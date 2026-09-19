@@ -2,9 +2,9 @@
 sketch: 074
 name: admin-header
 question: "Where does the primary action live once the editor's chrome collapses into one top app bar?"
-winner: "N1"
-tags: [admin, editor, header, top-app-bar, action-bar, d42, D-19f, D-19n]
-rounds: 2
+winner: "N1 · weight W2 Contorno recommended, pending review from the device"
+tags: [admin, editor, header, top-app-bar, action-bar, cta-weight, d42, d64, D-19f, D-19n]
+rounds: 3
 ---
 
 # Sketch 074: the editor's header
@@ -24,17 +24,18 @@ and both rounds ran one at a time.
 | Q1 | do `.hdr` + `.pbar` + `.back` collapse into one top app bar? | round 1 — premise, not varied |
 | Q2 | where does the primary live? | **round 1** |
 | Q3 | what does the title hold? | **round 2** |
-| — | CTA weight — filled / tonal / text | **open, round 3** |
+| — | CTA weight — filled / outline / text | **round 3** |
 
 ## How to view
 
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/074-admin-header/index.html
-node .planning/sketches/074-admin-header/verify.js     # 60/60
+node .planning/sketches/074-admin-header/verify.js     # 99/99
 ```
 
-Variants on screen: **N1** (the answer) and **HOY** (what 073 ships — the baseline every guard is
+Variants on screen: **W1 / W2 / W3** (N1's CTA in three weights — W2 is the standing recommendation) and
+**HOY** (what 073 ships — the baseline every guard is
 negative-tested against). Round 1's H1 and H3 are removed along with their comparison checks; their
 measurements are below.
 
@@ -156,14 +157,118 @@ Open N1 and scroll to the bottom of a game with BGG data: the title arrives, not
 stays where your thumb left it. Then switch to `Con datos · 386` with no edits — that is the one situation
 where the slot is dead.
 
+---
+
+## Round 3 — the CTA's weight
+
+**Variants:** W1 Relleno · W2 Contorno · W3 Texto, paint only. **W2 is the standing recommendation on the
+measurements — not yet confirmed from the device.**
+
+### The round opened by finding that the question was posed backwards
+
+Round 2 left this as *"filled vs tonal vs text"*, which assumes filled is the incumbent and the others are
+departures. Checked against the artefacts rather than the prose, it is the other way round:
+
+- **Sketch 064 already settled this for the whole admin** — *"S3 Contorno, weight-tuned: 1px strokes
+  everywhere … **no disabled buttons**"*, applied to 059–063 and checked by `audit-admin.js` at 89/89.
+- **071/072/073/074 have drawn a filled primary ever since** (`.btn { background: var(--color-primary) }`,
+  072:216 and 073:265, copied forward verbatim), and round 2 added a *disabled* one.
+- **Nothing records the departure.** No decision supersedes 064, and none of 071–074 carries its CSS block
+  or mentions it. The incumbent on screen and the system of record have simply disagreed, unnoticed, for
+  four sketches.
+
+So W2 is not a new proposal. It is 064, and the round is about whether to keep departing from it.
+
+**Tonal is not drawn.** 064's round 2 removed it with the developer in the room (*"S3 looks better"*), and
+redrawing it would re-litigate a settled call. Three answers, not four.
+
+### One axis, and the metric it took three tries to get right
+
+Geometry is pinned — same 36px height, same padding, same radius, same hit box — so a finding about weight
+cannot be blamed on size. The stroke is an **inset box-shadow, not a border**, so W2 does not shift the
+label by the 1px a border would cost. Round 1 held the CTA byte-identical across positions for the same
+reason, inverted.
+
+**Two metrics were thrown away first, and both failed the same way** — well-defined for two weights,
+meaningless for the third:
+
+1. *"the label against the bar"* is nonsense for W1: its label is white, the bar is white, and the fill sits
+   between them so they never touch. The probe returned **1:1** — a true number about a comparison that does
+   not exist on screen.
+2. *"three different box readings"* assumed three inks. There are not three. In light `--color-primary` and
+   `--color-accent-text` are **the same hex** (`#3C1269`), so a fill and a stroke are the same ink at the
+   same 14.16:1.
+
+**The axis is painted area, not contrast.** Same token, three coverages:
+
+| | painted container | dominant ink vs the bar (light / dark) |
+|---|---|---|
+| **W1 Relleno** | **3903px²** | 14.16:1 / **2.33:1** |
+| **W2 Contorno** | **285px²** | 14.16:1 / 11.67:1 |
+| **W3 Texto** | **0px²** | 14.16:1 / 11.67:1 |
+
+### What decided it
+
+**1. The disabled read — the question round 2 actually asked.** Its note said a disabled filled button
+*"reads as lavender-and-live rather than clearly dead"*. The screenshot is blunter than the number: in the
+one dead situation W1 keeps **2977px² of solid lavender pill**, the entire silhouette of a live primary.
+W2 drops to a **233px² faint outline** and W3 to **nothing at all**. W1 is the only weight whose dead state
+still looks tappable.
+
+**2. W1's weight is not portable across themes.** Dark `--color-primary` (#7B2DCE) on the bar's #2E154E is
+**2.33:1**, against 14.16:1 in light — the container all but merges with the bar, and what identifies the
+button in dark is the white 15.75:1 label, not the fill. *Stated as measured, not as a verdict:* this is
+**not** called a WCAG 1.4.11 failure, because 1.4.11 covers information *required* to identify a control and
+the label does that job. What it does establish is that "filled is the loudest" is a light-theme fact, not a
+property of the weight. W2's stroke holds a container in both (14.16 / 11.67).
+
+**3. W3 merges with the title at full scroll.** The bar's gap between title and action is 4px in every
+weight; W1 and W2 put a container edge in it, W3 puts whitespace. On a truncated real name the result is
+`Castillos del Rey Loco Lud… Guardar` — one run-on line in which the primary action does not read as a
+control. W3 also has no container to outrank the back chevron, so all that distinguishes the primary from
+navigation is that one is a word and the other a glyph.
+
+**4. W3 breaks d42's rule in a way the rule never anticipated.** *"The primary always ends at the same
+edge"* was written for a control whose box **is** its ink. With no box the two readings come apart and only
+one can sit on the 16px keyline: either the label sits 14px short of every other right edge, or the box —
+and the 44px hit target with it — overhangs to **R373, two pixels from the bezel**. W3 is drawn the second
+way and the cost is measured, not smoothed over.
+
+**W2 wins on every axis and costs nothing new:** it disables unambiguously, keeps a container in both
+themes, stays legible beside a truncated title, holds the keyline with no overhang — and it ends an
+unrecorded four-sketch departure instead of creating another decision.
+
+### A guard that passed vacuously, caught by the screenshot again
+
+Check 20's first version measured the title-to-CTA gap on `bgg_missing`, chosen because that fixture carries
+the long real name. But a broken game has no BGG facts, so the page is barely one screen tall, `toBottom()`
+moved nothing, and **the title never faded in** — `getBoundingClientRect()` measured an element at
+`opacity: 0` and reported a tidy 4px for all three weights. Three identical numbers, all about something
+invisible. The fixtures force the choice (the long name is on the page that does not scroll; the page that
+scrolls has a short name), so the name is now typed in through the real sheet, and **the title's visibility
+and truncation are asserted before the gap is read**. That is the sixth time in this sketch's lineage the
+screenshot caught what the harness was green over.
+
+## What to look for
+
+Open W2 and switch to `Con datos · 386` with no edits — the one dead situation. Then flip to W1 and back:
+the question is whether W1's dead lavender pill still looks tappable to you. Then scroll to the bottom of a
+game with BGG data in W3 and read the bar left to right.
+
 ## Open
 
-- **Round 3: CTA weight.** A *disabled filled* button reads as lavender-and-live rather than clearly dead —
-  a text button would disable unambiguously. That is now the sharpest input to the weight question.
-- **There is no longer any way to abandon an edit without leaving the page.** `Descartar` used to let you
-  stay. The honest cost of deleting it, in the same shape as decision 41's.
-- **D-19n must be amended, not dropped.** This settles the **editor** only. `.pbar` stays alive for the
-  **catalogue list**, a different screen, not decided here.
+- **W2 is a recommendation on the measurements, not a decision.** It needs confirming from the device — and
+  the relevant judgement is one only the developer can make: whether a dead filled CTA reads as live in the
+  hand the way it does in the screenshot.
+- **064 needs a decision either way.** If W2 is confirmed, 071–074's filled `.btn` is a four-sketch drift to
+  be corrected and 064 stands. If W1 is chosen instead, 064 is *overturned* and that has to be written down
+  — it governs the whole admin, not just this bar.
+- **`no disabled buttons` (064) is still contradicted** whichever weight wins, because round 2's slot is
+  dead in 1 of 8. 064 banned disabled controls outright; d42 allowed 0 and rejected 4. The 1/8 case sits
+  between two rules and is currently governed by neither.
+- **There is no longer any way to abandon an edit without leaving the page.** Unchanged from round 2.
+- **D-19n must be amended, not dropped.** This settles the **editor** only; `.pbar` stays alive for the
+  **catalogue list**.
 - `crear juego` is not drawn — the title question changes shape when there is no name yet.
 - The d40 lifecycle dot stays in the page head; whether it moves into the bar is untouched.
 - `TODO(palette)` — `--val`'s dark stop is still defined locally, inherited from 073 and still owed upstream.

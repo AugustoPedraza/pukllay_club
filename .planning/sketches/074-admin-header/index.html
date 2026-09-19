@@ -278,6 +278,52 @@
   .tbar .btn::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
   .tbar .btn svg { width: 16px; height: 16px; }
 
+  /* ================= ROUND 3: the CTA's WEIGHT =================
+     Round 2 settled the CTA's PROPORTION (36px in a 56px bar) and left its weight open, with one sharp
+     input recorded: *"a disabled filled button reads as lavender-and-live rather than clearly dead — a text
+     button would disable unambiguously."* That is the question, and it now has a number attached to it
+     (check 21) instead of an adjective.
+
+     WHAT THE ROUND FOUND BEFORE DRAWING ANYTHING. Sketch 064 already settled this for the admin —
+     "S3 Contorno, weight-tuned: 1px strokes everywhere … NO DISABLED BUTTONS" — and 071/072/073/074 have
+     drawn a FILLED primary ever since, with round 2 adding a disabled one. Neither departure is recorded
+     anywhere: no decision supersedes 064, and the 071-074 lineage carries no trace of its CSS block. So the
+     incumbent on screen and the system of record disagree, and this round is where that is settled rather
+     than inherited. W2 IS 064's answer, drawn against the other two.
+
+     ONE AXIS: PAINT. Geometry is byte-identical across W1/W2/W3 — same 36px height, same 14px padding, same
+     9px radius, same hit box. The stroke is an INSET BOX-SHADOW, not a border, precisely so W2 does not
+     shift the label by the 1px a border would cost. Round 1 held the CTA byte-identical across positions so
+     a finding about position could not be blamed on weight; this is the same discipline inverted, and
+     check 19 asserts it.
+
+     Tonal is NOT drawn. 064's round 2 removed it with the developer in the room ("S3 looks better"), and
+     re-drawing it would re-litigate a decision that is already made. Three answers, not four. */
+
+  /* W1 · Relleno — what round 2 drew, and what 071-073 ship. Overturns 064 if it wins. */
+  .device.w-fill .tbar .btn { background: var(--color-primary); color: var(--color-primary-content); box-shadow: none; }
+
+  /* W2 · Contorno — 064's settled Principal: a 1px primary stroke with a primary label, no fill. */
+  .device.w-line .tbar .btn { background: none; color: var(--color-accent-text);
+    box-shadow: inset 0 0 0 1px var(--color-accent-text); }
+
+  /* W3 · Texto — the label alone.
+     A text button has NO BOX, and that breaks d42's rule in a way the rule never anticipated: "the primary
+     always ends at the same edge" was written for a control whose box IS its ink. With no box the two
+     readings come apart and they cannot both hold —
+       (a) box edge on the 16px keyline -> the LABEL sits 14px inside it, visibly short of every other right
+           edge on the page;
+       (b) label on the keyline -> the box, and with it the 44px hit target, overhangs to R373, two pixels
+           from the bezel.
+     (b) is drawn, because the keyline is what the eye reads and `.back` in this same file already aligns a
+     text control by negative margin. The cost is real and it is measured, not smoothed over: check 19
+     reports both edges for all three weights. */
+  .device.w-text .tbar .btn { background: none; color: var(--color-accent-text); box-shadow: none; margin-right: -14px; }
+
+  /* W1 gets the fill's own darkening; the two boxless weights need a backdrop to press against, the same
+     one `.btn.ghost` already uses. (Not asserted anywhere — CDP touch does not set `:active`.) */
+  .device.w-line .tbar .btn:active, .device.w-text .tbar .btn:active { background: var(--color-surface-2); filter: none; }
+
   /* ---- sheets (D-19e) ---- */
   .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
   .backdrop.open { opacity: 1; pointer-events: auto; }
@@ -456,8 +502,10 @@
   <!-- Round 1's H1 and H3 are removed along with their comparison checks: their question is answered and
        their measurements live in the README. 072's rule — what is on screen is the decision, not a menu of
        them. HOY stays; it is the baseline every negative test is written against. -->
-  <div>Variante:
-    <button data-var="N1" class="on">N1 · la respuesta</button>
+  <div>Peso del CTA:
+    <button data-var="W1">W1 · Relleno</button>
+    <button data-var="W2" class="on">W2 · Contorno ★ recomendado</button>
+    <button data-var="W3">W3 · Texto</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -529,7 +577,10 @@ const SHELVES = [
   { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
 ];
 
-let VAR = 'N1', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
+/* ROUND 3: N1 becomes three weights. W1 is N1 byte-for-byte except for the CTA's paint, so every round-1
+   and round-2 guard still has an incumbent to run against; W2 and W3 differ from it in paint ONLY. */
+let VAR = 'W2', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
+const WEIGHT = { W1: 'w-fill', W2: 'w-line', W3: 'w-text' };
 let G, START;
 
 function loadState() {
@@ -627,7 +678,7 @@ function topbarHTML() {
    With the bar gone, `Descartar` is not relocated — it is DELETED, and becomes the destructive option in
    the D-19f dialog on the way out. HOY keeps the bar; it is the baseline. */
 function barWanted() {
-  if (VAR === 'N1') return false;
+  if (VAR !== 'HOY') return false;
   return dirty() || !!primary();
 }
 function barHTML() {
@@ -733,6 +784,10 @@ function topHTML() {
 function render() {
   const dev = $('#device');
   dev.classList.toggle('chrome-top', topChrome());
+  /* ROUND 3: exactly one weight class, and none at all in HOY. Toggling rather than assigning means a
+     variant switch cannot leave the previous weight's paint behind — which would make check 18's "the three
+     weights really do differ" pass while showing the wrong one. */
+  Object.values(WEIGHT).forEach(c => dev.classList.toggle(c, WEIGHT[VAR] === c));
   /* HOY's three pieces are hidden, not emptied — an empty .hdr still spends its 53px. */
   $('#hdr').hidden = topChrome();
   $('#pbar').style.display = topChrome() ? 'none' : '';
