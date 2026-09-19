@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 073 — el estado de BGG en el editor</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 073 — the BGG state in the game editor. Item 1 of sketch 072's handoff, and the one with a real
+     defect behind it. Everything structural (device chrome, sheets, the club spine, the save bar) is COPIED
+     from 072, which copied it from 071 — nothing settled is redrawn, so what is on screen is this round's
+     question and not a second opinion about last round's.
+
+     THE GROUND TRUTH, measured against the dev DB rather than assumed (2026-09-19):
+
+       enrichment_status | n   | bgg_id | campos BGG poblados | status
+       enriched          | 386 | sí     | 11/11               | 385 published + 1 draft
+       no_bgg_id         |  41 | NULL   | 0                   | published
+       bgg_missing       |   8 | sí     | 0                   | published
+       pending           |   0 | —      | —                   | —
+       failed            |   0 | —      | —                   | —
+
+     Four facts that each change the question:
+
+     1. The 49 broken games hold NOTHING. Every BGG column is NULL — no cover, no year, no description, no
+        players, no duration, no rating. 15 of the 41 have a weight_band and that is all. So this is not
+        "some facts are missing"; it is an empty set rendered through a block built for a full one.
+     2. `form.ex:332-346` renders ELEVEN rows through `value_or_dash/1`, so a broken game today shows a wall
+        of eleven em-dashes under the sentence "Vienen de BoardGameGeek y se actualizan solos. No se editan
+        acá." — which for exactly these 49 games is false twice: they did not update themselves, and the
+        sentence offers nothing to do about it.
+     3. The two broken states are STRUCTURALLY different and `bgg_id` is the difference. `no_bgg_id` has none,
+        so there is nothing to retry. `bgg_missing` has one that does not resolve, so retrying is guaranteed
+        to fail again. `Reintentar` — gated on `failed` in BOTH `form.ex:220` and `catalog.ex:368` — is the
+        wrong remedy for both, and `failed` has ZERO rows.
+     4. `Catalog.publish_game/1` (`catalog.ex:490`) runs `status_changeset`, which casts and validates ONLY
+        `:status`. Nothing anywhere gates publishing on BGG answering. That is why all 49 are live.
+
+     THE QUESTION (decision 38): when BGG has given nothing, what does the editor offer — and where does the
+     `ID de BGG` field live?
+
+     Settled before building, so the variants do not re-argue it:
+       · WHAT staff supply: the id, pasted by hand, with a hint carrying a link to BGG. Chosen over a
+         search-by-name flow (needs a BGG search endpoint that does not exist) and over retry-only (fixes
+         nothing — 41 of the 49 have no id to retry).
+       · THE PUBLISH RULE: "the app must avoid publishing uncompleted games." So a game with no BGG data
+         cannot be published, in every variant — this is a rule the sketch obeys, not a variant axis.
+
+     What is left is genuinely open, and it is one question with one pivot: `bgg_id` is BGG-derived, but it is
+     the club's INPUT to BGG rather than an output of it. Whether that makes it a club field or a BGG field
+     decides whether "No se editan acá" survives, and whether the changeset grows a 7th cast field. */
+
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  /* D-19o (decision 32, sketch 071) — the platform tap highlight is suppressed at the ROOT because the
+     property inherits, and every pressable surface presses to ONE token, --color-surface-2. */
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* ---- chrome, context only (copied from 071) ---- */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+
+  main { padding: 0 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+
+  /* ---- D-19n: the page bar. An ABSOLUTE OVERLAY, so at rest it costs zero layout; `inert` keeps exactly
+     one focusable back control. Copied from 071's .pbar. ---- */
+  .pbar { position: absolute; left: 0; right: 0; top: 0; height: 44px; z-index: 18; display: flex; align-items: center; gap: 2px;
+    padding: 0 8px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; pointer-events: none; transition: opacity 140ms var(--ease-out-soft); }
+  .pbar.on { opacity: 1; pointer-events: auto; }
+  .pbar .pb-back { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); }
+  .pbar .pb-back svg { width: 22px; height: 22px; }
+  .pbar .pb-t { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* the in-page back row */
+  .back { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: -8px; padding: 0 8px 0 4px;
+    border: 0; background: none; color: var(--color-accent-text); font-size: 15px; font-weight: 600; }
+  .back svg { width: 20px; height: 20px; }
+
+  /* ---- the game's head ---- */
+  .ghead { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 18px; }
+  .ghead .cov { width: 64px; height: 68px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--color-surface); }
+  .ghead .tile { width: 64px; height: 68px; border-radius: 7px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .ghead .tile svg { width: 30px; height: 30px; }
+  .gh-t { flex: 1; min-width: 0; }
+  .gh-name { font-size: 22px; font-weight: 600; line-height: 1.22; }
+  .gh-meta { margin-top: 3px; font-size: 13px; color: var(--color-text-muted); }
+
+  /* ---- form section label. NOT the versalita list caption (decision 28): that rule governs a LIST section
+     header. This is a FORM group label, the BENCHMARK's `Label (group)` rank, 13/600 — conflating the two is
+     exactly what caused decision 20. ---- */
+  .glabel { font-size: 13px; font-weight: 600; color: var(--color-text-muted); letter-spacing: .01em;
+    padding: 22px 0 8px; }
+  .gnote { font-size: 13px; line-height: 1.45; color: var(--color-text-muted); margin: -2px 0 10px; }
+
+  /* ---- the spine (decision 33): every value is a ROW that opens a sheet ----
+     Web decision 17's idiom — the pencil is gone, the VALUE ITSELF is the target, one target per field
+     instead of a label plus a pencil. Taken over an inline form (217px taller in the club block, 4 of 6
+     fields on screen) and over a mixed spine, which measured THREE row anatomies against this one's one:
+     an inline control already IS the value display, so its second line can only carry a hint, which makes
+     it a different kind of row. ---- */
+  .frows { margin: 0 -16px; }
+  .frow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
+    border: 0; background: none; text-align: left; position: relative; }
+  .frow + .frow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--color-border); }
+  .frow:hover { background: var(--color-surface); }
+  .frow:active { background: var(--color-surface-2); }
+  .frow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .fr-t { flex: 1; min-width: 0; }
+  /* block, not inline: these are spans inside a button, and as inline boxes they ran together on one line
+     ("NombreBrass: Birmingham"). Every harness check was green while the page was visibly broken — the
+     numbers measured height, contrast and hit boxes, none of which notice two ranks sharing a line. */
+  .fr-k { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .fr-v { display: block; font-size: 15px; line-height: 1.32; margin-top: 2px; overflow-wrap: anywhere; }
+  /* a long value must not let one row dominate the spine: the description is 4 lines of real text and made
+     its row 116px, nearly two ordinary rows. Clamped to 2 — the row is a SUMMARY that opens the full value. */
+  .fr-v.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fr-v.empty { color: var(--color-text-muted); font-style: italic; }
+  /* ---- decision 34: a row that opens a sheet carries NO glyph ----
+     D-19i literally: "a chevron means this row opens another page. Rows that act in place (show an answer,
+     open a sheet) have none." Round 1 put a chevron-DOWN here, reasoning from Web decision 17's note — but
+     that ⌄ was never actually built (070's row-name button renders a bare <h2> inside the button, and d17's
+     own note records the ⌄ drawing an empty SVG). Measured across the corpus, ⌄ has exactly ONE live
+     meaning: 071's collapse caret, "this section expands/collapses in place". Borrowing it for "opens a
+     sheet" overloads the one glyph the catalogue already spent.
+     What separates this block from the read-only BGG facts is not a glyph but the LAYOUT: 64px rows with the
+     value STACKED under its key (both on the 16 keyline), against 33.6px rows with the value beside it at
+     x=132. */
+
+  /* ---- decision 35: the value is the label's subordinate, and it carries the tint ----
+     Round 2 — the affordance question the ⌄ had been papering over. Four answers were built and measured;
+     what decided it was that BOTH platforms put the LABEL first and the VALUE second in a settings row:
+     iOS's grouped table (label ink left, value grey right) and M3's list item (headline = label, supporting
+     text = value — literally the Android Settings row). This sketch had it inverted, key muted 13 / value
+     ink 15.
+     Flipping the polarity also separates this block from the read-only BGG facts STRUCTURALLY rather than by
+     hue — club rows read ink-label / quiet-value, BGG facts quiet-key / ink-value: opposite polarity in
+     light AND dark. A colour-only signal could not do that. Measured: --color-accent-text resolves to
+     #E3D9F9 in dark, 1.17:1 from body text, so the tint AND the polarity both vanish on the theme switch.
+     Rejected: a bare row (no positive signal); the tint alone (light-only, per the above); and a standing
+     "Tocá un dato para editarlo" hint — 27px forever for a lesson learned once, it pushes DATOS DE BGG off
+     the fold, decision 19 made section hints contextual rather than standing, and the page already teaches
+     the rule from the other side, where the BGG block says "No se editan acá". */
+  /* line-height 1.3 is load-bearing, not cosmetic. Without it the label inherited 1.5 — a 22.5px line box
+     around an 11px cap — while the value sat on 1.32/18.5px, so the two lines of ONE pair were on different
+     leading and the pair sat 1.55px low in its 64px row. Measured at 1.3 the offset is 0.26px, and
+     margin-top 2px puts the ink gap at 10.0, against the app's existing two-line row (071's name + year) at
+     10.5. Same 64px row, nothing around it moves. */
+  .frow .fr-k { font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
+  .frow .fr-v { font-size: 14px; color: var(--val); margin-top: 2px; }
+  .frow .fr-v.empty { font-style: italic; color: var(--color-text-muted); }
+
+  /* TODO(palette) — `--val` is defined HERE, not in themes/default.css, deliberately.
+     default.css is a MIRROR of assets/css/app.css (its own header says so) and check-theme-drift.sh gates
+     the two hex-for-hex, so adding a colour on this side alone would fail that gate. The LIGHT value reuses
+     an existing token; the DARK one (#9F7AEA) does not exist in the palette at all.
+     It must clear three bars at once, which is why the obvious candidates fail:
+       >= 4.5:1 on the dark ground (it is body text), >= 1.5:1 from body text (or it is not a signal),
+       and clear of --color-text-muted (or it collides with the empty state).
+     Measured over nine candidates, #9F7AEA (4.83 / 2.82 / 1.43) is the only strong pass. #D0B3FF passes but
+     separates from body text by just 1.57; #C4B5FD, #A78BFA, #C9A6F5 and #B98CF0 all collide with muted;
+     dark --color-primary #7B2DCE is 2.33:1 and fails as body text; #8B5CF6 is 3.72:1 and fails too.
+     Before this ships: add the stop upstream in app.css, reconciled against its --pk-ramp-* envelope (the
+     palette's comments say the dark stops were moved onto that ramp), mirror it here, re-run
+     check-theme-drift.sh. Note 4.83:1 makes the value the LOWEST-contrast text on the dark page —
+     everything else sits at 6.9+ — so the reconciliation should try to BEAT that number, not match it. */
+  :root { --val: var(--color-accent-text); }
+  :root[data-theme="dark"] { --val: #9F7AEA; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
+
+  /* the sheet's own field controls (the only place an input survives: B's inline form and C's mixed spine
+     were removed when decision 33 took A) */
+  .inp { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px;
+    background: var(--color-bg); font-size: 16px; }
+  .inp:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; border-color: transparent; }
+  textarea.inp { min-height: 96px; resize: vertical; line-height: 1.45; }
+  /* the caret was `var(--caret-bg)`, a variable that does not exist — so every select rendered as a bare
+     box and B's two dropdowns read as text inputs. Comparing a variant against a broken one is not a
+     comparison, so it is an inline data URI (the stroke is baked in; currentColor cannot cross into a
+     background-image). */
+  select.inp { appearance: none; background-repeat: no-repeat; background-position: right 12px center;
+    background-size: 18px; padding-right: 40px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23675C7D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>'); }
+  :root[data-theme="dark"] select.inp {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23B9AACD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>'); }
+  .help { font-size: 12px; color: var(--color-text-muted); margin-top: 5px; line-height: 1.4; }
+
+  /* switch (shared by B and C) */
+  .sw { width: 52px; height: 32px; border-radius: 16px; border: 0; background: var(--color-surface-2); position: relative; flex-shrink: 0; transition: background 160ms var(--ease-out-soft); }
+  /* the track is 32px because that is what a switch LOOKS like; the touch floor is 44. Stretching the hit box
+     with a pseudo-element reaches the floor without inflating the control or moving anything around it —
+     decision 18's technique for the caption caret, reused rather than reinvented. */
+  .sw::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform 160ms var(--ease-out-soft); }
+  .sw[aria-checked="true"] { background: var(--color-primary); }
+  .sw[aria-checked="true"]::after { transform: translateX(20px); }
+  .sw:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .sw, .sw::after { transition: none; } }
+
+  /* stepper (C) */
+  .step { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .step button { width: 44px; height: 44px; border: 1px solid var(--stroke); background: none; border-radius: 10px; display: grid; place-items: center; }
+  .step button:active { background: var(--color-surface-2); }
+  .step button svg { width: 18px; height: 18px; }
+  .step .n { min-width: 40px; text-align: center; font-size: 17px; font-weight: 600; }
+
+  /* ---- BGG read-only block: the same in every variant, because the spine question is about EDITABLE
+     values. It is here only so each spine can be judged with the read-only mass actually present. ---- */
+  .bgg { margin: 0 -16px; padding: 0 16px; }
+  .kv { display: flex; gap: 12px; padding: 7px 0; font-size: 14px; line-height: 1.4; border-top: 1px solid var(--color-border); }
+  .kv:first-child { border-top: 0; }
+  .kv dt { flex: 0 0 104px; color: var(--color-text-muted); font-size: 13px; }
+  .kv dd { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lock { font-size: 13px; line-height: 1.45; color: var(--color-text-muted); margin: 0 0 12px; }
+
+  /* ---- the save bar ---- */
+  .savebar { position: absolute; left: 0; right: 0; bottom: 67px; z-index: 19; display: flex; gap: 10px; align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border);
+    transform: translateY(130%); transition: transform 220ms var(--ease-out-soft); }
+  .savebar.on { transform: none; }
+  .device.kbd .savebar { bottom: 0; }
+  @media (prefers-reduced-motion: reduce) { .savebar { transition: none; } }
+  .savebar .dirty { flex: 1; font-size: 13px; color: var(--color-text-muted); }
+  .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 0; font-size: 15px; font-weight: 600; background: var(--color-primary); color: var(--color-primary-content); }
+  .btn:active { filter: brightness(.92); }
+  .btn.ghost { background: none; color: var(--color-accent-text); padding: 0 12px; }
+  .btn.ghost:active { background: var(--color-surface-2); }
+
+  /* ---- sheets (D-19e), copied from 071 ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  /* ---- the sheet rides ABOVE the keyboard ----
+     Found in a screenshot, not by a check. 072's sheets never had to care: their one text field sat at the
+     very top of a short body, so the keyboard covered only empty space below it. This sheet's whole reason
+     to exist is the hint — what a BGG id is and where to copy it from — and with the sheet pinned to
+     `bottom: 0` the 292px keyboard buried the field, the hint, the link AND the commit button, leaving just
+     the title and half a subtitle. The harness passed it, because the guard measured against the 740px
+     viewport instead of the keyboard's top edge: a phone nobody is holding, since committing an id means
+     typing and typing raises the keyboard.
+     Both platforms move a sheet that owns a text field up with the keyboard rather than under it, so the
+     max-height is recomputed against the space that is actually left. */
+  .device.kbd .sheet { bottom: 292px; max-height: calc(100% - 292px - 24px); }
+  @media (prefers-reduced-motion: reduce) { .sheet, .backdrop { transition: none; } }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sh-head { display: flex; gap: 16px; align-items: flex-start; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .sh-sub { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:active { background: var(--color-surface-2); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .sh-body { padding: 0 16px; }
+  .opt { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px; margin: 0 -16px; border: 0; background: none; text-align: left; }
+  .opt:hover { background: var(--color-surface); }
+  .opt:active { background: var(--color-surface-2); }
+  .opt:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .opt .ot { flex: 1; min-width: 0; }
+  .opt .on2 { font-size: 16px; }
+  .opt .os { display: block; font-size: 13px; color: var(--color-text-muted); margin-top: 2px; line-height: 1.35; }
+  .opt .tick { width: 22px; height: 22px; color: var(--color-primary); flex-shrink: 0; }
+
+  /* simulated keyboard, 292px (the toolkit's number) */
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 45; background: var(--color-surface);
+    border-top: 1px solid var(--color-border); display: none; flex-direction: column; gap: 8px; padding: 10px 6px; }
+  .device.kbd .kbd-sim { display: flex; }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .krow span { flex: 1; max-width: 34px; height: 42px; border-radius: 6px; background: var(--color-bg); display: grid; place-items: center; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,.18); }
+  .krow .wide { max-width: 160px; }
+
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 50; display: flex; align-items: center; gap: 10px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 12px; padding: 12px 14px; font-size: 14px;
+    opacity: 0; transform: translateY(12px); pointer-events: none; transition: all 200ms var(--ease-out-soft); }
+  .snack.on { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; }
+
+  /* ---- tools ---- */
+  #tools { position: fixed; left: 12px; bottom: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(20,8,32,.88); color: #fff; padding: 9px 11px; border-radius: 10px; opacity: .45; transition: opacity .2s;
+    display: flex; flex-direction: column; gap: 6px; max-width: 92vw; }
+  #tools:hover { opacity: 1; }
+  #tools button { font: inherit; background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 4px 8px; margin-right: 2px; }
+  #tools button.on { background: #fff; color: #1a0a2a; font-weight: 600; }
+
+
+  /* ================= 073's own CSS — the BGG block, which in 072 had exactly one state ================= */
+
+  /* ---- the state line ----
+     D-19h: "a status is a dot + text, never a pill" — an 8px dot in the status colour before the word. The
+     shipped editor uses `alert alert-error`, a red BOX, which decision 24 already recorded as violating this
+     rule in the list row; it violates it in the editor too (`form.ex:262-267`). So the state is a dot and a
+     sentence, at the same 13px muted rank the lock line already occupies — it REPLACES that line rather than
+     stacking above it, because they answer the same question ("what is this block?") for different games. */
+  .st { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; margin: -2px 0 0; }
+  .st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5.5px; background: var(--color-text-muted); }
+  .st.warn .dot { background: var(--color-accent); }
+  .st.bad .dot { background: var(--color-danger); }
+  .st.wait .dot { background: var(--color-text-muted); }
+  .st .sx { flex: 1; min-width: 0; color: var(--color-text); }
+  .st .sx b { font-weight: 600; }
+  /* the consequence line — what this costs on the public site. 41+8 games are `published` RIGHT NOW with no
+     cover and no description, and nothing in the editor says so. 071's group hint says it from the list side
+     ("Se ven en la web sin tapa ni descripción."); this is the same fact for one game. */
+  .st .sc { display: block; color: var(--color-text-muted); margin-top: 3px; }
+
+  /* ---- the id hint, shared by all three variants ----
+     The developer's call: staff paste the id, and the hint carries a link to BGG. A club volunteer does not
+     know what a BGG id is, so the hint has to SHOW the operation rather than name it — the example is the
+     whole point, and it is a real URL for a real game (Castles of Mad King Ludwig, 155426), with the number
+     marked in the value colour so the eye lands on the part being asked for. */
+  .hint { font-size: 13px; line-height: 1.5; color: var(--color-text-muted); margin: 10px 0 0; }
+  .hint a { color: var(--color-accent-text); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--color-accent-text) 40%, transparent); }
+  .hint a:active { background: var(--color-surface-2); }
+  /* the example is a URL, so it is monospaced and it WRAPS — at 375 the full BGG url does not fit on one
+     line and `overflow-wrap: anywhere` on a bare string would break it mid-token in an arbitrary place, so it
+     breaks at the slashes instead (`word-break: break-word` + the natural break opportunities in the path). */
+  .ex { display: block; margin-top: 7px; padding: 8px 10px; border-radius: 8px; background: var(--color-surface);
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; line-height: 1.5; color: var(--color-text-muted); word-break: break-word; }
+  .ex b { color: var(--val); font-weight: 700; }
+  .ex .arw { color: var(--color-text-muted); }
+
+  /* ---- B only: the field inline in the BGG block ---- */
+  .idrow { display: flex; gap: 8px; align-items: stretch; margin-top: 12px; }
+  .idrow .inp { flex: 1; min-width: 0; }
+  .idrow .btn { flex-shrink: 0; }
+  /* a disabled commit is still 44px and still reads as a control — it is greyed, not removed, because its
+     presence is what tells you the field is the thing that unlocks it. */
+  .btn[disabled] { opacity: .42; }
+
+  /* ---- C only: the action row ----
+     It reuses the .frow anatomy but is NOT a value row: one line, no value beneath. Measured as a second
+     anatomy in the harness rather than waved away, because "one row anatomy" is exactly what decision 33
+     chose A for, and a rule that stops being counted stops being a rule. */
+  /* `calc(100% + 32px)`, and the reason is worth writing down because the obvious fix is wrong.
+     This row's hairlines stopped 32px short of the right edge — measured 0–343 against .frow's 0–375. The
+     first diagnosis was "a <button> is shrink-to-fit, so it needs width: 100%". It already HAD width: 100%,
+     and the guard below rejected the fix, which is the whole reason the guard exists.
+     The real mechanism: `main` is padded 16px each side, so a percentage width here resolves against a
+     343px containing block. `margin: … -16px` then SHIFTS that 343px box 16px left without widening it —
+     negative margins move a sized box, they do not stretch it. .frow escapes this only because its parent
+     `.frows` is a plain <div> that does the bleeding, and an auto-width block div genuinely does fill.
+     Either wrap the row the way .frows does, or add back the 32px the padding took. This does the latter. */
+  .arow { width: calc(100% + 32px); display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px; margin: 12px -16px 0;
+    border: 0; background: none; text-align: left; position: relative; color: var(--color-accent-text);
+    font-size: 15px; font-weight: 600; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+  .arow:hover { background: var(--color-surface); }
+  .arow:active { background: var(--color-surface-2); }
+  .arow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .arow svg { width: 19px; height: 19px; flex-shrink: 0; }
+
+  /* ---- pending: a skeleton, not a spinner ----
+     Decision 24 kept the one part of the shipped design that was right — `pending` takes a skeleton cover and
+     the placeholder name. The facts get the same treatment: the block's SHAPE is already known (11 rows), so
+     showing that shape greyed says "these are coming" in a way a spinner cannot. Respects reduced-motion. */
+  .sk { height: 11px; border-radius: 5px; background: var(--color-surface-2); }
+  .kv .sk { width: 62%; }
+  @keyframes shim { 0% { opacity: .55; } 50% { opacity: 1; } 100% { opacity: .55; } }
+  .sk { animation: shim 1.4s var(--ease-out-soft) infinite; }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+  .ghead .cov.skel { background: var(--color-surface-2); animation: shim 1.4s var(--ease-out-soft) infinite; }
+
+  /* ---- the publish gate ----
+     "The app must avoid publishing uncompleted games." `publish_game/1` today validates ONLY `:status`
+     (catalog.ex:490), so this is a rule with no implementation. Drawn here as a DISABLED primary with the
+     reason beside it, not as a hidden button: a control that vanishes teaches nothing, and the whole point is
+     that the reader learns what publishing is waiting on. */
+  .pubbar { display: flex; gap: 12px; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+  .pubbar .why { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
+
+  /* the eleven dashes, as they ship today — a TOOL, not a variant. It is the baseline the three variants are
+     measured against, and it is drawn rather than described because "eleven em-dashes" reads as a shrug in
+     prose and as a wall on screen. */
+  .kv dd.dash { color: var(--color-text-muted); }
+
+  .variant { display: none; }
+  .variant.on { display: block; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <div class="hdr">
+    <button class="burger" aria-label="Menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <span class="word">PUKLLAY CLUB</span>
+  </div>
+  <div class="pbar" id="pbar" inert><button class="pb-back" aria-label="Volver a Juegos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="pb-t" id="pbt"></span></div>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg></span>Juegos</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg></span>Web</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="savebar" id="savebar"><span class="dirty" id="dirty"></span><button class="btn ghost" id="discard">Descartar</button><button class="btn" id="save">Guardar</button></div>
+  <div class="snack" id="snack" role="status"><span></span></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>0</span></div><div class="krow"><span>q</span><span>w</span><span>e</span><span>r</span><span>t</span><span>y</span><span>u</span><span>i</span><span>o</span><span>p</span></div><div class="krow"><span>a</span><span>s</span><span>d</span><span>f</span><span>g</span><span>h</span><span>j</span><span>k</span><span>l</span><span>ñ</span></div><div class="krow"><span class="wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div></div>
+
+<div id="tools">
+  <div>Variante:
+    <button data-var="A" class="on">A · fila del club</button>
+    <button data-var="B">B · en el bloque</button>
+    <button data-var="C">C · vincular</button>
+    <button data-var="D">D · arriba</button>
+    <button data-var="HOY">Hoy (lo que se ve)</button>
+  </div>
+  <div>Estado:
+    <button data-st="no_bgg_id" class="on">Sin ID · 41</button>
+    <button data-st="bgg_missing">ID inválido · 8</button>
+    <button data-st="failed">Falló · 0</button>
+    <button data-st="pending">Trayendo · 0</button>
+    <button data-st="enriched">Con datos · 386</button>
+  </div>
+  <div>Tema: <button data-theme-set="light" class="on">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+const P = {
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  tick: '<path d="M4 12l6 6L20 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  link: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7L12 19"/>',
+  retry: '<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 4v5h-5"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- the fixtures, straight out of the dev DB ----------
+   Not invented and not the happy-path game 072 used. Each row below is a real `games` row queried on
+   2026-09-19, because the whole point of this round is what an EMPTY BGG block looks like, and an invented
+   empty game would quietly be tidier than the real ones. Note the names: many of the 41 are expansions
+   typed into a CSV by hand ("carcassonne La Torre (expa)", "abyss leviatan"), which is itself why they never
+   got an id — nobody could match them to a BGG entry. */
+const FIX = {
+  no_bgg_id:   { name: 'Atiwa',                          bgg_id: null,   band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  bgg_missing: { name: 'Castillos del Rey Loco Ludwig',   bgg_id: 255848, band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  failed:      { name: 'Castillos del Rey Loco Ludwig',   bgg_id: 255848, band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  pending:     { name: 'Juego #255848',                   bgg_id: 255848, band: '',          units: 1, cover: null, year: null, desc: '' },
+  enriched:    { name: 'Brass: Birmingham',               bgg_id: 224517, band: 'experto',   units: 1, cover: null, year: 2018,
+                 desc: 'Secuela de Brass: Lancashire. Construís canales, vías y fábricas en Birmingham durante la revolución industrial.' }
+};
+/* the enriched fixture borrows 072's real cover so the two sketches show the same game in the same state */
+const SRC = (typeof GAMES067 !== 'undefined' ? GAMES067 : []).find(g => g.n === 'Brass: Birmingham');
+if (SRC && SRC.t) FIX.enriched.cover = SRC.t;
+
+/* The 11 facts `form.ex:332-346` renders, in its order. For every state but `enriched` each one is NULL, and
+   `value_or_dash/1` turns each into "—". That is the wall this round is about. */
+const FACT_KEYS = ['Jugadores', 'Duración', 'Edad mínima', 'Mecánicas', 'Temáticas', 'Diseñadores', 'Ilustradores', 'Editorial', 'Valoración BGG', 'Ranking BGG', 'Peso BGG'];
+const FACTS_OK = {
+  'Jugadores': '2 – 4', 'Duración': '60 – 120 min', 'Edad mínima': '14+',
+  'Mecánicas': 'Colocación de losetas, Gestión de mano, Red/ruta',
+  'Temáticas': 'Económico, Industria, Transporte',
+  'Diseñadores': 'Gavan Brown, Matt Tolman, Martin Wallace',
+  'Ilustradores': 'Lina Cossette, David Forest',
+  'Editorial': 'Roxley', 'Valoración BGG': '8,6', 'Ranking BGG': '#1', 'Peso BGG': '3,91 / 5'
+};
+
+const BANDS = [
+  { v: '', n: 'Sin nivel', s: 'No aparece en ninguna fila por nivel' },
+  { v: 'intro', n: 'Para arrancar', s: 'Se explica en 5 minutos' },
+  { v: 'medio', n: 'Intermedio', s: 'Una tarde tranquila' },
+  { v: 'estratega', n: 'Ingenio estratega', s: 'Pide pensar varias jugadas' },
+  { v: 'experto', n: 'Experto', s: 'Para quien ya tiene rodaje' }
+];
+const SHELVES = [
+  { v: '', n: 'Sin ubicar', s: 'Nadie sabe dónde está' },
+  { v: 'a', n: 'Estante A', s: 'Entrando, a la izquierda' },
+  { v: 'b', n: 'Estante B', s: 'Junto a la ventana' },
+  { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
+];
+
+let VAR = 'A', ST = 'no_bgg_id', KBD_SIM = true;
+let G, START;
+
+function loadState() {
+  const f = FIX[ST];
+  START = { name: f.name, units: f.units, weight_band: f.band, is_expansion: false, shelf_id: '', description: f.desc, bgg_id: f.bgg_id };
+  G = { ...START };
+}
+loadState();
+
+const bandOf = v => BANDS.find(b => b.v === v) || BANDS[0];
+const shelfOf = v => SHELVES.find(b => b.v === v) || SHELVES[0];
+/* `bgg_id` is counted as dirty ONLY in A, where it is a club field. In B and C committing the id is its own
+   action (it triggers the fetch), so it never sits in the save bar's "Cambios sin guardar". That asymmetry is
+   real and is one of the things the variants are being judged on. */
+const CLUB_KEYS = ['name', 'units', 'weight_band', 'is_expansion', 'shelf_id', 'description'];
+const dirty = () => (VAR === 'A' ? [...CLUB_KEYS, 'bgg_id'] : CLUB_KEYS).some(k => G[k] !== START[k]);
+const hasData = () => ST === 'enriched';
+/* the two states this round exists for */
+const broken = () => ST === 'no_bgg_id' || ST === 'bgg_missing' || ST === 'failed';
+
+/* ---------- the game's head ----------
+   The 49 broken games have no cover, no year and no bgg_id, so the head degrades too — 072 never had to show
+   this because its fixture was enriched. The placeholder tile already exists (072 drew it for a null cover);
+   what is new is that the meta line can end up EMPTY, and an empty line still takes 3px of margin plus a line
+   box. It is dropped entirely rather than rendered blank. */
+function headHTML() {
+  const f = FIX[ST];
+  const cov = ST === 'pending'
+    ? `<div class="cov skel" style="width:64px;height:68px;border-radius:7px"></div>`
+    : f.cover ? `<img class="cov" src="${f.cover}" alt="" loading="lazy">`
+    : `<div class="tile">${ic('img')}</div>`;
+  const meta = [f.year, G.bgg_id ? 'BGG ' + G.bgg_id : null].filter(Boolean).join(' · ');
+  return `<button class="back" id="back">${ic('chevL', 1.9)}Juegos</button>
+    <div class="ghead">${cov}<div class="gh-t"><div class="gh-name" id="ghname">${esc(G.name)}</div>
+      ${meta ? `<div class="gh-meta">${esc(meta)}</div>` : ''}</div></div>`;
+}
+
+/* ---------- the club spine, decision 33, unchanged ----------
+   Six rows in B and C. SEVEN in A, which is exactly A's cost: `admin_changeset/2` casts six fields
+   (`game.ex:245`) and 072's harness asserts that the editor shows no more than it casts, so A is a schema
+   change, not only a layout one. Drawn as the same anatomy either way — if the id row needed a different
+   shape, A would already have lost on decision 33's own terms. */
+function rowsHTML() {
+  const r = (key, k, v, empty, clamp) => `<button class="frow" data-edit="${key}">
+    <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+    </button>`;
+  const idRow = VAR === 'A'
+    ? r('bgg_id', 'ID de BGG', G.bgg_id ? String(G.bgg_id) : 'Sin ID', !G.bgg_id)
+    : '';
+  return `<div class="glabel">DATOS DEL CLUB</div>
+    <div class="frows">
+      ${r('name', 'Nombre', G.name)}
+      ${r('weight_band', 'Nivel', bandOf(G.weight_band).n, !G.weight_band)}
+      ${r('units', 'Copias', String(G.units))}
+      ${r('shelf_id', 'Estante', shelfOf(G.shelf_id).n, !G.shelf_id)}
+      ${r('is_expansion', 'Es una expansión', G.is_expansion ? 'Sí' : 'No')}
+      ${r('description', 'Descripción en español', G.description || 'Sin descripción', !G.description, true)}
+      ${idRow}
+    </div>`;
+}
+
+/* ---------- the state line (D-19h: a dot + text, never a pill) ----------
+   One sentence per state, and the second line is the CONSEQUENCE — what this costs on the public site right
+   now. Writing the consequence rather than the cause is the developer's rule from the intake: the app must
+   not publish incomplete games, so the editor's job is to make the incompleteness visible where the decision
+   to publish is made, not to file a report about BGG. */
+const STATE_COPY = {
+  no_bgg_id: { k: 'warn', t: 'Este juego no está vinculado a BoardGameGeek.', c: 'Por eso no tiene tapa, ni descripción, ni datos.' },
+  bgg_missing: { k: 'bad', t: 'El ID guardado no existe en BoardGameGeek.', c: 'Volver a intentar no lo va a arreglar: hay que corregir el ID.' },
+  failed: { k: 'bad', t: 'No se pudieron traer los datos.', c: 'El ID es correcto. Puede ser un problema pasajero de BGG.' },
+  pending: { k: 'wait', t: 'Trayendo datos de BoardGameGeek…', c: 'Suele tardar menos de un minuto.' },
+  enriched: null
+};
+function stateHTML() {
+  const s = STATE_COPY[ST]; if (!s) return '';
+  /* the published-right-now line only applies to a game that IS live and broken — the real 49. A draft is not
+     misleading anybody yet, so it does not get told off for it. */
+  const live = broken() ? `<span class="sc">${esc(s.c)} <b>Se está viendo así en la web.</b></span>` : `<span class="sc">${esc(s.c)}</span>`;
+  return `<p class="st ${s.k}"><span class="dot"></span><span class="sx">${esc(s.t)}${live}</span></p>`;
+}
+
+/* the hint, identical in all three variants — only its CONTAINER differs, which is the whole question */
+function hintHTML() {
+  return `<p class="hint">Buscá el juego en <a href="https://boardgamegeek.com" target="_blank" rel="noopener">boardgamegeek.com</a>
+    y copiá el número que aparece en la dirección.
+    <span class="ex">boardgamegeek.com/boardgame/<b>155426</b>/castles-of-mad-king-ludwig<br>
+    <span class="arw">→ el ID es</span> <b>155426</b></span></p>`;
+}
+
+function factsHTML(mode) {
+  /* mode: 'ok' real values · 'dash' the eleven em-dashes as shipped · 'skel' pending */
+  return `<dl class="bgg">${FACT_KEYS.map(k => {
+    const dd = mode === 'ok' ? esc(FACTS_OK[k])
+      : mode === 'skel' ? '<span class="sk"></span>'
+      : '<span class="dash">—</span>';
+    return `<div class="kv"><dt>${esc(k)}</dt><dd${mode === 'dash' ? ' class="dash"' : ''}>${dd}</dd></div>`;
+  }).join('')}</dl>`;
+}
+
+/* ---------- the BGG block, which is where the three variants differ ---------- */
+function bggHTML() {
+  const L = `<div class="glabel">DATOS DE BGG</div>`;
+  /* the lock line. In 072 it was unconditional; it is TRUE only for an enriched game, so it is now the
+     enriched state's own line rather than the block's standing claim. That is not a cosmetic change: for the
+     49 it asserted both that the data updates itself (it did not) and that there is nothing to do here
+     (there is). */
+  const lock = `<p class="lock">Vienen de BoardGameGeek y se actualizan solos. No se editan acá.</p>`;
+
+  if (ST === 'enriched') return L + lock + factsHTML('ok');
+  if (ST === 'pending') return L + stateHTML() + `<div style="height:12px"></div>` + factsHTML('skel');
+
+  /* --- HOY: the baseline. What `form.ex` renders today for all 49, drawn rather than described. --- */
+  if (VAR === 'HOY') {
+    const alert = ST === 'failed'
+      ? `<div style="display:flex;gap:10px;align-items:center;background:color-mix(in srgb, var(--color-danger) 16%, var(--color-bg));border-radius:10px;padding:12px 14px;margin-bottom:12px">
+           <span style="flex:1;font-size:14px">Error al traer datos de BGG.</span>
+           <button class="btn" style="background:var(--color-surface-2);color:var(--color-text)">Reintentar</button></div>`
+      : '';
+    return L + alert + lock + factsHTML('dash');
+  }
+
+  /* --- A: the id is a club field. The BGG block is pure read-only OUTPUT and says so. --- */
+  if (VAR === 'A') {
+    const retry = ST === 'failed'
+      ? `<button class="arow" data-act="retry" style="margin-top:14px">${ic('retry')}Reintentar</button>` : '';
+    const point = ST === 'no_bgg_id'
+      ? `<p class="hint">Cargá el <b>ID de BGG</b> arriba, en Datos del club, y los datos se traen solos.</p>`
+      : ST === 'bgg_missing'
+      ? `<p class="hint">Corregí el <b>ID de BGG</b> arriba, en Datos del club.</p>` : '';
+    return L + stateHTML() + point + retry;
+  }
+
+  /* --- B: the field lives inside the BGG block. The block stops being read-only, so the lock line cannot
+         survive here at all — its replacement has to say the opposite thing. --- */
+  if (VAR === 'B') {
+    if (ST === 'failed') {
+      return L + stateHTML() + `<button class="arow" data-act="retry" style="margin-top:14px">${ic('retry')}Reintentar</button>`;
+    }
+    const val = G.bgg_id ? String(G.bgg_id) : '';
+    return L + stateHTML() + hintHTML() +
+      `<div class="idrow">
+         <input class="inp" id="idfield" inputmode="numeric" pattern="[0-9]*" placeholder="Pegá el ID acá" value="${esc(val)}" aria-label="ID de BGG">
+         <button class="btn" data-act="link" ${val ? '' : 'disabled'}>Traer datos</button>
+       </div>`;
+  }
+
+  /* --- C: nothing stands on the page. One action row opens a sheet that holds the field, the hint and the
+         link — the only variant where the 386 healthy editors pay literally zero for this feature. --- */
+  const verb = ST === 'bgg_missing' ? 'Corregir el ID de BGG' : ST === 'failed' ? 'Reintentar' : 'Vincular con BoardGameGeek';
+  const act = ST === 'failed' ? 'retry' : 'open-link';
+  const icon = ST === 'failed' ? 'retry' : 'link';
+  return L + stateHTML() + `<button class="arow" data-act="${act}">${ic(icon)}${esc(verb)}</button>`;
+}
+
+/* ---------- the publish gate ----------
+   The developer's rule: "the app must avoid publishing uncompleted games." Today `publish_game/1` validates
+   only `:status` (catalog.ex:490), so a game with zero BGG facts publishes exactly as easily as a complete
+   one — which is how all 49 got live. Every variant obeys the rule identically; it is not a variant axis.
+   Drawn for a DRAFT, the only place Publicar appears (`form.ex:305-312`). The 49 are already published, and
+   what they get instead is the state line's "Se está viendo así en la web." */
+function pubHTML() {
+  if (hasData()) return `<div class="pubbar"><span class="why">Listo para publicar.</span><button class="btn">Publicar</button></div>`;
+  const why = ST === 'pending' ? 'Esperá a que lleguen los datos de BGG.' : 'Un juego sin datos de BGG no se puede publicar.';
+  return `<div class="pubbar"><span class="why">${esc(why)}</span><button class="btn" disabled>Publicar</button></div>`;
+}
+
+/* ---------- D: the state goes ABOVE the club block ----------
+   Added in round 1, after the screenshots. A, B and C all argue about where the remedy sits INSIDE the BGG
+   block, and the harness was fully green across all three — 64/65 — while every one of them was wrong in the
+   same way, which no check could see because none of them asked whether the state was on screen at all.
+
+   Measured at rest, scrollTop 0, state line against the tab bar:
+
+     375×740   A  117px below the fold   B  53px below   C  53px below
+     390×844   A   13px below            B  visible      C  visible
+     360×640   A  217px below            B 153px below   C 153px below
+
+   The club spine is six 64px rows under a ~200px head, so the BGG block STARTS at y=619 on a 740px device
+   whose usable height ends at 673. Wherever the remedy lives inside that block, a staff member who opened
+   this game FROM the "Sin datos" group — that is, someone who came here specifically to fix it — lands on a
+   screen that looks entirely normal and has to scroll past six healthy fields to find out anything is wrong.
+
+   So the premise was wrong, not the three answers. The state is not a property of the BGG block; it is the
+   REASON THE PAGE WAS OPENED, and it outranks every club field. D puts it directly under the head, with its
+   remedy beside it, and then drops the "DATOS DE BGG" block entirely — a heading over eleven nothings is a
+   promise the page cannot keep, and with the state moved up there is nothing left for it to hold. */
+function topHTML() {
+  if (!broken() || VAR !== 'D') return '';
+  const verb = ST === 'bgg_missing' ? 'Corregir el ID de BGG' : ST === 'failed' ? 'Reintentar' : 'Vincular con BoardGameGeek';
+  const act = ST === 'failed' ? 'retry' : 'open-link';
+  const icon = ST === 'failed' ? 'retry' : 'link';
+  return stateHTML() + `<button class="arow" data-act="${act}">${ic(icon)}${esc(verb)}</button>`;
+}
+
+function render() {
+  /* D renders the state above the spine and no BGG block at all when broken; every other variant keeps 072's
+     order. `bggHTML` already returns the enriched/pending blocks, which D shares unchanged. */
+  const top = topHTML();
+  const bgg = (VAR === 'D' && broken()) ? '' : bggHTML();
+  $('#main').innerHTML = `<div class="variant on">${headHTML()}${top}${rowsHTML()}${bgg}${pubHTML()}</div>`;
+  $('#pbt').textContent = G.name;
+  $('#savebar').classList.toggle('on', dirty());
+  $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
+  updateBar();
+}
+
+/* ---------- sheets (D-19e), copied from 072 ---------- */
+function openSheet(html) {
+  $('#sheet').innerHTML = html;
+  $('#sheet').classList.add('open'); $('#backdrop').classList.add('open');
+}
+function closeSheet() {
+  $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open');
+  $('#device').classList.remove('kbd');
+}
+const shTop = (title, sub) => `<div class="sh-top"><div class="grab"></div>
+  <div class="sh-head"><div class="sh-txt"><div class="sh-title">${esc(title)}</div>${sub ? `<p class="sh-sub">${esc(sub)}</p>` : ''}</div>
+  <button class="sh-x" data-close aria-label="Cerrar">${ic('x', 1.9)}</button></div></div>`;
+
+/* the id sheet — A opens it from the club row, C from the action row. Deliberately the SAME sheet: if the two
+   needed different sheets the difference would be about the field, and it is not; it is about where the row
+   that opens it lives. `inputmode="numeric"` gives the number pad without `type=number`'s spinners. */
+function idSheet() {
+  const sub = ST === 'bgg_missing'
+    ? 'El ID guardado no existe en BoardGameGeek. Corregilo y los datos se traen solos.'
+    : 'Con esto el club trae la tapa, la descripción y los datos del juego.';
+  openSheet(shTop('ID de BGG', sub) +
+    `<div class="sh-body">
+       <input class="inp" id="s-bgg" inputmode="numeric" pattern="[0-9]*" placeholder="Pegá el ID acá" value="${G.bgg_id ? esc(String(G.bgg_id)) : ''}">
+       ${hintHTML()}
+       <div style="height:14px"></div>
+       <button class="btn" data-commit="bgg_id" style="width:100%">${VAR === 'A' ? 'Guardar' : 'Traer datos'}</button>
+     </div>`);
+  if (KBD_SIM) $('#device').classList.add('kbd');
+  setTimeout(() => { const i = $('#s-bgg'); i && (i.focus(), i.select()); }, 80);
+}
+
+function editField(key) {
+  if (key === 'bgg_id') return idSheet();
+  if (key === 'name') {
+    openSheet(shTop('Nombre', 'Así aparece en la ludoteca.') +
+      `<div class="sh-body"><input class="inp" id="s-name" value="${esc(G.name)}"><div style="height:12px"></div>
+       <button class="btn" data-commit="name" style="width:100%">Guardar</button></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => { const i = $('#s-name'); i && (i.focus(), i.select()); }, 80);
+  } else if (key === 'description') {
+    openSheet(shTop('Descripción en español', 'La leen los socios en la ficha del juego.') +
+      `<div class="sh-body"><textarea class="inp" id="s-desc">${esc(G.description)}</textarea><div style="height:12px"></div>
+       <button class="btn" data-commit="description" style="width:100%">Guardar</button></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => $('#s-desc')?.focus(), 80);
+  } else if (key === 'units') {
+    openSheet(shTop('Copias', 'Cuántas cajas del juego tiene el club.') +
+      `<div class="sh-body" style="display:flex;justify-content:center;padding-top:8px">
+        <span class="step"><button data-step="-1" aria-label="Una copia menos">${ic('minus')}</button><span class="n" id="unitsn">${G.units}</span><button data-step="1" aria-label="Una copia más">${ic('plus')}</button></span>
+       </div>`);
+  } else if (key === 'is_expansion') {
+    openSheet(shTop('Es una expansión', 'Se muestra junto al juego base.') +
+      `<div class="sh-body">${[['No', false], ['Sí', true]].map(([n, v]) =>
+        `<button class="opt" data-pick="is_expansion" data-val="${v}"><span class="ot"><span class="on2">${n}</span></span>${G.is_expansion === v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'weight_band') {
+    openSheet(shTop('Nivel', 'Cuánto pide el juego a quien lo juega por primera vez.') +
+      `<div class="sh-body">${BANDS.map(b =>
+        `<button class="opt" data-pick="weight_band" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.weight_band === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'shelf_id') {
+    openSheet(shTop('Estante', 'Dónde está la caja en el club.') +
+      `<div class="sh-body">${SHELVES.map(b =>
+        `<button class="opt" data-pick="shelf_id" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.shelf_id === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  }
+}
+
+function snack(msg) {
+  const s = $('#snack'); s.querySelector('span').textContent = msg; s.classList.add('on');
+  clearTimeout(snack._t); snack._t = setTimeout(() => s.classList.remove('on'), 2200);
+}
+
+/* committing an id is a REQUEST, not a save — the fetch is an Oban job (`EnrichGameWorker`, queue
+   concurrency 1, linear backoff attempt*30), so the honest response is to go to `pending` and wait, never to
+   show the facts instantly. Faking the round trip is the only way to feel whether `pending` is a state the
+   editor handles or a gap it falls through. */
+function commitId(raw) {
+  const id = String(raw || '').replace(/\D/g, '');
+  if (!id) return;
+  G.bgg_id = +id; START.bgg_id = +id;
+  closeSheet();
+  ST = 'pending'; FIX.pending.bgg_id = +id; FIX.pending.name = G.name;
+  loadState(); G.bgg_id = +id; START.bgg_id = +id;
+  mark('[data-st]', $(`[data-st="${ST}"]`));
+  render();
+  snack('Buscando el juego en BGG…');
+}
+
+/* ---------- the D-19n page bar ---------- */
+function updateBar() {
+  const head = $('.ghead'); if (!head) return;
+  const y = $('#scroller').scrollTop;
+  const on = y > head.offsetTop + head.offsetHeight - 44;
+  const bar = $('#pbar');
+  bar.classList.toggle('on', on);
+  if (on) { bar.removeAttribute('inert'); $('#back')?.setAttribute('inert', ''); }
+  else { bar.setAttribute('inert', ''); $('#back')?.removeAttribute('inert'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); return; }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); return; }
+  const v = e.target.closest('[data-var]'); if (v) { VAR = v.dataset.var; mark('[data-var]', v); closeSheet(); render(); return; }
+  const s = e.target.closest('[data-st]'); if (s) { ST = s.dataset.st; mark('[data-st]', s); closeSheet(); loadState(); render(); return; }
+
+  const act = e.target.closest('[data-act]');
+  if (act) {
+    const a = act.dataset.act;
+    if (a === 'open-link') return idSheet();
+    if (a === 'link') return commitId($('#idfield')?.value);
+    if (a === 'retry') { ST = 'pending'; loadState(); mark('[data-st]', $('[data-st="pending"]')); render(); snack('Volviendo a intentar…'); return; }
+  }
+
+  const ed = e.target.closest('[data-edit]'); if (ed) return editField(ed.dataset.edit);
+  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') return closeSheet();
+
+  const pick = e.target.closest('[data-pick]');
+  if (pick) { const f = pick.dataset.pick; G[f] = f === 'is_expansion' ? pick.dataset.val === 'true' : pick.dataset.val; closeSheet(); render(); return; }
+
+  const st = e.target.closest('[data-step]');
+  if (st) { G.units = Math.max(1, G.units + (+st.dataset.step)); const n = $('#unitsn'); if (n) n.textContent = G.units;
+    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').classList.toggle('on', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; } return; }
+
+  const com = e.target.closest('[data-commit]');
+  if (com) {
+    const f = com.dataset.commit;
+    if (f === 'bgg_id') return commitId($('#s-bgg').value);
+    G[f] = f === 'name' ? $('#s-name').value : $('#s-desc').value; closeSheet(); render(); return;
+  }
+
+  if (e.target.id === 'save') { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
+  if (e.target.id === 'discard') { G = { ...START }; render(); return; }
+});
+
+/* B's commit is gated on the field having content — the button is disabled until then, so the input has to
+   re-evaluate it on every keystroke rather than only on render. */
+document.addEventListener('input', e => {
+  if (e.target.id === 'idfield') {
+    const b = $('[data-act="link"]');
+    if (b) b.disabled = !e.target.value.replace(/\D/g, '');
+  }
+});
+document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
+document.addEventListener('focusout', e => { if (e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement?.matches('input, textarea')) $('#device').classList.remove('kbd'); }, 150); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) closeSheet(); });
+
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+$('#scroller').addEventListener('scroll', updateBar, { passive: true });
+render();
+</script>
+</body>
+</html>
