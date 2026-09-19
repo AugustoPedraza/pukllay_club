@@ -73,7 +73,11 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
     });
     ok(m.oflow <= 0, `no horizontal overflow (${m.oflow}px)`);
     ok(m.tags.length === 1 && m.tags[0] === 'BUTTON', `ONE row anatomy: every row is the same element (${m.tags.join(', ')})`);
-    ok(m.trailing.length === 1 && m.trailing[0] === 'chevron', `and the same trailing shape (${m.trailing.join(', ')}) — this is what A was chosen for`);
+    /* the load-bearing property is UNIFORMITY, not which shape: decision 33 chose this spine for having one
+       anatomy, and decision 34 then made that shape "none". Asserting the shape by name is how a rule
+       outlives its reason (decisions 26/28) — so assert there is exactly one, and that it is the empty one. */
+    ok(m.trailing.length === 1, `ONE trailing shape across every row (${m.trailing.join(', ')}) — what this spine was chosen for`);
+    ok(m.trailing[0] === 'none', `and after decision 34 that shape is no glyph at all (${m.trailing[0]})`);
     ok(m.onScreen === 6, `all 6 club fields are on screen at rest (${m.onScreen})`);
     log.push(`INFO club block ${m.clubH}px · ${m.onScreen} fields at rest`);
     await p.screenshot({ path: path.join(OUT, '01-spine-375x740.png') });
@@ -175,22 +179,91 @@ const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
   });
   ok(tallest.h <= 96, `no row dominates the list — tallest is ${tallest.t} at ${tallest.h}px (a summary row, not the whole value)`);
 
-  /* ---------- D-19i: the row chevron is reserved for "opens a page" ----------
-     "Rows that act in place (show an answer, open a sheet) have none." Every .frow here opens a SHEET, so
-     none may carry the row chevron's glyph. Asserted on the PATH DATA, not on the icon's name or position:
-     Juegos decision 26 found a caret that had been distinguished from the row chevron by position alone and
-     was byte-identical to it. */
-  const ROWCHEV = 'M9 5l7 7-7 7';
+  /* ---------- D-19i, corrected (decision 34): a sheet-opening row carries NO glyph ----------
+     Round 1 put a chevron-DOWN on every row, reasoning from Web decision 17's note. Wrong twice: that ⌄ was
+     never built (070's row-name button — the one settled "opens a sheet" control in the corpus — renders a
+     bare <h2>, and d17's own note records the ⌄ drawing an empty SVG), and ⌄ has exactly ONE live meaning
+     here, 071's collapse caret. D-19i's literal text was right: "rows that act in place (show an answer,
+     open a sheet) have none."
+     Asserted as NO trailing icon at all, and separately that neither reserved glyph's path data appears —
+     checking the path rather than the icon's name is decision 26's lesson. */
   {
-    const v = 'spine';
-    const bad = await J(rc => [...document.querySelectorAll('.frow')]
-      .filter(r => [...r.querySelectorAll('path')].some(pp => pp.getAttribute('d') === rc))
-      .map(r => r.querySelector('.fr-k')?.textContent), ROWCHEV);
-    ok(bad.length === 0, `${v}: no sheet-opening row wears the page chevron (D-19i)${bad.length ? ' — ' + bad.join(', ') : ''}`);
-    const drawn = await J(() => [...document.querySelectorAll('.frow .chev path')].map(pp => pp.getAttribute('d')));
-    ok(drawn.length > 0 && drawn.every(d => d === 'M5 9l7 7 7-7'),
-      `${v}: and each one draws the disclosure chevron-down (${new Set(drawn).size} glyph, ${drawn.length} rows)`);
+    const ROWCHEV = 'M9 5l7 7-7 7', CARET = 'M5 9l7 7 7-7';
+    const glyphs = await J(() => [...document.querySelectorAll('.frow')].map(r => ({
+      k: r.querySelector('.fr-k')?.textContent,
+      svg: r.querySelectorAll('svg').length,
+      paths: [...r.querySelectorAll('path')].map(pp => pp.getAttribute('d'))
+    })));
+    ok(glyphs.length === 6, `six club rows (${glyphs.length})`);
+    const withGlyph = glyphs.filter(g => g.svg > 0).map(g => g.k);
+    ok(withGlyph.length === 0, `no sheet-opening row carries a trailing glyph (D-19i)${withGlyph.length ? ' — ' + withGlyph.join(', ') : ''}`);
+    const reserved = glyphs.filter(g => g.paths.some(d => d === ROWCHEV || d === CARET)).map(g => g.k);
+    ok(reserved.length === 0, `and neither reserved glyph's path appears — not the page chevron, not the collapse caret${reserved.length ? ' — ' + reserved.join(', ') : ''}`);
+
+    /* what actually separates this block from the read-only BGG facts, now that no glyph does: the club row
+       STACKS its value under its key on the 16 keyline; a BGG fact sets it beside. If that ever collapses,
+       the editable block and the read-only one become the same object. */
+    const shape = await J(() => {
+      const rr = e => { const g = document.createRange(); g.selectNodeContents(e); const r = g.getBoundingClientRect(); return { l: +r.left.toFixed(1), t: +r.top.toFixed(1) }; };
+      const row = document.querySelector('.frow'), kv = document.querySelector('.kv');
+      const ck = rr(row.querySelector('.fr-k')), cv = rr(row.querySelector('.fr-v'));
+      const bk = rr(kv.querySelector('dt')), bv = rr(kv.querySelector('dd'));
+      return { clubStacked: cv.t > ck.t && Math.abs(cv.l - ck.l) < 1, bggBeside: Math.abs(bv.t - bk.t) < 6 && bv.l > bk.l + 40,
+               clubH: +row.getBoundingClientRect().height.toFixed(1), bggH: +kv.getBoundingClientRect().height.toFixed(1) };
+    });
+    ok(shape.clubStacked, 'an editable row stacks its value under its key, both on the 16 keyline');
+    ok(shape.bggBeside, 'a read-only BGG fact sets its value BESIDE the key — the two blocks differ by layout, not by a glyph');
+    ok(shape.clubH > shape.bggH * 1.6, `and by mass: ${shape.clubH}px against ${shape.bggH}px`);
   }
+
+  /* ---------- decision 35: polarity + tint, asserted in BOTH themes ----------
+     The tint-only answer was rejected because it is light-only: --color-accent-text is #E3D9F9 in dark,
+     1.17:1 from body text, so the signal dies on the theme switch. So the guard walks both themes and
+     asserts the three properties the winner was chosen for — the label outranks its value, the value still
+     clears 4.5:1 as body text, and the value stays distinguishable FROM body text. A check that ran in
+     light only would have passed the rejected variant. */
+  for (const theme of ['light', 'dark']) {
+    await J(t => { document.documentElement.dataset.theme = t; }, theme);
+    await p.waitForTimeout(260); await cool();
+    const m = await J(() => {
+      const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * r + .7152 * g + .0722 * b; };
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return +((Math.max(x, y) + .05) / (Math.min(x, y) + .05)).toFixed(2); };
+      const cs = e => getComputedStyle(e);
+      const page = cs(document.querySelector('.device')).backgroundColor;
+      const row = document.querySelector('.frow'), kv = document.querySelector('.kv');
+      const k = cs(row.querySelector('.fr-k')), v = cs(row.querySelector('.fr-v'));
+      const bk = cs(kv.querySelector('dt')), bv = cs(kv.querySelector('dd'));
+      return {
+        keySize: parseFloat(k.fontSize), valSize: parseFloat(v.fontSize),
+        keyC: ratio(k.color, page), valC: ratio(v.color, page),
+        /* DISTINGUISHABILITY is a perceptual question, not a luminance one, so it is measured as CIE76
+           deltaE and not as a contrast ratio. Contrast ratio cannot see hue: the accepted light pair scores
+           1.21 and the REJECTED dark pair 1.17, four hundredths apart, while the eye reads one as obviously
+           purple and the other as identical. In deltaE the same pairs are 29.6 and 10.1. The first version
+           of this guard used the ratio with a >=1.15 bar and passed the rejected variant — decision 30's
+           lesson exactly: a loose tolerance on the WRONG metric. */
+        keyVsVal: ratio(k.color, v.color),
+        deltaE: (() => {
+          const lab = c => { let [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map(x => { x /= 255; return x <= .04045 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); });
+            const X = (r * .4124 + g * .3576 + b * .1805) / .95047, Y = r * .2126 + g * .7152 + b * .0722, Z = (r * .0193 + g * .1192 + b * .9505) / 1.08883;
+            const f = t => t > .008856 ? Math.cbrt(t) : (7.787 * t) + 16 / 116;
+            return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))]; };
+          const [a1, b1, c1] = lab(k.color), [a2, b2, c2] = lab(v.color);
+          return +Math.sqrt((a1 - a2) ** 2 + (b1 - b2) ** 2 + (c1 - c2) ** 2).toFixed(1);
+        })(),
+        /* polarity: in the club block the KEY is the stronger ink; in the BGG block the VALUE is */
+        clubKeyStronger: ratio(k.color, page) > ratio(v.color, page),
+        bggValStronger: ratio(bv.color, page) > ratio(bk.color, page)
+      };
+    });
+    ok(m.keySize > m.valSize, `${theme}: the label outranks its value in size (${m.keySize} > ${m.valSize})`);
+    ok(m.clubKeyStronger, `${theme}: and in ink — label ${m.keyC}:1 over value ${m.valC}:1 (the recognised settings polarity)`);
+    ok(m.bggValStronger, `${theme}: the read-only BGG block keeps the OPPOSITE polarity, so the two blocks cannot be confused`);
+    ok(m.valC >= 4.5, `${theme}: the value still clears 4.5:1 as body text (${m.valC})`);
+    ok(m.deltaE >= 20, `${theme}: and stays perceptibly distinct from its label (deltaE ${m.deltaE}, contrast ${m.keyVsVal}) — the rejected tint-only variant scores 10.1 here`);
+  }
+  await J(() => { document.documentElement.dataset.theme = 'light'; });
+  await p.waitForTimeout(220);
 
   /* ---------- the 44px touch floor ---------- */
   {

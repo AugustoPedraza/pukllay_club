@@ -1129,10 +1129,72 @@ Harness: **135/135**.
 
 Harness: **31/31** after the losing variants were removed.
 
+34. **A row that opens a sheet carries no chevron — and the ⌄ was not free to borrow.** From the device:
+    *"the chevron pointing down isn't the correct affordance since we use that for an open list."* Correct,
+    and the round-1 build was wrong twice over:
+    - **D-19i already said it literally** — *"a chevron means this row opens another page. Rows that act in
+      place (show an answer, open a sheet) have none."* Every row in the editor opens a sheet.
+    - **The ⌄ I substituted was reasoned from a note, not from the screen.** Web decision 17 describes the
+      row name as "a 44px-tall button with a ⌄ chevron", so I took ⌄ to be the established
+      opens-a-sheet glyph. Checked against what is actually built: **070 renders a bare `<h2>` inside that
+      button, no glyph at all** — and d17's own note even records the ⌄ *"drew an empty SVG"*. Grepped
+      across the corpus, `chevD` is **rendered in exactly one place**: 071's collapse caret. So ⌄ has one
+      live meaning, the developer's, and borrowing it would have spent the catalogue's one disclosure glyph
+      on a second thing.
+    *Reading a decision's prose instead of its artefact is its own failure mode — the note described an
+    intent that the sketch never implemented, and nothing flagged the gap.*
+
+35. **The value is the label's subordinate, and it carries the tint.** Removing the glyph opened the real
+    question — what says "editable"? Five answers built and measured at 375×740, in both themes:
+
+    | | señal | claro | oscuro |
+    |---|---|---|---|
+    | A pelado | ninguna | — | — |
+    | B acento | tono | ✓ | **✗ 1,17:1 del texto** |
+    | C pista | línea fija | +27px, empuja BGG fuera | igual |
+    | D anatomía | polaridad | ✓ | ✓ |
+    | **D+B (tomada)** | **polaridad + tono** | **✓** | **✓ (con token nuevo)** |
+
+    **What decided it: both platforms put the LABEL first and the VALUE second** in a settings row — iOS's
+    grouped table (label ink left, value grey right) and M3's list item (headline = label, supporting text =
+    value, which is literally the Android Settings row). This sketch had it **inverted**: key muted 13 /
+    value ink 15. Flipping the polarity also separates the club block from the read-only BGG facts
+    **structurally** — club reads ink-label/quiet-value, BGG reads quiet-key/ink-value, opposite polarity in
+    both themes. **A colour-only signal cannot do that**, which is why B alone failed: dark
+    `--color-accent-text` is `#E3D9F9`, 1.17:1 from body text, so tint *and* polarity die on the switch.
+
+    **Rejected, and why a standing hint is not the answer** (the developer asked): the page already teaches
+    the rule **from the other side** — the BGG block says *"Vienen de BoardGameGeek… No se editan acá."* A
+    positive hint would teach the same lesson twice and, sitting above a block where it is false, imply the
+    BGG facts are editable too. It also costs **27px forever for a lesson learned once**, pushes DATOS DE
+    BGG off the fold, and contradicts decision 19, which made a section's hint **contextual, not standing**.
+    The project's own precedent is already on the record: *"no prompt line — the page is not empty"*;
+    Estantes has one *"because its page is otherwise empty"*. The editor is not empty. And D-19o now gives
+    every row a real press response, which on touch outteaches any line of text.
+
+    **TODO(palette), raised by the developer and real:** the dark half of this needs a colour the palette
+    does not have. `themes/default.css` is a **mirror of `assets/css/app.css`**, gated hex-for-hex by
+    `check-theme-drift.sh`, so `--val` is defined **in the sketch**, not the theme. The dark token must clear
+    **three** bars at once — ≥4.5:1 on the ground (it is body text), perceptibly distinct from body text, and
+    clear of `--color-text-muted` (or it collides with the empty state). Measured over nine candidates,
+    **`#9F7AEA` (4.83 / ΔE 65.5 / 1.43)** is the only strong pass. Before shipping: add the stop upstream
+    reconciled against app.css's `--pk-ramp-*` envelope, mirror it, re-run the drift check. **It should try
+    to beat 4.83:1, not match it** — that makes the value the lowest-contrast text on the dark page, where
+    everything else sits at 6.9+.
+
+    **A guard that passed the thing it was written to reject.** The distinguishability check first used a
+    contrast ratio with a `>= 1.15` bar — and the rejected variant scores **1.17**, four hundredths above
+    it, so the negative test came back green. Contrast ratio measures luminance and **cannot see hue**: the
+    accepted light pair is 1.21 and the rejected dark pair 1.17, while the eye reads one as obviously purple
+    and the other as identical. Re-measured as **CIE76 ΔE** the same pairs are **29.6 and 10.1**, and a bar
+    at 20 sits clear of both. *Decision 30's lesson, in a new place: a loose tolerance on the wrong metric.*
+
+Harness: **46/46**.
+
 ## Where we are (2026-09-18)
 - **Sketch:** `.planning/sketches/071-admin-juegos/index.html`, harness `verify.js` — **135/135**.
   Tools: **Tema · Teclado** only — every variant toggle is removed once its question is answered.
-- **Settled:** decisions 1–9 and **16–33**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
+- **Settled:** decisions 1–9 and **16–35**. **Superseded by 17:** 10, 11, 13, 14, 15 (all were consequences of
   having two kinds of section header). **Reverted:** 12 (`193d10c` → `b1d6c49`).
 - **The page today (375×740):** a 48px search with a `+` beside it · then ONE LIST of three sections, labelled
   in **versalita 14/600** — `SIN DATOS 49 ⌄` and `BORRADORES 1 ⌄` closed, `JUEGOS DEL CLUB 385` open. No resting
@@ -1149,4 +1211,16 @@ Harness: **31/31** after the losing variants were removed.
   5. copy not reviewed
   *(the hint/label pairing is closed by decision 23 — verified, not reproduced; the `:active`/touch state is
   closed by decision 32)*
-- **Next:** finish Juegos → sketch 072 (the editor), sketch 074, `--wrap-up`, then `/gsd-plan-phase 01.8.2`.
+- **BLOCKING BEFORE 01.8.2 SHIPS — `TODO(palette)`, from decision 35.** The editor's editable-value colour
+  needs a **dark token the palette does not have**. `sketches/themes/default.css` is a **mirror** of
+  `assets/css/app.css` gated hex-for-hex by `check-theme-drift.sh`, so sketch 072 defines `--val` **locally**
+  and the real fix is upstream. The token must clear **three** bars at once: **≥4.5:1** on the dark ground
+  (it is body text), **perceptibly distinct** from body text (ΔE, *not* a contrast ratio — see decision 35),
+  and **clear of `--color-text-muted`** or it collides with the empty state. `#9F7AEA` (4.83 / ΔE 65.5 /
+  1.43) is the measured candidate and **the reconciliation should try to beat 4.83:1**, since it would
+  otherwise be the lowest-contrast text on the dark page (everything else is 6.9+).
+  Steps: add the stop in `app.css` against its `--pk-ramp-*` envelope → mirror into `default.css` → re-run
+  `check-theme-drift.sh` → drop the local `--val` override from sketch 072.
+  *While reconciling, audit the rest of the dark palette for the same class of gap: `--color-accent-text`
+  resolving to `#E3D9F9` (1.17:1 from body text) is why a tint-based affordance had no dark answer at all.*
+- **Next:** sketch 072 rounds 2+ (the BGG state), sketch 074, `--wrap-up`, then `/gsd-plan-phase 01.8.2`.
