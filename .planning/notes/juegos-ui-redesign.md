@@ -1507,10 +1507,88 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     by neither. W3 softens it — a dead text button is a grey word, not a dead box — but the rule conflict is
     open.
 
+48. **The remedy while dirty is not hidden — it is unreachable, and the diagnosis keeps accusing.**
+    Sketch **075**, round 1. The slice d42 deferred on purpose, and the measurement came out stronger
+    than d42's own wording. Counted at both scroll extremes, on all three broken states:
+
+    ```
+                     limpio                         sucio
+    CTA              Vincular/Corregir/Reintentar    Guardar
+    remedio en pantalla   1                          0
+    fila bgg_id           0                          0
+    diagnóstico d38   presente                  PRESENTE, PALABRA POR PALABRA
+    ```
+
+    There is no second door. **d38** drops the `DATOS DE BGG` block entirely on a broken game and **d33**'s
+    spine never had a `bgg_id` row, so the CTA is the only way to reach `idSheet()` — and while dirty the
+    slot is `Guardar`. The page goes on saying *"Este juego no está vinculado… **Se está viendo así en la
+    web**"* with nothing to tap. **A permanent accusation with the remedy removed.**
+
+    **Two things d42 could not have known, both found by measuring before drawing:**
+    - **`Guardar` restores it.** Save and the CTA returns to `Vincular`. V1's cost is therefore *bounded* —
+      two steps and a save you may not have been ready to make, not a dead end. That is a real defence of
+      the incumbent, and why V1 is on the page as a variant rather than a straw man.
+    - **Linking while dirty destroyed the club edit, silently.** `commitId` called `loadState()`, which
+      rebuilds **both** `G` and `START` from the fixture: *"Es una expansión: Sí"* came back **No**, no
+      dialog, no snack. It survived a whole round *because* the remedy is unreachable in that state — the
+      only way to reach the function was the console. **Not a variant axis:** fixed at source (save first,
+      then link — the two edits are independent, `bgg_id` is not in `CLUB_KEYS`, so no dialog is owed),
+      negative-tested by reproducing 074's version, and `Reintentar` fixed with it.
+
+    **The three answers, with d44's one slot untouched in all of them** (24/24 across d42's eight
+    situations, dead in exactly 1/8 each, CTA edge R359 everywhere):
+
+    > **V1 Nada** — the incumbent · **V2 En el diagnóstico** — the CTA's understudy, reachable 3/3 ·
+    > **V3 Fila BGG** — a d33 argument first, permanence as the side effect.
+
+    **V2 is not a reversal of d42.** d42 put the remedy in the bar *because the bar was empty*; while dirty
+    it is not. What V2 does reopen, said rather than slid past, is d42's other sentence — *"the state line
+    stays as pure diagnosis"* — by putting an action in a block that has only ever informed.
+
+    **V3's claim fails as drawn.** Its row sits at **y697–761 against a fold of 673**: not clipped but
+    **entirely behind the tab bar**, hit-test landing on `.tabs`, on every broken state. The measurement
+    nearly went the other way — comparing against the *scroller's* rect reports 740, because the 67px tab
+    bar overlays it, which made the row look 21px short instead of fully hidden. Checked whether the
+    position was an artefact of the drawing (it is not: the row follows where `DATOS DE BGG` sits on an
+    enriched game); V3-above-the-spine is **named, not built**.
+
+    **V2's sharpest cost, and both rules are being obeyed.** Found in a screenshot, then measured on
+    **d46's own axis**:
+
+    ```
+    primary    "Guardar"   0px²    texto      <- d46, single-action container
+    understudy "Vincular"  319px²  contorno   <- 064, content-block Principal
+    ```
+
+    The page's primary is its faintest control while the understudy carries the only container on screen.
+    Neither rule is violated — **d47 and 064 meet in a case neither was written for**, the same shape as
+    the 064-vs-d42 disabled-button conflict 46/47 left open. A text remedy evens them at 0px² and costs
+    the affordance; named, not drawn.
+
+    **Charged and recorded:** V2 moves the remedy **221px across, 218px down** when the edit starts
+    (d42's "the thing to tap is moving", now across containers); V3 makes it reachable **twice** while
+    clean (bar 1 + fila 1), the charge 074 round 1 laid against the duplicated back control.
+
+    **A seventh screenshot-only catch:** `.rmd` is the first control drawn from scratch since `.btn` reset
+    `border: 0`, so the UA painted a `2px outset` bevel — invisible to any box-shadow or contrast
+    assertion, because the stroke was present and its contrast correct.
+
+    **And a gap in the page itself:** it could model `pending` but never the moment it ends. The only
+    route to `enriched` was the tool panel's fixture switch, which calls `loadState()` — so the first
+    version of the data-loss check **failed while the fix was correct**, measuring the tool panel rather
+    than the fix. `enrichmentArrived()` added: in the real app that transition is PubSub, and whatever was
+    typed is still the user's.
+
+    **PENDING REVIEW from the device.** No variant is recommended: V2 answers the round's question
+    outright and pays an inversion neither rule governs; V3's d33 argument is the stronger *structural*
+    one and its drawing does not deliver it; V1 is defensible on the bounded-cost finding.
+
+
 ## Where we are (2026-09-19)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
-  `073-admin-bgg-state` **132/132**. Serve with `python3 -m http.server 8765` from the repo root.
+  `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **31/31**
+  (**PENDING REVIEW**). Serve with `python3 -m http.server 8765` from the repo root.
 - **Settled:** decisions 1–9, 16–36, **38–47**. **37 is still a CANDIDATE**, scoped to editors until checked
   against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
   39's "the remedy cannot go in the bar". **Amended by 47:** sketch 064's Principal weight, for the top app
@@ -1539,7 +1617,8 @@ DATOS DE BGG                                   <- dropped entirely when empty (d
 ### Open, in slice order
 
 1. **NEXT, and the developer's own proposal (fresh session):** *the header.* See the handoff below.
-2. **The remedy while dirty** — deferred out of decision 42 on purpose.
+2. ~~**The remedy while dirty**~~ — sketch **075** built, decision 48, **PENDING REVIEW from the device**.
+   V1 / V2 / V3 on the page; no variant recommended.
 3. **`Retirar` / `Restaurar`** — untouched since 063; must become D-19f's centred dialog.
 4. **`Estante`** — 072 shows a picker, but D-01/D-00c place a *copy*, in the "¿Dónde va?" sheet. Likely
    resolves to read-only plus a link out.
