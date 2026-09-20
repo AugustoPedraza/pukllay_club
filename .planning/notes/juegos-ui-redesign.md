@@ -1721,17 +1721,93 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **PENDING REVIEW from the device.** Standing recommendation: **V4 + `Solo acciones de página`**.
 
 
-## Where we are (2026-09-19)
+## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
+
+**The developer's words:** *"This iteration have been becoming harder and harder over time. I want to
+save this learnings until now, and focus on 1 scenario, get it done and then move the next one. Trying to
+fix everything at the time isn't working. So let's focus on this scenario, one by one: create game ->
+edit created game -> draft -> failed."*
+
+### Why it got harder, measured rather than felt
+
+The call is right, and the artefacts say so plainly:
+
+- **Nine decisions (42-50) are all about one action slot.** Each amended the last: d42 put the remedy in
+  the bottom bar -> d44 deleted the bottom bar and made the slot swap -> d46 chose its weight -> d47 made
+  it an exception to 064 -> d50 redefined what the slot is *for*. Every round was correct on its own
+  question and made the next round's question larger.
+- **The open list outgrew the settled list.** 073, 074 and 075 carry **~35 open items** between them —
+  two `TODO(palette)` gaps, a four-sketch `.btn` drift, a rule conflict (064's *no disabled buttons*)
+  that **widened from 1 dead slot to 4** as a direct result of d50, plus `crear juego`, `Borrar el ID`,
+  the toast, `Retirar`/`Restaurar`, `Estante`, `Copias`, `En la web` — none drawn.
+- **Every sketch measured STATES, never a JOURNEY.** 075's own fixtures are a toolbar of eight isolated
+  situations. Nobody has ever walked create -> edit -> draft -> failed in one sitting, which is exactly
+  how the `commitId` data-loss defect survived a whole round: it was unreachable from any single state.
+
+**The lesson to carry:** a round that fixes one property across all states leaves every other property
+half-decided in all of them. A round that walks one scenario end to end finishes something.
+
+### The scenario, and what it actually touches
+
+```
+crear juego  ->  editar el juego creado  ->  borrador  ->  falló
+```
+
+| step | what exists | what does not |
+|---|---|---|
+| **crear** | d4 settled the entry points: a 44px `+` rightmost in the header opens *"Agregar juego"* (BGG number **or** link, the edition prompt, and `Crear a mano`), and the search is create-aware | **the sheet has never been drawn.** 074 flags it: *"`crear juego` is not drawn — the title question changes shape when there is no name yet."* 41 games have no BGG id, so by-name creation is **11% of the catalogue**, not an edge case |
+| **editar** | the whole 072-075 spine, sheets, top bar, D-19f dialog | what a *just-created* game looks like before anything arrives |
+| **borrador** | `CY='draft'`, CTA `Publicar`, disabled until `hasData()` | **`publish_game/1` does not implement the publish rule** — `catalog.ex:490` validates only `:status` |
+| **falló** | the `failed` state, `Reintentar`, d38's diagnosis | **`Reintentar`'s gate is wrong** (`enrichment_status == "failed"` should be *"has a `bgg_id`"*, `form.ex:220` + `catalog.ex:368`); **no failure reason is ever persisted** (`enrich_game_worker.ex:94` logs three causes into one string), so the UI can never say which happened; `enrichment_status` is **unvalidated on every live write path** |
+
+Note the shape: **two of the four steps are blocked on codebase gaps, not design questions.** That is new
+information — the previous rounds were pure UI and could not surface it.
+
+### Start here
+
+1. **Read this file's decisions 33-50**, then `075-admin-remedy-dirty/README.md` (three rounds, all the
+   measurements) and `074-admin-header/README.md`.
+2. **Pin the two PENDING REVIEW items as provisional rather than re-opening them**, or the scenario has no
+   stable base:
+   - **073 round 4 / G1** — the bar disappears when nothing is pending. Standing recommendation on the
+     measurements, never confirmed from the device.
+   - **075 / V4 + `Solo acciones de página`** — the diagnosis *is* the remedy, and the header CTA holds
+     only what commits the page. Standing recommendation, never confirmed from the device. **It has no
+     measured cost** except a CTA dead in 4 of 8, which d50 argues is accurate rather than inverted.
+3. **Draw the scenario as one walk, not eight fixtures.** The sketch should be steppable — create, then
+   edit, then draft, then fail — with state carried between steps. That is the thing no sketch in this
+   lineage has done, and it is where the `commitId` class of defect lives.
+4. **Do not re-open** d33-d50 unless the scenario forces it. If it does, that is a real finding; record
+   it as an amendment (d47's rule) rather than a drift.
+
+### House rules that keep catching real defects, and cost little
+
+- Keep a `HOY` variant rendering what ships, so every guard can be **negative-tested**.
+- **Screenshot every variant and look at it.** In this lineage the harness has been green while the page
+  was wrong **eight** times now — the latest being a band that painted behind `.device` and a diagnosis
+  dot that has been transparent since 073.
+- **Measure before drawing variants**, and check a charged cost is not an artefact of your own drawing —
+  it was, three times across 074 and 075.
+- **Check the variants differ along ONE axis.** 075 spent two rounds charging V4 for a cost that belonged
+  to a second, unnoticed axis (what the CTA is for), not to V4.
+
+
+## Where we are (2026-09-20)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
   `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **48/48**
   (**PENDING REVIEW**). Serve with `python3 -m http.server 8765` from the repo root.
-- **Settled:** decisions 1–9, 16–36, **38–47**. **37 is still a CANDIDATE**, scoped to editors until checked
-  against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
-  39's "the remedy cannot go in the bar". **Amended by 47:** sketch 064's Principal weight, for the top app
-  bar only — 064 stands everywhere else, and 071–073's filled `.btn` is still an uncorrected drift.
-- **Open across 46/47 and worth picking up first:** 064 banned disabled buttons outright, d42 allowed 0 and
-  rejected 4, and the slot is dead in **1 of 8**. That case is governed by neither rule.
+- **Settled:** decisions 1–9, 16–36, **38–47**. **48–50 are recorded but PENDING REVIEW** (sketch 075,
+  never confirmed from the device). **37 is still a CANDIDATE**, scoped to editors until checked against
+  069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:** 39's "the
+  remedy cannot go in the bar". **Amended by 47:** sketch 064's Principal weight, for the top app bar
+  only — 064 stands everywhere else, and 071–073's filled `.btn` is still an uncorrected drift.
+  **Amended by 50:** d42/d44's swapping slot — the header CTA holds only what commits the page.
+- **Open across 46/47/50, and it WIDENED:** 064 banned disabled buttons outright, d42 allowed 0 and
+  rejected 4, d44 accepted **1 of 8** — and d50's page-only policy takes it to **4 of 8**, d42's own
+  rejected count, argued as accurate rather than inverted. Governed by neither rule, and now larger.
+- **WAY OF WORKING CHANGED 2026-09-20.** Property-at-a-time rounds are replaced by one scenario end to
+  end — see the scenario handoff above. Start there, not from this list.
 - **073 round 4 is PENDING REVIEW** — G1 (the bar disappears when nothing is pending) is the standing
   recommendation on the measurements, not yet confirmed from the device. G2 and G3 are still in the page.
 - **Two fixes landed back in 072** from 073's findings, both guarded and negative-tested: the sheet-close
@@ -1751,7 +1827,9 @@ DATOS DE BGG                                   <- dropped entirely when empty (d
 [ barra: la acción del momento, borde derecho fijo ]   <- d42
 ```
 
-### Open, in slice order
+### Open, in slice order — **superseded 2026-09-20.** These are still true, but they are properties
+### across all states, which is the way of working the scenario handoff above replaces. Kept as an
+### inventory of what is unbuilt, not as a queue to work through in this order.
 
 1. **NEXT, and the developer's own proposal (fresh session):** *the header.* See the handoff below.
 2. ~~**The remedy while dirty**~~ — sketch **075**, decisions **48-50**, **PENDING REVIEW from the
@@ -1781,7 +1859,7 @@ DATOS DE BGG                                   <- dropped entirely when empty (d
 
 ---
 
-## HANDOFF — sketch 074, the header (opened 2026-09-19, for a fresh session)
+## HANDOFF — sketch 074, the header (opened 2026-09-19) — **CLOSED.** Delivered as decisions 43-47. Superseded by the scenario handoff above.
 
 **The developer's words:** *"Until now, we have been using a useless header that is replaced at scrolling. So
 I want to explore what if we use with 'current action' (like editar juego, o crear juego, etc), the chevron
