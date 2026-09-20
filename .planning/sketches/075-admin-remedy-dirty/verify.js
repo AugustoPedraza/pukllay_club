@@ -65,13 +65,16 @@ const SITS = [
   const J = (f, a) => p.evaluate(f, a);
   const cool = async () => { await p.mouse.move(-60, -60); await p.waitForTimeout(120); };
 
-  const set = async (v, s, cy = 'published', makeDirty = false) => {
-    await J(([vv, ss, cc]) => {
+  /* `pol` defaults to 'swap' — d44 as settled — so every check written before round 3 keeps measuring
+     the incumbent and cannot silently start measuring the new policy. */
+  const set = async (v, s, cy = 'published', makeDirty = false, pol = 'swap') => {
+    await J(([vv, ss, cc, pp]) => {
       document.querySelector(`[data-var="${vv}"]`).click();
+      document.querySelector(`[data-cta="${pp}"]`).click();
       document.querySelector(`[data-st="${ss}"]`).click();
       document.querySelector(`[data-cy="${cc}"]`).click();
       document.getElementById('scroller').scrollTop = 0;
-    }, [v, s, cy]);
+    }, [v, s, cy, pol]);
     await p.waitForTimeout(90);
     if (makeDirty) {
       /* through the real UI — d41 deleted the sheets' commit buttons, so picking the other value commits
@@ -497,6 +500,78 @@ const SITS = [
       return n;
     }, SITS);
     ok(dead >= 1, `V4-only (remedy dropped from the CTA) would leave the slot dead in ${dead} of 8 — d42 rejected 4, d44 accepted 1. Named, not drawn: it reopens d44.`);
+  }
+
+  /* ============================ ROUND 3: WHAT THE HEADER CTA IS FOR ============================
+     23. THE TAXONOMY, asserted rather than accepted. The developer's claim is that `Vincular` is not the
+     same kind of thing as `Guardar` — it opens a sheet, it does not commit the page. Checked against the
+     artefact: `remedy()` returns `open-link` (-> idSheet(), a disclosure) for two of the three broken
+     states and `retry` (-> fires the job) for the third. So the slot has been holding disclosures and
+     page-commits interchangeably, under one name. */
+  {
+    const kinds = await J(() => {
+      const out = {};
+      for (const st of ['no_bgg_id', 'bgg_missing', 'failed']) { const o = ST; ST = st; const r = remedy(); out[st] = r.act; ST = o; }
+      return out;
+    });
+    const opens = Object.values(kinds).filter(k => k === 'open-link').length;
+    ok(opens === 2, `\`remedy()\` returns two KINDS under one name: ${JSON.stringify(kinds)} — ${opens} disclosures (open a sheet) and ${3 - opens} action`);
+  }
+
+  /* 24. Under 'page' the slot holds ONLY what commits the page — never a sheet-opener — in every
+     situation and every variant. Negative-tested against 'swap', which really does put one there. */
+  {
+    let leaked = [];
+    for (const v of VARS) for (const s of SITS) {
+      await set(v, s.st, s.cy, s.d, 'page');
+      const a = await J(() => { const b = document.querySelector('.tbar .btn'); return b ? { label: b.textContent.trim(), act: b.dataset.act || null } : null; });
+      if (a && a.act) leaked.push(`${v}/${s.k}: ${a.label} (${a.act})`);
+    }
+    ok(leaked.length === 0, `'page' · the CTA never holds a sheet-opener (${leaked.length ? leaked.join('; ') : VARS.length * 8 + ' situations clean'})`);
+    await set('V4', 'no_bgg_id', 'published', false, 'swap');
+    const sw = await J(() => { const b = document.querySelector('.tbar .btn'); return b ? b.dataset.act || null : null; });
+    ok(sw === 'open-link', `NEGATIVE TEST — 'swap' (d44) really does put a sheet-opener in the CTA (act="${sw}"), so check 24 can fail`);
+  }
+
+  /* 25. The count, and what changes is its MEANING. d42 rejected 4-of-8 because a dead `Guardar` there
+     "demoted the real next step to a ghost" — which assumes the remedy wanted that slot. Under 'page' it
+     never wanted it, so the same number stops describing an inverted hierarchy and starts describing a
+     page with nothing to commit. The number is asserted; the reading is the developer's call. */
+  {
+    const count = async pol => {
+      let n = 0, which = [];
+      for (const s of SITS) { await set('V4', s.st, s.cy, s.d, pol);
+        const d = await J(() => { const b = document.querySelector('.tbar .btn'); return !!(b && b.disabled); });
+        if (d) { n++; which.push(s.k); } }
+      return { n, which };
+    };
+    const sw = await count('swap'), pg = await count('page');
+    ok(sw.n === 1, `'swap' (d44) · dead in ${sw.n} of 8 (${sw.which.join(', ')})`);
+    ok(pg.n === 4, `'page' · dead in ${pg.n} of 8 (${pg.which.join(', ')}) — d42's rejected count, under a premise that makes it accurate rather than inverted`);
+  }
+
+  /* 26. WHAT IT BUYS: V4's only charged cost disappears. Round 2 charged V4 with the remedy being
+     reachable TWICE while clean (barra 1 + diagnóstico 1). Under 'page' the bar never holds it, so the
+     remedy has exactly one home — clean AND dirty, the same one, never moving. */
+  {
+    const n = async (pol, d) => { await set('V4', 'no_bgg_id', 'published', d, pol);
+      return J(() => { const vis = el => el && el.offsetParent !== null;
+        return [...document.querySelectorAll('.tbar [data-act="open-link"], #stbtn')].filter(vis).length; }); };
+    const a = await n('swap', false), b = await n('page', false), c = await n('page', true);
+    ok(a === 2 && b === 1 && c === 1,
+      `V4 · 'swap' reaches the remedy twice while clean (${a}); 'page' reaches it exactly once, clean (${b}) and dirty (${c}) — one home, never moving. Round 2's only charged cost, dissolved.`);
+  }
+
+  /* 27. THE COMBINATION THAT MUST NOT SHIP: 'page' with no body home leaves the remedy reachable from
+     NOWHERE, in any state. Asserted so the two axes cannot be set independently by mistake. */
+  {
+    let gone = 0;
+    for (const st of BROKEN) for (const d of [false, true]) {
+      await set('V1', st, 'published', d, 'page');
+      const r = await reach();
+      if (!r.rendered) gone++;
+    }
+    ok(gone === 6, `V1 + 'page' leaves the remedy reachable from nowhere in ${gone}/6 broken states — the two axes are NOT independent: 'page' requires a body home`);
   }
 
   /* 16. Screenshots. Every variant, both themes, the dirty broken state the round is about — and then

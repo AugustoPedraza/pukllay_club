@@ -1660,10 +1660,71 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **PENDING REVIEW from the device**, with V1–V4 on the page.
 
 
+50. **The header CTA holds what commits the PAGE; a sheet-opener is a different kind of thing.**
+    Sketch 075, round 3, from the developer: *"The header CTA is action associated to the fullscreen
+    'page', and 'vincular' is more a kind of 'link' that trigger an action (display a new bottom sheet)."*
+
+    **Checked against the artefact before building on it, and it is sharper than a placement preference.**
+    `remedy()` has been returning **two different kinds of thing under one name**:
+
+    ```
+    Vincular      act 'open-link'  ->  idSheet()       DISCLOSURE — opens a sheet, commits nothing
+    Corregir ID   act 'open-link'  ->  idSheet()       the same
+    Reintentar    act 'retry'      ->  fires the job   an ACTION, but about the BGG data, not the page
+    ```
+
+    So **d44's swapping slot has been holding disclosures and page-commits interchangeably** — while the
+    editor already carries a taxonomy for disclosures: **d33**'s spine, where every row opens a sheet, and
+    **d34**, where such a row carries no chevron *because* it is that kind of thing. `Vincular` is one of
+    those. `Guardar` and `Publicar` are not.
+
+    **The round's first result is that this is an ORTHOGONAL AXIS, not another variant.** Rounds 1-2 had
+    conflated *where the remedy lives in the body* with *what the header slot is for*. Drawn as a toggle
+    crossing every body-home — `Cambia (d44)` vs `Solo acciones de página`.
+
+    **What it buys: V4's only charged cost disappears.** Under `page` the bar never holds the remedy, so
+    V4 goes from reachable **twice** while clean to **exactly one home, clean and dirty, never moving**.
+    V4 + `page` has no cost this round could measure — 3/3 reachable while dirty, above the fold, no
+    travel, no inversion, no duplication.
+
+    **What it costs, and why the same number reads differently.** The slot goes **dead in 4 of 8 —
+    exactly the count d42 rejected.** Not smoothed over; what changed is what the number *describes*:
+
+    > d42 rejected 4/8 because a dead `Guardar` there *"demoted the real next step to a ghost"* — which
+    > assumes the remedy **wanted** that slot and was displaced from it. Under `page` it never wanted it.
+
+    And the four are **not uniform**, which is the strongest evidence they are honest rather than inverted:
+
+    ```
+    pub·sin-id·limpio      Guardar  [dis]     no hay nada que guardar
+    pub·con-datos·limpio   Guardar  [dis]     no hay nada que guardar
+    pub·id-malo·limpio     Guardar  [dis]     no hay nada que guardar
+    bor·sin-id·limpio      Publicar [dis]     no se puede publicar un juego sin datos
+    ```
+
+    Three say *this page has nothing to commit*; one says *this page cannot be published yet*. Both are
+    true statements about the page, which is what the slot is now for. **d46's W3 Texto gets MORE
+    important, not less** — a dead text button is a grey word, and there are now four rather than one.
+
+    **This amends d42 and d44, and is written down as one.** An unrecorded departure is precisely what
+    d47 was convened to stop.
+
+    **The combination that must not ship:** `page` with **no body home** leaves the remedy reachable from
+    **nowhere**, 6 of 6 broken states. The two axes are not independent — choosing `page` requires
+    choosing a body home. Asserted so they cannot be set separately by mistake.
+
+    **Still open:** `Reintentar` is neither a disclosure nor a page-commit — it fires a job about the BGG
+    data — and lands in the body with the other two **by elimination rather than by argument**. And
+    **064's `no disabled buttons` conflict widens** from 1 dead slot to 4; it was already governed by
+    neither rule after 46/47.
+
+    **PENDING REVIEW from the device.** Standing recommendation: **V4 + `Solo acciones de página`**.
+
+
 ## Where we are (2026-09-19)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
-  `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **41/41**
+  `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **48/48**
   (**PENDING REVIEW**). Serve with `python3 -m http.server 8765` from the repo root.
 - **Settled:** decisions 1–9, 16–36, **38–47**. **37 is still a CANDIDATE**, scoped to editors until checked
   against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
@@ -1693,11 +1754,12 @@ DATOS DE BGG                                   <- dropped entirely when empty (d
 ### Open, in slice order
 
 1. **NEXT, and the developer's own proposal (fresh session):** *the header.* See the handoff below.
-2. ~~**The remedy while dirty**~~ — sketch **075**, decisions 48-49, **PENDING REVIEW from the device**.
-   V1 / V2 / V3 / V4 on the page. **V4 (the diagnosis IS the remedy) is the standing recommendation** —
-   it is the only variant that is reachable while dirty, above the fold, with no travel and no inversion.
-   Its price is the remedy being reachable twice while clean; making it the sole home would leave the CTA
-   dead in 4 of 8, the count d42 rejected.
+2. ~~**The remedy while dirty**~~ — sketch **075**, decisions **48-50**, **PENDING REVIEW from the
+   device**. Standing recommendation: **V4 + `Solo acciones de página`** — the diagnosis is the remedy,
+   and the header CTA holds only what commits the page. One home for the remedy, clean and dirty, never
+   moving; no travel, no inversion, no duplication, above the fold. Its price is a CTA dead in 4 of 8 —
+   d42's rejected count, accepted here under a premise that makes it accurate rather than inverted, and
+   amended explicitly rather than by drift.
 3. **`Retirar` / `Restaurar`** — untouched since 063; must become D-19f's centred dialog.
 4. **`Estante`** — 072 shows a picker, but D-01/D-00c place a *copy*, in the "¿Dónde va?" sheet. Likely
    resolves to read-only plus a link out.

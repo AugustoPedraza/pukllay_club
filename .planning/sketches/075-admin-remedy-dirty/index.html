@@ -653,6 +653,15 @@
     <button data-var="V4">V4 · El diagnóstico ES el remedio</button>
     <button data-var="HOY">Hoy (073)</button>
   </div>
+  <!-- ROUND 3: an ORTHOGONAL axis, not a fifth variant. The developer: *"The header CTA is action
+       associated to the fullscreen page, and 'vincular' is more a kind of link that trigger an action
+       (display a new bottom sheet)."* That is about WHAT THE SLOT IS FOR, which crosses with — rather
+       than competes with — where the remedy lives in the body. Drawn as a toggle so every body-home can
+       be seen under both policies instead of multiplying tabs. -->
+  <div>CTA del header:
+    <button data-cta="swap" class="on">Cambia (d44)</button>
+    <button data-cta="page">Solo acciones de página</button>
+  </div>
   <div>Estado:
     <button data-st="no_bgg_id" class="on">Sin ID · 41</button>
     <button data-st="bgg_missing">ID inválido · 8</button>
@@ -724,7 +733,7 @@ const SHELVES = [
 
 /* ROUND 3: N1 becomes three weights. W1 is N1 byte-for-byte except for the CTA's paint, so every round-1
    and round-2 guard still has an incumbent to run against; W2 and W3 differ from it in paint ONLY. */
-let VAR = 'V1', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
+let VAR = 'V1', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published', CTAPOL = 'swap';
 let G, START;
 
 function loadState() {
@@ -754,10 +763,38 @@ function remedy() {
     : ST === 'failed' ? { verb: 'Reintentar', short: 'Reintentar', act: 'retry', icon: 'retry' }
     : { verb: 'Vincular con BoardGameGeek', short: 'Vincular', act: 'open-link', icon: 'link' };
 }
+/* ---- ROUND 3: what is the header CTA FOR? ----
+   From the developer: *"The header CTA is action associated to the fullscreen 'page', and 'vincular' is
+   more a kind of 'link' that trigger an action (display a new bottom sheet)."*
+
+   CHECKED AGAINST THE ARTEFACT BEFORE BUILDING ON IT, and it is sharper than a placement preference:
+   `remedy()` has been returning TWO DIFFERENT KINDS OF THING under one name.
+
+     Vincular      -> act 'open-link' -> idSheet()        a DISCLOSURE; opens a sheet, commits nothing
+     Corregir ID   -> act 'open-link' -> idSheet()        the same
+     Reintentar    -> act 'retry'     -> fires the job    an ACTION, but about the BGG data, not the page
+
+   So d44's swapping slot has been holding disclosures and page-commits interchangeably. The editor
+   already has a whole taxonomy for disclosures — d33's spine, where every row opens a sheet, and d34,
+   where such a row carries no chevron precisely BECAUSE it is that kind of thing. `Vincular` is one of
+   those. `Guardar` and `Publicar` are not.
+
+   'swap' is d44 as settled, kept as the incumbent so the comparison is honest.
+   'page' is the developer's reading: the slot holds only what COMMITS THE PAGE.
+
+   WHY THIS IS NOT JUST "DROP THE REMEDY FROM THE CTA", which round 2 measured at 4-of-8 dead and
+   therefore rejected as d42's own rejected count: d42's 4/8 was rejected because a dead `Guardar` there
+   "demoted the real next step to a ghost" — that reasoning assumes the remedy WANTED that slot and was
+   displaced from it. Under 'page' it never wanted it. A disabled `Guardar` on a clean page is then not an
+   inverted hierarchy, it is an accurate statement that this page has nothing to commit. The count is the
+   same; what it MEANS is not. That is an amendment to d42/d44 and it is written down as one — being an
+   unrecorded departure is exactly what d47 was convened to stop. */
 function primary() {
   if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
-  const r = remedy();
-  if (r) return { label: r.verb, short: r.short, act: r.act, icon: r.icon, dis: false, situational: true };
+  if (CTAPOL === 'swap') {
+    const r = remedy();
+    if (r) return { label: r.verb, short: r.short, act: r.act, icon: r.icon, dis: false, situational: true };
+  }
   if (CY === 'draft') return { label: 'Publicar', id: 'publish', dis: !hasData() };
   return null;
 }
@@ -1166,6 +1203,7 @@ document.addEventListener('click', e => {
   const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); return; }
   const v = e.target.closest('[data-var]'); if (v) { VAR = v.dataset.var; mark('[data-var]', v); closeSheet(); $('#scroller').scrollTop = 0; render(); return; }
   const s = e.target.closest('[data-st]'); if (s) { ST = s.dataset.st; mark('[data-st]', s); closeSheet(); loadState(); render(); return; }
+  const cp = e.target.closest('[data-cta]'); if (cp) { CTAPOL = cp.dataset.cta; mark('[data-cta]', cp); closeSheet(); render(); return; }
   const cy = e.target.closest('[data-cy]'); if (cy) { CY = cy.dataset.cy; mark('[data-cy]', cy); closeSheet(); render(); return; }
 
   const act = e.target.closest('[data-act]');

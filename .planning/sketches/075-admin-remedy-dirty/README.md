@@ -4,7 +4,7 @@ name: admin-remedy-dirty
 question: "Where does the remedy live while the editor is dirty and the CTA slot is taken?"
 winner: null
 tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, d29, d40, dirty-state, palette]
-rounds: 2
+rounds: 3
 status: PENDING REVIEW
 ---
 
@@ -20,7 +20,7 @@ The slice decision 42 deferred on purpose:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/075-admin-remedy-dirty/index.html
-node .planning/sketches/075-admin-remedy-dirty/verify.js     # 41/41
+node .planning/sketches/075-admin-remedy-dirty/verify.js     # 48/48
 ```
 
 Variants on screen: **V1 Nada** (opens — the incumbent), **V2 En el diagnóstico**, **V3 Fila BGG**,
@@ -298,3 +298,89 @@ V4's tap target is **343×72 = 24,535px²**, **4.7×** V2's 117×44 button.
   real token in `app.css`, and the same undefined `--color-accent` should be grepped for elsewhere.
 - **V4-only (dead in 4 of 8) is named, not drawn** — it reopens d44, which this round may not touch.
 - Everything in round 1's Open list still stands.
+
+---
+
+## Round 3 — what the header CTA is *for*
+
+From the developer:
+
+> *"The header CTA is action associated to the fullscreen 'page', and 'vincular' is more a kind of 'link'
+> that trigger an action (display a new bottom sheet)."*
+
+**Checked against the artefact before building on it, and it is sharper than a placement preference.**
+`remedy()` has been returning **two different kinds of thing under one name**:
+
+```
+Vincular      act 'open-link'  ->  idSheet()      a DISCLOSURE — opens a sheet, commits nothing
+Corregir ID   act 'open-link'  ->  idSheet()      the same
+Reintentar    act 'retry'      ->  fires the job  an ACTION, but about the BGG data, not the page
+```
+
+So d44's swapping slot has been holding disclosures and page-commits interchangeably. The editor already
+has a taxonomy for disclosures — **d33**'s spine, where every row opens a sheet, and **d34**, where such a
+row carries no chevron *because* it is that kind of thing. `Vincular` is one of those. `Guardar` and
+`Publicar` are not.
+
+**This is an orthogonal axis, not a fifth variant** — and finding that out is the round's first result.
+Rounds 1–2 had conflated *where the remedy lives in the body* with *what the header slot is for*. They are
+independent, so the CTA policy is drawn as a **toggle** that crosses with every body-home:
+
+| | the slot holds |
+|---|---|
+| **Cambia (d44)** | the incumbent — whatever is "the one thing to do now", including sheet-openers |
+| **Solo acciones de página** | only what commits the page: `Guardar`, `Publicar` |
+
+### What it buys: V4's only charged cost disappears
+
+Round 2 charged V4 with the remedy being reachable **twice** while clean. Under `page` the bar never holds
+it, so:
+
+```
+V4 · swap    clean 2   →   the duplication round 2 charged
+V4 · page    clean 1, dirty 1   →   ONE home, clean and dirty, never moving
+```
+
+That was V4's only cost. With it gone, V4 + `page` has no cost this round could measure: reachable 3/3
+while dirty, above the fold, no travel, no inversion, no duplication.
+
+### What it costs, and why the same number reads differently
+
+The slot goes **dead in 4 of 8** — *exactly the count d42 rejected*, and four times what d44 accepted.
+That is not smoothed over. What changed is what the number describes:
+
+> d42 rejected 4/8 because a dead `Guardar` there *"demoted the real next step to a ghost"* — which
+> assumes the remedy **wanted** that slot and was displaced from it. Under `page` it never wanted it.
+
+And the four are not uniform, which is the strongest evidence they are honest rather than inverted:
+
+```
+pub·sin-id·limpio      Guardar  [dis]      nothing to save
+pub·con-datos·limpio   Guardar  [dis]      nothing to save
+pub·id-malo·limpio     Guardar  [dis]      nothing to save
+bor·sin-id·limpio      Publicar [dis]      cannot publish a game with no data
+```
+
+Three say *this page has nothing to commit*; one says *this page cannot be published yet*. Both are true
+statements about the page, which is what the slot is now for. **d46's W3 Texto gets more important, not
+less** — a dead text button is a grey word, and there are now four of them rather than one.
+
+**This is an amendment to d42 and d44 and it is written down as one.** Being an unrecorded departure is
+precisely what d47 was convened to stop.
+
+### The combination that must not ship
+
+`page` with **no body home** leaves the remedy reachable from **nowhere**, in 6 of 6 broken states. The
+two axes are **not** independent: choosing `page` requires choosing a body home. Asserted (check 27) so
+they cannot be set separately by mistake.
+
+## Open (round 3)
+
+- **d42/d44 need amending explicitly if `page` wins.** The 4-of-8 count must be recorded as *accepted
+  under a new premise*, not left to look like the rejected configuration returning by drift.
+- **`Reintentar` is still the odd one.** It is neither a disclosure nor a page-commit — it fires a job
+  about the BGG data. Under `page` it goes to the body with the other two, which is right by elimination
+  rather than by argument.
+- **064's `no disabled buttons` gets worse, not better** — 1 dead slot becomes 4. That conflict was
+  already open after 074 and this widens it.
+- Everything in rounds 1 and 2's Open lists still stands, including `Borrar el ID`.
