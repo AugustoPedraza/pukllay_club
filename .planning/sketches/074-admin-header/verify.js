@@ -567,8 +567,13 @@ const SITS = [
       `the three weights are the same height (${WEIGHTS.map(w => g[w].h + 'px').join(' / ')}) — paint is the only axis`);
     ok(new Set(WEIGHTS.map(w => g[w].inkR)).size === 1,
       `every weight's INK ends on the same keyline (${WEIGHTS.map(w => `${w} R${g[w].inkR}`).join(' · ')}) — d42 holds for what the eye reads`);
-    ok(g.W3.boxR > g.W1.boxR,
-      `W3's cost, stated: with the label on the keyline its BOX — and the 44px hit target with it — overhangs to R${g.W3.boxR}, ${g.W3.boxR - g.W1.boxR}px past every other right edge and ${375 - g.W3.boxR}px from the bezel (W1/W2 end at R${g.W1.boxR})`);
+    /* ROUND 3 FOLLOW-UP, after W3 was chosen. This assertion used to be the opposite — it RECORDED an
+       overhang to R373 as W3's irreducible cost. It was not irreducible: the visible box and the hit box
+       are separate boxes, and once `padding-right: 0` puts the visible edge on the keyline, the
+       pseudo-element carries the tap margin out past it. d42's rule now holds LITERALLY for all three
+       weights, with no amendment to the rule and no overhang on screen. */
+    ok(new Set(WEIGHTS.map(w => g[w].boxR)).size === 1,
+      `every weight's visible BOX also ends on the keyline (${WEIGHTS.map(w => `${w} R${g[w].boxR}`).join(' · ')}) — d42 holds literally, and W3's R373 overhang is gone`);
   }
 
   /* ================= 20. what each weight costs the bar at full scroll =================
@@ -611,12 +616,18 @@ const SITS = [
       r[w] = await inkProbe();
       await p.screenshot({ path: path.join(OUT, `20-${w}-titulo-y-cta.png`) });
     }
-    ok(r.W1.gap === r.W2.gap && r.W2.gap === r.W3.gap,
-      `the title-to-action gap is the same ${r.W1.gap}px in every weight — so what separates them is the PAINT, not the spacing`);
-    ok(r.W1.box > 1.2 && r.W2.box > 1.2,
-      `W1 and W2 put a container edge in that ${r.W1.gap}px (box ${r.W1.box}:1 and ${r.W2.box}:1 against the bar)`);
-    ok(r.W3.box === 0,
-      `W3 puts NOTHING there — ${r.W3.gap}px of whitespace between a truncated title and the primary, both of them bare text (box ${r.W3.box})`);
+    /* ROUND 3 FOLLOW-UP. This block first measured all three weights at the bar's own 4px gap and reported
+       the run-on as W3's cost. W3 was then chosen, so the cost became a defect to fix rather than a number
+       to record: W3 alone opens the gap to 16px, since it is the only weight with no edge of its own to
+       separate the action from a truncated title.
+       The other two keep 4px, which is what makes this falsifiable — if the scoped rule ever stops
+       applying, W3 silently drops back to their number and the first assertion fails. */
+    ok(r.W1.gap === 4 && r.W2.gap === 4,
+      `NEGATIVE TEST — W1 and W2 really do still sit at the bar's own ${r.W1.gap}px, so the assertion below can fail`);
+    ok(r.W3.gap >= 16,
+      `W3: ${r.W3.gap}px of clear space between a truncated title and the action — ${r.W3.gap - r.W1.gap}px more than the weights that have a box edge to do the separating`);
+    ok(r.W1.box > 1.2 && r.W2.box > 1.2 && r.W3.box === 0,
+      `…and it is still the only weight with no container at all (W1 ${r.W1.box}:1 · W2 ${r.W2.box}:1 · W3 ${r.W3.box}) — the space is doing the whole job`);
   }
 
   /* ================= 21. THE ROUND'S LOAD-BEARING CHECK: the disabled drop =================

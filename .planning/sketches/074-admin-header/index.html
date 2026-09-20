@@ -307,18 +307,31 @@
   .device.w-line .tbar .btn { background: none; color: var(--color-accent-text);
     box-shadow: inset 0 0 0 1px var(--color-accent-text); }
 
-  /* W3 · Texto — the label alone.
-     A text button has NO BOX, and that breaks d42's rule in a way the rule never anticipated: "the primary
-     always ends at the same edge" was written for a control whose box IS its ink. With no box the two
-     readings come apart and they cannot both hold —
-       (a) box edge on the 16px keyline -> the LABEL sits 14px inside it, visibly short of every other right
-           edge on the page;
-       (b) label on the keyline -> the box, and with it the 44px hit target, overhangs to R373, two pixels
-           from the bezel.
-     (b) is drawn, because the keyline is what the eye reads and `.back` in this same file already aligns a
-     text control by negative margin. The cost is real and it is measured, not smoothed over: check 19
-     reports both edges for all three weights. */
-  .device.w-text .tbar .btn { background: none; color: var(--color-accent-text); box-shadow: none; margin-right: -14px; }
+  /* W3 · Texto — the label alone. CHOSEN (round 3, from the device).
+     A text button has NO BOX, and that looked like it broke d42's rule: "the primary always ends at the same
+     edge" was written for a control whose box IS its ink. Drawn first with a negative margin — label on the
+     keyline, box and 44px hit target overhanging to R373, two pixels from the bezel — and that overhang was
+     recorded as W3's irreducible cost.
+
+     IT IS NOT IRREDUCIBLE. The two edges only conflict while the visible box and the hit box are the same
+     box. They are not: this bar already carries a pseudo-element hit box for the 36px height (round 2), and
+     the same element takes the horizontal slack. So `padding-right: 0` puts the visible box AND the ink on
+     R359 together — d42's rule holds literally, with no amendment — while `::before`'s `right: -14px`
+     keeps the tap margin out at R373 where a thumb wants it, invisibly. The cost W3 was charged in round 3
+     was an artefact of how it was drawn, not a property of the weight. */
+  .device.w-text .tbar .btn { background: none; color: var(--color-accent-text); box-shadow: none; padding-right: 0; }
+  .device.w-text .tbar .btn::before { right: -14px; }
+
+  /* ---- the run-on, fixed: 16px between a truncated title and the action ----
+     W3's one measured defect that is about the DESIGN rather than the drawing. The bar's own `gap` is 4px,
+     which is invisible under W1 and W2 because a filled or stroked box puts an edge in it. W3 puts nothing
+     there, so at full scroll a truncated real name and the primary ran together into one line —
+     `Castillos del Rey Loco Lud… Guardar` — in which the action does not read as a control.
+     16px is the spacing scale's step, and it costs the title nothing it was keeping: the title is `flex: 1`
+     and already truncating, so the 12 extra pixels come out of an ellipsis, not out of a word. Scoped to
+     W3 because it is a fix for the weight that has no edge of its own; check 20 asserts the separation and
+     is negative-tested against the 4px the other two still use. */
+  .device.w-text .tbar { gap: 16px; }
 
   /* W1 gets the fill's own darkening; the two boxless weights need a backdrop to press against, the same
      one `.btn.ghost` already uses. (Not asserted anywhere — CDP touch does not set `:active`.) */
@@ -504,8 +517,8 @@
        them. HOY stays; it is the baseline every negative test is written against. -->
   <div>Peso del CTA:
     <button data-var="W1">W1 · Relleno</button>
-    <button data-var="W2" class="on">W2 · Contorno ★ recomendado</button>
-    <button data-var="W3">W3 · Texto</button>
+    <button data-var="W2">W2 · Contorno</button>
+    <button data-var="W3" class="on">W3 · Texto ★ elegido</button>
     <button data-var="HOY">Hoy (lo que se ve)</button>
   </div>
   <div>Estado:
@@ -579,7 +592,7 @@ const SHELVES = [
 
 /* ROUND 3: N1 becomes three weights. W1 is N1 byte-for-byte except for the CTA's paint, so every round-1
    and round-2 guard still has an incumbent to run against; W2 and W3 differ from it in paint ONLY. */
-let VAR = 'W2', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
+let VAR = 'W3', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
 const WEIGHT = { W1: 'w-fill', W2: 'w-line', W3: 'w-text' };
 let G, START;
 

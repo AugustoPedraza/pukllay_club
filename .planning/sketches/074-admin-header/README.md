@@ -2,7 +2,7 @@
 sketch: 074
 name: admin-header
 question: "Where does the primary action live once the editor's chrome collapses into one top app bar?"
-winner: "N1 · weight W2 Contorno recommended, pending review from the device"
+winner: "N1 · weight W3 Texto (decisions 43-44)"
 tags: [admin, editor, header, top-app-bar, action-bar, cta-weight, d42, d64, D-19f, D-19n]
 rounds: 3
 ---
@@ -34,7 +34,7 @@ open http://127.0.0.1:8765/.planning/sketches/074-admin-header/index.html
 node .planning/sketches/074-admin-header/verify.js     # 99/99
 ```
 
-Variants on screen: **W1 / W2 / W3** (N1's CTA in three weights — W2 is the standing recommendation) and
+Variants on screen: **W1 / W2 / W3** (N1's CTA in three weights — **W3 chosen**) and
 **HOY** (what 073 ships — the baseline every guard is
 negative-tested against). Round 1's H1 and H3 are removed along with their comparison checks; their
 measurements are below.
@@ -161,8 +161,8 @@ where the slot is dead.
 
 ## Round 3 — the CTA's weight
 
-**Variants:** W1 Relleno · W2 Contorno · W3 Texto, paint only. **W2 is the standing recommendation on the
-measurements — not yet confirmed from the device.**
+**Variants:** W1 Relleno · W2 Contorno · W3 Texto, paint only. **W3 chosen from the device — against the
+harness's recommendation of W2.** Decisions 43 and 44.
 
 ### The round opened by finding that the question was posed backwards
 
@@ -234,9 +234,39 @@ one can sit on the 16px keyline: either the label sits 14px short of every other
 and the 44px hit target with it — overhangs to **R373, two pixels from the bezel**. W3 is drawn the second
 way and the cost is measured, not smoothed over.
 
-**W2 wins on every axis and costs nothing new:** it disables unambiguously, keeps a container in both
-themes, stays legible beside a truncated title, holds the keyline with no overhang — and it ends an
-unrecorded four-sketch departure instead of creating another decision.
+**On the measurements W2 won every axis** — it disables unambiguously, keeps a container in both themes,
+stays legible beside a truncated title, holds the keyline, and ends an unrecorded four-sketch departure
+instead of creating another decision. That was the recommendation put to the developer.
+
+### W3 was chosen instead, and the recommendation was wrong about two of the three costs
+
+From the device: **W3.** The harness had ranked W2 first, so this section is the accounting rather than a
+ratification — two of W3's three charged costs turned out not to be properties of the weight at all.
+
+**W3 wins the question round 2 actually asked, outright.** The round exists because of one sentence: a
+disabled filled CTA *"reads as lavender-and-live rather than clearly dead"*. W3 is the only weight that
+paints **0px²** when dead — not a fainter box, no box. W2's 233px² ghost outline is *better* than W1's solid
+pill but it is still the silhouette of a control; W3 stops being a control. Ranking W2 first weighted "holds
+a container in both themes" above "disables unambiguously", which is not what the round was convened to
+decide.
+
+**Cost 2 — the R373 bezel overhang — was an artefact of how I drew it, not a property of the weight.** It
+was charged because the label was put on the keyline with a negative margin, dragging the box and the 44px
+hit target out with it. But the visible box and the hit box are *separate boxes* — this bar already carries
+a pseudo-element hit box for the 36px height. `padding-right: 0` puts the visible edge and the ink on R359
+together, and `::before { right: -14px }` keeps the tap margin out at R373 invisibly. **d42's rule now holds
+literally for all three weights**, with no amendment and nothing overhanging. The check that recorded the
+overhang now asserts its absence.
+
+**Cost 1 — the run-on with a truncated title — was real, and is fixed.** The bar's own gap is 4px, which is
+invisible under W1 and W2 because a box edge fills it. W3 put nothing there, so at full scroll a real name
+read as one line: `Castillos del Rey Loco Lud… Guardar`. W3 alone now opens the gap to **16px**, which costs
+the title nothing it was keeping — it is `flex: 1` and already truncating, so the 12 extra pixels come out
+of an ellipsis, not a word. The other two stay at 4px, which is what makes the guard falsifiable.
+
+**Cost 3 — no container to outrank the back chevron — is accepted, not fixed.** A word at 14.16:1 against a
+glyph at 17.16:1, at opposite ends of the bar. The screenshots say it reads correctly; nothing was changed,
+and it is recorded as accepted rather than solved.
 
 ### A guard that passed vacuously, caught by the screenshot again
 
@@ -251,21 +281,23 @@ screenshot caught what the harness was green over.
 
 ## What to look for
 
-Open W2 and switch to `Con datos · 386` with no edits — the one dead situation. Then flip to W1 and back:
-the question is whether W1's dead lavender pill still looks tappable to you. Then scroll to the bottom of a
-game with BGG data in W3 and read the bar left to right.
+W3 is what opens. Switch to `Con datos · 386` with no edits — the one dead situation, and the reason W3 was
+chosen: nothing is painted. Then scroll to the bottom of a game with BGG data and read the bar left to
+right; the 16px is what stops `Guardar` reading as the end of the title.
 
 ## Open
 
-- **W2 is a recommendation on the measurements, not a decision.** It needs confirming from the device — and
-  the relevant judgement is one only the developer can make: whether a dead filled CTA reads as live in the
-  hand the way it does in the screenshot.
-- **064 needs a decision either way.** If W2 is confirmed, 071–074's filled `.btn` is a four-sketch drift to
-  be corrected and 064 stands. If W1 is chosen instead, 064 is *overturned* and that has to be written down
-  — it governs the whole admin, not just this bar.
-- **`no disabled buttons` (064) is still contradicted** whichever weight wins, because round 2's slot is
-  dead in 1 of 8. 064 banned disabled controls outright; d42 allowed 0 and rejected 4. The 1/8 case sits
-  between two rules and is currently governed by neither.
+- **064 is overturned for the top app bar, and upheld everywhere else** — decision 44. It is written down
+  rather than left as drift, which was the point of asking.
+- **`no disabled buttons` (064) is still contradicted** by the 1/8 dead slot, whichever weight ships. 064
+  banned disabled controls outright; d42 allowed 0 and rejected 4. The 1/8 case sits between two rules and
+  is governed by neither — **the sharpest thing still open on this bar.** W3 softens it (a dead text button
+  is a grey word, not a dead box) but does not resolve the rule conflict.
+- **Cost 3 is accepted, not solved:** with no container, all that separates the primary from the back
+  chevron is that one is a word and the other a glyph. Worth re-checking on a real device in sunlight.
+- **The other admin surfaces still ship 064's outline Principal**, and 071-073's filled `.btn` is still
+  there in the sketches. Decision 44 makes the editor's bar the exception; it does not by itself correct
+  the four-sketch drift in the others.
 - **There is no longer any way to abandon an edit without leaving the page.** Unchanged from round 2.
 - **D-19n must be amended, not dropped.** This settles the **editor** only; `.pbar` stays alive for the
   **catalogue list**.

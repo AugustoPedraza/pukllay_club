@@ -1433,13 +1433,90 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **Its honest cost:** there is no longer any way to abandon an edit *without leaving the page*.
     `Descartar` used to let you stay. Same shape as decision 41's candour about the missing per-field abandon.
 
+46. **The editor's top-bar CTA is a TEXT button.** Sketch 074, round 3, one question. Round 2 left the
+    weight open with one sentence behind it: a disabled filled CTA *"reads as lavender-and-live rather than
+    clearly dead"*. Three weights drawn, paint only — geometry pinned (same 36px height, padding, radius,
+    hit box) and the stroke an inset box-shadow rather than a border, so a finding about weight could not be
+    blamed on size.
+
+    **The axis is PAINTED AREA, not contrast.** In light `--color-primary` and `--color-accent-text` are the
+    **same hex** (`#3C1269`), so a fill and a stroke are one ink at one 14.16:1 — only coverage differs:
+
+    ```
+    W1 Relleno   3903px²    W2 Contorno   285px²    W3 Texto   0px²
+    ```
+
+    Two metrics were discarded before that one stood up, both well-defined on two weights and meaningless on
+    the third — *"the label against the bar"* returned **1:1** for W1, whose white label never touches the
+    white bar because the fill sits between them. A true number about a comparison that does not exist.
+
+    **W3 chosen from the device, against the harness's recommendation of W2.** It wins the question the
+    round was actually convened for: in the one dead situation W3 paints **nothing** — not a fainter box, no
+    box. W1 keeps 2977px² of solid lavender pill, the whole silhouette of a live primary; W2's 233px² ghost
+    outline is better but is still the silhouette of a control. Ranking W2 first weighted *"holds a
+    container in both themes"* above *"disables unambiguously"*, which is not what was being decided.
+
+    **Two of W3's three charged costs were not properties of the weight:**
+    - **The R373 bezel overhang was an artefact of the drawing.** It was charged because the label was put
+      on the keyline with a negative margin, dragging the box and its 44px hit target out with it. The
+      visible box and the hit box are separate boxes — `padding-right: 0` puts the visible edge and the ink
+      on R359 together, and the pseudo-element already in the bar carries the tap margin out to R373
+      invisibly. **d42's fixed right edge now holds literally**, no amendment needed.
+    - **The run-on with a truncated title was real, and is fixed.** The bar's 4px gap is invisible under a
+      weight with a box edge; W3 put nothing there, so at full scroll a real name read as one line
+      (`Castillos del Rey Loco Lud… Guardar`). W3 alone opens it to **16px**, which costs the title nothing
+      — it is `flex: 1` and already truncating, so the pixels come out of an ellipsis.
+    - **Accepted, not fixed:** with no container, all that separates the primary from the back chevron is
+      that one is a word and the other a glyph (14.16:1 vs 17.16:1, opposite ends of the bar).
+
+    **A dark-only asymmetry recorded on the way past:** dark `--color-primary` (#7B2DCE) on the bar is
+    **2.33:1** against 14.16:1 in light, so W1's prominence comes from its white label, not its fill.
+    Flagged as measured and deliberately **not** called a WCAG 1.4.11 failure — 1.4.11 covers information
+    *required* to identify a control, and the label does that job.
+
+    **A sixth vacuous guard, caught by a screenshot rather than a number:** the title-to-CTA check measured
+    a fixture that does not scroll, so the title sat at `opacity: 0` and three identical 4px readings were
+    all about an invisible element. Visibility and truncation are now asserted before the gap is read.
+
+47. **Sketch 064 is overturned for the top app bar, and upheld everywhere else.** Asked for explicitly when
+    46 was settled, because the alternative was leaving it as drift.
+
+    **What was actually going on.** 064 settled the admin's button system — *"S3 Contorno, weight-tuned: 1px
+    strokes everywhere … **no disabled buttons**"*, applied to 059–063 and checked at 89/89. Then
+    071/072/073/074 drew a **filled** primary (`.btn { background: var(--color-primary) }`, 072:216 and
+    073:265, copied forward verbatim) and round 2 added a *disabled* one. **Nothing recorded the
+    departure**: no decision supersedes 064, and none of 071–074 carries its CSS block or mentions it. The
+    incumbent on screen and the system of record disagreed, unnoticed, for four sketches.
+
+    **The resolution, and why it is a real rule and not a carve-out.** 064's ladder ranks *competing*
+    actions — its own wording is "at most one Principal per block". The top app bar holds **one** action and
+    one navigation glyph, so there is nothing to rank against, and the weight that block needs is whatever
+    disables most honestly. M3's own top app bar uses text actions for the same reason.
+
+    > **064's four roles stand for content blocks. In a single-action container — the top app bar — the
+    > primary takes Terciaria's paint (text), because weight there buys nothing and costs the clarity of the
+    > disabled state.**
+
+    **What this does NOT license.** The other admin surfaces keep 064's outline Principal; this is not
+    permission to go filled or to go text elsewhere. And 071–073's filled `.btn` remains a **four-sketch
+    drift that is still uncorrected** — decision 47 makes the editor's bar an exception to 064, it does not
+    retroactively justify the others.
+
+    **Still unresolved, and flagged rather than buried:** 064 banned disabled buttons outright; d42 allowed
+    0 and rejected 4; round 2's slot is dead in **1 of 8**. That case sits between two rules and is governed
+    by neither. W3 softens it — a dead text button is a grey word, not a dead box — but the rule conflict is
+    open.
+
 ## Where we are (2026-09-19)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
   `073-admin-bgg-state` **132/132**. Serve with `python3 -m http.server 8765` from the repo root.
-- **Settled:** decisions 1–9, 16–36, **38–42**. **37 is still a CANDIDATE**, scoped to editors until checked
+- **Settled:** decisions 1–9, 16–36, **38–47**. **37 is still a CANDIDATE**, scoped to editors until checked
   against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
-  39's "the remedy cannot go in the bar".
+  39's "the remedy cannot go in the bar". **Amended by 47:** sketch 064's Principal weight, for the top app
+  bar only — 064 stands everywhere else, and 071–073's filled `.btn` is still an uncorrected drift.
+- **Open across 46/47 and worth picking up first:** 064 banned disabled buttons outright, d42 allowed 0 and
+  rejected 4, and the slot is dead in **1 of 8**. That case is governed by neither rule.
 - **073 round 4 is PENDING REVIEW** — G1 (the bar disappears when nothing is pending) is the standing
   recommendation on the measurements, not yet confirmed from the device. G2 and G3 are still in the page.
 - **Two fixes landed back in 072** from 073's findings, both guarded and negative-tested: the sheet-close
