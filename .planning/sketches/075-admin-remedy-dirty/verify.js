@@ -37,7 +37,7 @@ const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-075-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
 
-const VARS = ['V1', 'V2', 'V3'];
+const VARS = ['V1', 'V2', 'V3', 'V4'];
 const BROKEN = ['no_bgg_id', 'bgg_missing', 'failed'];
 
 /* d42's eight situations. `dead` marks the ONE where nothing is pending — the only place d44's slot is
@@ -93,6 +93,7 @@ const SITS = [
        tappable   — elementFromPoint at its centre returns it or a descendant, so nothing overlays it */
   const reach = () => J(() => {
     const el = document.getElementById('rmd')
+      || document.getElementById('stbtn')
       || document.querySelector('[data-edit="bgg_id"]')
       || document.querySelector('.tbar [data-act], .savebar [data-act]');
     if (!el || el.offsetParent === null) return { rendered: false, visible: false, tappable: false };
@@ -106,7 +107,7 @@ const SITS = [
       fullyVisible: r.bottom <= visBottom && r.top >= 0,
       tappable: !!hit && (hit === el || el.contains(hit)),
       top: Math.round(r.top), bottom: Math.round(r.bottom), visBottom: Math.round(visBottom),
-      where: el.id === 'rmd' ? 'diagnóstico' : el.dataset.edit === 'bgg_id' ? 'fila' : 'barra'
+      where: el.id === 'rmd' ? 'diagnóstico' : el.id === 'stbtn' ? 'diagnóstico-tap' : el.dataset.edit === 'bgg_id' ? 'fila' : 'barra'
     };
   });
 
@@ -154,6 +155,7 @@ const SITS = [
     ok(m.V1 === 0, `V1 · remedy reachable while dirty on 0/3 broken states (${m.V1}) — the control`);
     ok(m.V2 === 3, `V2 · remedy reachable while dirty on 3/3 broken states (${m.V2})`);
     ok(m.V3 === 0, `V3 · remedy NOT tappable at rest while dirty (${m.V3}/3) — the row is below the tab bar; see check 8`);
+    ok(m.V4 === 3, `V4 · remedy reachable while dirty on 3/3 broken states (${m.V4}) — the diagnosis itself`);
   }
 
   /* ============================ INHERITANCE: what this round must not break ============================
@@ -171,7 +173,7 @@ const SITS = [
         if (got && got.dis) { deadCount[v]++; if (!s.dead) bad.push(`${v}/${s.k}: dead slot in a situation that has something pending`); }
       }
     }
-    ok(bad.length === 0, `d44's slot is identical in all three variants across d42's 8 situations (${bad.length ? bad.join('; ') : '24/24'})`);
+    ok(bad.length === 0, `d44's slot is identical in all ${VARS.length} variants across d42's 8 situations (${bad.length ? bad.join('; ') : VARS.length * 8 + '/' + VARS.length * 8})`);
     ok(VARS.every(v => deadCount[v] === 1), `the slot is dead in exactly 1 of 8, in every variant (${JSON.stringify(deadCount)}) — d42 rejected 4, and this is the guard that stops it drifting back`);
   }
 
@@ -335,6 +337,14 @@ const SITS = [
       return [...document.querySelectorAll('.tbar [data-act="open-link"],#rmd')].filter(vis).length;
     });
     ok(n2 === 1, `V2 · while clean the remedy is reachable exactly once (${n2}) — the understudy stays off until the slot is taken`);
+    await set('V4', 'no_bgg_id', 'published', false);
+    const n3 = await J(() => {
+      const vis = el => el && el.offsetParent !== null;
+      const bar = [...document.querySelectorAll('.tbar [data-act="open-link"]')].filter(vis).length;
+      const diag = [...document.querySelectorAll('#stbtn')].filter(vis).length;
+      return { bar, diag, total: bar + diag };
+    });
+    ok(n3.total === 2, `V4 · COST — while clean the remedy is reachable twice too (barra ${n3.bar} + diagnóstico ${n3.diag}), the same charge as V3. d44 is left intact; removing the remedy from the CTA is check 22's number.`);
   }
 
   /* 14. The diagnosis copy is untouched by the variant that answers it. If V2 had reworded the accusation
@@ -345,7 +355,7 @@ const SITS = [
       return c.textContent.replace(/\s+/g, ' ').trim(); });
     const out = [];
     for (const v of VARS) { await set(v, 'no_bgg_id', 'published', true); out.push(await read()); }
-    ok(new Set(out).size === 1, `the d38 copy is identical in all three variants (${new Set(out).size} distinct) — V2 adds an action below it and changes not a word`);
+    ok(new Set(out).size === 1, `the d38 copy is identical in all four variants (${new Set(out).size} distinct) — V2 adds an action below it and changes not a word`);
   }
 
   /* 15. The top bar still has ONE back control (d43), in every variant — negative-tested against HOY,
@@ -354,7 +364,7 @@ const SITS = [
     const backs = () => J(() => [...document.querySelectorAll('#tbback, .pb-back, #back, .back')].filter(el => el && el.offsetParent !== null).length);
     let one = 0;
     for (const v of VARS) { await set(v, 'no_bgg_id'); if (await backs() === 1) one++; }
-    ok(one === 3, `one back control in every variant (${one}/3) — d43`);
+    ok(one === VARS.length, `one back control in every variant (${one}/${VARS.length}) — d43`);
     await set('HOY', 'no_bgg_id');
     await toBottom(); await p.waitForTimeout(200);
     const h = await backs();
@@ -384,6 +394,109 @@ const SITS = [
     });
     ok(m.cta.painted < m.rmd.painted,
       `V2 · COST — the hierarchy inverts while dirty: primary "${m.cta.l}" paints ${m.cta.painted}px² (${m.cta.kind}), understudy "${m.rmd.l}" paints ${m.rmd.painted}px² (${m.rmd.kind}). d47 and 064 meeting in a case neither was written for.`);
+  }
+
+  /* 18. V4's tap target, against V2's button. The exchange V4 makes for having no control container:
+     the whole diagnosis is the target instead of a 44px pill. Fitts's law, measured not asserted. */
+  {
+    await set('V4', 'no_bgg_id', 'published', true);
+    const a = await J(() => { const r = document.getElementById('stbtn').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), area: Math.round(r.width * r.height) }; });
+    await set('V2', 'no_bgg_id', 'published', true);
+    const b = await J(() => { const r = document.getElementById('rmd').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), area: Math.round(r.width * r.height) }; });
+    ok(a.area > b.area * 2, `V4's tap target is ${a.w}×${a.h} (${a.area}px²) against V2's ${b.w}×${b.h} (${b.area}px²) — ${(a.area / b.area).toFixed(1)}× the area`);
+  }
+
+  /* 19. THE AFFORDANCE, as the only falsifiable question available: is there ANY rendered difference
+     between the variant where the diagnosis is the remedy and the variant where it does nothing?
+     A true pixel diff — decoded to RGBA, not compared as PNG bytes, because compression rewrites the
+     whole stream on a 1px shift and the byte count says nothing.
+
+     DRAWN PURE FIRST, this returned **0 of 270000**. Identical, clean and dirty. That is why the band
+     exists, and the negative test below keeps the result alive by stripping `.band` and asserting the
+     diff collapses back to 0. Geometry is asserted first: two of my own defects (a `font` shorthand that
+     reset `line-height`, and one-sided padding) moved the spine 8px, and a diff would have reported them
+     as an affordance. */
+  {
+    const clip = { x: 0, y: 100, width: 375, height: 180 };
+    const geo = () => J(() => { const R = e => e ? Math.round(e.getBoundingClientRect().top) : null;
+      return { sx: R(document.querySelector('.st .sx')), gl: R(document.querySelector('.glabel')), nm: R(document.querySelector('[data-edit="name"]')) }; });
+    const shot = async (v, strip) => {
+      await set(v, 'no_bgg_id', 'published', true);
+      if (strip) { await J(() => document.getElementById('stbtn').classList.remove('band')); await p.waitForTimeout(80); }
+      return (await p.screenshot({ clip })).toString('base64');
+    };
+    await set('V1', 'no_bgg_id', 'published', true); const g1 = await geo();
+    await set('V4', 'no_bgg_id', 'published', true); const g4 = await geo();
+    ok(g1.sx === g4.sx && g1.gl === g4.gl && g1.nm === g4.nm,
+      `V4 moves no text — the spine sits where V1 puts it (${JSON.stringify(g1)} vs ${JSON.stringify(g4)}), d29's reason for a band on a pseudo`);
+
+    const a = await shot('V1', false), b = await shot('V4', false), c = await shot('V4', true);
+    const q = await ctx.newPage(); await q.goto('about:blank');
+    const diff = (x, y) => q.evaluate(async ([m, n]) => {
+      const load = z => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = 'data:image/png;base64,' + z; });
+      const [ia, ib] = await Promise.all([load(m), load(n)]);
+      const cv = document.createElement('canvas'); cv.width = ia.width; cv.height = ia.height; const g = cv.getContext('2d');
+      g.drawImage(ia, 0, 0); const da = g.getImageData(0, 0, cv.width, cv.height).data;
+      g.clearRect(0, 0, cv.width, cv.height); g.drawImage(ib, 0, 0); const db = g.getImageData(0, 0, cv.width, cv.height).data;
+      let d = 0; for (let i = 0; i < da.length; i += 4) { const e = Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]); if (e > 8) d++; }
+      return { diffPx: d, totalPx: da.length / 4 };
+    }, [x, y]);
+    const withBand = await diff(a, b), without = await diff(a, c);
+    await q.close();
+    ok(withBand.diffPx > 2000, `V4 IS visibly distinguishable from V1 — ${withBand.diffPx} of ${withBand.totalPx}px differ over the diagnosis`);
+    ok(without.diffPx === 0, `NEGATIVE TEST — strip the band and V4 is PIXEL-IDENTICAL to V1 (${without.diffPx}px). The pure version had zero affordance, which is the finding that forced the band.`);
+  }
+
+  /* 20. The accessible name carries BOTH halves. An `aria-label` naming only the action would hide the
+     diagnosis from assistive tech, which is the one thing this block exists to deliver. */
+  {
+    await set('V4', 'no_bgg_id', 'published', true);
+    const n = await J(() => document.getElementById('stbtn').textContent.replace(/\s+/g, ' ').trim());
+    ok(/no está vinculado/.test(n) && /tocá para/.test(n), `V4's accessible name is the diagnosis AND the action ("…${n.slice(-34)}")`);
+  }
+
+  /* 21. THE INVISIBLE DOT — inherited, not this sketch's. `.st.warn .dot` was `var(--color-accent)`,
+     which the theme does not define (it is `--color-accent-bg`/`--color-accent-text`, and default.css:22
+     records the rename), so it computed to `rgba(0,0,0,0)`: an 8px transparent hole, in 073, 074 and 075.
+     `warn` is `no_bgg_id` — 41 of the 49. `.st.bad` used `--color-danger`, which IS defined, so 8 games
+     showed a dot and 41 did not. d40 says status is a dot + text; on the majority it has been text. */
+  {
+    const theme = async t => { await J(tt => { document.querySelector(`[data-theme-set="${tt}"]`).click(); }, t); await p.waitForTimeout(90); };
+    const bad = [];
+    for (const th of ['light', 'dark']) {
+      await theme(th);
+      for (const st of BROKEN) {
+        await set('V1', st);
+        const c = await J(() => { const d = document.querySelector('.st .dot'); return d ? getComputedStyle(d).backgroundColor : 'none'; });
+        if (/rgba\(0, 0, 0, 0\)|transparent/.test(c)) bad.push(`${th}/${st}`);
+      }
+    }
+    ok(bad.length === 0, `no diagnosis dot computes transparent, in either theme (${bad.length ? bad.join(', ') : '6/6'})`);
+    await theme('light');
+    await set('V1', 'no_bgg_id');
+    const neg = await J(() => { const d = document.querySelector('.st .dot'); d.style.background = 'var(--color-accent)'; return getComputedStyle(d).backgroundColor; });
+    ok(/rgba\(0, 0, 0, 0\)/.test(neg), `NEGATIVE TEST — \`var(--color-accent)\` really does compute to ${neg}, so check 21 can fail`);
+    await set('V1', 'no_bgg_id');
+  }
+
+  /* 22. The number V4 needs and does not have: what would it cost to make the diagnosis the ONLY home,
+     i.e. drop the remedy from the CTA? Computed by overriding `primary()`, NOT drawn — it reopens d44,
+     which this round is not allowed to touch. d42 rejected 4 of 8 dead; round 2 accepted 1 of 8. */
+  {
+    await set('V4', 'no_bgg_id', 'published', false);
+    const dead = await J((sits) => {
+      const orig = window.primary;
+      window.primary = function () {
+        if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
+        if (CY === 'draft') return { label: 'Publicar', id: 'publish', dis: !hasData() };
+        return null;                       /* the remedy no longer offered here */
+      };
+      let n = 0;
+      for (const s of sits) { ST = s.st; CY = s.cy; loadState(); if (s.d) G.is_expansion = !START.is_expansion; const p2 = topSlot(); if (p2.dis) n++; }
+      window.primary = orig; ST = 'no_bgg_id'; CY = 'published'; loadState(); render();
+      return n;
+    }, SITS);
+    ok(dead >= 1, `V4-only (remedy dropped from the CTA) would leave the slot dead in ${dead} of 8 — d42 rejected 4, d44 accepted 1. Named, not drawn: it reopens d44.`);
   }
 
   /* 16. Screenshots. Every variant, both themes, the dirty broken state the round is about — and then

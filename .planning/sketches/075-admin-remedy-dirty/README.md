@@ -3,8 +3,8 @@ sketch: 075
 name: admin-remedy-dirty
 question: "Where does the remedy live while the editor is dirty and the CTA slot is taken?"
 winner: null
-tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, dirty-state]
-rounds: 1
+tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, d29, d40, dirty-state, palette]
+rounds: 2
 status: PENDING REVIEW
 ---
 
@@ -20,11 +20,11 @@ The slice decision 42 deferred on purpose:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/075-admin-remedy-dirty/index.html
-node .planning/sketches/075-admin-remedy-dirty/verify.js     # 31/31
+node .planning/sketches/075-admin-remedy-dirty/verify.js     # 41/41
 ```
 
-Variants on screen: **V1 Nada** (opens — the incumbent), **V2 En el diagnóstico**, **V3 Fila BGG**, and
-**HOY** (073's three-piece chrome, the baseline every negative test is written against). To reach the
+Variants on screen: **V1 Nada** (opens — the incumbent), **V2 En el diagnóstico**, **V3 Fila BGG**,
+**V4 El diagnóstico ES el remedio** (round 2), and **HOY** (073's three-piece chrome, the baseline every negative test is written against). To reach the
 state the round is about: pick a broken state, then tap **Es una expansión** and change it.
 
 074's `W1`/`W2` weight tabs are gone — d46 settled the weight and what is on screen is the decision, not a
@@ -196,3 +196,105 @@ Then **V3**, and notice you have to scroll to find out whether it answered anyth
 - **The 49 already-published broken games remain a data decision, not a UI one.** Unchanged.
 - `TODO(palette)` — `--val`'s dark stop is still defined locally, inherited from 073 and still owed
   upstream.
+
+---
+
+## Round 2 — V4, the diagnosis *is* the remedy
+
+From the developer, rejecting the shape of the round rather than choosing inside it:
+
+> *"For error, isn't simpler to show a kind of message (toast) and ask to the user like fix data? I mean
+> the main purpose is to let the user know about that and ask for fix it. Nothing else care (maybe delete,
+> remove the invalid data)."*
+
+**The toast half was not drawn, and the reason is stated rather than assumed.** A toast is a container for
+*events*; this is *state*. `snack()` clears itself after **2200ms**; the condition it would announce has
+been true since the 2026-08-10 import and is true for **49 published games**. Once it went, nothing on the
+page would say *which* of the three problems this game has — and the fix differs per problem. d2 also
+makes the editor reachable by search, so arriving from the *Sin datos* queue already knowing why is not
+guaranteed.
+
+**The other half was right, and V4 is it.** If the job is only *know, and fix*, then a diagnosis that names
+the problem and a separate control that fixes it are two things doing one job. V4 deletes the control: the
+state line itself opens the sheet. It dissolves rather than trades — no second control, so no inversion;
+nothing appears or moves on edit, so no travel; it is where the diagnosis already is, so above the fold.
+
+### Drawn pure first, and the pixel diff was brutal
+
+V4 was first drawn with **no paint at all**, on the reasoning that adding none is exactly what dissolves
+V2's inversion. Pixel-diffed against V1 over the diagnosis region, decoded to RGBA:
+
+```
+diffPx 0 of 270000        maxDelta 0        clean AND dirty
+```
+
+**Identical.** Not a weak affordance — *none*. The variant where the diagnosis is the way to fix the game
+was indistinguishable from the variant where it does nothing, and the page carries other small-grey-prose
+blocks (`.lock`, `.hint`) that really are inert, in the same register. A chevron was unavailable by rule
+(**d34** bans it on sheet-openers).
+
+So it gets the minimum signifier that is **not a control container**: **d29's band** — a `::before`
+anchored to the content box, which is centred by construction and *moves no text* (the spine sits at the
+same 154/214/263 as V1). Check 19 keeps the pure result alive: strip `.band` and the diff returns to **0**.
+
+**On comparing the band's paint to V2's 319px² — don't, and d46 is why.** That round discarded two metrics
+for being well-defined on two variants and meaningless on the third. A band is a **surface**; V2's stroke
+is a **control container**. Putting them on one axis is the same category error. What is measurable is
+that `Guardar` keeps the only control container on screen; whether the page still *reads* it as the
+primary is a device question, left as one.
+
+### Three defects found, and only one of them was V4's
+
+1. **`font: inherit` reset the line-height.** The shorthand resets `line-height`, and at (0,2,0) it
+   out-specified `.st`'s own `1.45`. With one-sided padding on top, the whole spine sat **8px lower** than
+   in every other variant. A pixel diff would have reported my CSS as an affordance. Geometry is now
+   asserted *before* the diff is read.
+2. **`z-index: -1` escaped the button.** With no stacking context the band painted *behind `.device`*,
+   which is opaque white — so it rendered nothing, and V4 still pixel-matched V1. `isolation: isolate`
+   fixes it. By eye the band was simply absent, twice.
+3. **The invisible dot — inherited, and the worst of the three.** `.st.warn .dot` has been
+   `var(--color-accent)` since 073. **That property does not exist**: the theme renamed it to
+   `--color-accent-bg`/`--color-accent-text` and says so in its own header (`default.css:22`). An
+   undefined custom property makes `background` compute to `rgba(0,0,0,0)` — an **8px transparent hole**,
+   verified by loading 073, 074 and 075 and reading `getComputedStyle`.
+
+   `warn` is `no_bgg_id`: **41 of the 49**. `.st.bad` uses `--color-danger`, which *is* defined, so 8 games
+   showed a dot and 41 did not. **d40** says status is a dot + text; on the majority it has been text
+   alone, through three sketches and four rounds of screenshots that all had it on screen. The palette has
+   no warning stop at all, so `--warn` is defined locally as **`TODO(palette)` #2**, the same pattern as
+   `--val`, and is owed upstream.
+
+### What V4 costs, and the number that bounds it
+
+V4 keeps **d44 intact**, so while *clean* the remedy is reachable twice — bar **1** + diagnóstico **1** —
+the same charge as V3 and the one 074 laid against the duplicated back control.
+
+The obvious fix is to drop the remedy from the CTA and let the diagnosis be its only home. **Measured, not
+drawn** (check 22, by overriding `primary()`): that leaves the slot **dead in 4 of 8** — *exactly the count
+d42 rejected*, and four times what d44 accepted. So V4 cannot become the sole home without reopening d42's
+rejected configuration. The duplication is the price of V4, not an oversight in how it was drawn.
+
+### Where V4 lands against the others
+
+| | reachable while dirty | above the fold | travel on edit | inversion | duplication while clean |
+|---|---|---|---|---|---|
+| **V1** | 0 / 3 | — | none | none | none |
+| **V2** | **3 / 3** | ✓ | **221px / 218px** | **0px² vs 319px²** | none |
+| **V3** | 0 / 3 (behind the tab bar) | ✗ | none | none | **2** |
+| **V4** | **3 / 3** | ✓ | none | none | **2** |
+
+V4's tap target is **343×72 = 24,535px²**, **4.7×** V2's 117×44 button.
+
+## Open (round 2)
+
+- **The toast is argued against, not drawn.** If the argument is unconvincing it should be built and
+  measured rather than conceded — the counts above are what it would have to beat.
+- **`Borrar el ID` is still not drawn.** The developer's parenthetical — *"maybe delete, remove the invalid
+  data"* — is a real gap: for the **8 `bgg_missing`** games a stored ID that does not resolve is worse than
+  none, and the page's own copy says `Reintentar` will never fix it. It belongs in the ID sheet as a
+  destructive text action, and it is a **data** decision with a live-site consequence (the notes already
+  carry `enrichment_status` being unvalidated on every live write path).
+- **`TODO(palette)` #2 — the palette has no warning stop.** `--warn` is local here; `.st.warn` is owed a
+  real token in `app.css`, and the same undefined `--color-accent` should be grepped for elsewhere.
+- **V4-only (dead in 4 of 8) is named, not drawn** — it reopens d44, which this round may not touch.
+- Everything in round 1's Open list still stands.

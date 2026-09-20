@@ -1584,10 +1584,86 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     one and its drawing does not deliver it; V1 is defensible on the bounded-cost finding.
 
 
+49. **The diagnosis can be the remedy — but drawn pure it is invisible, and the dot was never there.**
+    Sketch 075, round 2, from the developer rejecting the round's shape rather than choosing inside it:
+    *"isn't simpler to show a kind of message (toast) and ask to the user like fix data? The main purpose
+    is to let the user know about that and ask for fix it. Nothing else care (maybe delete, remove the
+    invalid data)."*
+
+    **The toast half is argued against and deliberately not drawn.** A toast is a container for **events**;
+    this is **state**. `snack()` clears after **2200ms**, the condition has held since the 2026-08-10
+    import across **49 published** games, the fix differs per problem so nothing would say which one this
+    is once it went, and **d2** makes the editor reachable by search — arriving pre-informed from the
+    *Sin datos* queue is not guaranteed. Recorded as an argument, not a measurement; if it is
+    unconvincing the toast should be built and made to beat the counts below.
+
+    **The other half is right, and it is V4: the state line itself opens the sheet.** It dissolves rather
+    than trades — no second control (no inversion), nothing appears or moves on edit (no travel), and it
+    is where the diagnosis already is (above the fold). Tap target **343×72 = 24,535px²**, **4.7×** V2's.
+
+    **Drawn pure first, and the pixel diff was brutal.** Decoded to RGBA — not compared as PNG bytes,
+    because compression rewrites the stream on a 1px shift and the byte count says nothing:
+
+    ```
+    V4 sin pintura vs V1:   diffPx 0 of 270000     limpio Y sucio
+    ```
+
+    **Identical.** Not a weak affordance — none. The page also carries genuinely inert prose (`.lock`,
+    `.hint`) in the same register, and **d34** bans the chevron that would have been the cheap signifier.
+    So V4 takes **d29's band**: a `::before` on the content box, centred by construction, **moving no
+    text** (the spine stays at 154/214/263). The pure result is kept alive as a negative test — strip
+    `.band` and the diff returns to 0.
+
+    **Its paint is deliberately NOT compared to V2's 319px².** A band is a **surface**; V2's stroke is a
+    **control container**. d46 already threw away two metrics for exactly that category error. What is
+    measurable is that `Guardar` keeps the only control container on screen; whether it still *reads* as
+    the primary is a device question and is left as one.
+
+    **Three defects found, and only one was V4's:**
+    - **`font: inherit` reset the line-height.** The shorthand resets it, and at (0,2,0) out-specified
+      `.st`'s own `1.45`; with one-sided padding the whole spine sat **8px lower** than every other
+      variant. A pixel diff would have reported my own CSS as an affordance. Geometry is now asserted
+      *before* the diff is read.
+    - **`z-index: -1` escaped the button.** With no stacking context the band painted **behind
+      `.device`**, which is opaque white — so it rendered nothing and V4 still pixel-matched V1.
+      `isolation: isolate` fixes it. By eye the band was simply absent, twice.
+    - **The invisible dot, inherited and the worst of the three.** `.st.warn .dot` has been
+      `var(--color-accent)` since 073, and **that property does not exist** — the theme renamed it to
+      `--color-accent-bg`/`--color-accent-text` and records the rename in its own header
+      (`default.css:22`). An undefined custom property makes `background` compute to `rgba(0,0,0,0)`: an
+      **8px transparent hole**, verified by loading 073, 074 and 075. `warn` is `no_bgg_id` — **41 of the
+      49** — while `.st.bad` uses the defined `--color-danger`, so **8 games showed a dot and 41 did
+      not**, against **d40**'s "status is a dot + text", through four rounds of screenshots that all had
+      it on screen. The palette has **no warning stop at all**: `--warn` is local as **`TODO(palette)`
+      #2** and is owed upstream in `app.css`, along with a grep for `--color-accent` elsewhere.
+
+    **The number that bounds V4.** It keeps **d44** intact, so while clean the remedy is reachable twice
+    (barra 1 + diagnóstico 1) — the same charge as V3. Making the diagnosis its *sole* home was
+    **measured, not drawn** (by overriding `primary()`): the slot would be **dead in 4 of 8 — exactly the
+    count d42 rejected**, four times what d44 accepted. The duplication is V4's price, not an oversight in
+    how it was drawn.
+
+    ```
+             sucio: alcanzable   sobre el pliegue   viaje      inversión      duplicado limpio
+    V1       0/3                 —                  —          —              —
+    V2       3/3                 sí                 221/218px  0 vs 319px²    —
+    V3       0/3 (tras la barra) no                 —          —              2
+    V4       3/3                 sí                 —          —              2
+    ```
+
+    **Still not drawn: `Borrar el ID`** — the developer's parenthetical. For the **8 `bgg_missing`** games
+    a stored ID that does not resolve is worse than none, and the page's own copy already says
+    `Reintentar` will never fix it. It belongs in the ID sheet as a destructive text action, and it is a
+    **data** decision with a live-site consequence — see the unvalidated `enrichment_status` write paths
+    already owed to the codebase.
+
+    **PENDING REVIEW from the device**, with V1–V4 on the page.
+
+
 ## Where we are (2026-09-19)
 
 - **Sketches:** `071-admin-juegos` **135/135** · `072-admin-game-editor` **53/53** ·
-  `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **31/31**
+  `073-admin-bgg-state` **132/132** · `074-admin-header` **99/99** · `075-admin-remedy-dirty` **41/41**
   (**PENDING REVIEW**). Serve with `python3 -m http.server 8765` from the repo root.
 - **Settled:** decisions 1–9, 16–36, **38–47**. **37 is still a CANDIDATE**, scoped to editors until checked
   against 069 and 070. **Superseded by 17:** 10, 11, 13, 14, 15. **Reverted:** 12. **Superseded by 42:**
@@ -1617,8 +1693,11 @@ DATOS DE BGG                                   <- dropped entirely when empty (d
 ### Open, in slice order
 
 1. **NEXT, and the developer's own proposal (fresh session):** *the header.* See the handoff below.
-2. ~~**The remedy while dirty**~~ — sketch **075** built, decision 48, **PENDING REVIEW from the device**.
-   V1 / V2 / V3 on the page; no variant recommended.
+2. ~~**The remedy while dirty**~~ — sketch **075**, decisions 48-49, **PENDING REVIEW from the device**.
+   V1 / V2 / V3 / V4 on the page. **V4 (the diagnosis IS the remedy) is the standing recommendation** —
+   it is the only variant that is reachable while dirty, above the fold, with no travel and no inversion.
+   Its price is the remedy being reachable twice while clean; making it the sole home would leave the CTA
+   dead in 4 of 8, the count d42 rejected.
 3. **`Retirar` / `Restaurar`** — untouched since 063; must become D-19f's centred dialog.
 4. **`Estante`** — 072 shows a picker, but D-01/D-00c place a *copy*, in the "¿Dónde va?" sheet. Likely
    resolves to read-only plus a link out.

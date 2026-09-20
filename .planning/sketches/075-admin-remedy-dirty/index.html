@@ -242,6 +242,26 @@
   :root[data-theme="dark"] { --val: #9F7AEA; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
 
+  /* TODO(palette) #2 — FOUND IN THIS ROUND, and it is not this sketch's bug.
+     `.st.warn .dot` has been `background: var(--color-accent)` since 073. **`--color-accent` does not
+     exist.** The theme renamed it to `--color-accent-bg` / `--color-accent-text` and says so in its own
+     header (default.css:22). An undefined custom property makes `background` compute to
+     `rgba(0, 0, 0, 0)`, so the dot has rendered as an 8px TRANSPARENT HOLE in 073, 074 and 075 — verified
+     by loading all three and reading `getComputedStyle`.
+
+     What that costs: `no_bgg_id` is the `warn` state and it is **41 of the 49** broken games — the
+     largest group in the queue. `.st.bad` uses `--color-danger`, which IS defined, so the other 8 show a
+     dot. The diagnosis has been dot-less on the majority and dotted on the minority, across three
+     sketches, with nobody seeing it — including four rounds of screenshots that all had it on screen.
+     d40 settled "status is a dot + text, never a pill"; on 41 games it has been text alone.
+
+     The real gap: the palette has no WARNING stop at all (danger, success, accent, primary — no amber).
+     So `warn` is defined locally here, exactly like `--val` above, and is owed upstream in app.css.
+     Check 21 asserts no `.st` dot computes to transparent, in either theme, and is negative-tested. */
+  :root { --warn: #B26B00; }
+  :root[data-theme="dark"] { --warn: #E0A33E; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --warn: #E0A33E; } }
+
   .inp { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px;
     background: var(--color-bg); font-size: 16px; }
   .inp:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; border-color: transparent; }
@@ -359,6 +379,86 @@
   /* the block the action sits in owns the left keyline; the action starts where the caption's ink does */
   .st.has-rmd { padding-bottom: 14px; }
 
+  /* ================= V4 · THE DIAGNOSIS IS THE REMEDY =================
+     From the developer, rejecting the shape of the whole round: *"isn't simpler to show a kind of message
+     and ask the user to fix data? The main purpose is to let the user know about that and ask for fix it.
+     Nothing else cares."*
+
+     The toast half of that is not drawn, and the reason is stated rather than assumed: a toast is a
+     container for EVENTS and this is STATE. `snack()` clears itself after 2200ms; the condition it would
+     announce has been true since the 2026-08-10 import and is true for 49 PUBLISHED games. Once it went,
+     nothing on the page would say which of the three problems this game has — and the fix differs per
+     problem. d2 also makes the editor reachable by search, so arriving from the "Sin datos" queue (where
+     the user already knows why they are here) is not guaranteed.
+
+     The other half is right, and this is it. If the job is only "know, and fix", then a diagnosis that
+     names the problem and a separate control that fixes it are two things doing one job. V4 deletes the
+     control: THE STATE LINE ITSELF OPENS THE SHEET.
+
+     WHAT IT DISSOLVES RATHER THAN TRADES:
+       · no second control  -> no 0px²-vs-319px² inversion; nothing competes with `Guardar`
+       · nothing appears or moves when the edit starts -> V2's 221px/218px travel is gone
+       · it is where the diagnosis already is -> above the fold, unlike V3's row
+       · it does not ADD an action to d38's block, it makes the block actionable — a smaller departure
+         from "the state line stays as pure diagnosis" than V2's, though still a departure
+
+     ITS ONE REAL COST, and it is drawn honestly rather than smoothed: `.st` has NO background (line 456),
+     so this is a bare paragraph that happens to be tappable. No fill, no stroke, no chevron — d34 bans
+     the chevron on sheet-openers, so the obvious signifier is unavailable by rule. Worse, the page
+     carries other small-grey-prose blocks that are NOT tappable (`.lock`, `.hint`), in the same visual
+     register. Check 19 asks the only falsifiable version of "does it read as a control": is there ANY
+     rendered difference between this block and the non-tappable prose beside it.
+
+     What it gets in exchange is a tap target the width of the content column and ~56px tall instead of a
+     44px button — Fitts's law, measured in check 18, not asserted. */
+  /* Two defects here were mine, not V4's, and both moved the page rather than the control:
+     · `font: inherit` — the SHORTHAND resets `line-height` to the inherited value, and at (0,2,0) it
+       out-specifies `.st`'s own `line-height: 1.45`. The block grew 2px. The page's global
+       `button { font: inherit }` is harmless because `.st` outranks it; this rule did not.
+       So: `font-family` alone, and `.st`'s own size and leading are left to govern.
+     · `padding: 6px 0` with `margin: -8px 0 0` compensated only at the TOP, so everything below the
+       diagnosis — the whole spine — sat 8px lower than in every other variant. The negative bottom
+       margin pulls the tap padding back out of flow.
+     Caught by pixel-diffing V4 against V1, which is the comparison this variant exists to lose or win;
+     with these in place the diff would have been measuring my CSS. Check 19 asserts the page below is
+     unmoved, so a future edit here fails loudly. */
+  /* `isolation: isolate` is load-bearing, not tidiness. The band is a `z-index: -1` pseudo (d29's
+     technique), and without a stacking context here the -1 escapes the button entirely and paints behind
+     `.device`, which carries an opaque white background — so the band rendered NOTHING and the variant
+     still pixel-matched V1. Isolating keeps the -1 inside the button: behind its own ink, above the page.
+     Check 19's pixel diff is what caught it; by eye the band was simply absent twice. */
+  .st.tap { isolation: isolate; position: relative; width: 100%; text-align: left; font-family: inherit; color: inherit;
+    border: 0; background: none; cursor: pointer; padding: 6px 0; margin: -8px 0 -6px; }
+  .st.tap:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 10px; }
+
+  /* ---- the band, and why it had to be added ----
+     V4 was first drawn PURE: tappable, zero paint, on the reasoning that adding none is what dissolves
+     V2's 0px²-vs-319px² inversion. Pixel-diffed against V1 over the diagnosis region, clean and dirty:
+
+         diffPx 0 of 270000, maxDelta 0
+
+     IDENTICAL. Not "a weak affordance" — no affordance. The variant that makes the diagnosis the way to
+     fix the game is indistinguishable from the variant where the diagnosis does nothing, and the page
+     carries other small-grey-prose blocks (`.lock`, `.hint`) that really are inert, in the same register.
+     Check 19 keeps that result alive by stripping `.band` and asserting the diff returns to 0.
+
+     So it gets the minimum signifier that is not a control container: d29's band. `::before` anchored to
+     the CONTENT BOX and grown each way, which is centred by construction and — decision 29's own reason —
+     MOVES NO TEXT, so the spine below stays where every other variant puts it. A chevron is unavailable
+     by rule (d34 bans it on sheet-openers) and would have been the cheaper signifier otherwise.
+
+     ON COMPARING ITS PAINT TO V2's 319px²: don't, and d46 is why. That round threw away two metrics for
+     being well-defined on two variants and meaningless on the third. A band is a SURFACE — a region of
+     the page — and V2's stroke is a CONTROL CONTAINER; putting them on one axis is the same category
+     error. What is measurable is that the band is not a button silhouette and that `Guardar` keeps the
+     only control container on screen. Whether the page still reads `Guardar` as the primary is a device
+     question, and it is left as one. */
+  .st.tap.band::before { content: ''; position: absolute; left: -12px; right: -12px; top: -4px; bottom: -4px;
+    border-radius: 12px; background: color-mix(in srgb, var(--warn) 13%, var(--color-bg)); z-index: -1; }
+  .st.tap.band.bad::before { background: color-mix(in srgb, var(--color-danger) 13%, var(--color-bg)); }
+  .st.tap.band:active::before { background: color-mix(in srgb, var(--warn) 22%, var(--color-bg)); }
+  .st.tap.band.bad:active::before { background: color-mix(in srgb, var(--color-danger) 22%, var(--color-bg)); }
+
   /* V3 · FILA BGG — `bgg_id` gets the row d33 says every value gets.
      Anatomy is the spine's, reused wholesale rather than re-drawn: `.frow` / `.fr-k` / `.fr-v`, the label
      above its subordinate value (d35/d36), and NO CHEVRON — d34, "a row that opens a sheet carries no
@@ -455,7 +555,7 @@
   /* ---- the state line (d38 / D-19h: a dot + text, never a pill) ---- */
   .st { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; margin: -2px 0 0; }
   .st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5.5px; background: var(--color-text-muted); }
-  .st.warn .dot { background: var(--color-accent); }
+  .st.warn .dot { background: var(--warn); }
   .st.bad .dot { background: var(--color-danger); }
   .st.wait .dot { background: var(--color-text-muted); }
   .st .sx { flex: 1; min-width: 0; color: var(--color-text); }
@@ -550,6 +650,7 @@
     <button data-var="V1" class="on">V1 · Nada</button>
     <button data-var="V2">V2 · En el diagnóstico</button>
     <button data-var="V3">V3 · Fila BGG</button>
+    <button data-var="V4">V4 · El diagnóstico ES el remedio</button>
     <button data-var="HOY">Hoy (073)</button>
   </div>
   <div>Estado:
@@ -802,7 +903,17 @@ function stateHTML() {
   const s = STATE_COPY[ST]; if (!s) return '';
   const live = broken() ? `<span class="sc">${esc(s.c)} <b>Se está viendo así en la web.</b></span>` : `<span class="sc">${esc(s.c)}</span>`;
   const rmd = remedyShown() ? remedyBtnHTML() : '';
-  return `<p class="st ${s.k}${rmd ? ' has-rmd' : ''}"><span class="dot"></span><span class="sx">${esc(s.t)}${live}${rmd}</span></p>`;
+  const inner = `<span class="dot"></span><span class="sx">${esc(s.t)}${live}${rmd}</span>`;
+  /* V4: the same block, as a button. A <button> and not a <p> with a handler — the element carries the
+     role, the keyboard reachability and the focus ring for free, and every one of those would have to be
+     hand-rolled and hand-asserted otherwise.
+     The accessible name is the diagnosis itself, which is verbose but TRUE; an aria-label naming only
+     the action would hide the diagnosis from assistive tech, which is the one thing this block exists to
+     deliver. A visually-hidden hint carries the action instead — check 20 asserts both halves are in the
+     name, so a future tidy-up cannot quietly drop the sentence. */
+  const r = VAR === 'V4' ? remedy() : null;
+  if (r) return `<button class="st tap band ${s.k}" data-act="${r.act}" id="stbtn">${inner}<span class="sr"> — tocá para ${esc(r.short.toLowerCase())}</span></button>`;
+  return `<p class="st ${s.k}${rmd ? ' has-rmd' : ''}">${inner}</p>`;
 }
 
 /* ---------- V3: the row d33 says this value gets ----------
