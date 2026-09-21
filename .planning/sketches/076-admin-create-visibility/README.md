@@ -2,10 +2,10 @@
 sketch: 076
 name: admin-create-visibility
 question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2/R3 — what do you get when you tap `+`?"
-winner: null
-tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d53, d54, d49, d39, d38, d35, d36, d46, d64, copy, disabled-state, scenario-walk]
+winner: "V2 Se abre + Toast «Ver»"
+tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d53, d54, d55, d18, d49, d39, d38, d35, d36, d46, d64, copy, disabled-state, scenario-walk]
 rounds: 5
-status: PENDING REVIEW
+status: DECIDED 2026-09-21 (on the measurements; not device-confirmed)
 ---
 
 # Sketch 076: crear con ID de BGG — ¿dónde queda el juego?
@@ -24,8 +24,11 @@ The developer's scope for the scenario, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/076-admin-create-visibility/index.html
-node .planning/sketches/076-admin-create-visibility/verify.js     # 38/38
+node .planning/sketches/076-admin-create-visibility/verify.js     # 40/40
 ```
+
+**The sketch opens on the decision** — `V2 Se abre ★` with `Toast «Ver» ★`. V1 and V3 are still on the page
+and navigable; the winner is marked, not the only option.
 
 Use the **El paseo** strip in the tool panel: `1 · Agregar 342942`, then `2a · llegan los datos` or
 `2b · falla`, and `↺` to start over. State is carried between steps — the row that changes is the row the
@@ -563,3 +566,50 @@ current screen is about has to change the screen too.**
 - **The real app already broadcasts completion** (`{:game_enriched, game_id}`, `enrich_game_worker.ex:104-106`,
   consumed at `index.ex:196-198`) — the event reaches the list today and is used only to re-render the row.
   Whatever wins here is a small change on top of a signal that already exists.
+
+
+---
+
+## Decided — V2 Se abre + Toast «Ver» (2026-09-21)
+
+**Both axes are taken, because check 26 showed neither covers the other:** V2 covers the **interval** between
+create and completion; the toast covers the **moment** of completion.
+
+| | en pantalla | y= | toques | viaje | duplicado | rótulos | «falló» dicho |
+|---|---|---|---|---|---|---|---|
+| V1 | **no** | — | 1 (abrir la sección) | 0px | 0 | 3 | 1 |
+| **V2 ★** | **sí** | 166-230 | **0** | 79px | **1** | **3** | **1** |
+| V3 | sí | 173-237 | 0 | **0px** | 1 (latente → 2) | 4 | 2 |
+
+**Why V2 rather than V3 — V2 introduces nothing new.** The shipped app already answers this question with
+`push_patch(to: filter_path(:draft, ""))` (`index.ex:105`), and V2 is that same intent said in d8's
+vocabulary instead of d1's deleted chips. V3 invents *"Recién agregado"*, and a new concept needs a lifetime
+rule this round does not have: its block retires when the status resolves, but a `failed` game never
+resolves. It also costs a 4th caption and announces the same failure twice.
+
+**Why V2 rather than V1.** V1 is defensible — the incumbent, provably identical to 071, cost of one tap. But
+you tap `Agregar`, the page is unchanged, and you wait with no feedback at all.
+
+**A charged cost withdrawn.** V2's 79px of travel was listed beside d42's *"the thing to tap is moving"* — but
+d42's defect was a **control** drifting between renders. This is a page scrolling once, right after an
+explicit tap, to show what the tap did. Caused and expected. **The fifth charge in this lineage that did not
+survive being checked against what it was actually a property of.**
+
+### The two amendments
+
+**d1 is amended, not overturned.** Its measurement — the four `estado` chips filter 435 into 435 — stands,
+and it is about **browsing**. What it did not account for is the **create moment**, where the shipped app
+uses the drafts filter for a different job. **d1 stands for browsing; the job the chips did at the create
+moment is now done by d8's `Borradores` section opening.** No chips return.
+
+**d18 is amended: "closed at rest" means ON ARRIVAL, not invariantly.** Creating a draft opens the section
+that holds it, and it **stays** open — through the sync finishing and through a round trip to the editor and
+back (check 27). Measured *before* the choice, because a section that silently redefines the resting page
+would have been a reason to reject V2 rather than a footnote to it. Kept because staff add in **batches**
+(d3's newest-first list exists for that reason). **The default changed, not the control** — one tap on the
+caption still closes it, and the state is per-session, never persisted.
+
+### Not device-confirmed
+
+Chosen on the measurements at the developer's request. In this lineage the device has caught what the harness
+did not **eight** times. If V2 feels wrong in the hand, that finding outranks all of the above.

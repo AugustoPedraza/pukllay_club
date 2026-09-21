@@ -613,6 +613,45 @@ const VARS = ['V1', 'V2', 'V3'];
     `V1 ${gap.V1.saysSyncing} · V2 ${gap.V2.saysSyncing} · V3 ${gap.V3.saysSyncing}. ` +
     `The toast covers the END, not the INTERVAL, so V1 is still silent for the whole wait`);
 
+  /* ---------- the chosen combination, guarded ---------- */
+
+  /* 27 — THE d18 AMENDMENT, asserted rather than left as behaviour.
+         d18 ("the two exception sections close at rest") and d8's collapsed-by-default are what V2 changes:
+         creating a draft OPENS the section that holds it, and it STAYS open — through the sync finishing
+         and through a round trip to the editor and back. Measured before the choice was made, because a
+         section that silently redefines the resting page would have been a reason to reject V2 rather than
+         a footnote to it. It is kept because staff add in batches (d3's newest-first list exists for that
+         reason) and staying open matches the task — but it is an amendment, so it is guarded. */
+  const persist = await p.evaluate(() => {
+    document.querySelector('[data-walk="reset"]').click();
+    document.querySelector('[data-var-set="V2"]').click();
+    const before = S.open.draft;
+    document.querySelector('[data-walk="create"]').click();
+    const afterCreate = S.open.draft;
+    document.querySelector('[data-walk="enriched"]').click();
+    const afterSync = S.open.draft;
+    openGame(NEW, 'juegos'); go('juegos');
+    const afterRoundTrip = S.open.draft;
+    /* and it is still USER-CLOSABLE — the amendment changes the default, not the control */
+    document.querySelector('[data-g="draft"]').click();
+    const afterTap = S.open.draft;
+    return { before, afterCreate, afterSync, afterRoundTrip, afterTap };
+  });
+  ok(persist.before === false && persist.afterCreate === true && persist.afterSync === true &&
+     persist.afterRoundTrip === true && persist.afterTap === false,
+    `27 · d18 amended: Borradores is closed at rest (${persist.before}), opens on create (${persist.afterCreate}), ` +
+    `stays open through the sync and a round trip (${persist.afterSync}/${persist.afterRoundTrip}), ` +
+    `and one tap still closes it (${persist.afterTap}) — the default changed, not the control`);
+
+  /* 28 — the sketch opens on the decision. A winner nobody can see without hunting for it is how a chosen
+         variant quietly stops being the one people read. */
+  const dflt = await p.evaluate(() => {
+    const on = [...document.querySelectorAll('#tools .vt.on')].map(b => b.textContent.trim());
+    return { on, marked: on.filter(t => t.includes('★')).length };
+  });
+  ok(dflt.marked === 2 && dflt.on.some(t => /V2/.test(t)) && dflt.on.some(t => /Toast/.test(t)),
+    `28 · the sketch opens on the chosen combination and both halves carry ★: ${JSON.stringify(dflt.on)}`);
+
   /* 21 — nothing in the page threw while all of the above ran */
   ok(errs.length === 0, `21 · no page errors (${errs.length ? errs.join(' | ') : 'none'})`);
 

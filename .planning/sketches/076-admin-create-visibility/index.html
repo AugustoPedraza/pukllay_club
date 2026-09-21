@@ -559,8 +559,8 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>Variante: <button class="vt on" data-var-set="V1">V1 Nada</button> <button class="vt" data-var-set="V2">V2 Se abre</button> <button class="vt" data-var-set="V3">V3 Arriba</button></div>
-  <div>Aviso al terminar: <button class="vt on" data-toast-set="0">Nada</button> <button class="vt" data-toast-set="1">Toast «Ver»</button></div>
+  <div>Variante: <button class="vt" data-var-set="V1">V1 Nada</button> <button class="vt on" data-var-set="V2">V2 Se abre ★</button> <button class="vt" data-var-set="V3">V3 Arriba</button></div>
+  <div>Aviso al terminar: <button class="vt" data-toast-set="0">Nada</button> <button class="vt on" data-toast-set="1">Toast «Ver» ★</button></div>
   <div>El paseo: <button class="step" data-walk="create">1 · Agregar 342942</button>
     <button class="step" data-walk="enriched" disabled>2a · llegan los datos</button>
     <button class="step" data-walk="failed" disabled>2b · falla</button>
@@ -617,7 +617,25 @@ G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 202
 
    VAR is the round's only axis. NEW is the id `addGame` minted, and it is what "where did it go" is asked
    about; it survives every render and is cleared only by ↺. */
-let VAR = 'V1';
+/* ---------- THE ANSWER, 2026-09-21: V2 Se abre + the completion toast ----------
+   Chosen on the measurements (the device has not overruled them). The two axes are BOTH taken, because
+   check 26 showed neither covers the other: V2 covers the INTERVAL between create and completion, the toast
+   covers the MOMENT of completion. V1 and V3 stay on the page and navigable — the winner is marked, not the
+   only option.
+
+   WHY V2 RATHER THAN V3: V2 introduces nothing new. The shipped app already answers this question with
+   `push_patch(to: filter_path(:draft, ""))` (index.ex:105) — jump to the drafts view — and V2 is that same
+   intent said in d8's vocabulary instead of d1's deleted chips. V3 invents "Recién agregado", and a new
+   concept needs a lifetime rule this sketch does not have: its block retires when the status resolves, but
+   a `failed` game never resolves, so it would sit there indefinitely.
+
+   WHY V2 RATHER THAN V1: V1 is genuinely defensible — it is the incumbent, provably identical to 071, and
+   its cost is one tap. But you tap `Agregar`, the page is unchanged, and you wait with no feedback at all.
+
+   THE TRAVEL CHARGE WAS DISCOUNTED, and the reason is recorded: 79px was listed next to d42's "the thing to
+   tap is moving", but d42's defect was a CONTROL drifting between renders. This is a page scrolling once,
+   immediately after an explicit tap, to show what the tap did. Caused and expected — not the same thing. */
+let VAR = 'V2';
 let NEW = null;
 
 /* ---------- ROUND 5: the SECOND axis — does the end of the sync announce itself? ----------
@@ -648,7 +666,7 @@ let NEW = null;
        thing that says anything, and V1 does not render it
      · it lasts 10000ms; miss it and you are back to the same question
    Complementary, not substitutes. Measured by checks 22-26 rather than argued. */
-let TOAST = false;
+let TOAST = true;
 
 const enrOf = g => g.enr || 'enriched';
 const byId = id => G.find(g => g.id === id);

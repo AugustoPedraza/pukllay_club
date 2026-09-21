@@ -1916,6 +1916,74 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     id that no longer existed. A reset that deletes what the current screen is about has to change the
     screen too.
 
+
+55. **V2 + the completion toast, and it amends d1 and d18.** Sketch **076**, decided 2026-09-21. Both axes
+    are taken, because check 26 showed neither covers the other: **V2 covers the INTERVAL** between create
+    and completion, **the toast covers the MOMENT** of completion. V1 and V3 stay on the page and navigable;
+    the winner is marked, not the only option.
+
+    | | en pantalla | y= | toques | viaje | duplicado | rótulos | «falló» dicho |
+    |---|---|---|---|---|---|---|---|
+    | V1 | **no** | — | 1 (abrir la sección) | 0px | 0 | 3 | 1 |
+    | **V2** | **sí** | 166-230 | **0** | 79px | **1** | **3** | **1** |
+    | V3 | sí | 173-237 | 0 | **0px** | 1 (latente → 2) | 4 | 2 |
+
+    **Why V2 rather than V3: V2 introduces nothing new.** The shipped app already answers this question —
+    `push_patch(to: filter_path(:draft, ""))` (`index.ex:105`), jump to the drafts view — and V2 is that same
+    intent said in **d8's vocabulary** instead of d1's deleted chips. V3 invents *"Recién agregado"*, and a
+    new concept needs a **lifetime rule this round does not have**: its block retires when the status
+    resolves, but a `failed` game never resolves, so it would sit there indefinitely; and in the real app
+    *"recently"* would need defining (session? an hour?). V3 also costs a 4th caption on a page d17
+    deliberately made uniform with 3, and announces the same failure twice.
+
+    **Why V2 rather than V1.** V1 is genuinely defensible — the incumbent, provably identical to 071 (check
+    18 compares rendered list DOM: 28,076 chars), and its cost is one tap. But you tap `Agregar`, the page is
+    unchanged, and you wait with no feedback at all.
+
+    **A charged cost withdrawn, and the withdrawal recorded.** V2's **79px of travel** was listed next to
+    d42's *"the thing to tap is moving"* — but **d42's defect was a CONTROL drifting between renders**. This
+    is a page scrolling once, immediately after an explicit tap, to show what the tap did: caused and
+    expected. Discounted. That is the **fifth** charge in this lineage that did not survive being checked
+    against what it was actually a property of.
+
+    ### d1 is AMENDED, not overturned
+
+    > d1 deleted the four `estado` filter chips because, with 434 published / 1 draft / 0 retired, they
+    > **filter 435 into 435**. That measurement stands, and it is about **browsing**.
+
+    What it did not account for is the **create moment**, where the shipped app uses the drafts filter for a
+    different job: showing you the thing you just made. **d1 stands for browsing; the job the chips did at
+    the create moment is now done by d8's `Borradores` section opening.** No chips return.
+
+    ### d18 is AMENDED: "closed at rest" means ON ARRIVAL, not invariantly
+
+    > d18: *"the two exception sections close at rest"*, so the newest-first catalogue starts immediately.
+
+    **Creating a draft opens the section that holds it, and it stays open** — through the sync finishing and
+    through a round trip to the editor and back (check 27). Measured **before** the choice was made, because
+    a section that silently redefines the resting page would have been a reason to reject V2 rather than a
+    footnote to it.
+
+    **Kept, because it matches the task:** staff add in **batches** — d3's newest-first list exists for
+    exactly that reason — so staying open across a sitting is right, not sloppy. **The default changed, not
+    the control:** one tap on the caption still closes it, and the state is per-session, never persisted.
+
+    ### The toast, and what it does not cover
+
+    `Aviso al terminar` is **on**. It names the game, fires on **both** endings, carries `Ver` to that game's
+    editor, and never fires for a game whose editor you are already reading (d54). It lasts **10000ms**, and
+    **a missed toast has no second chance** — which is precisely why V2 is taken alongside it rather than
+    instead of it. Check 26 is the number:
+
+    ```
+    durante la ESPERA (creado, sin terminar, el snack de creación ya se fue)
+    V1  sin fila, sin texto, sin toast          V2  «Trayendo datos de BGG…»
+    ```
+
+    **Not device-confirmed.** Chosen on the measurements at the developer's request. In this lineage the
+    device has caught what the harness did not **eight** times; if V2 feels wrong in the hand, that finding
+    outranks everything above.
+
 ## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
 
 **The developer's words:** *"This iteration have been becoming harder and harder over time. I want to
