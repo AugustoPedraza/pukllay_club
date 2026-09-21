@@ -4,24 +4,22 @@
      node .planning/sketches/078-admin-publish-gate/verify.js
    Env: PLAYWRIGHT_CORE, SKETCH_URL, SHOTS_DIR (default <os tmp>/sketch-078-shots).
 
-   THE ROUND'S QUESTION: the draft is incomplete and you reach for Publicar. WHO STOPS YOU, AND HOW?
-   G1 bloquea · G2 avisa · G3 la ficha (the do-nothing baseline).
+   TODAS LAS PREGUNTAS ESTÁN CONTESTADAS Y LOS TOGGLES ELIMINADOS (convención de 072): el borrador se
+   completa y se publica desde UNA HOJA abierta desde la lista, con UN solo botón, validación P2 (el botón
+   nace muerto y revive al elegir el nivel, sin mensaje de error) y vuelta a la lista con la fila resaltada.
+   La página del editor sobrevive SÓLO para un juego ya publicado.
 
-   WHAT THE GATE REQUIRES IS MEASURED, NOT VARIED — and checks 7/9/11 are where that measurement is made
-   falsifiable rather than asserted in prose:
-     · copias is NOT a gate item in any variant, and the row pre-fills 1   (434/434 published = 1)
-     · estante is NOT a gate item in any variant                          (433/434 published have none)
-     · nivel IS a gate item, and it VANISHES for an expansion              (408/408 base · 0/26 expansions)
+   LO QUE LA PUERTA EXIGE ESTÁ MEDIDO, NO ELEGIDO, y sigue siendo el corazón de la hoja:
+     · copias no es condición — se pre-carga en 1        (434/434 publicados tienen exactamente 1)
+     · estante no es condición                            (1 de 435 lo tiene)
+     · el nivel SÍ, salvo expansión                       (408/408 base · 0/26 expansiones)
+     · y el nivel ES la sección                           (sections.rule_value, 1:1 contra la banda)
 
    Traps this file is written around — the first is new to this round, the rest inherited from 075-077,
    where each one produced a green number that described something other than the page.
 
-     · A GATE CHECK THAT READS ONLY `#publish[disabled]` CANNOT DISTINGUISH G2 FROM G3. Both render a live
-       button; they diverge only at the TAP. Every G2/G3 assertion below therefore DRIVES the tap and reads
-       what came back (a dialog, or a published game) rather than reading the resting page.
-     · A DISABLED BUTTON DOES NOT PROVE A GATE. `#publish[disabled]` is also what you get if the walk never
-       reached the editor. Check 2 asserts the button EXISTS and is enabled in the complete case before
-       check 3 is allowed to mean anything, and check 12 negative-tests the gate by emptying `missing()`.
+     · UN BOTÓN DESHABILITADO NO PRUEBA UNA PUERTA: `#dpub[disabled]` es también lo que se ve si la hoja
+       nunca se abrió. Todo check del estado muerto va acompañado del estado VIVO sobre la misma hoja.
      · CLICKING A WALK BUTTON THROUGH PLAYWRIGHT'S `click()` FAILS WHILE `#tools` IS HIDDEN. Every step is
        dispatched with `el.click()` inside `evaluate`; the panel is hidden only around screenshots.
      · A top-level `const`/`let` in a classic script is a LEXICAL BINDING, not a property of `window`, so a
@@ -107,8 +105,6 @@ const gateState = p => p.evaluate(() => {
 });
 
 (async () => {
-  /* no ms-playwright browser is cached on this machine; the system Chrome is used instead. Kept as an env
-     override rather than hardcoded so the file still runs where the bundled browser IS installed. */
   const exe = process.env.CHROME_BIN || '/usr/bin/google-chrome-stable';
   const browser = await chromium.launch(fs.existsSync(exe) ? { executablePath: exe } : {});
   const page = await browser.newPage({ viewport: { width: 375, height: 740 }, deviceScaleFactor: 2 });
@@ -117,607 +113,157 @@ const gateState = p => p.evaluate(() => {
   page.on('pageerror', e => errors.push(String(e)));
   await page.goto(URL, { waitUntil: 'networkidle' });
 
-  /* ---- 0. the tool panel really hides, so every hit test below means something ---- */
+  const toSheet = async () => {
+    await reset(page);
+    await step(page, 'create'); await step(page, 'enriched'); await step(page, 'draft');
+  };
+
+  /* ---- 0. el panel se oculta de verdad, así cualquier hit-test significa algo ---- */
   await hideTools(page);
   ok(await page.evaluate(() => getComputedStyle(document.getElementById('tools')).visibility === 'hidden'),
     '0 · #tools se oculta de verdad antes de cualquier hit-test');
   await showTools(page);
 
-  /* ---- 1. the walk reaches an enriched, incomplete draft in the editor ---- */
-  await toEditor(page);
-  let st = await gateState(page);
-  ok(st.status === 'draft' && st.missing && st.missing.join() === 'weight_band',
-    `1 · el borrador llega enriquecido y le falta EXACTAMENTE el nivel (missing=${st.missing})`);
+  /* ---- 1. NO QUEDA NINGÚN TOGGLE DE VARIANTE ----
+     072: *"lo que está en pantalla es la decisión, no un menú de decisiones."* El desarrollador lo pidió
+     explícitamente. Asertado como ausencia para que no vuelvan de a uno. */
+  const toggles = await page.evaluate(() => ({
+    variantes: document.querySelectorAll('[data-v-set],[data-g-set],[data-m-set],[data-r-set],[data-exp-set],[data-nm-set],.vt').length,
+    pasos: document.querySelectorAll('[data-walk]').length
+  }));
+  ok(toggles.variantes === 0, `1 · no queda ningún toggle de variante en la página (${toggles.variantes})`);
 
-  /* ---- 2. the button exists and is ALIVE once complete — so check 3's "disabled" can mean something ----
-     Without this, `#publish[disabled]` is indistinguishable from "the walk never got here". */
-  await setGate(page, 'G1');
-  await step(page, 'nivel');
-  st = await gateState(page);
-  ok(st.hasBtn && st.disabled === false && st.missing.length === 0 && !/[Ff]alta/.test(st.why),
-    `2 · con el nivel puesto, Publicar está VIVO en G1 y ya no se nombra ningún faltante ("${st.why}")`);
-
-  /* ---- 3. G1 kills the button while incomplete, and SAYS WHAT is missing ---- */
-  await toEditor(page); await setGate(page, 'G1');
-  st = await gateState(page);
-  ok(st.hasBtn && st.disabled === true, '3a · G1 · Publicar está muerto mientras falta el nivel');
-  ok(/falta el nivel/i.test(st.why), `3b · G1 · la barra nombra QUÉ falta, no sólo QUE falta ("${st.why}")`);
-
-  /* ---- 4. the three variants read ONE `missing()` — so nothing below is attributable to treatment ---- */
-  const miss = {};
-  for (const g of GATES) { await toEditor(page); await setGate(page, g); miss[g] = (await gateState(page)).missing.join(); }
-  ok(miss.G1 === miss.G2 && miss.G2 === miss.G3 && miss.G1 === 'weight_band',
-    `4 · las tres variantes leen el mismo missing() (${JSON.stringify(miss)})`);
-
-  /* ---- 5. the bar's geometry is identical in all three; only G1 adds the `why` and the dead button ---- */
-  const bars = {};
-  for (const g of GATES) {
-    await toEditor(page); await setGate(page, g); await hideTools(page);
-    bars[g] = await page.evaluate(() => {
-      const host = document.getElementById('stack').offsetParent ? document.getElementById('stack') : document.getElementById('tbar');
-      const b = host.getBoundingClientRect();
-      return { top: Math.round(b.top), h: Math.round(b.height), btns: host.querySelectorAll('.btn').length };
-    });
-    await showTools(page);
-  }
-  ok(bars.G2.top === bars.G3.top && bars.G2.h === bars.G3.h && bars.G2.btns === bars.G3.btns && bars.G2.btns === 2,
-    `5a · G2 y G3 dibujan una barra byte-idéntica — sólo difieren AL TOCAR (${JSON.stringify(bars.G2)} vs ${JSON.stringify(bars.G3)})`);
-  /* 5b was written for round 1's single-row savebar, where G1's sentence sat BESIDE the buttons and cost
-     no height. In B's stacked foot it sits ABOVE them, so G1's bar is genuinely taller — and that height
-     comes straight out of the form. Measured rather than asserted equal. */
-  ok(bars.G1.btns === 2 && bars.G1.h >= bars.G2.h,
-    `5b · en el pie apilado la frase de G1 cuesta ALTURA: ${bars.G1.h}px contra ${bars.G2.h}px de G2/G3 — ${bars.G1.h - bars.G2.h}px menos de formulario`);
-
-  /* ---- 6. G3's only paint: a dot on the row the gate names, and on no other row ---- */
-  const dots = {};
-  for (const g of GATES) { await toEditor(page); await setGate(page, g); const s = await gateState(page); dots[g] = { n: s.missDots, k: s.missDotKeys.join() }; }
-  ok(dots.G3.n === 1 && dots.G3.k === 'weight_band' && dots.G1.n === 0 && dots.G2.n === 0,
-    `6a · el punto de "falta" existe SÓLO en G3 y SÓLO en la fila del nivel (${JSON.stringify(dots)})`);
-  /* 6b EXISTS BECAUSE 6a PASSED AGAINST AN INVISIBLE DOT. The first draft painted it with a variable this
-     theme renamed years ago, so it rendered as an 8x8 transparent square — counted, found, and green.
-     A node count is not a measurement of something you can SEE. */
-  await toEditor(page); await setGate(page, 'G3');
-  const dotPaint = await page.evaluate(() => {
-    const d = document.querySelector('.frow .miss'), cs = getComputedStyle(d);
-    return { bg: cs.backgroundColor, w: d.getBoundingClientRect().width };
-  });
-  ok(!/rgba\(0, 0, 0, 0\)|transparent/.test(dotPaint.bg) && dotPaint.w >= 6,
-    `6b · y ese punto tiene un color de verdad, no una variable inexistente (${dotPaint.bg}, ${dotPaint.w}px)`);
-
-  /* ---- 7. copias: pre-filled to 1, and NOT a gate item in any variant ----
-     `units` has no DB default, enrichment never casts it, admin_changeset lets a blank through — so without
-     the pre-fill every game the new flow creates stays nil forever. 434/434 published have exactly 1. */
-  const units = {};
-  for (const g of GATES) { await toEditor(page); await setGate(page, g); const s = await gateState(page); units[g] = { row: s.unitsRow.trim(), inGate: s.missing.includes('units') }; }
-  ok(units.G1.row.startsWith('1') && !units.G1.inGate && !units.G2.inGate && !units.G3.inGate,
-    `7 · copias se pre-carga en 1 y NO es condición de la puerta en ninguna variante (${JSON.stringify(units)})`);
-
-  /* ---- 8. THE GATE CANNOT TELL A BAD NAME FROM A GOOD ONE ----
-     The real draft's name is a 62-char concatenation BGG never meant to send (bgg_client.ex:130's `.//` +
-     SweetXml's `s`). It is a production bug, filed separately, and the gate is deliberately NOT designed
-     around it. This check asserts that claim instead of leaving it as prose: the gate's items must be
-     IDENTICAL under both names. If it ever goes red, someone has taught the gate a name heuristic. */
-  await toEditor(page); await setGate(page, 'G1');
-  const clean = await gateState(page);
-  await setTool(page, 'nm', '1');
-  const broken = await gateState(page);
-  ok(clean.missing.join() === broken.missing.join() && broken.disabled === clean.disabled,
-    `8a · la puerta no distingue el nombre roto del bueno (limpio=${clean.missing} roto=${broken.missing})`);
-  ok(await page.evaluate(() => document.getElementById('ghname').textContent.includes('Korean edition')),
-    '8b · el nombre roto REALMENTE se pinta (si no, 8a no probaría nada)');
-  await setTool(page, 'nm', '0');
-
-  /* ---- 9. the gate's one condition VANISHES for an expansion, in all three ----
-     0 of 26 published expansions carry a nivel; 408 of 408 base games do. Without this lever "the gate
-     requires nivel" is unfalsifiable. */
-  const exp = {};
-  for (const g of GATES) {
-    await toEditor(page); await setGate(page, g); await setTool(page, 'exp', '1');
-    const s = await gateState(page); exp[g] = { miss: s.missing.join(), dis: s.disabled, dots: s.missDots };
-    await setTool(page, 'exp', '0');
-  }
-  ok(exp.G1.miss === '' && exp.G1.dis === false && exp.G2.miss === '' && exp.G3.miss === '' && exp.G3.dots === 0,
-    `9 · para una expansión la puerta no tiene ninguna condición, en las tres (${JSON.stringify(exp)})`);
-
-  /* ---- 10. 073:46's rule survives in all three: no BGG data, no publishing ----
-     This is the half of the gate that WAS already drawn (075's `hasData()`), and it is not a variant. */
-  const pend = {};
-  for (const g of GATES) {
-    await reset(page); await step(page, 'create'); await setGate(page, g);
-    pend[g] = await page.evaluate(() => {
-      const gm = window.byId(window.NEW);
-      return { open: window.gateOpen(gm), enr: window.enrOf(gm) };
-    });
-  }
-  ok(pend.G1.enr === 'pending' && !pend.G1.open && !pend.G2.open && !pend.G3.open,
-    `10 · sin datos de BGG no se publica, en ninguna variante (${JSON.stringify(pend)})`);
-
-  /* ---- 11. THE TAP — the only place G2 and G3 differ, and the reason 5a is not the whole story ---- */
-  await toEditor(page); await setGate(page, 'G2');
-  await tapPublish(page);
-  let g2 = await gateState(page);
-  ok(g2.dialogOpen && /falta el nivel/i.test(g2.dialogText) && g2.status === 'draft',
-    `11a · G2 · el toque abre un confirm que NOMBRA lo que falta, y todavía NO publicó (${JSON.stringify({ d: g2.dialogOpen, s: g2.status })})`);
-  /* 18 EXISTS BECAUSE A SCREENSHOT CAUGHT IT: the dialog is shared with 077, whose only caller was
-     destructive, so `dlg-yes` carried danger red unconditionally and "Publicar igual" came out painted as a
-     delete. Compared against the app's OWN danger colour rather than against a hardcoded hex, so a theme
-     change cannot make this check quietly meaningless. */
-  const dlgPaint = await page.evaluate(() => {
-    const b = document.querySelector('[data-act="dlg-yes"]');
-    const danger = getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim();
-    const probe = document.createElement('span'); probe.style.color = danger;
-    document.body.appendChild(probe); const resolved = getComputedStyle(probe).color; probe.remove();
-    return { colour: getComputedStyle(b).color, danger: resolved, dan: b.classList.contains('dan') };
-  });
-  ok(!dlgPaint.dan && dlgPaint.colour !== dlgPaint.danger,
-    `18 · "Publicar igual" NO está pintado de rojo de peligro — publicar no es destruir (${dlgPaint.colour} vs peligro ${dlgPaint.danger})`);
-  await page.evaluate(() => document.querySelector('[data-act="dlg-yes"]').click());
-  g2 = await gateState(page);
-  ok(g2.status === 'published' && !g2.dialogOpen,
-    '11b · G2 · "Publicar igual" sí publica — avisar no es prohibir');
-
-  await toEditor(page); await setGate(page, 'G3');
-  await tapPublish(page);
-  const g3 = await gateState(page);
-  ok(g3.status === 'published' && !g3.dialogOpen,
-    '11c · G3 · el toque publica de una, sin decir nada — que es lo que hace el código HOY');
-
-  await toEditor(page); await setGate(page, 'G1');
-  await tapPublish(page);
-  let g1 = await gateState(page);
-  ok(g1.status === 'draft' && !g1.dialogOpen,
-    '11d · G1 · tocar el botón muerto no hace nada');
-  /* AND THE SAME THING THROUGH THE OTHER DOOR. This is the check that found G1's gate was pure paint:
-     the walk's step 5 calls doPublish() the way any other caller would, and the first version of this page
-     published a draft with no nivel while the button on screen was visibly dead. */
-  await step(page, 'publish');
-  g1 = await gateState(page);
-  ok(g1.status === 'draft',
-    '11e · G1 · y tampoco por el otro camino — la negativa vive en la función, no sólo en la pintura');
-
-  /* ---- 12. NEGATIVE TEST — empty `missing()` and checks 3 and 6 must go RED ----
-     Reached through `window` because a top-level function DECLARATION is the only kind the page's own
-     closures resolve late enough for a harness override to reach (076 hit the const trap twice). */
-  await toEditor(page); await setGate(page, 'G1');
-  await page.evaluate(() => { window.__realMissing = window.missing; window.missing = () => []; window.render(); });
-  const neg = await gateState(page);
-  await setGate(page, 'G3');
-  const negDots = (await gateState(page)).missDots;
-  await page.evaluate(() => { window.missing = window.__realMissing; window.render(); });
-  ok(neg.disabled === false && neg.why === '' && negDots === 0,
-    `12 · anulando missing() la puerta desaparece — el check 3 y el 6 son falsificables (dis=${neg.disabled} why="${neg.why}" dots=${negDots})`);
-
-  /* ---- 13. the lifecycle read-out is 075's dot + text, and it is NOT a control ----
-     075:886 drew it that way and it is also the app-wide status rule. Despublicar is slice 079; this check
-     exists so that adding a control here later cannot happen silently. */
-  await toEditor(page);
-  const life = await page.evaluate(() => {
-    const el = document.querySelector('.gh-st');
-    return { txt: el.textContent.trim(), dots: el.querySelectorAll('.dot').length, tag: el.tagName, btns: el.querySelectorAll('button').length };
-  });
-  ok(life.dots === 1 && life.btns === 0 && /^Borrador/.test(life.txt),
-    `13a · el ciclo es un punto + texto, sin ningún control (${JSON.stringify(life)})`);
-  const lifePaint = await page.evaluate(() => getComputedStyle(document.querySelector('.gh-st .dot')).backgroundColor);
-  ok(!/rgba\(0, 0, 0, 0\)|transparent/.test(lifePaint),
-    `13c · y el punto del ciclo se ve (${lifePaint}) — 13a pasó contra uno transparente`);
-  await setGate(page, 'G3'); await step(page, 'publish');
-  const life2 = await page.evaluate(() => document.querySelector('.gh-st').textContent.trim());
-  ok(/^Publicado/.test(life2), `13b · y cambia de verdad al publicar ("${life2}")`);
-
-  /* ---- 14. published: there is NO way back. The measurement, not a design ----
-     `publish_game` -> :published, `retire_game` -> :retired, `restore_game` :retired -> :published. There
-     is no :published -> :draft transition anywhere in the app, and `Retirar` means the club no longer HAS
-     the game. This check records the absence so slice 079 starts from a number rather than from memory. */
-  const back = await page.evaluate(() => {
-    const acts = [...document.querySelectorAll('#tbar [data-act], #stack [data-act], #savebar [data-act]')].map(b => b.dataset.act).filter(a => a !== 'juegos' && a !== 'back');
-    return { acts, publishBtn: !!document.getElementById('publish') };
-  });
-  ok(!back.publishBtn && !back.acts.includes('unpublish') && !back.acts.includes('retire'),
-    `14 · publicado, la barra no ofrece ninguna vuelta atrás — despublicar NO EXISTE (acts=${back.acts})`);
-
-  /* ---- 17. G1's explanation has to fit BESIDE two buttons in 375px ----
-     Not a preference: `why` + `Guardar` + `Publicar` share one row, so the sentence gets whatever is left.
-     Measured rather than eyeballed, and recorded in the README as G1's real cost. G2 and G3 pay nothing
-     here because their bar carries no sentence at all. */
-  await toEditor(page); await setGate(page, 'G1'); await hideTools(page);
-  const crowd = await page.evaluate(() => {
-    const w = document.querySelector('#tbar .why, #stack .why, #savebar .why') || document.createElement('span');
-    const r = w.getBoundingClientRect();
-    const lh = parseFloat(getComputedStyle(w).lineHeight) || 18;
-    return { w: Math.round(r.width), h: Math.round(r.height), lines: Math.round(r.height / lh), txt: w.textContent.trim() };
-  });
-  await showTools(page);
-  ok(crowd.w > 0, `17 · la explicación de G1 vive en ${crowd.w}px y ocupa ${crowd.lines} renglones ("${crowd.txt}")`);
-
-  /* ---- 17b. G1's DEAD button is still the loudest thing in the bar ----
-     d42's rule puts the primary at the trailing edge and gives it the filled treatment; `disabled` only
-     drops its opacity (075's `.btn[disabled] { opacity: .42 }`). So under G1 the control you CANNOT use is
-     a filled block, and the one you CAN use (`Guardar`) is text. Measured as painted area, not judged:
-     if the dead primary is bigger, the bar's loudest element is the refusal. */
-  await toEditor(page); await setGate(page, 'G1'); await hideTools(page);
-  const weight = await page.evaluate(() => {
-    const p = document.getElementById('publish').getBoundingClientRect();
-    const gEl = document.querySelector('#stack .btn.sec') || document.querySelector('.btn.ghost') || document.getElementById('publish');
-    const g = gEl.getBoundingClientRect();
-    const cs = getComputedStyle(document.getElementById('publish'));
-    return { pub: Math.round(p.width * p.height), save: Math.round(g.width * g.height), op: cs.opacity, fill: cs.backgroundColor };
-  });
-  await showTools(page);
-  ok(weight.pub > 0 && weight.save > 0,
-    `17b · en el pie apilado los dos botones ocupan lo mismo (${weight.pub}px² vs ${weight.save}px²) — el Publicar muerto se distingue sólo por opacidad ${weight.op} y relleno, no por tamaño`);
-
-  /* ---- 16. THE TOAST BURIES THE FOOT — and A is out of its reach ----
-     Round 1 found d55's 10000ms toast sitting on top of the action bar, with `elementFromPoint` at the
-     button's own centre returning the snackbar. Round 2 turns that into a COMPARISON, because moving the
-     CTA into 074's top bar takes it out of the toast's path entirely. Measured with a hit test in both. */
-  const reach = {};
-  for (const mo of ['A', 'B']) {
-    await reset(page); await setMode(page, mo); await setGate(page, 'G3');
-    await step(page, 'create'); await step(page, 'enriched'); await step(page, 'edit');
-    await hideTools(page);
-    reach[mo] = await page.evaluate(() => {
-      const b = document.getElementById('publish'), s = document.getElementById('snack');
-      const r = b.getBoundingClientRect();
-      return {
-        snackUp: s.classList.contains('show'),
-        /* RESOLVED BY ANCESTRY, not by the leaf's own id/class: the point inside the snackbar lands on its
-           inner <span>, which has neither — so reading the leaf reported "" and the check went red while
-           the page was doing exactly what it was accused of. A hit test has to name the CONTAINER. */
-        hit: (el => el ? (el.closest('#snack') ? 'snack' : el.closest('#stack') ? 'stack'
-          : el.closest('#tbar') ? 'tbar' : el.id || el.className || el.tagName) : 'nada')
-          (document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)),
-        y: Math.round(r.top)
-      };
-    });
-    await page.screenshot({ path: path.join(OUT, `X-toast-${mo}.png`) });
-    await showTools(page);
-  }
-  ok(reach.A.snackUp && reach.B.snackUp, `16a · en ambos el toast de d55 sigue vivo al llegar al editor (${JSON.stringify(reach)})`);
-  ok(/snack/.test(reach.B.hit) && !/snack/.test(reach.A.hit),
-    `16b · el toast tapa el Publicar de B (y=${reach.B.y}) y NO alcanza al de A (y=${reach.A.y}) — subirlo a la barra de 074 lo saca de su camino`);
-
-  /* ================= RONDA 2 · ¿cuándo se vuelve real una edición? ================= */
-
-  /* ---- 20. THE EDITOR IS A FULL-SCREEN DESTINATION ----
-     Counted with offsetParent, never by reading the `hidden` attribute: 074 lost a round to a class whose
-     `display` out-specified `[hidden] { display: none }`, so the page rendered the wordmark header UNDER
-     the new bar while the check reported it gone. Negative-tested by removing the companion rule. */
-  for (const mo of ['A', 'B']) {
-    await toEditor(page, mo);
-    const chrome = await page.evaluate(() => {
-      const laid = id => { const e = document.getElementById(id); return !!(e && e.offsetParent); };
-      return { hdr: laid('hdr'), tabs: laid('tabs'), pbar: laid('pbar'), tbar: laid('tbar'),
-        foot: laid('stack') || laid('savebar'),
-        backs: [...document.querySelectorAll('.back, .tb-back')].filter(e => e.offsetParent).length };
-    });
-    ok(!chrome.hdr && !chrome.tabs && !chrome.pbar && chrome.tbar && chrome.backs === 1
-      && chrome.foot === (mo === 'B'),
-      `20${mo} · ${mo} · sin wordmark, sin tabs, sin pbar; una barra, UN control de volver, y pie ${mo === 'B' ? 'presente' : 'AUSENTE de verdad'} (${JSON.stringify(chrome)})`);
-  }
-  /* the negative test: put the companion rule back out of reach and the count must go wrong. */
-  await page.evaluate(() => {
-    const st = document.createElement('style');
-    st.id = 'neg'; st.textContent = '.hdr[hidden]{display:flex !important}';
-    document.head.appendChild(st);
-  });
-  const negChrome = await page.evaluate(() => !!document.getElementById('hdr').offsetParent);
-  await page.evaluate(() => document.getElementById('neg')?.remove());
-  ok(negChrome, '20neg · y el check 20 es falsificable: forzando el display el wordmark reaparece');
-
-  /* ---- 21. A's dirty state is structurally absent, not merely unused ---- */
-  await toEditor(page, 'A'); await step(page, 'nivel');
-  const aClean = await page.evaluate(() => ({ dirty: window.dirty(), writes: window.TAPS.writes }));
-  await toEditor(page, 'B'); await step(page, 'nivel');
-  const bDirty = await page.evaluate(() => ({ dirty: window.dirty(), writes: window.TAPS.writes }));
-  ok(aClean.dirty === false && aClean.writes === 1 && bDirty.dirty === true && bDirty.writes === 0,
-    `21 · A escribe al elegir y nunca queda sucio; B queda sucio y todavía no escribió (A=${JSON.stringify(aClean)} B=${JSON.stringify(bDirty)})`);
-
-  /* ---- 22. G1 IS ONLY BUILDABLE IN B — the cross-round dependency, asserted not assumed ----
-     074's bar is `‹ · título · CTA`. There is no slot for a sentence, so a blocked Publicar in A cannot say
-     why. This is the thing that makes round 1 and round 2 not independent. */
-  await toEditor(page, 'A'); await setGate(page, 'G1');
-  const aWhy = await page.evaluate(() => {
-    const w = document.querySelector('#tbar .why');
-    return { why: w ? w.textContent.trim() : null, dead: document.getElementById('publish').disabled };
-  });
-  ok(aWhy.dead === true && aWhy.why === null,
-    `22 · en A el Publicar de G1 está muerto y NO TIENE DÓNDE EXPLICARSE — la barra de 074 no tiene slot para una frase (${JSON.stringify(aWhy)})`);
-
-  /* ---- 23. how much form fits above the fold ----
-     The first version compared A and B at G3 only and reported 6/6 vs 6/6 — true, and useless: the last
-     row ends at 608 and B's G3 floor is 611, so it clears by THREE PIXELS. The interesting number is
-     across the gates, because G1's sentence pushes B's foot from 129px to 155px and takes the last row
-     with it. Measured per gate rather than averaged into a verdict. */
-  const fold = {};
-  for (const mo of ['A', 'B']) for (const g of GATES) {
-    await toEditor(page, mo); await setGate(page, g); await hideTools(page);
-    fold[mo + g] = await page.evaluate(() => {
-      /* OFF THE SCREEN, NOT THE ATTRIBUTE. The first version asked `stack.hidden` and hardcoded 740 —
-         which was false while `.stack` was still laid out for want of its `[hidden]` companion. */
-      const stack = document.getElementById('stack');
-      const floor = stack.offsetParent ? stack.getBoundingClientRect().top : 740;
-      const rows = [...document.querySelectorAll('.frow')];
-      return { ok: rows.filter(r => r.getBoundingClientRect().bottom <= floor + 0.5).length, floor: Math.round(floor) };
-    });
-    await showTools(page);
-  }
-  ok(fold.AG1.ok === 6 && fold.AG2.ok === 6 && fold.AG3.ok === 6,
-    `23a · en A las 6 filas entran enteras con cualquier puerta (piso 740px siempre)`);
-  ok(fold.BG3.ok === 6 && fold.BG1.ok === 5,
-    `23b · en B la frase de G1 se come la última fila: G3 ${fold.BG3.ok}/6 (piso ${fold.BG3.floor}) · G1 ${fold.BG1.ok}/6 (piso ${fold.BG1.floor}) — y G3 zafa por 3px`);
-
-  /* ---- 23c. B's resting foot holds TWO DEAD BUTTONS ----
-     Found in a screenshot, not in a number. On a fresh draft `Publicar` is blocked by G1 and `Guardar` is
-     dead because nothing is staged yet — so 155px at the foot of the page, the heaviest thing on screen,
-     is two controls you cannot press. 064 banned disabled buttons outright; round 1 already counted the
-     sixth, and this is the seventh in the same view as the sixth. A does not have this state at all,
-     because it has no Guardar and its CTA is 36px of text. */
-  await toEditor(page, 'B'); await setGate(page, 'G1');
-  const deadFoot = await page.evaluate(() => {
-    const bs = [...document.querySelectorAll('#stack .btn')];
-    return { n: bs.length, dead: bs.filter(b => b.disabled).length,
-      h: Math.round(document.getElementById('stack').getBoundingClientRect().height) };
-  });
-  await toEditor(page, 'A'); await setGate(page, 'G1');
-  const deadTop = await page.evaluate(() => {
-    const bs = [...document.querySelectorAll('#tbar .btn')];
-    return { n: bs.length, dead: bs.filter(b => b.disabled).length };
-  });
-  ok(deadFoot.n === 2 && deadFoot.dead === 2 && deadTop.n === 1 && deadTop.dead === 1,
-    `23c · en reposo B ofrece ${deadFoot.dead} de ${deadFoot.n} botones MUERTOS en ${deadFoot.h}px de pie; A ofrece ${deadTop.dead} de ${deadTop.n}, de 36px`);
-
-  /* ---- 24. cuántos toques cuesta completar y publicar ----
-     THE HONEST ANSWER, and it is not the one the framing implied: for the PUBLISH path they cost the same,
-     because Publicar has always saved first (form.ex:84-92 -> after_save). The difference is not in taps. */
-  const cost = {};
-  for (const mo of ['A', 'B']) {
-    await toEditor(page, mo); await setGate(page, 'G3');
-    await page.evaluate(() => { window.TAPS.taps = 0; window.TAPS.writes = 0; });
-    await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="ingenio_estratega"]').click());
-    await tapPublish(page);
-    cost[mo] = await page.evaluate(() => ({ taps: window.TAPS.taps, writes: window.TAPS.writes, st: window.byId(window.S.editing).status }));
-  }
-  ok(cost.A.st === 'published' && cost.B.st === 'published' && cost.A.taps === cost.B.taps,
-    `24 · completar y publicar cuesta LO MISMO en toques: A ${cost.A.taps} · B ${cost.B.taps} (escrituras A ${cost.A.writes} · B ${cost.B.writes})`);
-
-  /* ---- 25. y si te vas a la mitad — donde SÍ difieren ---- */
-  const leave = {};
-  for (const mo of ['A', 'B']) {
-    await toEditor(page, mo); await setGate(page, 'G3');
-    await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="ingenio_estratega"]').click());
-    await step(page, 'leave');
-    const asked = await page.evaluate(() => document.getElementById('dscrim').classList.contains('open'));
-    if (asked) await page.evaluate(() => document.querySelector('[data-act="dlg-yes"]').click());
-    leave[mo] = { asked, band: await page.evaluate(() => window.byId(window.NEW).weight_band) };
-  }
-  ok(leave.A.asked === false && leave.A.band === 'ingenio_estratega' && leave.B.asked === true && leave.B.band === null,
-    `25 · salir a la mitad: A no pregunta y el nivel QUEDA · B pregunta y al salir el nivel SE PIERDE (${JSON.stringify(leave)})`);
-
-  /* ================= RONDA 3 · ¿dónde se marca que un campo es requerido? ================= */
-
-  /* ---- 26. HOW MANY PLACES SAY IT ----
-     B's foot already says "Falta el nivel para publicarlo" under G1 and G3 already dots the row. A third
-     marker would say one thing in three places — the defect 077 counted when the row and the sheet both
-     read "Trayendo datos de BGG" 310px apart. Counted as VISIBLE TEXT plus the dot, not as prose. */
-  const says = {};
-  for (const rq of ['R1', 'R2', 'R3']) for (const g of ['G1', 'G3']) {
-    await toEditor(page, 'B'); await setGate(page, g); await setReq(page, rq); await hideTools(page);
-    says[rq + g] = await page.evaluate(() => {
-      const onScreen = el => el && el.offsetParent && el.getBoundingClientRect().height > 0;
-      const row = document.querySelector('[data-field="weight_band"]');
-      return {
-        etiqueta: onScreen(row.querySelector('.fr-k .req')) ? 1 : 0,
-        valor: onScreen(row.querySelector('.fr-v.req')) ? 1 : 0,
-        punto: onScreen(row.querySelector('.miss')) ? 1 : 0,
-        pie: /[Ff]alta/.test((document.querySelector('#stack .why') || {}).textContent || '') ? 1 : 0
-      };
-    });
-    await showTools(page);
-  }
-  const total = k => Object.values(says[k]).reduce((a, b) => a + b, 0);
-  ok(total('R3G1') === 1 && total('R3G3') === 1,
-    `26a · la línea base dice "falta el nivel" en UN solo lugar: R3+G1 el pie, R3+G3 el punto (${JSON.stringify(says.R3G1)} / ${JSON.stringify(says.R3G3)})`);
-  ok(total('R1G1') === 2 && total('R2G1') === 2,
-    `26b · con G1, marcar en la ficha lo dice en DOS lugares — R1 ${total('R1G1')}, R2 ${total('R2G1')}`);
-  ok(total('R1G3') === 2 && total('R2G3') === 2,
-    `26c · y con G3 también dos, porque el punto y la marca son la misma noticia en la misma fila (R1 ${JSON.stringify(says.R1G3)})`);
-
-  /* ---- 27. REQUIRED TO PUBLISH, NEVER TO SAVE ----
-     In B you can save a draft with no nivel and come back, so a marker reading "obligatorio" would be a lie
-     about what the page will let you do. Every variant's wording has to be scoped, and the save path has to
-     actually work while the field is empty. */
-  for (const rq of ['R1', 'R2']) {
-    await toEditor(page, 'B'); await setReq(page, rq);
-    const txt = await page.evaluate(() => {
-      const row = document.querySelector('[data-field="weight_band"]');
-      return (row.querySelector('.fr-k .req') || row.querySelector('.fr-v.req') || {}).textContent || '';
-    });
-    ok(/publicar|web/i.test(txt) && !/obligatorio|requerido\b/i.test(txt),
-      `27${rq} · ${rq} · la marca habla de PUBLICAR o de la web, nunca de "obligatorio" ("${txt.trim()}")`);
-  }
-  /* and saving really does work with the field empty — otherwise the scoping above is a claim, not a fact */
-  await toEditor(page, 'B'); await setReq(page, 'R1');
-  await page.evaluate(() => document.querySelector('[data-field="units"]').click());
-  await page.evaluate(() => document.querySelector('[data-step="1"]').click());
-  await page.evaluate(() => document.querySelector('.sh-x').click());
-  await page.evaluate(() => document.querySelector('#stack [data-act="save"]').click());
-  const saved = await page.evaluate(() => ({ dirty: window.dirty(), band: window.byId(window.S.editing).weight_band, units: window.byId(window.S.editing).units }));
-  ok(saved.dirty === false && saved.band === null,
-    `27save · y guardar SÍ funciona con el nivel vacío — el borrador queda limpio sin nivel (${JSON.stringify(saved)})`);
-
-  /* ---- 28. WHAT SURVIVES ONCE THE FIELD IS FILLED ----
-     "Required" and "missing" are different claims. R1 rides the label, so it still says the field matters
-     once a nivel is picked; R2 rides the empty value and therefore DISAPPEARS, which is its structural
-     cost. G3's dot disappears in both, correctly — it was only ever about the gap. */
-  const filled = {};
-  for (const rq of ['R1', 'R2']) {
-    await toEditor(page, 'B'); await setGate(page, 'G3'); await setReq(page, rq); await step(page, 'nivel');
-    filled[rq] = await page.evaluate(() => {
-      const row = document.querySelector('[data-field="weight_band"]');
-      return { marca: !!row.querySelector('.fr-k .req, .fr-v.req'), punto: !!row.querySelector('.miss'),
-        valor: row.querySelector('.fr-v').textContent.trim() };
-    });
-  }
-  ok(filled.R1.marca === true && filled.R2.marca === false && !filled.R1.punto && !filled.R2.punto,
-    `28 · con el nivel puesto R1 sigue marcando el campo y R2 ya no dice nada (${JSON.stringify(filled)})`);
-
-  /* ---- 29. an expansion requires nothing, in all three ---- */
-  const exp2 = {};
-  for (const rq of ['R1', 'R2', 'R3']) {
-    await toEditor(page, 'B'); await setReq(page, rq); await setTool(page, 'exp', '1');
-    exp2[rq] = await page.evaluate(() => !!document.querySelector('.fr-k .req, .fr-v.req, .frow .miss'));
-    await setTool(page, 'exp', '0');
-  }
-  ok(!exp2.R1 && !exp2.R2 && !exp2.R3,
-    `29 · en una expansión no se marca nada, en las tres (${JSON.stringify(exp2)})`);
-
-  /* ---- 30. the three bands are the real ones, and the band IS the section ----
-     Round 1 carried 075's four invented bands. Corrected against Vocabulary.@weight_bands and the live
-     column; the sheet must offer exactly the three real values plus the empty one. */
-  await toEditor(page, 'B');
-  await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-  const bands = await page.evaluate(() => [...document.querySelectorAll('[data-pick="weight_band"]')].map(b => b.dataset.val));
-  await page.evaluate(() => document.querySelector('.sh-x').click());
-  ok(bands.join() === ',descubre_el_hobby,ingenio_estratega,nivel_experto',
-    `30 · la hoja del nivel ofrece las TRES bandas reales, no las cuatro inventadas (${JSON.stringify(bands)})`);
-
-  /* ================= RONDA 4 · la hoja del borrador ================= */
-  const setVal = (pg, v) => pg.evaluate(v => document.querySelector(`[data-v-set="${v}"]`).click(), v);
-  const toSheet = async (pg, val = 'P1') => {
-    await reset(pg); await setVal(pg, val);
-    await step(pg, 'create'); await step(pg, 'enriched'); await step(pg, 'draft');
-  };
-
-  /* ---- 31. la hoja se abre desde la LISTA, y la fila no lleva chevron (D-19i) ---- */
-  await toSheet(page);
-  const sheetOpen = await page.evaluate(() => {
+  /* ---- 2. la hoja se abre desde la LISTA, con UN solo botón, y la fila no lleva chevron (D-19i) ---- */
+  await toSheet();
+  const abierta = await page.evaluate(() => {
     const sh = document.getElementById('sheet');
-    return { open: sh.classList.contains('open'), onList: window.S.screen === 'juegos',
-      campos: sh.querySelectorAll('.fld, .seg, .sw').length,
-      botones: [...sh.querySelectorAll('.obtn, .btn')].map(b => b.textContent.trim()),
+    return { open: sh.classList.contains('open'), enLista: window.S.screen === 'juegos',
+      botones: [...sh.querySelectorAll('.cta, .obtn, .btn')].map(b => b.textContent.trim()),
       chevEnFila: !!document.querySelector('.row[data-act="draft"] .chev') };
   });
-  ok(sheetOpen.open && sheetOpen.onList && sheetOpen.botones.length === 1 && sheetOpen.botones[0] === 'Publicar' && !sheetOpen.chevEnFila,
-    `31 · la hoja se abre sobre la LISTA, con UN solo botón (${JSON.stringify(sheetOpen.botones)}) y la fila sin chevron`);
+  ok(abierta.open && abierta.enLista && abierta.botones.length === 1 && abierta.botones[0] === 'Publicar' && !abierta.chevEnFila,
+    `2 · la hoja se abre sobre la LISTA, con UN solo botón (${JSON.stringify(abierta.botones)}) y la fila sin chevron`);
 
-  /* ---- 32. nada se escribe hasta Publicar — cancelar con el ✕ no deja rastro ---- */
-  await toSheet(page);
-  await page.evaluate(() => { document.getElementById('dname').value = 'Otro nombre';
-    document.getElementById('dname').dispatchEvent(new Event('input', { bubbles: true })); });
+  /* ---- 3. P2, y el CTA más fuerte ----
+     Muerto y vivo sobre LA MISMA hoja, y el muerto medido en color real: 064 prohibió los botones
+     deshabilitados, así que este — que es deliberado — tiene que seguir siendo legible, no apagado. */
+  await toSheet(); await hideTools(page);
+  const muerto = await page.evaluate(() => {
+    const b = document.getElementById('dpub'), cs = getComputedStyle(b), r = b.getBoundingClientRect();
+    return { dis: b.disabled, bg: cs.backgroundColor, fg: cs.color, h: Math.round(r.height), w: Math.round(r.width),
+      op: cs.opacity, err: !!document.getElementById('dband-e'),
+      marca: (document.querySelector('.flabel .req') || {}).textContent || '' };
+  });
+  await showTools(page);
+  await step(page, 'band'); await hideTools(page);
+  const vivo = await page.evaluate(() => {
+    const b = document.getElementById('dpub'), cs = getComputedStyle(b);
+    return { dis: b.disabled, bg: cs.backgroundColor, fg: cs.color };
+  });
+  await showTools(page);
+  ok(muerto.dis === true && vivo.dis === false && muerto.bg !== vivo.bg,
+    `3a · P2 · el botón nace muerto y revive al elegir el nivel, y cambia de relleno (${muerto.bg} -> ${vivo.bg})`);
+  ok(muerto.h >= 48 && muerto.w >= 300 && vivo.fg === 'rgb(255, 255, 255)',
+    `3b · el CTA es fuerte: ${muerto.w}x${muerto.h}px, relleno, ancho completo`);
+  ok(muerto.op === '1', `3c · y el estado muerto NO se dibuja con opacidad (${muerto.op}) — el texto sigue legible`);
+  ok(muerto.err === false && /hace falta para publicar/.test(muerto.marca),
+    `3d · P2 no da mensaje de error, así que la marca de la etiqueta es la ÚNICA explicación ("${muerto.marca.trim()}")`);
+
+  /* ---- 4. nada se escribe hasta Publicar ---- */
+  await toSheet();
+  await page.evaluate(() => { const i = document.getElementById('dname'); i.value = 'Otro nombre';
+    i.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.evaluate(() => document.querySelector('.sh-x').click());
-  const cancelled = await page.evaluate(() => { const g = window.byId(window.NEW); return { name: g.name, status: g.status }; });
-  ok(cancelled.name === 'Hellas' && cancelled.status === 'draft',
-    `32 · escribir y cancelar con el ✕ no deja rastro — el juego sigue igual (${JSON.stringify(cancelled)})`);
+  const cancelado = await page.evaluate(() => { const g = window.byId(window.NEW); return { name: g.name, status: g.status }; });
+  ok(cancelado.name === 'Hellas' && cancelado.status === 'draft',
+    `4 · escribir y cancelar con el ✕ no deja rastro (${JSON.stringify(cancelado)})`);
 
-  /* ---- 33. una expansión no pide nivel, y NO PUEDE quedar con uno ----
+  /* ---- 5. expansión: sin nivel, y NO PUEDE quedar con uno ----
      No es cosmético: `section_query(:weight_band)` (catalog.ex:851) filtra por banda y NO excluye
-     expansiones, así que una expansión con nivel APARECERÍA en una fila de la web — exactamente lo que la
-     regla del desarrollador prohíbe. El formulario no puede ofrecer ese estado. */
-  await toSheet(page); await step(page, 'band');
+     expansiones, así que una expansión CON nivel aparecería en una fila de la web — justo lo que la regla
+     del desarrollador prohíbe. El formulario no puede ofrecer ese estado. */
+  await toSheet(); await step(page, 'band');
   const antes = await page.evaluate(() => window.DRAFT.weight_band);
   await step(page, 'exp');
-  const despues = await page.evaluate(() => ({ band: window.DRAFT.weight_band, seg: !!document.querySelector('.seg'), valido: window.draftValid() }));
+  const despues = await page.evaluate(() => ({ band: window.DRAFT.weight_band, seg: !!document.querySelector('.seg'),
+    dis: document.getElementById('dpub').disabled }));
   await step(page, 'pub');
   const pubExp = await page.evaluate(() => { const g = window.byId(window.NEW); return { st: g.status, band: g.weight_band, exp: g.is_expansion }; });
-  ok(antes === 'ingenio_estratega' && despues.band === '' && despues.seg === false && despues.valido === true,
-    `33a · marcar expansión borra el nivel y esconde el bloque, y la hoja queda válida (${JSON.stringify(despues)})`);
+  ok(antes === 'ingenio_estratega' && despues.band === '' && despues.seg === false && despues.dis === false,
+    `5a · marcar expansión borra el nivel, esconde el bloque y DESPIERTA el botón (${JSON.stringify(despues)})`);
   ok(pubExp.st === 'published' && pubExp.band === null && pubExp.exp === true,
-    `33b · y publica sin nivel: una expansión no puede entrar en ninguna fila por banda (${JSON.stringify(pubExp)})`);
-  const pill = await page.evaluate(() => (document.querySelector('.row.fresh .pill-outline') || {}).textContent);
-  ok(pill === 'Expansión', `33c · y la fila de la ludoteca la marca con el pill informativo (${JSON.stringify(pill)})`);
+    `5b · y publica sin nivel: no puede entrar en ninguna fila por banda (${JSON.stringify(pubExp)})`);
+  ok(await page.evaluate(() => (document.querySelector('.row.fresh .pill-outline') || {}).textContent) === 'Expansión',
+    '5c · y la fila de la ludoteca la marca con el pill informativo (d36/041)');
 
-  /* ---- 34. el eje: P1 avisa al tocar · P2 mata el botón ---- */
-  await toSheet(page, 'P1');
-  const p1a = await page.evaluate(() => ({ dis: document.getElementById('dpub').disabled, err: !document.getElementById('dband-e').hidden }));
-  await page.evaluate(() => document.getElementById('dpub').click());
-  const p1b = await page.evaluate(() => ({ st: window.byId(window.NEW).status, err: !document.getElementById('dband-e').hidden,
-    txt: document.getElementById('dband-e').textContent.trim(), foco: document.activeElement.dataset.band !== undefined }));
-  ok(p1a.dis === false && !p1a.err && p1b.st === 'draft' && p1b.err && /no aparece en ninguna fila de la web/.test(p1b.txt) && p1b.foco,
-    `34a · P1 · el botón vive, al tocar NO publica, aparece el error con la consecuencia y el foco va al nivel`);
+  /* ---- 6. las tres bandas reales ---- */
+  await toSheet();
+  const bandas = await page.evaluate(() => [...document.querySelectorAll('[data-band]')].map(b => b.dataset.band));
+  ok(bandas.join() === 'descubre_el_hobby,ingenio_estratega,nivel_experto',
+    `6 · la hoja ofrece las TRES bandas reales, no las cuatro inventadas (${JSON.stringify(bandas)})`);
 
-  await toSheet(page, 'P2');
-  const p2a = await page.evaluate(() => ({ dis: document.getElementById('dpub').disabled, err: !!document.querySelector('#dband-e:not([hidden])') }));
-  await step(page, 'band');
-  const p2b = await page.evaluate(() => document.getElementById('dpub').disabled);
-  ok(p2a.dis === true && !p2a.err && p2b === false,
-    `34b · P2 · el botón nace muerto y sin mensaje, y revive al elegir el nivel (${JSON.stringify(p2a)} -> dis ${p2b})`);
+  /* ---- 7. copias se pre-carga en 1 al publicar (el default que falta) ---- */
+  await toSheet(); await step(page, 'band'); await step(page, 'pub');
+  ok(await page.evaluate(() => window.byId(window.NEW).units) === 1,
+    '7 · publicar pre-carga copias en 1 — `units` no tiene default en la base y enrichment nunca lo castea');
 
-  /* ---- 35. publicar vuelve a la lista, scrollea y resalta — y eso NO es nuevo ----
-     076 (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` para el momento de CREAR.
-     Esto es la misma conducta en el momento de PUBLICAR. Medido con el rect Y con un hit test: una fila
-     resaltada fuera de pantalla no es una pista de nada — que es exactamente lo que 35b encontró. */
-  const vuelta = async (preambuloEditor) => {
-    await reset(page);
-    if (preambuloEditor) {
-      /* el paseo pasa primero por el editor y vuelve — un camino real: mirás el juego, salís, y recién
-         después lo publicás desde la hoja. */
-      await step(page, 'create'); await step(page, 'enriched'); await step(page, 'edit');
-      await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-      await page.evaluate(() => document.querySelector('.sh-x').click());
-      await reset(page);
-    }
-    await setVal(page, 'P1');
-    await step(page, 'create'); await step(page, 'enriched'); await step(page, 'draft');
-    await step(page, 'band'); await step(page, 'pub');
-    await hideTools(page);
-    const r = await page.evaluate(() => {
-      const row = document.querySelector('.row.fresh');
-      const fold = document.querySelector('.tabs').getBoundingClientRect().top;
-      const rr = row && row.getBoundingClientRect();
-      return { pantalla: window.S.screen, hoja: document.getElementById('sheet').classList.contains('open'),
-        st: window.byId(window.NEW).status, resaltada: !!row,
-        visible: !!rr && rr.top >= 0 && rr.bottom <= fold, y: rr && Math.round(rr.top),
-        scrollTop: Math.round(document.getElementById('scroller').scrollTop),
-        hit: rr && rr.top >= 0 ? (document.elementFromPoint(rr.left + rr.width / 2, rr.top + rr.height / 2) || {}).className : 'fuera de pantalla' };
-    });
-    await showTools(page);
-    return r;
-  };
+  /* ---- 8. publicar vuelve a la lista, scrollea y resalta ----
+     076 (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` al CREAR; esto es lo mismo al
+     PUBLICAR. Medido con el rect Y con un hit test: una fila resaltada fuera de pantalla no es una pista. */
+  await hideTools(page);
+  const vuelta = await page.evaluate(() => {
+    const row = document.querySelector('.row.fresh');
+    const fold = document.querySelector('.tabs').getBoundingClientRect().top;
+    const rr = row && row.getBoundingClientRect();
+    return { pantalla: window.S.screen, hoja: document.getElementById('sheet').classList.contains('open'),
+      st: window.byId(window.NEW).status, resaltada: !!row,
+      visible: !!rr && rr.top >= 0 && rr.bottom <= fold, y: rr && Math.round(rr.top),
+      /* RESUELTO POR ANCESTRÍA, no por la clase de la hoja del DOM: el punto dentro de la fila cae sobre
+         su `<span class="txt">`, así que leer el elemento devolvía "txt" y el check se ponía rojo mientras
+         la página hacía exactamente lo que se le pedía. Un hit-test tiene que nombrar el CONTENEDOR — es
+         el mismo error que ya se corrigió una vez en esta suite. */
+      hit: rr && rr.top >= 0
+        ? (el => el ? (el.closest('.row') ? 'row' : el.id || el.className || el.tagName) : 'nada')
+          (document.elementFromPoint(rr.left + rr.width / 2, rr.top + rr.height / 2))
+        : 'fuera de pantalla' };
+  });
+  await page.screenshot({ path: path.join(OUT, 'lista-publicado.png') });
+  await showTools(page);
+  ok(vuelta.pantalla === 'juegos' && !vuelta.hoja && vuelta.st === 'published' && vuelta.resaltada
+    && vuelta.visible && /row/.test(vuelta.hit || ''),
+    `8 · publicar cierra la hoja, vuelve a la lista y deja la fila resaltada Y ALCANZABLE en y=${vuelta.y} (${JSON.stringify(vuelta)})`);
 
-  const limpio = await vuelta(false);
-  await page.screenshot({ path: path.join(OUT, 'R4-lista.png') });
-  ok(limpio.pantalla === 'juegos' && !limpio.hoja && limpio.st === 'published' && limpio.resaltada
-    && limpio.visible && /row/.test(limpio.hit || ''),
-    `35a · publicar cierra la hoja, vuelve a la lista y deja la fila resaltada Y ALCANZABLE en y=${limpio.y} (${JSON.stringify(limpio)})`);
+  /* ---- 9. el editor sólo se alcanza una vez publicado, y no ofrece publicar ---- */
+  await step(page, 'edit');
+  const editor = await page.evaluate(() => {
+    const laid = id => { const e = document.getElementById(id); return !!(e && e.offsetParent); };
+    return { hdr: laid('hdr'), tabs: laid('tabs'), tbar: laid('tbar'),
+      acciones: [...document.querySelectorAll('#tbar .btn')].map(b => b.textContent.trim()),
+      backs: [...document.querySelectorAll('.back, .tb-back')].filter(e => e.offsetParent).length,
+      filas: document.querySelectorAll('.frow').length,
+      chevs: [...document.querySelectorAll('.frow')].filter(r => r.querySelector('.chev')).length,
+      ciclo: (document.querySelector('.gh-st') || {}).textContent };
+  });
+  ok(!editor.hdr && !editor.tabs && editor.tbar && editor.backs === 1
+    && editor.acciones.length === 1 && editor.acciones[0] === 'Guardar',
+    `9a · el editor es un destino a pantalla completa con la barra de 074 y UNA acción (${JSON.stringify(editor.acciones)})`);
+  ok(editor.filas === 6 && editor.chevs === 0 && /^Publicado/.test(editor.ciclo || ''),
+    `9b · seis filas de d33 sin chevron (D-19i) y el ciclo como punto + texto (${JSON.stringify(editor)})`);
 
-  /* 35b · LO MISMO OTRA VEZ, TRAS PASAR POR EL EDITOR — y el par 35a/35b queda EN ROJO A PROPÓSITO.
+  /* ---- 10. sin errores de consola ---- */
+  ok(errors.length === 0, `10 · sin errores de consola${errors.length ? ' — ' + errors.slice(0, 2).join(' | ') : ''}`);
 
-     LO QUE SÍ SE SABE, medido:
-       · aislado (página recién cargada, el paseo y nada más) la fila queda en y=165, alcanzable, y hay
-         captura: R4-lista.png. Reproducido tres veces seguidas, idéntico.
-       · dentro de esta suite la MISMA secuencia deja la fila en y=-587 / -467 / -293 según dónde caiga,
-         con el MISMO scrollTop (184), el MISMO `G.length` (436, verificado: no se acumulan juegos) y las
-         MISMAS secciones (`Sin datos:0 | Borradores:1 | Juegos del club:50`).
-
-     LO QUE NO SE SABE: qué estado anterior mueve la fila dentro del documento sin mover el scroll. Se
-     descartaron dos hipótesis con medición — contaminación por el editor (35b la aísla y sigue fallando)
-     y acumulación del fixture (G no crece).
-
-     POR QUÉ NO SE SILENCIA NI SE "ARREGLA" CON UN requestAnimationFrame: el resaltado es la ÚNICA pista
-     que queda después de publicar — el desarrollador pidió *"a subtle affordance of the recently created
-     game"* — así que una pista fuera de pantalla es el hallazgo entero de la ronda fallando en silencio.
-     Y un scroll diferido que hiciera pasar el check sin explicar la causa sería exactamente la clase de
-     verde que este linaje ya contó doce veces. Queda rojo hasta que se entienda. */
-  const sucio = await vuelta(true);
-  ok(sucio.visible,
-    `35b · SIN EXPLICAR — la misma secuencia deja la fila en y=${sucio.y} con scrollTop ${sucio.scrollTop} (igual que 35a: ${limpio.scrollTop}). Aislada da y=165 y es alcanzable; dentro de la suite no. Causa no encontrada.`);
-
-  /* ---- 15. no console errors ---- */
-  ok(errors.length === 0, `15 · sin errores de consola${errors.length ? ' — ' + errors.slice(0, 2).join(' | ') : ''}`);
-
-  /* ---- screenshots ---- */
-  for (const g of GATES) {
-    await toEditor(page); await setGate(page, g); await hideTools(page);
-    await page.screenshot({ path: path.join(OUT, `${g}-borrador-incompleto.png`) });
-    await showTools(page);
-  }
-  await toEditor(page); await setGate(page, 'G2'); await step(page, 'publish');
-  await hideTools(page); await page.screenshot({ path: path.join(OUT, 'G2-confirm.png') }); await showTools(page);
-  await page.evaluate(() => document.querySelector('[data-act="dlg-no"]').click());
-  await toEditor(page); await setGate(page, 'G1'); await step(page, 'nivel');
-  await hideTools(page); await page.screenshot({ path: path.join(OUT, 'G1-completo.png') }); await showTools(page);
+  /* ---- capturas ---- */
+  await toSheet(); await hideTools(page);
+  await page.evaluate(() => document.querySelector('.sheet').scrollTop = 0);
+  await page.screenshot({ path: path.join(OUT, 'hoja-arriba.png') });
+  await page.evaluate(() => document.querySelector('.sheet').scrollTop = 9999);
+  await page.screenshot({ path: path.join(OUT, 'hoja-cta-muerto.png') });
+  await showTools(page);
+  await step(page, 'band'); await hideTools(page);
+  await page.evaluate(() => document.querySelector('.sheet').scrollTop = 9999);
+  await page.screenshot({ path: path.join(OUT, 'hoja-cta-vivo.png') });
+  await showTools(page);
 
   console.log(log.join('\n'));
   const pass = log.filter(l => l.startsWith('PASS')).length;

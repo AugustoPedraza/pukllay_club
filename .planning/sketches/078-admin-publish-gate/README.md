@@ -2,10 +2,10 @@
 sketch: 078
 name: admin-publish-gate
 question: "r1 · ¿quién te frena al publicar un borrador incompleto? — r2 · ¿cuándo se vuelve real una edición?"
-winner: null
+winner: "P2 · la hoja del borrador, un solo CTA"
 tags: [admin, juegos, draft, publish, gate, lifecycle, d42, d47, d33, d49, 064, scenario-walk]
-rounds: 4
-status: r4 es el alcance vivo (hoja del borrador) · r2 RETIRADA por r4 · r1 y r3 quedan para la página del editor
+rounds: 5
+status: DECIDIDO 2026-09-21 — P2, sin variantes en la página (no confirmado en dispositivo)
 ---
 
 # Sketch 078: la puerta de Publicar
@@ -23,7 +23,7 @@ The developer's scope, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/078-admin-publish-gate/index.html
-node .planning/sketches/078-admin-publish-gate/verify.js     # 57/59 — 35a/35b en rojo a propósito, ver abajo
+node .planning/sketches/078-admin-publish-gate/verify.js     # 17/17
 ```
 
 **El paseo**: `1 · Agregar 207330` → `2 · llegan los datos` → `3 · abrir el borrador` → `4 · poner el nivel`
@@ -658,3 +658,79 @@ doce veces. **Queda rojo hasta que se entienda.**
 - **El bug de `bgg_client.ex` sigue sin archivar** (ronda 1) — `./` en `name`, `publishers`, `artists`, y la
   página pública de Codenames sigue mostrando 3.304 caracteres de *"editado por"*.
 - Las rondas 1 y 3 siguen abiertas **para la página del editor**, no para esta hoja.
+
+
+---
+
+# Decidido — P2, y la página queda sin variantes (2026-09-21)
+
+> *"p2. and be sure that is a stronger CTA. Remove also the rest of variants"*
+
+072 fijó la convención y el desarrollador la invocó: *"cada toggle de variante se elimina una vez contestada
+su pregunta, así lo que está en pantalla es LA DECISIÓN y no un menú de decisiones."* La página ya no ofrece
+ninguna (check 1 lo asserta como ausencia, para que no vuelvan de a uno).
+
+## Qué pasó con cada ronda, escrito y no derivado (d47)
+
+| ronda | | |
+|---|---|---|
+| **r1** · la puerta (G1/G2/G3) | **moot** | Preguntaba cómo frena *la página del editor* al publicar un borrador — y el borrador ya no se publica desde ahí. La puerta vive en la hoja, y la contesta P2. |
+| **r2** · cuándo escribe (A/B) | **retirada** | B existía para sostener un `Guardar` que la ronda 4 eliminó. En la hoja nada se escribe hasta Publicar (check 4). |
+| **r3** · marcar requerido (R1/R2/R3) | **moot como eje, viva como conducta** | La marca de la etiqueta (era R1) sobrevive — ver abajo, es load-bearing. |
+| **r4** · validar (P1/P2) | **P2** | El botón nace muerto y revive al elegir. |
+
+**Lo que sobrevive de las rondas 1-3 porque se midió y sigue siendo cierto:** copias se pre-carga en 1
+(check 7), estante nunca es condición, el nivel es obligatorio salvo expansión, y **el nivel ES la sección**.
+
+## P2 le da todo el peso a la marca de la etiqueta
+
+Sin mensaje de error, *"Nivel · hace falta para publicar"* es la **única** explicación de por qué el botón no
+responde. Era una variante de la ronda 3 y **sobrevive por esto, no por inercia** (check 3d). Si alguna vez
+se borra, P2 queda siendo un botón muerto sin motivo visible — el defecto exacto que 064 prohibió.
+
+## El CTA más fuerte, y por qué su estado muerto no usa opacidad
+
+```
+3b · 343x52px, relleno, ancho completo
+3a · muerto rgb(241,236,253) -> vivo rgb(60,18,105)
+3c · y el muerto NO se dibuja con opacidad (1)
+```
+
+**Es un botón deshabilitado por decisión, y 064 los prohibió de entrada**, así que se dibuja con los stops
+mudos y un borde interior. 076 ronda 3 ya argumentó esto para el primer `.obtn` muerto del proyecto: **la
+opacidad apaga también el texto**, y acá el texto es lo único que dice qué va a pasar cuando reviva.
+
+## El defecto 35a/35b se resolvió, y la causa era mía
+
+La ronda 4 dejó dos checks en rojo: la fila resaltada aparecía en `y=-587 / -467 / -293` dentro de la suite y
+en `y=165` aislada, sin explicación. **Al eliminar las variantes desapareció**: ahora da `y=165`, visible y
+alcanzable por hit test (check 8).
+
+**Era contaminación de estado entre variantes en mi propio arnés, no un defecto del diseño.** Haberlo dejado
+en rojo en vez de comprarle un verde con un `requestAnimationFrame` es lo que permitió que la causa
+apareciera sola al simplificar. Registrado así, y no borrado, porque el reflejo de "arreglarlo" habría
+escondido justamente esto.
+
+## Lo que quedó en la página
+
+```
+la lista            una fila de borrador lista abre la HOJA (sin chevron, D-19i)
+                    una fila publicada abre el EDITOR (con chevron)
+                    las expansiones llevan el pill informativo (d36/041)
+la hoja             formulario clásico: tapa (verificar) · nombre · descripción · expansión · nivel
+                    UN CTA de 52px · cancelar con el ✕ · nada se escribe hasta Publicar
+al publicar         cierra, vuelve a la lista, scrollea y resalta la fila (076 d55/d18)
+el editor           sólo para un publicado: barra de 074, seis filas de d33, UN CTA (Guardar)
+```
+
+## Open
+
+- **No confirmado en dispositivo.** En este linaje el dispositivo encontró ocho veces lo que el arnés no.
+- **El guard que falta en el código:** `and g.is_expansion == false` en `section_query(:weight_band)`
+  (`catalog.ex:851`). Sin él la regla de las expansiones depende de que nadie les ponga nivel.
+- **El bug de `bgg_client.ex` sigue sin archivar** — `./` en `name`, `publishers`, `artists`. La página
+  pública de Codenames sigue mostrando **3.304 caracteres** de *"editado por"*.
+- **El selector de imagen es una reversión, no una pantalla** (01.3.1/D-07 limpió `gallery_urls`).
+- **El resaltado puede ser demasiado fuerte para "subtle"** — es el lavado completo de 076, heredado.
+- **Despublicar sigue sin existir**, y `Retirar` dice lo que no es. Es la slice 079.
+- **La hoja no pregunta por copias ni estante**, a propósito.

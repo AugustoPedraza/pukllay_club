@@ -848,6 +848,21 @@
     border-radius: 11px; font-size: 12px; font-weight: 500; line-height: 1; color: var(--color-text); }
   .row .pill-outline { margin-left: 6px; }
 
+  /* ---------- EL CTA DE LA HOJA, PEDIDO MÁS FUERTE ----------
+     Era un `.obtn` con borde; ahora es relleno, 52px y ancho completo. Es la única acción de la pantalla y
+     el único motivo por el que la hoja existe, así que no compite con nada.
+
+     ES UN BOTÓN DESHABILITADO POR DECISIÓN (P2), no por descuido, y 064 los prohibió de entrada — así que
+     el estado muerto se dibuja con los stops mudos y un borde interior, NO con `opacity`. 076 ronda 3 ya
+     argumentó esto para el primer `.obtn` muerto del proyecto: la opacidad apaga también el TEXTO, y acá
+     el texto es lo único que dice qué va a pasar cuando reviva.
+     LA EXPLICACIÓN NO VIVE ACÁ: vive en la etiqueta del nivel, porque P2 no da mensaje de error. */
+  .cta { width: 100%; min-height: 52px; margin-top: 20px; border: 0; border-radius: 12px; cursor: pointer;
+    background: var(--color-primary); color: var(--color-primary-content); font-size: 16px; font-weight: 600; }
+  :root[data-theme="dark"] .cta { background: var(--color-accent-text); color: #1b1024; }
+  .cta:active { filter: brightness(.92); }
+  .cta[disabled] { background: var(--color-surface); color: var(--color-text-muted); cursor: default; box-shadow: inset 0 0 0 1px var(--color-border); }
+
 </style>
 </head>
 <body>
@@ -877,9 +892,7 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>Validar el nivel: <button class="vt on" data-v-set="P1">P1 · al tocar Publicar</button> <button class="vt" data-v-set="P2">P2 · botón muerto</button></div>
-  <div style="opacity:.62">Rondas 1-3 (la página del editor, sin retirar) — puerta: <button class="vt" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt on" data-g-set="G3">G3</button> · escribe: <button class="vt" data-m-set="A">A</button> <button class="vt on" data-m-set="B">B</button> · req: <button class="vt" data-r-set="R1">R1</button> <button class="vt" data-r-set="R2">R2</button> <button class="vt on" data-r-set="R3">R3</button></div>
-  <div style="opacity:.8">Ronda 1 (abierta) — la puerta: <button class="vt on" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt" data-g-set="G3">G3</button></div>
+
   <div>El paseo: <button class="stp" data-walk="create">1 · Agregar 207330</button>
     <button class="stp" data-walk="enriched" disabled>2 · llegan los datos</button>
     <button class="stp" data-walk="draft" disabled>3 · tocar el borrador</button>
@@ -887,13 +900,8 @@
     <button class="stp" data-walk="pub" disabled>5 · Publicar</button>
     <button class="stp" data-walk="exp" disabled>· marcarlo expansión</button>
     <button class="stp" data-walk="reset">↺</button></div>
-  <div style="opacity:.62">Camino del editor (rondas 1-3, sin retirar): <button class="stp" data-walk="edit" disabled>abrir editor</button>
-    <button class="stp" data-walk="nivel" disabled>poner nivel</button>
-    <button class="stp" data-walk="publish" disabled>Publicar</button>
-    <button class="stp" data-walk="leave" disabled>salir ‹</button></div>
+  <div style="opacity:.62">El editor, una vez publicado: <button class="stp" data-walk="edit" disabled>abrirlo</button></div>
   <div class="now" id="walkNow">Paso 0 — nada creado todavía</div>
-  <div>Tipo: <button data-exp-set="0" class="on">juego base</button> <button data-exp-set="1">expansión</button>
-    · Nombre de BGG: <button data-nm-set="0" class="on">Hellas</button> <button data-nm-set="1">el roto (bug real)</button></div>
   <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
 
 </div>
@@ -1391,185 +1399,46 @@ const SHELVES = [
 const bandOf = v => BANDS.find(b => b.v === (v || '')) || BANDS[0];
 const shelfOf = v => SHELVES.find(b => b.v === (v || '')) || SHELVES[0];
 
+/* ---------- EL EDITOR ES AHORA SÓLO PARA UN JUEGO YA PUBLICADO ----------
+   Decisión del desarrollador en la ronda 4: la hoja es el camino del borrador y esta página queda para
+   corregir después. Eso borra de acá la puerta entera (un publicado no tiene nada que publicar), el estado
+   sucio de la ronda 2 y las marcas de requerido de la ronda 3 — acá nada bloquea nada.
+   SOBREVIVEN, porque se decidieron y se midieron: las filas de d33 SIN chevron (D-19i), el tinte `--val`
+   de d37, el ciclo como punto + texto (075) y la barra de 074 con UN solo CTA. */
 function renderEditor() {
   const g = byId(S.editing);
   const st = CYC[g.status] || CYC.published;
   const meta = [g.year, g.bgg_id ? 'BGG ' + g.bgg_id : null].filter(Boolean).join(' · ');
-  const miss = missing(g);
-  const missKeys = miss.map(m => m.k);
 
-  /* G3 has no container of its own, so the ROW is where it speaks — the same dot the status line uses
-     (D-19h), never a badge. In G1 and G2 the rows are untouched, so a finding about the rows cannot be
-     blamed on the gate's paint. Check 6 asserts the dot exists in G3 alone. */
-  /* `requiredKeys` is what the gate WOULD ask for, independent of whether it is currently unmet — that is
-     the difference between "required" and "missing", and it is why R1's marker survives once the nivel is
-     set while G3's dot does not (check 28). An expansion requires nothing, so both vanish there. */
-  const requiredKeys = g.status === 'draft' && !g.is_expansion ? ['weight_band'] : [];
-  const r = (key, k, v, empty, clamp) => {
-    const flag = GATE === 'G3' && missKeys.includes(key) ? '<span class="miss" aria-hidden="true"></span>' : '';
-    const req = requiredKeys.includes(key);
-    /* R1 — the marker rides the LABEL, so it is about the field rather than about its current value. */
-    const mark = req && REQ === 'R1' ? ` <span class="req">para publicar</span>` : '';
-    /* R2 — the marker replaces the EMPTY VALUE, so it says what happens rather than what is owed. It only
-       has anywhere to live while the value is empty, which is R2's structural cost: once the nivel is set,
-       R2 says nothing at all and the field stops looking required (check 28). */
-    let val = v, cls = empty ? ' empty' : '';
-    if (req && empty && REQ === 'R2') { val = 'Falta — sin esto no aparece en ninguna fila de la web'; cls = ' empty req'; }
-    return `<button class="frow" data-field="${key}">
-      <span class="fr-t"><span class="fr-k">${esc(k)}${mark}</span><span class="fr-v${cls}${clamp ? ' clamp' : ''}">${esc(val)}</span></span>
-      ${flag}</button>`;
-  };
-
-  /* ---------- `copias` is PRE-FILLED, in every variant, and it is not a gate item ----------
-     434 of 434 published games have exactly 1 copy and none varies. `units` has no DB default, enrichment
-     never casts it and admin_changeset lets a blank through — so without this the new flow leaves every
-     game at nil forever. The fix is a default, not a gate: the row shows 1 and says where it came from.
-     Check 7 asserts the value is 1 and that `copias` is NOT among the gate's items in any variant. */
+  const r = (key, k, v, empty, clamp) => `<button class="frow" data-field="${key}">
+      <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+      </button>`;
   const units = g.units == null ? UNITS_DEFAULT : g.units;
-  const unitsNote = g.units == null ? ' (por defecto)' : '';
 
-  /* the in-page `‹ Juegos` row is GONE — 074 measured it as the second of two back controls pointing at
-     the same place, neither hittable at the same scroll offset, and collapsed both into the top bar. */
   main.innerHTML = `
     <div class="ghead">${cover(g, 'cov')}<div class="gh-t">
       <div class="gh-name" id="ghname">${esc(g.name)}</div>
-      <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
+      <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${g.is_expansion ? '<span class="pill-outline">Expansión</span>' : ''}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
     </div></div>
-    ${gateBlockHTML(g, miss)}
     <div class="glabel">DATOS DEL CLUB</div>
     <div class="frows">
       ${r('name', 'Nombre', g.name)}
       ${r('weight_band', 'Nivel', bandOf(g.weight_band).n, !g.weight_band)}
-      ${r('units', 'Copias', String(units) + unitsNote)}
+      ${r('units', 'Copias', String(units))}
       ${r('shelf_id', 'Estante', shelfOf(g.shelf_id).n, !g.shelf_id)}
       ${r('is_expansion', 'Es una expansión', g.is_expansion ? 'Sí' : 'No')}
       ${r('description', 'Descripción en español', g.description || 'Sin descripción', !g.description, true)}
     </div>
-    <div style="height:${MODE === 'B' ? 132 : 24}px"></div>`;
+    <div style="height:24px"></div>`;
 
-  renderChrome(g, miss);
-}
-
-/* ---------- the editor's chrome, and the whole of round 2's difference ----------
-   A · 074's bar, one CTA, nothing at the foot.
-   B · 074's bar with NO CTA (it has two actions and the slot holds one), and the stacked pair at the foot.
-   The top bar, the back control and the title behave identically in both — only the actions move. */
-function renderChrome(g, miss) {
-  const tbar = $('#tbar'), stack = $('#stack');
-  const blocked = GATE === 'G1' && !gateOpen(g);
-  const draft = g.status === 'draft';
-
-  if (MODE === 'A') {
-    /* ONE CTA. On a draft it is Publicar; on a published game there is nothing left to press, because
-       every edit has already been written — which is A's whole claim, made visible. */
-    const cta = draft
-      ? `<button class="btn" data-act="publish" id="publish"${blocked ? ' disabled' : ''}>Publicar</button>`
-      : '';
-    tbar.innerHTML = `<button class="tb-back" data-act="juegos" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
-      <span class="tb-t">${esc(g.name)}</span>${cta}`;
-    tbar.hidden = false; stack.hidden = true; stack.innerHTML = '';
-    return;
-  }
-
-  tbar.innerHTML = `<button class="tb-back" data-act="back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
-    <span class="tb-t">${esc(g.name)}</span>`;
+  /* la barra de 074 (d43/d44): ‹ · título que aparece al scrollear · UN CTA, peso texto. */
+  const tbar = $('#tbar');
+  tbar.innerHTML = `<button class="tb-back" data-act="juegos" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
+    <span class="tb-t">${esc(g.name)}</span>
+    <button class="btn" data-act="save">Guardar</button>`;
   tbar.hidden = false;
-  /* B's foot. `Publicar` keeps the filled primary and `Guardar` is an OUTLINE, not a ghost — a ghost at
-     full width under a filled button reads as a caption rather than a control. */
-  const why = dirty() ? 'Cambios sin guardar' : (blocked && draft ? `Falta ${miss.map(m => m.n).join(' y ')} para publicarlo.` : '');
-  stack.innerHTML = `<span class="why">${esc(why)}</span>
-    ${draft ? `<button class="btn" data-act="publish" id="publish"${blocked ? ' disabled' : ''}>Publicar</button>` : ''}
-    <button class="btn sec" data-act="save"${dirty() ? '' : ' disabled'}>Guardar</button>`;
-  stack.hidden = false;
+  $('#stack').hidden = true; $('#stack').innerHTML = '';
 }
-
-/* ---------- G3's honesty clause, and the reason it is not simply "nothing" ----------
-   G3 is the do-nothing baseline for the GATE, not a licence to hide the state. The rows already carry
-   their own holes (the `.miss` dot above) — that IS G3's answer to "how does the unmet requirement reach
-   you". No block, no bar copy, no confirm. */
-function gateBlockHTML(g, miss) { return ''; }
-
-/* ---------- d42's bar, and the one place the three variants disagree ----------
-   The bar itself is IDENTICAL in all three — same height, same position, same two buttons in the same
-   order. What differs is exactly two things, and nothing else:
-     · whether `Publicar` is disabled            (G1 only)
-     · whether the bar carries a `why` line       (G1 only)
-   G2 and G3 render a byte-identical bar; they diverge only at the TAP (see `doPublish`). That is
-   deliberate: it makes G2 vs G3 a question about the moment of the tap rather than about the resting page,
-   which is what the round is actually asking. Check 5 asserts the bar's geometry is the same in all three. */
-function renderSavebar(g, miss) {
-  const bar = $('#savebar'); if (!bar) return;
-  if (g.status !== 'draft') {
-    /* not this round's question — the lifecycle of a PUBLISHED game is slice 079. The bar still has to say
-       something truthful here, so it says the one thing that is: the changes save. */
-    bar.innerHTML = `<button class="btn" data-act="save">Guardar cambios</button>`;
-    bar.hidden = false; return;
-  }
-  const blocked = GATE === 'G1' && !gateOpen(g);
-  /* the `why` line names WHAT is missing, never merely THAT something is. A bar that said "faltan datos"
-     would make you hunt the rows for which — the defect 076 round 1 found in the create sheet's hint. */
-  const why = blocked
-    ? (!hasData(g)
-      ? `<span class="dot"></span>Todavía estamos trayendo los datos de BGG.`
-      : `<span class="dot"></span>Falta ${miss.map(m => m.n).join(' y ')} para publicarlo.`)
-    : '';
-  bar.innerHTML = `<span class="why">${why}</span>
-    <button class="btn ghost" data-act="save">Guardar</button>
-    <button class="btn" data-act="publish" id="publish"${blocked ? ' disabled' : ''}>Publicar</button>`;
-  bar.hidden = false;
-}
-
-/* ---------- the tap, and G2's whole existence ----------
-   G1 never gets here while incomplete (the button is dead). G3 publishes straight through — which is
-   exactly what `publish_game/1` -> `status_changeset/2` does today: it casts and validates ONLY :status
-   (catalog.ex:490-494, game.ex:218-222), so a draft with no nivel goes live. G2 interposes a confirm that
-   NAMES what is missing and still lets you through.
-
-   G2's confirm is an `alertdialog`, not a snackbar, because it needs an answer before anything happens —
-   d49's own distinction: a toast is a container for events, and this is a question. */
-function doPublish() {
-  const g = byId(S.editing); if (!g) return;
-  const miss = missing(g);
-  if (!hasData(g)) return;                       /* 073:46's rule, in every variant */
-  /* ---------- FOUND BY THE HARNESS, NOT DRAWN: a disabled button is not a gate ----------
-     The first version of G1 lived ENTIRELY in the `disabled` attribute. Check 11d drives step 5 of the
-     walk, which calls this function the way any other caller would, and it published a draft with no nivel
-     while the button on screen was visibly dead. The paint said no and the code said yes.
-
-     That is not a sketch artefact — IT IS EXACTLY THE SHIPPED SITUATION. `publish_game/1` ->
-     `status_changeset/2` casts and validates ONLY `:status` (catalog.ex:490-494, game.ex:218-222), so
-     whatever the editor renders, the transition itself has no opinion. G1 is only a real gate if the refusal
-     lives HERE, where every caller passes, and is merely REFLECTED in the button.
-
-     Recorded rather than quietly patched, because it is the strongest thing this round learned about what
-     "a gate" has to mean in the implementation. */
-  if (GATE === 'G1' && miss.length) return;
-  if (GATE === 'G2' && miss.length) {
-    return openDialog({
-      title: 'Publicar sin completarlo',
-      text: `Falta ${miss.map(m => m.n).join(' y ')}. Se va a ver en la web igual.`,
-      yes: 'Publicar igual',
-      run: () => publishNow(g)
-    });
-  }
-  publishNow(g);
-}
-function publishNow(g) {
-  /* form.ex:84-92 -> update_game_admin, THEN after_save("publish") -> publish_game. Publicar has ALWAYS
-     saved first; that is why B's two buttons were never save-vs-publish but "guardar y publicar" vs
-     "guardar y seguir después". In B this is where the staged values become real. */
-  if (MODE === 'B') { snapshot(g); TAPS.writes++; }
-  g.status = 'published';
-  render();
-  snack(`${g.name} se está viendo en la web`);
-  walkUI();
-}
-
-/* ---------- the search (069) ---------- */
-/* decision 4 — one field, three answers: a name searches, a BGG id or link offers to add it,
-   no match offers to create it by name. The shipped parser already accepts a number or a BGG link. */
-const BGG_RE = /^(?:\s*(\d{2,7})\s*|.*boardgamegeek\.com\/boardgame(?:expansion)?\/(\d{2,7})\b.*)$/i;
-const bggId = q => { const m = String(q).match(BGG_RE); return m ? (m[1] || m[2]) : null; };
 
 function markMatch(name, q) {
   const n = norm(q.trim()), i = norm(name).indexOf(n);
@@ -1991,10 +1860,13 @@ document.addEventListener('click', e => { if (e.target.closest('#device')) TAPS.
    (La tarea `mix catalog.translate_descriptions` es el backfill de las filas viejas, no el camino vivo —
    confundirlas me hizo afirmar lo contrario una vez en esta sesión, y chequearlo lo corrigió.)
 
-   LA VALIDACIÓN ES EL ÚNICO EJE DE ESTA RONDA (`VAL`), porque el formulario en sí lo dio el desarrollador:
-     P1 · al tocar Publicar   el botón siempre vive; al tocar, el error aparece bajo el campo y hace foco
-     P2 · en vivo             el botón está muerto hasta que el nivel esté puesto, sin mensaje de error
-   Todo lo demás es idéntico en las dos (check 31).
+   LA VALIDACIÓN ESTÁ DECIDIDA: P2 — el botón nace muerto y revive al elegir el nivel, SIN mensaje de
+   error, nunca. P1 queda descartada y su toggle eliminado con ella (convención de 072).
+
+   LA CONSECUENCIA A TENER PRESENTE: sin mensaje de error, la marca de la etiqueta («Nivel · hace falta
+   para publicar») es la ÚNICA explicación de por qué el botón no responde. Era una variante de la ronda 3
+   (R1) y sobrevive por esto, no por inercia. Si alguna vez se borra, P2 queda siendo un botón muerto sin
+   motivo visible — el defecto exacto que 064 prohibió de entrada.
 
    LAS EXPANSIONES NO PIDEN NIVEL, y ahora hay una razón de código y no sólo de costumbre. El desarrollador:
    *"an expansion of a game never will be listed on any web section for now."* Medido:
@@ -2007,7 +1879,6 @@ document.addEventListener('click', e => { if (e.target.closest('#device')) TAPS.
    exigiera nivel a una expansión, esa expansión APARECERÍA en una fila de la web y rompería la regla que
    el desarrollador acaba de enunciar. Por eso el switch apaga el bloque entero (check 33), y por eso el
    README pide el guard `and g.is_expansion == false` en `section_query(:weight_band)`. */
-let VAL = 'P1';
 let DRAFT = null;   /* lo que la hoja tiene en la mano; nada se escribe hasta Publicar */
 
 function openDraftSheet(g, from) {
@@ -2020,7 +1891,6 @@ function draftValid() { return DRAFT.is_expansion || !!DRAFT.weight_band; }
 
 function paintDraftSheet(g, from) {
   const d = DRAFT;
-  const showErr = VAL === 'P1' && d.touched && !draftValid();
   /* la tapa: VERIFICAR, no editar. Ver el comentario del CSS sobre gallery_urls. */
   const cover = g.thumb
     ? `<img src="${esc(g.thumb)}" alt="">`
@@ -2047,14 +1917,13 @@ function paintDraftSheet(g, from) {
 
     ${d.is_expansion ? '' : `<div class="ffield">
       <label class="flabel" id="dband-l">Nivel <span class="req">· hace falta para publicar</span></label>
-      <div class="seg" role="group" aria-labelledby="dband-l" data-invalid="${showErr}">
+      <div class="seg" role="group" aria-labelledby="dband-l" data-invalid="false">
         ${BANDS.filter(b => b.v).map(b => `<button data-band="${b.v}" aria-pressed="${d.weight_band === b.v}">
           <span class="rd" aria-hidden="true"></span><span><span class="sn">${esc(b.n)}</span><span class="ss">${esc(b.s)}</span></span></button>`).join('')}
       </div>
-      <p class="ferr" id="dband-e"${showErr ? '' : ' hidden'}>${ic('x')}Elegí un nivel: sin esto el juego no aparece en ninguna fila de la web.</p>
       </div>`}
 
-    <button class="obtn wide pri" id="dpub" data-act="dopub"${VAL === 'P2' && !draftValid() ? ' disabled' : ''}>Publicar</button>
+    <button class="cta" id="dpub" data-act="dopub"${draftValid() ? '' : ' disabled'}>Publicar</button>
   </div>`;
 
   const sh = $('#sheet');
@@ -2245,9 +2114,6 @@ document.addEventListener('click', e => {
   /* 077's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so AV1/AV2/AV3
      are three renderings of one walk rather than three walks. It only changes what happens AT the arrival,
      so switching it after the data has landed shows nothing; ↺ and walk it again. */
-  const vl = e.target.closest('[data-v-set]');
-  if (vl) { VAL = vl.dataset.vSet; mark('[data-v-set]', vl);
-    if (DRAFT && S.sheetFor) { DRAFT.touched = false; paintDraftSheet(byId(S.sheetFor)); } return; }
   const rq = e.target.closest('[data-r-set]');
   if (rq) { REQ = rq.dataset.rSet; mark('[data-r-set]', rq); render(); return; }
   const m = e.target.closest('[data-m-set]');
@@ -2256,27 +2122,6 @@ document.addEventListener('click', e => {
   if (m) {
     MODE = m.dataset.mSet; mark('[data-m-set]', m);
     const g = S.editing ? byId(S.editing) : null; if (g) snapshot(g);
-    render(); walkUI(); return;
-  }
-  const v = e.target.closest('[data-g-set]');
-  /* 078's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so G1/G2/G3 are
-     three renderings of one walk rather than three walks. It is live at every step, including after the
-     game is already published, so the variants can be compared at any point of the walk. */
-  if (v) { GATE = v.dataset.gSet; mark('[data-g-set]', v); render(); walkUI(); return; }
-  const ex = e.target.closest('[data-exp-set]');
-  if (ex) {
-    IS_EXP = ex.dataset.expSet === '1'; mark('[data-exp-set]', ex);
-    /* it applies to a game whose data has ALREADY arrived too, because enrichment_changeset casts
-       :is_expansion and the flip is what makes "the gate's one condition vanishes for an expansion"
-       falsifiable AFTER the fact rather than only on a fresh walk. */
-    const g = NEW ? byId(NEW) : null; if (g && enrOf(g) === 'enriched') g.is_expansion = IS_EXP;
-    render(); walkUI(); return;
-  }
-  const nm = e.target.closest('[data-nm-set]');
-  if (nm) {
-    NAME_BROKEN = nm.dataset.nmSet === '1'; mark('[data-nm-set]', nm);
-    const g = NEW ? byId(NEW) : null;
-    if (g && enrOf(g) === 'enriched') g.name = NAME_BROKEN ? BROKEN_NAME : 'Hellas';
     render(); walkUI(); return;
   }
   const w = e.target.closest('[data-walk]');
@@ -2291,9 +2136,6 @@ document.addEventListener('click', e => {
     /* THROUGH `setField`, not by assigning the column. Check 21 caught the shortcut: the walk was setting
        weight_band directly, so A's write never happened and A looked identical to B. A walk step that
        bypasses the mechanism the round is about measures nothing. */
-    if (k === 'nivel') { const g = byId(NEW); if (g && S.editing === g.id) setField('weight_band', 'ingenio_estratega'); return; }
-    if (k === 'publish') { doPublish(); return; }
-    if (k === 'leave') { document.querySelector('.tb-back')?.click(); walkUI(); return; }
     if (k === 'reset') {
       /* ↺ must also LEAVE THE EDITOR. Found by check 25, which reaches the editor through the toast's «Ver»
          and then resets: the game was spliced out of `G` while `S.screen` was still 'editor', so the next
@@ -2321,14 +2163,12 @@ function walkUI() {
   $('[data-walk="create"]').disabled = !!NEW;
   $('[data-walk="enriched"]').disabled = !g || e !== 'pending';
   const inSheet = !!g && S.sheetFor === g.id && !!DRAFT && $('#sheet').classList.contains('open');
-  $('[data-walk="edit"]').disabled = !g || e !== 'enriched' || inEditor;
+  /* el editor ya no es el camino del borrador: se llega sólo una vez publicado. */
+  $('[data-walk="edit"]').disabled = !g || g.status !== 'published' || inEditor;
   $('[data-walk="draft"]').disabled = !g || e !== 'enriched' || g.status !== 'draft' || inSheet;
   $('[data-walk="band"]').disabled = !inSheet || DRAFT.is_expansion;
   $('[data-walk="exp"]').disabled = !inSheet;
   $('[data-walk="pub"]').disabled = !inSheet;
-  $('[data-walk="nivel"]').disabled = !g || !inEditor || !!g.weight_band || g.status !== 'draft';
-  $('[data-walk="publish"]').disabled = !g || !inEditor || g.status !== 'draft';
-  $('[data-walk="leave"]').disabled = !inEditor;
   /* step 5 stays live even when the gate would refuse it — otherwise the walk could only ever reach the
      variant that lets you through, and the round's own question would be unmeasurable from the panel.
      What each variant DOES with the tap is the thing being compared. */
@@ -2356,7 +2196,7 @@ Object.defineProperties(window, {
   /* `draftValid` NO va acá: es una DECLARACIÓN de función, así que ya es propiedad de `window` y
      redefinirla con defineProperty tira "Cannot redefine property". La misma distinción que hace
      falsificable al check 12, vista desde el otro lado. */
-  VAL: { get: () => VAL }, DRAFT: { get: () => DRAFT }, G: { get: () => G },
+  DRAFT: { get: () => DRAFT }, G: { get: () => G },
   REQ: { get: () => REQ }, GATE: { get: () => GATE },
   byId: { get: () => byId }, enrOf: { get: () => enrOf }, gateOpen: { get: () => gateOpen },
   S: { get: () => S }, NEW: { get: () => NEW },
