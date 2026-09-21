@@ -4,8 +4,8 @@ name: admin-publish-gate
 question: "r1 · ¿quién te frena al publicar un borrador incompleto? — r2 · ¿cuándo se vuelve real una edición?"
 winner: null
 tags: [admin, juegos, draft, publish, gate, lifecycle, d42, d47, d33, d49, 064, scenario-walk]
-rounds: 2
-status: PENDING REVIEW (r1 la puerta · r2 cuándo escribe)
+rounds: 3
+status: r2 DECIDIDA (B) · r1 y r3 PENDING REVIEW
 ---
 
 # Sketch 078: la puerta de Publicar
@@ -23,7 +23,7 @@ The developer's scope, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/078-admin-publish-gate/index.html
-node .planning/sketches/078-admin-publish-gate/verify.js     # 41/41
+node .planning/sketches/078-admin-publish-gate/verify.js     # 50/50
 ```
 
 **El paseo**: `1 · Agregar 207330` → `2 · llegan los datos` → `3 · abrir el borrador` → `4 · poner el nivel`
@@ -407,3 +407,128 @@ Check 20 is negative-tested by forcing the display back.
 - **074's rider is unbuilt in A by construction** — *"confirm on back when there is unsaved data"* has
   nothing to confirm. That is a feature of A, but it means the rider only ever applies to B.
 - **`Guardar` vs `Guardar cambios`** — unchanged from round 1, still untested as copy.
+
+
+---
+
+# Ronda 3 — ¿dónde se marca que un campo es requerido?
+
+> *"I like B. But the rest of 'data', it must mark fields as required. The toast should show like 'publicado'
+> and allow the user jump to admin the sections of the web so the new game can be managed."*
+
+**B queda decidida** (la hoja prepara, `Guardar` confirma; par apilado al pie). A sigue en la página y
+navegable. Lo que sigue son las dos cosas que agregaste — la marca de requerido acá, el toast en la 079.
+
+## La medición que le dio una razón al requisito — y corrigió mi propio fixture
+
+```
+sections.rule_value    "Descubre el hobby"  -> descubre_el_hobby    179 publicados
+                       "Ingenio estratega"  -> ingenio_estratega    183
+                       "Nivel experto"      -> nivel_experto         46
+                       (ninguna)                                     26   ← las expansiones
+```
+
+**El nivel ES la sección.** Cada sección `weight_band` mapea 1:1 contra un valor de banda, así que poner el
+nivel es lo que **coloca el juego en una de las tres filas que organizan el catálogo público**. Sin él, el
+juego se publica y no entra en ninguna.
+
+Eso convierte la única condición de la puerta de una preferencia en **una consecuencia**, y por lo tanto en
+algo decible. 075 ya lo sabía y lo había escrito — *"Sin nivel · No aparece en ninguna fila por nivel"* —
+pero no podía decir en cuál, porque el mapeo no estaba medido.
+
+**Y corrigió el fixture de la ronda 1**, que había copiado de 075 **cuatro bandas inventadas**
+(`intro/medio/estratega/experto`). Ninguno de esos valores existe. `Vocabulary.@weight_bands`
+(`vocabulary.ex:24-40`) y la columna viva coinciden en **tres**, con estas etiquetas y descriptores
+(check 30). Tercera deriva de fixture en este sketch, y la tercera que salió de mirar los datos y no el
+sketch anterior.
+
+## Lo que ya existe, medido antes de proponer nada
+
+**El editor YA administra secciones.** `form.ex:289-294` renderiza un fieldset `Secciones` con un checkbox
+por cada sección `:manual`, y `apply_section_ids/3` las guarda apenas se guarda el juego. Las cuatro reales:
+
+```
+Destacados del club   featured, tope 20 (D-26)    7 juegos
+Crea conexiones                                  61
+Equipo ganador                                   54
+Duelos memorables                                19
+```
+
+Y **publicar ya mete el juego en dos secciones automáticas**: la de su nivel, y *Recientemente añadidos*
+(`kind: :recent`). Nadie tiene que hacer nada para eso.
+
+**Así que "saltar a administrar las secciones" es la misma forma que 076 ronda 5 y 077**: la mitad ya está
+construida, y lo que queda genuinamente abierto es **cuál de los dos lugares** — el fieldset del editor o la
+pestaña Web — y **si hace falta un salto** cuando el juego ya quedó en dos filas solo. Eso es la ronda 4, no
+ésta.
+
+## Las tres respuestas
+
+| | |
+|---|---|
+| **R1 · en la etiqueta** | `Nivel` lleva una marca chica *para publicar* |
+| **R2 · en el valor** | el valor vacío deja de decir *Sin nivel* y dice qué pasa: *Falta — sin esto no aparece en ninguna fila de la web* |
+| **R3 · sólo en el pie** | la línea base: lo que B ya hace, y lo que hace falsificables a R1 y R2 |
+
+**Requerido acá significa requerido PARA PUBLICAR, nunca para guardar** — y en B esa distinción es real: se
+puede guardar un borrador sin nivel y volver. Una marca que dijera *"obligatorio"* sería mentira sobre lo
+que la página deja hacer. Check 27 lo asserta en las dos variantes **y además guarda de verdad con el campo
+vacío**, para que el recorte sea un hecho y no una afirmación.
+
+## Lo que midió
+
+### Marcar en la ficha lo dice en dos lugares — siempre
+
+```
+26a   R3+G1   el pie                    1 lugar
+      R3+G3   el punto de la fila       1 lugar
+26b   R1+G1 / R2+G1                     2 lugares
+26c   R1+G3 / R2+G3                     2 lugares
+```
+
+Es la forma que 077 contó cuando la fila y la hoja decían *"Trayendo datos de BGG"* a 310px una de otra. Acá
+la distancia es ~580px entre *"Falta — sin esto…"* en la fila y *"Falta el nivel para publicarlo"* en el
+pie, **con la misma palabra abriendo las dos**.
+
+### R2 desaparece cuando el campo se llena; R1 no
+
+```
+28   con el nivel puesto   R1 sigue marcando el campo   ·   R2 ya no dice nada
+```
+
+**Requerido y faltante son dos afirmaciones distintas.** R1 va en la etiqueta, así que sigue diciendo que el
+campo importa. R2 va en el valor vacío, así que sólo puede hablar mientras falta — y el punto de G3 hace
+exactamente lo mismo, correctamente, porque sólo era sobre el hueco. **R2 no es una marca de requerido: es
+una segunda marca de faltante, más elocuente.**
+
+### Y una defensa que hay que hacer siempre
+
+```
+29   en una expansión no se marca nada, en las tres
+```
+
+## Un defecto real en B, encontrado por el check 27save
+
+El stepper de `Copias` es el único control que edita **dentro** de la hoja en vez de elegir y cerrar. Mutaba
+`units` y volvía, y **nada repintaba el pie**: `Guardar` quedaba MUERTO habiendo cambios sin guardar, y
+cerrar la hoja tampoco lo despertaba porque `closeSheet` no renderizaba. **Una edición preparada que el botón
+de confirmar no puede ver es el modelo entero de B fallando en silencio.**
+
+Arreglado en las dos mitades — el stepper renderiza, y `closeSheet` también, para que ningún control futuro
+dentro de una hoja lo reintroduzca por olvido. Y el arreglo **volvió a entrar por una puerta vieja**: ↺
+borra el juego del walk y recién después limpia `S.editing`, así que renderizar por id solo corría
+`renderEditor` contra una fila eliminada — el mismo peligro que 076 ya había registrado. Ahora se guarda
+contra la fila, no contra el id.
+
+## Open (ronda 3)
+
+- **R1 / R2 / R3 están abiertas, y la ronda 1 también.**
+- **El toast y el salto a secciones son la ronda 4** — con lo medido arriba: el editor ya tiene el fieldset,
+  publicar ya mete el juego en dos secciones automáticas, y Destacados tiene 7 de 20.
+- **R1 y R2 no son excluyentes con la puerta, son acumulativas.** Si se elige R3, la ficha en reposo no dice
+  nada sobre requisitos y todo el peso queda en el pie — que es donde G1/G2/G3 todavía está sin decidir.
+- **Ninguna variante marca los campos NO requeridos.** *"the rest of data"* puede querer decir lo contrario
+  de lo que dibujé: marcar los opcionales en vez de el requerido. Con 5 de 6 opcionales eso sería marcar
+  cinco filas, que la convención habitual desaconseja — pero no está medido acá.
+- **`Copias` sigue pre-cargándose en 1 en silencio** (ronda 1), y ahora convive con una marca de requerido
+  en otra fila, lo cual podría leerse como que copias no importa.

@@ -48,6 +48,7 @@ const GATES = ['G1', 'G2', 'G3'];
 const step = (p, k) => p.evaluate(k => document.querySelector(`[data-walk="${k}"]`).click(), k);
 const setGate = (p, v) => p.evaluate(v => document.querySelector(`[data-g-set="${v}"]`).click(), v);
 const setMode = (p, v) => p.evaluate(v => document.querySelector(`[data-m-set="${v}"]`).click(), v);
+const setReq = (p, v) => p.evaluate(v => document.querySelector(`[data-r-set="${v}"]`).click(), v);
 const setTool = (p, attr, v) => p.evaluate(([a, v]) => document.querySelector(`[data-${a}-set="${v}"]`).click(), [attr, v]);
 const hideTools = p => p.evaluate(() => document.getElementById('tools').style.visibility = 'hidden');
 const showTools = p => p.evaluate(() => document.getElementById('tools').style.visibility = '');
@@ -64,6 +65,7 @@ const reset = p => step(p, 'reset');
 async function toEditor(p, mode = 'B') {
   await reset(p);
   await setMode(p, mode);
+  await setReq(p, 'R3');   /* round 3's baseline, so round 1/2 checks keep measuring their own question */
   await step(p, 'create'); await step(p, 'enriched'); await step(p, 'edit');
   /* THE SNACKBAR IS CLEARED HERE ON PURPOSE, AND CHECK 16 IS WHY IT IS NOT SWEPT UNDER THE RUG.
      d55's completion toast lives 10000ms and the walk reaches the editor about a second after it fires, so
@@ -472,7 +474,7 @@ const gateState = p => p.evaluate(() => {
     await toEditor(page, mo); await setGate(page, 'G3');
     await page.evaluate(() => { window.TAPS.taps = 0; window.TAPS.writes = 0; });
     await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="medio"]').click());
+    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="ingenio_estratega"]').click());
     await tapPublish(page);
     cost[mo] = await page.evaluate(() => ({ taps: window.TAPS.taps, writes: window.TAPS.writes, st: window.byId(window.S.editing).status }));
   }
@@ -484,14 +486,102 @@ const gateState = p => p.evaluate(() => {
   for (const mo of ['A', 'B']) {
     await toEditor(page, mo); await setGate(page, 'G3');
     await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
-    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="medio"]').click());
+    await page.evaluate(() => document.querySelector('[data-pick="weight_band"][data-val="ingenio_estratega"]').click());
     await step(page, 'leave');
     const asked = await page.evaluate(() => document.getElementById('dscrim').classList.contains('open'));
     if (asked) await page.evaluate(() => document.querySelector('[data-act="dlg-yes"]').click());
     leave[mo] = { asked, band: await page.evaluate(() => window.byId(window.NEW).weight_band) };
   }
-  ok(leave.A.asked === false && leave.A.band === 'medio' && leave.B.asked === true && leave.B.band === null,
+  ok(leave.A.asked === false && leave.A.band === 'ingenio_estratega' && leave.B.asked === true && leave.B.band === null,
     `25 · salir a la mitad: A no pregunta y el nivel QUEDA · B pregunta y al salir el nivel SE PIERDE (${JSON.stringify(leave)})`);
+
+  /* ================= RONDA 3 · ¿dónde se marca que un campo es requerido? ================= */
+
+  /* ---- 26. HOW MANY PLACES SAY IT ----
+     B's foot already says "Falta el nivel para publicarlo" under G1 and G3 already dots the row. A third
+     marker would say one thing in three places — the defect 077 counted when the row and the sheet both
+     read "Trayendo datos de BGG" 310px apart. Counted as VISIBLE TEXT plus the dot, not as prose. */
+  const says = {};
+  for (const rq of ['R1', 'R2', 'R3']) for (const g of ['G1', 'G3']) {
+    await toEditor(page, 'B'); await setGate(page, g); await setReq(page, rq); await hideTools(page);
+    says[rq + g] = await page.evaluate(() => {
+      const onScreen = el => el && el.offsetParent && el.getBoundingClientRect().height > 0;
+      const row = document.querySelector('[data-field="weight_band"]');
+      return {
+        etiqueta: onScreen(row.querySelector('.fr-k .req')) ? 1 : 0,
+        valor: onScreen(row.querySelector('.fr-v.req')) ? 1 : 0,
+        punto: onScreen(row.querySelector('.miss')) ? 1 : 0,
+        pie: /[Ff]alta/.test((document.querySelector('#stack .why') || {}).textContent || '') ? 1 : 0
+      };
+    });
+    await showTools(page);
+  }
+  const total = k => Object.values(says[k]).reduce((a, b) => a + b, 0);
+  ok(total('R3G1') === 1 && total('R3G3') === 1,
+    `26a · la línea base dice "falta el nivel" en UN solo lugar: R3+G1 el pie, R3+G3 el punto (${JSON.stringify(says.R3G1)} / ${JSON.stringify(says.R3G3)})`);
+  ok(total('R1G1') === 2 && total('R2G1') === 2,
+    `26b · con G1, marcar en la ficha lo dice en DOS lugares — R1 ${total('R1G1')}, R2 ${total('R2G1')}`);
+  ok(total('R1G3') === 2 && total('R2G3') === 2,
+    `26c · y con G3 también dos, porque el punto y la marca son la misma noticia en la misma fila (R1 ${JSON.stringify(says.R1G3)})`);
+
+  /* ---- 27. REQUIRED TO PUBLISH, NEVER TO SAVE ----
+     In B you can save a draft with no nivel and come back, so a marker reading "obligatorio" would be a lie
+     about what the page will let you do. Every variant's wording has to be scoped, and the save path has to
+     actually work while the field is empty. */
+  for (const rq of ['R1', 'R2']) {
+    await toEditor(page, 'B'); await setReq(page, rq);
+    const txt = await page.evaluate(() => {
+      const row = document.querySelector('[data-field="weight_band"]');
+      return (row.querySelector('.fr-k .req') || row.querySelector('.fr-v.req') || {}).textContent || '';
+    });
+    ok(/publicar|web/i.test(txt) && !/obligatorio|requerido\b/i.test(txt),
+      `27${rq} · ${rq} · la marca habla de PUBLICAR o de la web, nunca de "obligatorio" ("${txt.trim()}")`);
+  }
+  /* and saving really does work with the field empty — otherwise the scoping above is a claim, not a fact */
+  await toEditor(page, 'B'); await setReq(page, 'R1');
+  await page.evaluate(() => document.querySelector('[data-field="units"]').click());
+  await page.evaluate(() => document.querySelector('[data-step="1"]').click());
+  await page.evaluate(() => document.querySelector('.sh-x').click());
+  await page.evaluate(() => document.querySelector('#stack [data-act="save"]').click());
+  const saved = await page.evaluate(() => ({ dirty: window.dirty(), band: window.byId(window.S.editing).weight_band, units: window.byId(window.S.editing).units }));
+  ok(saved.dirty === false && saved.band === null,
+    `27save · y guardar SÍ funciona con el nivel vacío — el borrador queda limpio sin nivel (${JSON.stringify(saved)})`);
+
+  /* ---- 28. WHAT SURVIVES ONCE THE FIELD IS FILLED ----
+     "Required" and "missing" are different claims. R1 rides the label, so it still says the field matters
+     once a nivel is picked; R2 rides the empty value and therefore DISAPPEARS, which is its structural
+     cost. G3's dot disappears in both, correctly — it was only ever about the gap. */
+  const filled = {};
+  for (const rq of ['R1', 'R2']) {
+    await toEditor(page, 'B'); await setGate(page, 'G3'); await setReq(page, rq); await step(page, 'nivel');
+    filled[rq] = await page.evaluate(() => {
+      const row = document.querySelector('[data-field="weight_band"]');
+      return { marca: !!row.querySelector('.fr-k .req, .fr-v.req'), punto: !!row.querySelector('.miss'),
+        valor: row.querySelector('.fr-v').textContent.trim() };
+    });
+  }
+  ok(filled.R1.marca === true && filled.R2.marca === false && !filled.R1.punto && !filled.R2.punto,
+    `28 · con el nivel puesto R1 sigue marcando el campo y R2 ya no dice nada (${JSON.stringify(filled)})`);
+
+  /* ---- 29. an expansion requires nothing, in all three ---- */
+  const exp2 = {};
+  for (const rq of ['R1', 'R2', 'R3']) {
+    await toEditor(page, 'B'); await setReq(page, rq); await setTool(page, 'exp', '1');
+    exp2[rq] = await page.evaluate(() => !!document.querySelector('.fr-k .req, .fr-v.req, .frow .miss'));
+    await setTool(page, 'exp', '0');
+  }
+  ok(!exp2.R1 && !exp2.R2 && !exp2.R3,
+    `29 · en una expansión no se marca nada, en las tres (${JSON.stringify(exp2)})`);
+
+  /* ---- 30. the three bands are the real ones, and the band IS the section ----
+     Round 1 carried 075's four invented bands. Corrected against Vocabulary.@weight_bands and the live
+     column; the sheet must offer exactly the three real values plus the empty one. */
+  await toEditor(page, 'B');
+  await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
+  const bands = await page.evaluate(() => [...document.querySelectorAll('[data-pick="weight_band"]')].map(b => b.dataset.val));
+  await page.evaluate(() => document.querySelector('.sh-x').click());
+  ok(bands.join() === ',descubre_el_hobby,ingenio_estratega,nivel_experto',
+    `30 · la hoja del nivel ofrece las TRES bandas reales, no las cuatro inventadas (${JSON.stringify(bands)})`);
 
   /* ---- 15. no console errors ---- */
   ok(errors.length === 0, `15 · sin errores de consola${errors.length ? ' — ' + errors.slice(0, 2).join(' | ') : ''}`);

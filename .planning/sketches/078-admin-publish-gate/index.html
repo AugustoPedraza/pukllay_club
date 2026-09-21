@@ -779,6 +779,13 @@
   .stack .btn.sec { background: none; color: var(--color-accent-text); border: 1px solid var(--stroke); }
   :root[data-theme="dark"] .stack .btn.sec { color: var(--color-accent-text); }
 
+  /* R1's marker. NOT an asterisk: an asterisk needs a legend somewhere to decode it, and on a form with
+     exactly one required field a legend costs more than the words do. It is also not a pill — the project's
+     status convention is a dot + text and pills were retired (d36) — so it is small muted text, the same
+     rank the `.fr-v` value line carries. */
+  .fr-k .req { font-size: 12px; font-weight: 500; color: var(--warn); letter-spacing: .01em; }
+  .fr-v.req { color: var(--warn); font-style: normal; }
+
 </style>
 </head>
 <body>
@@ -808,7 +815,8 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>Cuándo escribe: <button class="vt on" data-m-set="A">A · la hoja guarda</button> <button class="vt" data-m-set="B">B · la hoja prepara</button></div>
+  <div>Marcar requerido: <button class="vt" data-r-set="R1">R1 · en la etiqueta</button> <button class="vt" data-r-set="R2">R2 · en el valor</button> <button class="vt on" data-r-set="R3">R3 · sólo el pie</button></div>
+  <div style="opacity:.8">Ronda 2 (decidida) — cuándo escribe: <button class="vt" data-m-set="A">A</button> <button class="vt on" data-m-set="B">B ★</button></div>
   <div style="opacity:.8">Ronda 1 (abierta) — la puerta: <button class="vt on" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt" data-g-set="G3">G3</button></div>
   <div>El paseo: <button class="stp" data-walk="create">1 · Agregar 207330</button>
     <button class="stp" data-walk="enriched" disabled>2 · llegan los datos</button>
@@ -974,7 +982,34 @@ let GATE = 'G1';
    HELD FIXED SO THE ROUNDS DO NOT CONTAMINATE EACH OTHER: round 1's GATE is still open, so it stays on the
    page as a toggle — but check 23 asserts the A-vs-B deltas are IDENTICAL under all three gates, so nothing
    this round finds can be attributed to a gate that has not been chosen yet. */
-let MODE = 'A';
+let MODE = 'B';   /* DECIDIDO (ronda 2): la hoja prepara, Guardar confirma. A sigue navegable. */
+
+/* ---------- RONDA 3: ¿DÓNDE SE MARCA QUE UN CAMPO ES REQUERIDO? ----------
+   The developer: *"the rest of 'data', it must mark fields as required."*
+
+   MEASURED FIRST, and it is what makes this round small and sharp: exactly ONE of the six club rows is
+   required, and for an expansion none is. So "marking required" means marking ONE row — a different
+   problem from a form where half are mandatory, and the usual asterisk convention (mark required when few
+   are) points the same way.
+
+   AND THE REQUIREMENT CAN NOW STATE A CONSEQUENCE INSTEAD OF A RULE, which is new this round:
+   `sections.rule_value` maps each `weight_band` section 1:1 onto a band value, so the nivel is what PLACES
+   the game in one of the three rows that organise the public catalogue. Without it the game is published
+   into none of them. That is a fact about the site, not a policy — and it is sayable.
+
+   THE TENSION THIS ROUND EXISTS TO MEASURE: B's foot ALREADY says "Falta el nivel para publicarlo" under
+   G1, and G3 already puts a dot on the row. A third marker risks saying one thing in three places, which is
+   the defect 077 counted when the row and the sheet both said "Trayendo datos de BGG" 310px apart. Check 26
+   counts the places rather than trusting that it reads well.
+
+     R1 · en la etiqueta    `Nivel` carries a small "para publicar" marker
+     R2 · en el valor       the empty value stops saying "Sin nivel" and says what is missing and why
+     R3 · sólo en el pie    the do-nothing baseline — what B already does, and what makes R1/R2 falsifiable
+
+   REQUIRED HERE MEANS REQUIRED TO PUBLISH, NEVER TO SAVE, and in B that distinction is real: you can save
+   a draft without a nivel and come back. A marker reading "obligatorio" would be a lie about what the page
+   will let you do. Every variant's wording is scoped to publishing; check 27 asserts it. */
+let REQ = 'R3';
 
 /* B's staging pair. `START` is the persisted row, `G`'s club columns are the screen. In A they are never
    allowed to diverge — `setField` writes both — which is what makes `dirty()` structurally false rather
@@ -1236,12 +1271,35 @@ function renderJuegos() {
 /* 075:746 verbatim — the lifecycle as a dot + text. A READ-OUT in the head, never a control. */
 const CYC = { published: { n: 'Publicado', k: 'ok' }, draft: { n: 'Borrador', k: 'warn' }, retired: { n: 'Retirado', k: 'off' } };
 
+/* ---------- CORRECTED AGAINST THE DATABASE: THERE ARE THREE BANDS, NOT FOUR ----------
+   Round 1 carried 075's array verbatim — `intro / medio / estratega / experto` with invented labels. None
+   of those four values exists. `Vocabulary.@weight_bands` (vocabulary.ex:24-40) and the live column agree
+   on three, and these are their real labels and descriptors:
+
+       descubre_el_hobby   Descubre el hobby    179 publicados
+       ingenio_estratega   Ingenio estratega    183
+       nivel_experto       Nivel experto         46
+       (nil)                                     26   — las 26 expansiones
+
+   AND THE BAND IS THE SECTION. `sections.rule_value` maps each `weight_band` section 1:1 onto a band value
+   (measured: "Descubre el hobby" -> descubre_el_hobby, and so on), so setting the nivel is what PLACES the
+   game in one of the three rows that organise the public catalogue. That is why `nivel` is the gate's one
+   condition — not a policy preference but a consequence: without it the game is published into none of
+   them. 075 already knew and said it (*"No aparece en ninguna fila por nivel"*); this round can now say
+   WHICH fila, because the mapping was measured rather than assumed. */
 const BANDS = [
   { v: '', n: 'Sin nivel', s: 'No aparece en ninguna fila por nivel' },
-  { v: 'intro', n: 'Para arrancar', s: 'Se explica en 5 minutos' },
-  { v: 'medio', n: 'Intermedio', s: 'Una tarde tranquila' },
-  { v: 'estratega', n: 'Ingenio estratega', s: 'Pide pensar varias jugadas' },
-  { v: 'experto', n: 'Experto', s: 'Para quien ya tiene rodaje' }
+  { v: 'descubre_el_hobby', n: 'Descubre el hobby', s: 'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.' },
+  { v: 'ingenio_estratega', n: 'Ingenio estratega', s: 'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.' },
+  { v: 'nivel_experto', n: 'Nivel experto', s: 'Reglas largas y decisiones profundas. Para mesas con experiencia.' }
+];
+/* the four MANUAL sections, exactly as the dev DB has them — the ones the editor's `Secciones` fieldset
+   already lists today (form.ex:289-294). The automatic ones are NOT here on purpose: nobody picks them. */
+const SECCIONES = [
+  { id: 1, n: 'Destacados del club', featured: true, has: 7, cap: 20 },
+  { id: 2, n: 'Crea conexiones', has: 61 },
+  { id: 3, n: 'Equipo ganador', has: 54 },
+  { id: 4, n: 'Duelos memorables', has: 19 }
 ];
 /* THE DATABASE HAS EXACTLY ONE SHELF AND EXACTLY ONE GAME ON IT (measured 2026-09-21). 075 drew three
    invented ones; the fixture is corrected to the truth here, because the round's central claim about
@@ -1264,10 +1322,22 @@ function renderEditor() {
   /* G3 has no container of its own, so the ROW is where it speaks — the same dot the status line uses
      (D-19h), never a badge. In G1 and G2 the rows are untouched, so a finding about the rows cannot be
      blamed on the gate's paint. Check 6 asserts the dot exists in G3 alone. */
+  /* `requiredKeys` is what the gate WOULD ask for, independent of whether it is currently unmet — that is
+     the difference between "required" and "missing", and it is why R1's marker survives once the nivel is
+     set while G3's dot does not (check 28). An expansion requires nothing, so both vanish there. */
+  const requiredKeys = g.status === 'draft' && !g.is_expansion ? ['weight_band'] : [];
   const r = (key, k, v, empty, clamp) => {
     const flag = GATE === 'G3' && missKeys.includes(key) ? '<span class="miss" aria-hidden="true"></span>' : '';
+    const req = requiredKeys.includes(key);
+    /* R1 — the marker rides the LABEL, so it is about the field rather than about its current value. */
+    const mark = req && REQ === 'R1' ? ` <span class="req">para publicar</span>` : '';
+    /* R2 — the marker replaces the EMPTY VALUE, so it says what happens rather than what is owed. It only
+       has anywhere to live while the value is empty, which is R2's structural cost: once the nivel is set,
+       R2 says nothing at all and the field stops looking required (check 28). */
+    let val = v, cls = empty ? ' empty' : '';
+    if (req && empty && REQ === 'R2') { val = 'Falta — sin esto no aparece en ninguna fila de la web'; cls = ' empty req'; }
     return `<button class="frow" data-field="${key}">
-      <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+      <span class="fr-t"><span class="fr-k">${esc(k)}${mark}</span><span class="fr-v${cls}${clamp ? ' clamp' : ''}">${esc(val)}</span></span>
       ${flag}</button>`;
   };
 
@@ -1489,7 +1559,17 @@ function openSheet(head, body, from, opt = {}) {
   sh.classList.add('open'); $('#backdrop').classList.add('open');
   setTimeout(() => { const f = sh.querySelector('input'); f ? f.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
 }
-function closeSheet() { S.sheetFor = null; device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener?.isConnected && opener.focus?.({ preventScroll: true }); }
+function closeSheet() {
+  S.sheetFor = null; device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open');
+  /* see the stepper above: closing a sheet has to repaint the page behind it, or an edit made IN the sheet
+     leaves the foot describing the state before it. */
+  /* THE GAME MUST STILL EXIST. ↺ splices the walk's game out of `G` and only THEN clears `S.editing`, so
+     rendering here on the id alone ran `renderEditor` against a deleted row — the exact hazard 076
+     recorded ("a reset that deletes the thing the current screen is about has to change the screen too"),
+     re-entered through a new door. Guarded on the row, not on the id. */
+  if (S.screen === 'editor' && S.editing && byId(S.editing)) { render(); walkUI(); }
+  opener?.isConnected && opener.focus?.({ preventScroll: true });
+}
 
 /* decision 4 — the "+" sheet. ROUND 2: the manual path and its separator are gone (see the note below the
    function); what remains is the BGG field, the hint, and `Agregar`.
@@ -1854,8 +1934,17 @@ document.addEventListener('click', e => {
   }
   const stp = e.target.closest('[data-step]');
   if (stp) {
+    /* ---------- FOUND BY CHECK 27save, AND IT WAS A REAL DEFECT IN B ----------
+       The stepper is the one control that edits IN the sheet rather than by picking and closing, so it
+       mutated `units` and returned — and nothing re-rendered the foot. `Guardar` stayed DEAD while there
+       were unsaved changes, and closing the sheet did not wake it either, because `closeSheet` does not
+       render. A staged edit that the commit button cannot see is B's whole model failing silently.
+       Both halves fixed: the stepper renders, and `closeSheet` renders too, so no future in-sheet control
+       can reintroduce it by forgetting. */
     const n = $('#unitsn'); n.textContent = Math.max(1, +n.textContent + (+stp.dataset.step));
-    const g = byId(S.editing); if (g) g.units = +n.textContent;
+    const g = byId(S.editing);
+    if (g) { g.units = +n.textContent; if (MODE === 'A') { snapshot(g); TAPS.writes++; } }
+    render(); walkUI();
     return;
   }
   const t = e.target.closest('[data-act]'); if (!t) return;
@@ -1945,6 +2034,8 @@ document.addEventListener('click', e => {
   /* 077's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so AV1/AV2/AV3
      are three renderings of one walk rather than three walks. It only changes what happens AT the arrival,
      so switching it after the data has landed shows nothing; ↺ and walk it again. */
+  const rq = e.target.closest('[data-r-set]');
+  if (rq) { REQ = rq.dataset.rSet; mark('[data-r-set]', rq); render(); return; }
   const m = e.target.closest('[data-m-set]');
   /* switching re-renders from the SAME state: the game is not rebuilt, so A and B are two renderings of
      one walk. Switching INTO B re-snapshots, so B never starts life already dirty from A's writes. */
@@ -1982,7 +2073,7 @@ document.addEventListener('click', e => {
     /* THROUGH `setField`, not by assigning the column. Check 21 caught the shortcut: the walk was setting
        weight_band directly, so A's write never happened and A looked identical to B. A walk step that
        bypasses the mechanism the round is about measures nothing. */
-    if (k === 'nivel') { const g = byId(NEW); if (g && S.editing === g.id) setField('weight_band', 'medio'); return; }
+    if (k === 'nivel') { const g = byId(NEW); if (g && S.editing === g.id) setField('weight_band', 'ingenio_estratega'); return; }
     if (k === 'publish') { doPublish(); return; }
     if (k === 'leave') { document.querySelector('.tb-back')?.click(); walkUI(); return; }
     if (k === 'reset') {
@@ -2038,6 +2129,7 @@ function walkUI() {
    Everything else the harness needs is exported here EXPLICITLY, as getters — never as a one-time copy,
    which would capture `NEW` and `S.editing` stale the moment the walk advanced. */
 Object.defineProperties(window, {
+  REQ: { get: () => REQ }, GATE: { get: () => GATE },
   byId: { get: () => byId }, enrOf: { get: () => enrOf }, gateOpen: { get: () => gateOpen },
   S: { get: () => S }, NEW: { get: () => NEW },
   /* round 2's additions — and the trap bit AGAIN while writing check 21, which is the fourth time in this
