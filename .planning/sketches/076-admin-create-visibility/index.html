@@ -35,8 +35,8 @@
      put_change(:enrichment_status, "pending"), and name = "Juego #<bgg_id>" (game.ex:159-166). The Oban job is
      enqueued in the SAME transaction (catalog.ex:326-328), queue concurrency 1, backoff attempt*30
      (config.exs:38-42). So a new game is ALWAYS draft+pending with a placeholder name. There is no by-name
-     create path at all — `Crear a mano` is d4-settled and UNBUILT, so it is disabled here rather than
-     silently sketched as if it worked.
+     create path at all — `Crear a mano` was d4-settled and UNBUILT, and round 2 DELETED it from both places
+     that offered it (the sheet and the search), as an explicit amendment to d4 rather than a drift.
 
      THE WALK IS STEPPABLE AND STATE IS CARRIED. 075's lesson: the only route to a new state must not be a
      fixture reload, or the harness measures the tool panel instead of the page. `enrichmentArrived(outcome)`
@@ -479,6 +479,7 @@
   .row.fresh .name { font-weight: 600; }
   /* V3's pinned block: the new game rendered above every section. It reuses .lgroup/.lhw/.lhead verbatim so
      it cannot accidentally become a fourth kind of header — the only new thing is that it exists at all. */
+  .sgnone { margin: 0; padding: 14px 16px; color: var(--color-text-muted); font-size: 14px; }
   #tools { position: fixed; right: 12px; top: 12px; z-index: 99; font: 12px system-ui; background: rgba(0,0,0,.72); color: #fff; padding: 6px 10px; border-radius: 8px; }
   #tools .vt { background: none; }
   #tools .vt.on { background: #fff; color: #000; }
@@ -859,14 +860,14 @@ function renderSugg() {
     box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
   }
 
+  /* ROUND 2: the search's "Crear «…»" answer is deleted with `Crear a mano` — same unbuilt path, and leaving
+     one of the two live would keep the door open through a different handle. d4's create-aware search keeps
+     its OTHER answer: paste a BGG number or link and the dropdown still offers `Agregar desde BGG` (above).
+     A name with no match now simply finds nothing, which is the truth. */
   const hits = G.filter(g => norm(g.name).includes(norm(q.trim()))).slice(0, 6);
-  box.innerHTML = hits.map(g => sugRow(g, q)).join('')
-    /* 076: the search's create-by-name answer is the same unbuilt path as `Crear a mano` in the sheet, and is
-       disabled for the same reason — d4 stands, the code does not exist. Consistency matters here: leaving one
-       of the two live would make the round's walk reachable through a door the app does not have. */
-    + `<button class="srow create" role="option" data-act="create" data-name="${esc(q.trim())}" disabled aria-disabled="true">
-        <span class="cov">${ic('plus')}</span>
-        <span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Todavía no está construido</span></span></button>`;
+  box.innerHTML = hits.length
+    ? hits.map(g => sugRow(g, q)).join('')
+    : `<p class="sgnone">No hay ningún juego con ese nombre.</p>`;
   box.hidden = false; inp.setAttribute('aria-expanded', 'true');
 }
 
@@ -891,7 +892,21 @@ function openSheet(head, body, from, opt = {}) {
 }
 function closeSheet() { device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener?.isConnected && opener.focus?.({ preventScroll: true }); }
 
-/* decision 4 — the "+" sheet: the BGG path first, the manual path under a separator */
+/* decision 4 — the "+" sheet. ROUND 2: the manual path and its separator are gone (see the note below the
+   function); what remains is the BGG field, the hint, and `Agregar`.
+
+   THE HINT PROMISED A FIELD ENRICHMENT NEVER WRITES. `Enrichment.attrs_from_bgg_item/1`
+   (enrichment.ex:54-72) returns year, min/max players, min/max playtime, playing_time, min_age, description,
+   bgg_weight, bgg_rating, bgg_rank, mechanics, themes, designers, artists and publishers, plus the cover via
+   `image_attrs/3`. `weight_band` is NOT among them — the only things that ever write the club's `nivel` are
+   `admin_changeset` (staff, by hand) and the band-audit tool. So the sheet was promising the one value a
+   member still has to fill in themselves, on the screen where they are being told what they get for free.
+   "y el nivel" is deleted. Everything else the line claims is true, and "queda como borrador hasta que lo
+   publiques" is exactly what `draft_changeset` does (status :draft, game.ex:159).
+
+   NOTE FOR ANYONE EDITING THIS FUNCTION: do not put an HTML comment inside the template literal below.
+   `<!--` is a legal HTML-like line comment in a classic script, so it swallows the rest of the line and
+   breaks the literal. It happened twice while building this sketch. */
 function addSheet(from, prefill) {
   openSheet(
     `<span class="tile" aria-hidden="true">${ic('plus')}</span>
@@ -900,27 +915,29 @@ function addSheet(from, prefill) {
        <label class="flab" for="bg">Número o link de BGG</label>
        <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
        <p class="ferr" id="bgerr" hidden></p>
-       <p class="hint">Traemos la tapa, los jugadores, la duración y el nivel. Queda como borrador hasta que lo publiques.</p>
+       <p class="hint">Traemos la tapa, los jugadores y la duración. Queda como borrador hasta que lo publiques.</p>
        <button class="obtn pri wide" data-act="addgo">Agregar</button>
-       <div class="fsep">o</div>
-       ${manualLink()}
      </div>`, from, { form: true });
   if (KBD_SIM) device.classList.add('kbd');
 }
 
-/* 076: `Crear a mano` is decision 4 and it is UNBUILT.
-   Verified 2026-09-20: `catalog.ex:325` is the ONLY game insert in the app, and it goes through
-   `Game.draft_changeset`, which does `validate_required([:bgg_id])` (game.ex:157). There is no by-name path,
-   no context function for one, and no route for one. The 41 `no_bgg_id` games are LEGACY CSV-seed rows
-   (seed/report.ex) — by-name creation has never once happened, so "11% of the catalogue" is a fact about the
-   import, not about this door.
-   It is left ON SCREEN because deleting it would silently reverse d4, which is the unrecorded-drift failure
-   d47 was convened to stop. It is DISABLED because drawing it as working would make the sketch assert a
-   feature that cannot ship — and this round's walk must not be reachable through a door the app lacks. */
-function manualLink() {
-  return `<button class="dlink" data-act="manual" style="padding-left:0" disabled aria-disabled="true" title="Todavía no existe en la app"><span>${ic('edit')}</span>
-    <span>Crear a mano<span class="dsub">Todavía no está construido — sólo con ID de BGG</span></span></button>`;
-}
+/* ---------- `Crear a mano` is GONE, and decision 4 is amended rather than drifted ----------
+   Round 1 left it on screen but disabled, on the reasoning that deleting it would silently reverse d4. The
+   developer's call in round 2 is to delete it, which makes this an explicit amendment instead — the thing
+   d47 was convened to require.
+
+   The case for deleting rather than disabling:
+     · It is UNBUILT, not merely unfinished. `catalog.ex:325` is the ONLY game insert in the app and it goes
+       through `Game.draft_changeset`, which does `validate_required([:bgg_id])` (game.ex:157). There is no
+       by-name context function, no route, and nothing to enable.
+     · It was never used. The 41 `no_bgg_id` games are LEGACY CSV-seed rows (seed/report.ex), so "11% of the
+       catalogue" is a fact about the 2026-08-10 import, not evidence that anyone wants this door.
+     · Disabled, it cost 106px of a 435px sheet — 24% — to say "no".
+
+   d4's OTHER half stands untouched: the 44px `+` rightmost in the header, the BGG number-or-link field, and
+   the edition prompt are all still here. What is withdrawn is only the manual path, in BOTH places that
+   offered it — the sheet and the search's "Crear «…»" suggestion — because leaving one live would keep the
+   unbuilt door open through a different handle. `createManual` and its two actions are deleted with them. */
 
 /* D-03 — a BGG id that already belongs to a game: warn, list the holders, let staff confirm an edition */
 function editionPrompt(id) {
@@ -1012,11 +1029,6 @@ function enrichmentArrived(outcome) {
   walkUI();
 }
 
-function createManual(name) {
-  const g = { id: 1000 + G.length, name: name || 'Juego nuevo', thumb: null, hue: hue(name || 'x'), year: null, gap: true, status: 'draft', added: 1e6 + G.length };
-  G.push(g); closeSheet(); openGame(g.id, 'juegos'); snack('Juego creado');
-}
-
 /* ---------- dialog / snackbar ---------- */
 const DLG = { run: null };
 function openDialog({ title, text, yes, run }) {
@@ -1053,8 +1065,6 @@ document.addEventListener('click', e => {
   if (a === 'more') { S.shown += PAGE; return render(); }
   if (a === 'add') return addSheet(t);
   if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
-  if (a === 'create') return createManual(t.dataset.name);
-  if (a === 'manual') { closeSheet(); return createManual($('#q')?.value?.trim() || ''); }
   if (a === 'addgo') {
     const v = $('#bg').value.trim(), id = bggId(v);
     if (!id) { $('#bg').setAttribute('aria-invalid', 'true'); const er = $('#bgerr'); er.textContent = 'Pegá un número de BGG o el link del juego.'; er.hidden = false; return; }

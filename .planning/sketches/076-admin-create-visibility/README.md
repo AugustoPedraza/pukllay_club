@@ -1,10 +1,10 @@
 ---
 sketch: 076
 name: admin-create-visibility
-question: "After you tap `Agregar` with a BGG id, where does the just-created game become visible?"
+question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2 — what do you get when you tap `+`?"
 winner: null
-tags: [admin, juegos, create, draft, pending, failed, d1, d3, d8, d17, d24, scenario-walk]
-rounds: 1
+tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, copy, scenario-walk]
+rounds: 2
 status: PENDING REVIEW
 ---
 
@@ -24,7 +24,7 @@ The developer's scope for the scenario, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/076-admin-create-visibility/index.html
-node .planning/sketches/076-admin-create-visibility/verify.js     # 26/26
+node .planning/sketches/076-admin-create-visibility/verify.js     # 28/28
 ```
 
 Use the **El paseo** strip in the tool panel: `1 · Agregar 342942`, then `2a · llegan los datos` or
@@ -91,9 +91,12 @@ And one that makes the developer's scenario *more* real, not less: **`failed` is
 Missing credentials (`:65-68`) and BGG-has-no-such-item (`:78-80`) both write `"failed"` immediately; only
 the third branch waits for `attempt >= max_attempts`.
 
-`Crear a mano` is therefore left **on screen and disabled**, in both places that offer it (the sheet and the
-search). Deleting it would silently reverse d4 — the unrecorded-drift failure d47 was convened to stop —
-and drawing it as working would make the sketch assert a feature that cannot ship.
+In round 1 `Crear a mano` was therefore left **on screen and disabled**, in both places that offer it, on the
+reasoning that deleting it would silently reverse d4 — the unrecorded-drift failure d47 was convened to
+stop — while drawing it as working would make the sketch assert a feature that cannot ship.
+
+> **Superseded by round 2:** the developer's call is to delete it, which makes the reversal an **explicit
+> amendment** (decision 51) rather than a drift. See *Round 2* below.
 
 ---
 
@@ -236,3 +239,101 @@ and — after `2b · falla` — at how many times it tells you the same game fai
   and the redesign still disagree, and that is a code change owed either way.
 - Everything in 075's Open list still stands, including both `TODO(palette)` items and the widened
   `no disabled buttons` conflict.
+
+
+---
+
+## Round 2 — what do you get when you tap `+`?
+
+From the developer, pulling the round back to its first moment rather than choosing inside it:
+
+> *"There are too many decisions that I need to do here. Go simple. What do I get when I tap +? I want to
+> focus on that first."*
+
+Answered by **reading the sheet**, not by proposing anything. Measured at 375×740, keyboard up:
+
+```
+y48    435 juegos en el club                     context
+y69    Agregar juego                             title              ✕ at y35
+y134   Número o link de BGG                      label
+y159   [ 342942 ]                                input, 48px
+y213   Traemos la tapa, los jugadores, la duración y el nivel.
+       Queda como borrador hasta que lo publiques.                  hint, 36px
+y266   [ Agregar ]                               outlined, full width, 44px
+y326   ─── o ───                                 separator
+y353   Crear a mano                              79px
+                                                 sheet total: 435px
+```
+
+Three things were wrong with it. Two are fixed here; the third is recorded and deliberately left alone.
+
+### 1. The hint promised a field enrichment never writes
+
+*"Traemos la tapa, los jugadores, la duración **y el nivel**."*
+
+`Enrichment.attrs_from_bgg_item/1` (`enrichment.ex:54-72`) returns year, min/max players, min/max playtime,
+`playing_time`, `min_age`, description, `bgg_weight`, `bgg_rating`, `bgg_rank`, mechanics, themes, designers,
+artists and publishers — plus the cover through `image_attrs/3`. **`weight_band` is not among them.** The
+only things that ever write the club's `nivel` are `admin_changeset` (staff, by hand) and the band-audit
+tool.
+
+So the one screen whose job is to say *what you get for free* was promising the one value the member still
+has to fill in themselves, two steps later, in the editor. `y el nivel` is deleted. Everything else the line
+claims is true, and *"queda como borrador hasta que lo publiques"* is exactly `draft_changeset`'s
+`put_change(:status, :draft)` (`game.ex:159`).
+
+### 2. `Crear a mano` is deleted — and d4 is amended, not drifted
+
+Round 1 left it on screen but disabled, reasoning that deleting it would silently reverse d4. The
+developer's call makes it **explicit**, which is what d47 exists to require. Recorded as **decision 51**.
+
+- **Unbuilt, not unfinished.** `catalog.ex:325` is the only game insert in the app and goes through
+  `draft_changeset`, which does `validate_required([:bgg_id])` (`game.ex:157`). No by-name context function,
+  no route, nothing to enable.
+- **Never used.** The 41 `no_bgg_id` games are legacy CSV-seed rows (`seed/report.ex`) — the handoff's
+  *"11% of the catalogue"* is a fact about the 2026-08-10 import, not a demand for this door.
+- **Disabled, it cost 106px of 435 — 24%** — to say "no".
+
+**d4 keeps** the 44px `+`, the BGG number-or-link field, and the edition prompt. What is withdrawn is only
+the manual path, **in both places that offered it** — the sheet and the search's `Crear «…»` suggestion —
+since leaving one live keeps the same door open through a different handle. The search keeps its other
+create-aware answer (`Agregar desde BGG` for a pasted id); a name with no match now simply finds nothing,
+which is the truth. Check 16 asserts all four together, so removing the manual path cannot quietly take the
+rest with it.
+
+### The result
+
+```
+y157   ✕                                         (page visible behind the sheet now)
+y256   Número o link de BGG
+y282   [ 342942 ]
+y336   Traemos la tapa, los jugadores y la duración.
+       Queda como borrador hasta que lo publiques.
+y388   [ Agregar ]
+                                                 sheet total: 313px   (435 → 313)
+```
+
+One field, one honest sentence, one button — and at 375×740 the page behind it is visible again.
+
+### 3. Not fixed, recorded: `Agregar` is enabled with an empty field
+
+Tap it with nothing and you get an error telling you what you should have typed. That is d44's
+enabled/disabled question in miniature, and it was left alone rather than opened in a round called *go
+simple*.
+
+### A build note
+
+`<!--` inside a JS template literal is a legal HTML-like line comment in a classic script, so it swallows the
+rest of the line and breaks the literal. It broke this page **twice** — once in round 1 and once in round 2,
+with the same symptom (`missing ) after argument list`, everything undefined). The function now carries a
+warning above it.
+
+## Open (round 2)
+
+- **Round 1's question is still open** — V1 / V2 / V3 are untouched and still PENDING REVIEW.
+- **`Agregar` with an empty field** — named above, not drawn.
+- **The hint's voseo is unchanged.** *"hasta que lo publiques"* is tuteo-shaped; the rest of the admin uses
+  voseo imperatives (`Pegá`, `Buscá`). Not touched, because it is a copy decision and this round was a
+  factual correction.
+- **This is a sketch change only.** The shipped `index.ex:269-285` add form and its hint still say whatever
+  they say; `Crear a mano` never existed there to remove.

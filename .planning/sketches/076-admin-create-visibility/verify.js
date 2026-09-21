@@ -254,22 +254,45 @@ const VARS = ['V1', 'V2', 'V3'];
   ok(v3Pending.captions.length === 4 && v3Done.captions.length === 3 && v3Done.name === 'Ark Nova' && v3Done.reach === 0,
     `15 · V3: once the data arrives the name becomes "${v3Done.name}" and "Recién agregado" retires (captions ${v3Pending.captions.length} -> ${v3Done.captions.length})`);
 
-  /* 16 — the unbuilt door stays shut, in BOTH places that offer it. d4 is not reversed (the button is still
-         there) but the walk cannot go through a path `catalog.ex` has no function for. */
-  const shut = await p.evaluate(() => {
+  /* 16 — ROUND 2: the unbuilt door is GONE, not disabled, in BOTH places that offered it. Round 1 kept it
+         disabled to avoid silently reversing d4; the developer's call made it an explicit amendment instead,
+         so the assertion flips from "present and disabled" to "absent".
+         d4's other half must SURVIVE, or this becomes a bigger change than was asked for: the `+` still opens
+         the sheet, the BGG field is still there, and the search still offers `Agregar desde BGG` for a pasted
+         id. All four are asserted together so removing the manual path cannot quietly take the rest with it. */
+  const door = await p.evaluate(() => {
+    const r = {};
     document.querySelector('[data-act="add"]').click();
-    const manual = document.querySelector('[data-act="manual"]');
-    const r = { manual: !!manual && manual.disabled, manualPresent: !!manual };
+    r.sheetOpens = document.querySelector('#sheet').classList.contains('open');
+    r.manual = !!document.querySelector('[data-act="manual"]');
+    r.sep = !!document.querySelector('#sheet .fsep');
+    r.bggField = !!document.querySelector('#bg');
+    r.addBtn = !!document.querySelector('[data-act="addgo"]');
+    r.hint = (document.querySelector('#sheet .hint') || {}).innerText || '';
+    r.sheetH = Math.round(document.querySelector('#sheet').getBoundingClientRect().height);
     document.querySelector('[data-act="close"]').click();
-    const q = document.querySelector('#q'); q.value = 'un juego que no existe';
-    q.dispatchEvent(new Event('input', { bubbles: true }));
-    const create = document.querySelector('[data-act="create"]');
-    r.searchCreate = !!create && create.disabled; r.searchPresent = !!create;
+
+    const q = document.querySelector('#q');
+    q.value = 'un juego que no existe'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    r.searchCreate = !!document.querySelector('[data-act="create"]');
+    r.searchEmpty = !!document.querySelector('#sugg .sgnone');
+    q.value = '342942'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    r.searchAddBgg = !!document.querySelector('[data-act="addbgg"]');   /* d4's other answer must survive */
     q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true }));
     return r;
   });
-  ok(shut.manualPresent && shut.manual && shut.searchPresent && shut.searchCreate,
-    '16 · `Crear a mano` and the search\'s create-by-name are both PRESENT (d4 not reversed) and both DISABLED (no by-name path exists in catalog.ex)');
+  ok(door.manual === false && door.sep === false && door.searchCreate === false &&
+     door.sheetOpens && door.bggField && door.addBtn && door.searchAddBgg,
+    `16 · the by-name path is gone from both doors (sheet ${door.manual}, separator ${door.sep}, search ${door.searchCreate}) ` +
+    `and d4's rest survives (+ opens the sheet, BGG field, Agregar, and "Agregar desde BGG" for a pasted id)`);
+
+  /* 16b — the hint no longer promises the one field enrichment never writes. `attrs_from_bgg_item/1` has no
+          `weight_band`; only `admin_changeset` and the band-audit tool ever set the club's `nivel`. */
+  ok(!/nivel/i.test(door.hint) && /tapa/.test(door.hint) && /borrador/.test(door.hint),
+    `16b · the hint claims only what enrichment actually writes: "${door.hint.replace(/\n/g, ' ')}"`);
+
+  /* 16c — what deleting the manual path bought, measured rather than asserted */
+  ok(door.sheetH > 0, `16c · the sheet is now ${door.sheetH}px (it was 435px with the disabled manual path, of which 106px — 24% — was the unbuilt door)`);
 
   /* 17 — the new row clears the 44px touch floor, hit-tested rather than read off a rect */
   await reset(); await setVar('V2'); await create();

@@ -1721,6 +1721,50 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **PENDING REVIEW from the device.** Standing recommendation: **V4 + `Solo acciones de página`**.
 
 
+
+51. **The `+` sheet says only what the app actually does — and `Crear a mano` is deleted, amending d4.**
+    Sketch **076**, round 2, from the developer pulling the round back to its first moment: *"There are too
+    many decisions that I need to do here. Go simple. What do I get when I tap +? I want to focus on that
+    first."* Answered by reading the sheet rather than by proposing anything — three things were wrong with
+    it, and two were fixed on the spot.
+
+    **The hint promised a field enrichment never writes.** It read *"Traemos la tapa, los jugadores, la
+    duración **y el nivel**."* Checked against `Enrichment.attrs_from_bgg_item/1` (`enrichment.ex:54-72`),
+    which returns year, min/max players, min/max playtime, playing_time, min_age, description, `bgg_weight`,
+    `bgg_rating`, `bgg_rank`, mechanics, themes, designers, artists and publishers — plus the cover through
+    `image_attrs/3`. **`weight_band` is not among them.** The only things that ever write the club's `nivel`
+    are `admin_changeset` (staff, by hand) and the band-audit tool. So the one screen whose job is to say
+    *what you get for free* was promising the one value the member still has to fill in themselves, in the
+    editor, two steps later. `y el nivel` is deleted; the rest of the line is true, and *"queda como borrador
+    hasta que lo publiques"* is exactly `draft_changeset`'s `put_change(:status, :draft)`.
+
+    **`Crear a mano` is deleted, and this AMENDS d4 rather than drifting from it.** Round 1 had left it on
+    screen but disabled, reasoning that deleting it would silently reverse d4. The developer's call makes it
+    explicit instead, which is what d47 exists to require. The case:
+    - **It is unbuilt, not unfinished.** `catalog.ex:325` is the **only** game insert in the application and
+      it goes through `Game.draft_changeset`, which does `validate_required([:bgg_id])` (`game.ex:157`).
+      There is no by-name context function, no route, and nothing to enable.
+    - **It has never been used.** The 41 `no_bgg_id` games are legacy CSV-seed rows (`seed/report.ex`), so
+      the handoff's *"by-name creation is 11% of the catalogue, not an edge case"* is a fact about the
+      2026-08-10 import, not evidence that anyone wants this door.
+    - **Disabled, it cost 106px of a 435px sheet — 24%** — to say "no".
+
+    **What d4 keeps:** the 44px `+` rightmost in the header, the BGG number-or-link field, and the edition
+    prompt. What is withdrawn is only the manual path, **in both places that offered it** — the sheet and the
+    search's `Crear «…»` suggestion — because leaving one live would keep the same unbuilt door open through
+    a different handle. The search keeps its other create-aware answer: paste an id or link and it still
+    offers `Agregar desde BGG`. A name with no match now finds nothing, which is the truth. Asserted together
+    so removing the manual path cannot quietly take the rest with it.
+
+    **Measured:** the sheet goes **435px → 313px**, and at 375×740 the page behind it is visible again.
+
+    **Not fixed, recorded:** `Agregar` is enabled with an empty field — tap it with nothing and you get an
+    error telling you what you should have typed. That is d44's enabled/disabled question in miniature and it
+    was left alone rather than opened in a round called "go simple".
+
+    **A build note worth keeping:** `<!--` inside a JS template literal is a legal HTML-like line comment in a
+    classic script, so it swallows the rest of the line and breaks the literal. It broke this page twice.
+
 ## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
 
 **The developer's words:** *"This iteration have been becoming harder and harder over time. I want to
