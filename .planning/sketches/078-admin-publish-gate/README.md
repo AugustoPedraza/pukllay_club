@@ -1,11 +1,11 @@
 ---
 sketch: 078
 name: admin-publish-gate
-question: "El borrador está incompleto y vas a tocar Publicar — ¿quién te frena, y cómo?"
+question: "r1 · ¿quién te frena al publicar un borrador incompleto? — r2 · ¿cuándo se vuelve real una edición?"
 winner: null
 tags: [admin, juegos, draft, publish, gate, lifecycle, d42, d47, d33, d49, 064, scenario-walk]
-rounds: 1
-status: PENDING REVIEW
+rounds: 2
+status: PENDING REVIEW (r1 la puerta · r2 cuándo escribe)
 ---
 
 # Sketch 078: la puerta de Publicar
@@ -253,3 +253,154 @@ watch it *not* notice.
 - **`Guardar` vs `Guardar cambios`.** The shipped form says `Guardar cambios` (`form.ex:314-319`); the bar
   here says `Guardar` to fit three things in 375px. Untested as a copy decision.
 - Everything in 077's and 076's Open lists still stands.
+
+
+---
+
+# Ronda 2 — ¿cuándo se vuelve real una edición?
+
+> *"each field can't have a `›` chevron since that is navigation. Also, before proceeding I'd like to define
+> if here we need the same shell as the other pages (header and bottom nav) or a full-screen form with the
+> CTA stacked at bottom. Also, could it be save and publish? How does this mark required fields vs not?"*
+
+Four things. **Three were already on the record, and two of those I had drifted from.**
+
+## The chevron, and the tint that went with it — my drift, settled twice
+
+D-19i is explicit: *"a chevron means THIS ROW OPENS ANOTHER PAGE. Rows that act in place (show an answer,
+open a sheet) have none."* **072 round 1 removed it for exactly this reason (d34), and round 2 then removed
+the `⌄` that replaced it too — landing on no glyph at all.** What says "editable" instead is d37's anatomy:
+label prominent, value subordinate, and the value carries `--val`, *"a tint that marks the datum you are
+about to change."*
+
+Round 1 added **six chevrons one sketch after 077 used D-19i to take one away**, and dropped the tint that
+was doing the work the chevron was wrongly hired for. Both restored, asserted in both directions (check 19).
+
+**Reading a decision's prose instead of its artefact is the failure mode 072 named by name.** This is it
+again, by me.
+
+## The shell was decided in 074 — and round 1 ignored that too
+
+```
+d43/d44 · N1 + W3 texto      .hdr + .pbar + .back  ->  UN top app bar de 56px
+                             ‹ · título (aparece al scrollear) · UN CTA
+```
+
+> *"I have the 'back' chevron for leave this page. So not need of main menu."* — el desarrollador, en 074
+
+074 measured HOY's chrome at **97px before the game's name**, with the back affordance existing **twice**
+and neither hittable at the same scroll offset. Round 1 built the editor on exactly that, plus a bottom
+savebar. **Now corrected**, and the developer settled the remaining half this round:
+
+> *"this is a destination page where I need the user to leave because saved/published or go back with the `‹`"*
+
+So the editor is a **full-screen destination**: no wordmark, no `.pbar`, **no bottom tab bar**, one back
+control (check 20).
+
+## "Could it be save and publish?" — it already is, and that is what decides the shell
+
+```
+form.ex:84-92    handle_event("save") -> update_game_admin(...) -> after_save(_action)
+form.ex:165-177  after_save("publish") -> Catalog.publish_game(...)
+form.ex:311-320  Publicar y Guardar cambios son AMBOS submitters del MISMO form
+```
+
+**`Publicar` has always saved first.** The two buttons were never save-vs-publish — they are *"guardar y
+publicar"* vs *"guardar y seguir después"*.
+
+But `Guardar` cannot simply be deleted, and that was measured before the round was framed:
+
+```
+form.ex:269   <.form phx-change="validate" phx-submit="save">   validate NO persiste
+075:750       dirty() = CLUB_KEYS.some(k => G[k] !== START[k])  las hojas preparan, la barra confirma
+```
+
+In both the app and the prior sketch, **`Guardar` is the only thing that writes.** So the axis is not *how
+many buttons* — it is **when the write happens**, and the buttons fall out of it. The first framing of this
+round had it backwards and the developer was right to stop it.
+
+| | al elegir en la hoja | botones | estado sucio | salir con `‹` |
+|---|---|---|---|---|
+| **A · la hoja guarda** | se escribe ya | `Publicar`, en la barra de 074 | **no existe** | sale y ya |
+| **B · la hoja prepara** | queda pendiente | `Guardar` + `Publicar`, apilados al pie | sí | pregunta |
+
+**What makes A plausible is d33, which is already decided**: every value is a row that opens a sheet, and a
+sheet's pick is a discrete, complete choice with a tick. *That is already a commit gesture.* A is the change
+that lets it commit — not a new interaction, the same one meaning what it looks like.
+
+## What the three measurements said
+
+### 1 · Los toques son IGUALES — y esa era la pregunta equivocada
+
+```
+24 · completar y publicar:   A 3 toques · B 3 toques   (escrituras: A 1 · B 1)
+```
+
+Because `Publicar` already saves, the publish path costs the same in both. **The framing implied A would be
+cheaper and it is not.** Where they differ is everywhere else.
+
+### 2 · El pliegue: A no lo toca nunca; en B la puerta se come una fila
+
+```
+23a · A   6/6 filas enteras con cualquier puerta      (piso 740px)
+23b · B   6/6 con G3 (piso 611 — zafa por 3px) · 5/6 con G1 (piso 585)
+23c · en reposo B ofrece 2 de 2 botones MUERTOS en 155px de pie; A ofrece 1 de 1, de 36px
+```
+
+**23c was found in a screenshot, not in a number.** On a fresh draft `Publicar` is blocked and `Guardar` is
+dead because nothing is staged — so the heaviest thing on the page is two controls you cannot press. 064
+banned disabled buttons outright; round 1 counted the sixth, and this is **the seventh, in the same view as
+the sixth.**
+
+### 3 · Salir a la mitad — el único lugar donde de verdad difieren
+
+```
+25 · A   no pregunta, y el nivel QUEDA escrito
+     B   pregunta, y al salir el nivel SE PIERDE
+```
+
+## The cross-round finding: G1 is only buildable in B
+
+074's bar is `‹ · título · CTA`. **There is no slot for a sentence**, so a blocked `Publicar` in A cannot say
+why (check 22). Round 1 and round 2 are therefore **not independent**, and round 1's checks are pinned to B
+so they keep measuring what they were written to measure.
+
+And the corollary, measured: **moving the CTA into 074's bar fixes round 1's toast collision.**
+
+```
+16b · el toast tapa el Publicar de B (y=624) · NO alcanza al de A (y=10)
+```
+
+## Required vs optional — nearly free here, and unanswered on purpose
+
+The measured gate has **one** required field. Marking "required" means marking one row of six, which is a
+different problem from a form where half are mandatory — so it is **not drawn this round**. What exists is
+G3's dot on the row the gate names (check 6), which marks *unmet*, not *required*: it disappears once the
+nivel is set, and never appears on an expansion. **Whether a draft should mark required fields up front, at
+rest, before you have failed anything, is its own question.**
+
+## Five instances of one trap, in one file
+
+`display` set on a **class** out-specifies the UA stylesheet's `[hidden] { display: none }`, so
+`el.hidden = true` hides nothing. 074 lost a round to it. This file hit it **five times**: `.tbar`, `.hdr`,
+`.tabs`, `.pbar`, and then `.savebar` + `.stack` — the last two found in a screenshot of mode A as **two
+stray bordered strips** under a form that is supposed to have nothing below it, **and they made check 23
+lie**: it computed A's floor as `stack.hidden ? 740 : …`, reading the attribute while the real floor was
+~715.
+
+The rule is now stated once, in the stylesheet: **any class that sets `display` carries its own `[hidden]`
+companion, and any check that asks whether something is on screen uses `offsetParent`, never `.hidden`.**
+Check 20 is negative-tested by forcing the display back.
+
+## Open (ronda 2)
+
+- **Both rounds are open.** G1/G2/G3 and A/B are all PENDING REVIEW.
+- **A's real cost is that there is no "descartar todo".** Per field the undo is reopening the sheet and
+  picking the old value; there is no bulk edit to abandon on a six-row form. Untested against a longer form.
+- **A writes six times instead of once.** Fine on a draft, and each write is one column — but it is six
+  round-trips where B has one, and that was not measured under a slow connection.
+- **A on a PUBLISHED game is not drawn.** Every pick writing straight to a live catalogue row is a different
+  proposition from writing to a draft, and this round only walked the draft.
+- **074's rider is unbuilt in A by construction** — *"confirm on back when there is unsaved data"* has
+  nothing to confirm. That is a feature of A, but it means the rider only ever applies to B.
+- **`Guardar` vs `Guardar cambios`** — unchanged from round 1, still untested as copy.

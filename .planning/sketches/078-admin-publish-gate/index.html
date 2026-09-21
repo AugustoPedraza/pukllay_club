@@ -651,7 +651,22 @@
   .frow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
   .fr-t { flex: 1; min-width: 0; }
   .fr-k { display: block; font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
-  .fr-v { display: block; font-size: 14px; line-height: 1.32; margin-top: 2px; color: var(--color-text-muted); overflow-wrap: anywhere; }
+  /* ---------- CORRECTED FROM THE DEVICE, AND IT WAS MY DRIFT, NOT THE DESIGN'S ----------
+     The first version of this file gave every club row a trailing `›` and painted the value muted. BOTH
+     were already settled, and against me:
+       · D-19i is explicit — *"a chevron means THIS ROW OPENS ANOTHER PAGE. Rows that act in place (show an
+         answer, open a sheet) have none."* 072 round 1 removed the chevron for exactly this reason (d34),
+         and 072 round 2 then removed the `⌄` that replaced it too, landing on NO GLYPH AT ALL.
+       · What says "editable" instead is d37's anatomy: LABEL PROMINENT, VALUE SUBORDINATE, and the value
+         carries `--val` — a tint that marks the datum you are about to change. 075 renders exactly that.
+     So this file added six chevrons ONE SKETCH AFTER 077 used D-19i to take one away, and dropped the tint
+     that was doing the work the chevron was wrongly hired for. Recorded rather than quietly fixed: reading
+     a decision's prose instead of its artefact is the failure mode 072 named by name, and this is it again.
+     `--val` is inherited from 073/075 verbatim, TODO(palette) and all. */
+  :root { --val: var(--color-accent-text); }
+  :root[data-theme="dark"] { --val: #9F7AEA; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
+  .fr-v { display: block; font-size: 14px; line-height: 1.32; margin-top: 2px; color: var(--val); overflow-wrap: anywhere; }
   .fr-v.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .fr-v.empty { font-style: italic; }
   /* ---------- G3's ONLY paint: the missing value is marked on its own row ----------
@@ -699,24 +714,91 @@
   .fld:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
   textarea.fld { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.45; resize: none; }
 
+
+  /* ---------- RONDA 2: 074's top app bar, ported verbatim (d43/d44, N1 + W3 texto) ----------
+     078's round 1 built the editor on 073's HOY chrome — wordmark header + .pbar + an in-page `‹ Juegos`
+     — which is the 97px-of-chrome baseline 074 MEASURED AND REPLACED with one 56px bar, and which the
+     developer confirmed on the device: *"I have the 'back' chevron for leave this page. So not need of main
+     menu."* That was drift, exactly like the chevron above. This is the decided chrome.
+
+     AND THE EDITOR IS A FULL-SCREEN DESTINATION (developer, round 2): the bottom tab bar goes too —
+     *"this is a destination page where I need the user to leave because saved/published or go back with
+     the ‹"*. Two exits, and nothing else. */
+  .tbar { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+    padding: 0 16px 0 2px; border-bottom: 1px solid var(--color-border); background: var(--color-bg); }
+  /* THE COMPANION RULE IS LOAD-BEARING, and 074 lost a whole round to its absence: `display` set on a CLASS
+     out-specifies the UA stylesheet's `[hidden] { display: none }`, so `el.hidden = true` hides NOTHING.
+     074 was rendering this bar on top of its own wordmark header — 109px of chrome, worse than the 97 it
+     replaced — while the check reported success because it trusted the attribute instead of the screen.
+     Every class here that sets `display` gets the companion, and check 20 counts what is actually laid out
+     via offsetParent rather than reading attributes. */
+  .tbar[hidden] { display: none; }
+  .hdr[hidden] { display: none; }
+  .tabs[hidden] { display: none; }
+  /* the THIRD instance of the same trap in this file's history: `.pbar` also sets `display: flex` on the
+     class, so `hidden = true` left it laid out and check 20 caught it. Every class that sets `display`
+     needs the companion — there is no exception, and this comment is the reminder. */
+  .pbar[hidden] { display: none; }
+  /* ---- AND THE FOURTH AND FIFTH, FOUND IN A SCREENSHOT OF MODE A ----
+     `.savebar` and `.stack` also set `display: flex` on the class, so `hidden = true` left BOTH laid out at
+     the foot of A — two empty strips, each drawing its own `border-top`, visible as two stray rules under
+     a form that is supposed to have nothing below it. And it made check 23 lie: it computed A's floor as
+     `stack.hidden ? 740 : ...`, reading the ATTRIBUTE, while the real floor was ~715.
+     Five instances of one trap in one file. The rule is now stated once and for all: IN THIS PAGE, ANY
+     CLASS THAT SETS `display` MUST CARRY ITS OWN `[hidden]` COMPANION — and any check that asks whether
+     something is on screen must use `offsetParent`, never `.hidden`. */
+  .savebar[hidden] { display: none; }
+  .stack[hidden] { display: none; }
+  .tbar .tb-back { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); cursor: pointer; }
+  .tbar .tb-back svg { width: 22px; height: 22px; }
+  .tbar .tb-back:active { background: var(--color-surface-2); border-radius: 50%; }
+  /* 074 round 2: the title is ABSENT AT REST and fades in once the head clears the bar. `flex: 1` is kept
+     while invisible on purpose — a title that collapsed would let the CTA slide left at rest and jump right
+     on scroll, which is the "the thing to tap is moving" defect d42 exists to prevent. */
+  .tbar .tb-t { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity 140ms var(--ease-out-soft); }
+  .tbar.titled .tb-t { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .tbar .tb-t { transition: none; } }
+  /* W3 texto (d44): the ink lands on R359 with every other right edge while the 44px tap margin reaches
+     R373 invisibly — the visible box and the hit box are separate boxes, kept verbatim with its reason. */
+  .tbar .btn { min-height: 36px; padding: 0 14px 0 14px; font-size: 14px; border-radius: 9px; position: relative;
+    background: none; color: var(--color-accent-text); box-shadow: none; padding-right: 0; }
+  .tbar .btn::before { content: ""; position: absolute; left: 0; right: -14px; top: 50%; height: 44px; transform: translateY(-50%); }
+  .tbar .btn:active { background: var(--color-surface-2); filter: none; }
+  .tbar .btn[disabled] { color: var(--color-text-muted); opacity: 1; }
+
+  /* ---------- RONDA 2 · B: el par apilado al pie ----------
+     The developer's "full screen form with the CTA stacked at bottom, with the correct balance". Publicar
+     is the primary and keeps the filled treatment; Guardar is the secondary and is an outline, NOT a ghost
+     — a ghost at full width under a filled button reads as a caption, not a control. */
+  .stack { position: absolute; left: 0; right: 0; bottom: 0; z-index: 19; display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border); }
+  .stack .why { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); text-align: center; }
+  .stack .why:empty { display: none; }
+  .stack .btn { width: 100%; justify-content: center; min-height: 48px; }
+  .stack .btn.sec { background: none; color: var(--color-accent-text); border: 1px solid var(--stroke); }
+  :root[data-theme="dark"] .stack .btn.sec { color: var(--color-accent-text); }
+
 </style>
 </head>
 <body>
 <div class="stage"><div class="device" id="device">
-  <header class="hdr">
+  <header class="hdr" id="hdr">
     <button class="burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
     <span class="word">PUKLLAY CLUB</span>
   </header>
+  <div class="tbar" id="tbar" hidden></div>
   <div class="pbar" id="pbar" inert></div>
   <div class="scroller" id="scroller"><main id="main"></main></div>
-  <nav class="tabs" aria-label="Secciones de Admin">
+  <nav class="tabs" id="tabs" aria-label="Secciones de Admin">
     <span class="tab"><span class="ti" id="t-admin"></span>Admin</span>
     <span class="tab on" aria-current="page"><span class="ti" id="t-juegos"></span>Juegos</span>
     <span class="tab"><span class="ti" id="t-web"></span>Web</span><span class="tab"><span class="ti" id="t-est"></span>Estantes</span>
     <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
   </nav>
   <div class="savebar" id="savebar" hidden></div>
+  <div class="stack" id="stack" hidden></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
   <div class="kbd-sim" aria-hidden="true"><div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div></div>
   <div class="backdrop" id="backdrop"></div>
@@ -726,12 +808,14 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>La puerta: <button class="vt on" data-g-set="G1">G1 bloquea</button> <button class="vt" data-g-set="G2">G2 avisa</button> <button class="vt" data-g-set="G3">G3 la ficha</button></div>
+  <div>Cuándo escribe: <button class="vt on" data-m-set="A">A · la hoja guarda</button> <button class="vt" data-m-set="B">B · la hoja prepara</button></div>
+  <div style="opacity:.8">Ronda 1 (abierta) — la puerta: <button class="vt on" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt" data-g-set="G3">G3</button></div>
   <div>El paseo: <button class="stp" data-walk="create">1 · Agregar 207330</button>
     <button class="stp" data-walk="enriched" disabled>2 · llegan los datos</button>
     <button class="stp" data-walk="edit" disabled>3 · abrir el borrador</button>
     <button class="stp" data-walk="nivel" disabled>4 · poner el nivel</button>
     <button class="stp" data-walk="publish" disabled>5 · Publicar</button>
+    <button class="stp" data-walk="leave" disabled>· salir a la mitad ‹</button>
     <button class="stp" data-walk="reset">↺</button></div>
   <div class="now" id="walkNow">Paso 0 — nada creado todavía</div>
   <div>Tipo: <button data-exp-set="0" class="on">juego base</button> <button data-exp-set="1">expansión</button>
@@ -867,6 +951,39 @@ let AV = 'AV1';   /* 077 is DECIDED (d56, AV1 sólo la hoja) — kept so the arr
    REQUIRES, which is measured rather than varied. */
 let GATE = 'G1';
 
+/* ---------- RONDA 2's AXIS: ¿CUÁNDO SE VUELVE REAL UNA EDICIÓN? ----------
+   Posed this way rather than as "how many buttons" because the buttons are a CONSEQUENCE, and the first
+   framing of this round got that backwards. MEASURED BEFORE ASKING:
+
+     form.ex:269   <.form phx-change="validate" phx-submit="save">   validate does NOT persist
+     075:750       dirty() = CLUB_KEYS.some(k => G[k] !== START[k])  the sheets STAGE, the bar COMMITS
+
+   So `Guardar` is not a convenience in either the app or the prior sketch — it is THE ONLY THING THAT
+   WRITES, and it cannot simply be deleted. What can change is when the write happens.
+
+     A · la hoja guarda   picking an option writes that column and closes. No dirty state, no Descartar,
+                          no confirm-on-back. ONE CTA (Publicar) in 074's slot; d43 is untouched.
+     B · la hoja prepara  today's model. Two actions, stacked at the foot — the developer's own shape —
+                          and therefore the variant that BREAKS d43 and would need an explicit amendment.
+
+   WHAT MAKES A PLAUSIBLE AT ALL is d33's spine rule, which is already decided: every value is a row that
+   opens a sheet, and a sheet's pick is a DISCRETE, COMPLETE choice with a tick. That is already a commit
+   gesture; A is the change that lets it commit. It is not a new interaction, it is the same one meaning
+   what it looks like.
+
+   HELD FIXED SO THE ROUNDS DO NOT CONTAMINATE EACH OTHER: round 1's GATE is still open, so it stays on the
+   page as a toggle — but check 23 asserts the A-vs-B deltas are IDENTICAL under all three gates, so nothing
+   this round finds can be attributed to a gate that has not been chosen yet. */
+let MODE = 'A';
+
+/* B's staging pair. `START` is the persisted row, `G`'s club columns are the screen. In A they are never
+   allowed to diverge — `setField` writes both — which is what makes `dirty()` structurally false rather
+   than merely unused (check 21 negative-tests exactly that). */
+let START = null;
+const CLUB_KEYS = ['name', 'weight_band', 'units', 'shelf_id', 'is_expansion', 'description'];
+const dirty = () => MODE === 'B' && !!START && CLUB_KEYS.some(k => (byId(S.editing) || {})[k] !== START[k]);
+const snapshot = g => { START = {}; CLUB_KEYS.forEach(k => START[k] = g[k]); };
+
 /* ---------- the tool panel's two falsifiability levers, neither of them a variant ----------
    NAME_BROKEN  paints the real id-873 string over the fixture's name. It exists to make ONE claim
                 falsifiable — *the gate cannot tell a bad name from a good one* — and check 8 asserts the
@@ -990,9 +1107,8 @@ const gameRow = g => { const p = window.opensSheet(g); return `<button class="ro
    focusable at a time (inert on the other), so the accessibility tree never carries a duplicate "Juegos". */
 const BAR = { juegos: { back: null, title: 'Juegos' } };
 function renderBar() {
-  const b = S.screen === 'editor'
-    ? { back: 'Juegos', title: byId(S.editing).name }
-    : BAR[S.screen];
+  if (S.screen === 'editor') return;   /* the editor has its own bar now (074) */
+  const b = BAR[S.screen];
   $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="juegos">${ic('chevL')}${esc(b.back)}</button>` : '')
     + `<span class="pbt">${esc(b.title)}</span>`;
 }
@@ -1001,6 +1117,14 @@ function render() {
      bar from the previous screen on top of it — the shape 076 found when ↺ deleted the game the editor was
      about and the next render ran against a missing id. */
   const sb = $('#savebar'); if (sb) { sb.hidden = true; sb.innerHTML = ''; }
+  /* ---------- THE EDITOR IS A FULL-SCREEN DESTINATION ----------
+     Two exits and nothing else: Publicar, or the `‹`. So the wordmark header, the .pbar and the bottom tab
+     bar are all hidden here — and they are hidden by the ATTRIBUTE, which only works because every one of
+     those classes carries the `[hidden] { display: none }` companion rule (074's lost round). Check 20
+     counts them with offsetParent rather than believing the attribute. */
+  const ed = S.screen === 'editor';
+  $('#hdr').hidden = ed; $('#tabs').hidden = ed; $('#pbar').hidden = ed;
+  if (!ed) { $('#tbar').hidden = true; $('#stack').hidden = true; $('#stack').innerHTML = ''; }
   if (S.screen === 'juegos') renderJuegos();
   else if (S.screen === 'editor') renderEditor();
   $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
@@ -1040,11 +1164,12 @@ function updateBar() {
     return;
   }
   /* the element that must scroll away before the bar takes over: the title row, or the editor's game head */
-  const ph = main.querySelector('.ehead'); if (!ph) return;   /* decision 22 — Juegos has no title row */
+  /* 074 round 2: the title is absent at rest and fades in once the game's head clears the bar — .pbar's
+     own trigger applied to a bar that is ALREADY there. Nothing appears and nothing moves; one element
+     changes opacity. The head is `.ghead` now, not 071's `.ehead`. */
+  const ph = main.querySelector('.ghead'); if (!ph) return;
   const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
-  device.classList.toggle('scrolled', on);
-  $('#pbar').inert = !on;
-  const inPage = main.querySelector('.back'); if (inPage) inPage.inert = on;
+  $('#tbar').classList.toggle('titled', on);
 }
 
 /* decision 8 — one list, three collapsible groups. The two work groups sit on top, collapsed by default, so at
@@ -1143,7 +1268,7 @@ function renderEditor() {
     const flag = GATE === 'G3' && missKeys.includes(key) ? '<span class="miss" aria-hidden="true"></span>' : '';
     return `<button class="frow" data-field="${key}">
       <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
-      ${flag}<span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
+      ${flag}</button>`;
   };
 
   /* ---------- `copias` is PRE-FILLED, in every variant, and it is not a gate item ----------
@@ -1154,8 +1279,9 @@ function renderEditor() {
   const units = g.units == null ? UNITS_DEFAULT : g.units;
   const unitsNote = g.units == null ? ' (por defecto)' : '';
 
+  /* the in-page `‹ Juegos` row is GONE — 074 measured it as the second of two back controls pointing at
+     the same place, neither hittable at the same scroll offset, and collapsed both into the top bar. */
   main.innerHTML = `
-    <button class="back" data-act="juegos">${ic('chevL')}Juegos</button>
     <div class="ghead">${cover(g, 'cov')}<div class="gh-t">
       <div class="gh-name" id="ghname">${esc(g.name)}</div>
       <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
@@ -1170,9 +1296,42 @@ function renderEditor() {
       ${r('is_expansion', 'Es una expansión', g.is_expansion ? 'Sí' : 'No')}
       ${r('description', 'Descripción en español', g.description || 'Sin descripción', !g.description, true)}
     </div>
-    <div style="height:72px"></div>`;
+    <div style="height:${MODE === 'B' ? 132 : 24}px"></div>`;
 
-  renderSavebar(g, miss);
+  renderChrome(g, miss);
+}
+
+/* ---------- the editor's chrome, and the whole of round 2's difference ----------
+   A · 074's bar, one CTA, nothing at the foot.
+   B · 074's bar with NO CTA (it has two actions and the slot holds one), and the stacked pair at the foot.
+   The top bar, the back control and the title behave identically in both — only the actions move. */
+function renderChrome(g, miss) {
+  const tbar = $('#tbar'), stack = $('#stack');
+  const blocked = GATE === 'G1' && !gateOpen(g);
+  const draft = g.status === 'draft';
+
+  if (MODE === 'A') {
+    /* ONE CTA. On a draft it is Publicar; on a published game there is nothing left to press, because
+       every edit has already been written — which is A's whole claim, made visible. */
+    const cta = draft
+      ? `<button class="btn" data-act="publish" id="publish"${blocked ? ' disabled' : ''}>Publicar</button>`
+      : '';
+    tbar.innerHTML = `<button class="tb-back" data-act="juegos" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
+      <span class="tb-t">${esc(g.name)}</span>${cta}`;
+    tbar.hidden = false; stack.hidden = true; stack.innerHTML = '';
+    return;
+  }
+
+  tbar.innerHTML = `<button class="tb-back" data-act="back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
+    <span class="tb-t">${esc(g.name)}</span>`;
+  tbar.hidden = false;
+  /* B's foot. `Publicar` keeps the filled primary and `Guardar` is an OUTLINE, not a ghost — a ghost at
+     full width under a filled button reads as a caption rather than a control. */
+  const why = dirty() ? 'Cambios sin guardar' : (blocked && draft ? `Falta ${miss.map(m => m.n).join(' y ')} para publicarlo.` : '');
+  stack.innerHTML = `<span class="why">${esc(why)}</span>
+    ${draft ? `<button class="btn" data-act="publish" id="publish"${blocked ? ' disabled' : ''}>Publicar</button>` : ''}
+    <button class="btn sec" data-act="save"${dirty() ? '' : ' disabled'}>Guardar</button>`;
+  stack.hidden = false;
 }
 
 /* ---------- G3's honesty clause, and the reason it is not simply "nothing" ----------
@@ -1247,6 +1406,10 @@ function doPublish() {
   publishNow(g);
 }
 function publishNow(g) {
+  /* form.ex:84-92 -> update_game_admin, THEN after_save("publish") -> publish_game. Publicar has ALWAYS
+     saved first; that is why B's two buttons were never save-vs-publish but "guardar y publicar" vs
+     "guardar y seguir después". In B this is where the staged values become real. */
+  if (MODE === 'B') { snapshot(g); TAPS.writes++; }
   g.status = 'published';
   render();
   snack(`${g.name} se está viendo en la web`);
@@ -1303,6 +1466,8 @@ function renderSugg() {
 function go(screen) { S.screen = screen; scroller().scrollTop = 0; lastY = 0; device.classList.remove('hidesearch'); render(); }
 
 function openGame(id, from) {
+  const gm = byId(id); if (gm) snapshot(gm);
+  TAPS.taps = 0; TAPS.writes = 0;
   S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
   S.editing = id; S.from = from || S.screen;
   device.classList.remove('kbd'); go('editor');
@@ -1634,8 +1799,19 @@ function setField(key, raw) {
   else if (key === 'units') g.units = Math.max(1, +raw);
   else if (key === 'weight_band' || key === 'shelf_id') g[key] = raw || null;
   else g[key] = raw.trim() || null;
+  /* ---------- RONDA 2, and this line IS the round ----------
+     A: the pick is the write. START moves with it, so `dirty()` is structurally false rather than merely
+        unused — check 21 negative-tests that by forcing MODE='B' on the same state and watching it go true.
+     B: START stays where it was, so the row is now staged and the foot lights up. */
+  if (MODE === 'A') { snapshot(g); TAPS.writes++; }
   closeSheet(); render(); walkUI();
 }
+
+/* the tap/write counter. The round's first question is "how many taps does completing a draft cost in
+   each", and the honest answer turned out to be THE SAME for the publish path — so the counter also tracks
+   WRITES, which is where they really differ. Reset by ↺ and by entering the editor. */
+const TAPS = { taps: 0, writes: 0 };
+document.addEventListener('click', e => { if (e.target.closest('#device')) TAPS.taps++; }, true);
 
 /* ---------- dialog / snackbar ---------- */
 const DLG = { run: null };
@@ -1714,7 +1890,23 @@ document.addEventListener('click', e => {
   if (a === 'edok') return addGame('13');
   if (a === 'close') return closeSheet();
   /* 078 — the editor's rows, the field sheets, and the bar */
-  if (a === 'save') { snack('Cambios guardados'); return; }
+  if (a === 'save') {
+    const g = byId(S.editing); if (!g || !dirty()) return;
+    snapshot(g); TAPS.writes++; render(); walkUI(); snack('Cambios guardados'); return;
+  }
+  /* ---------- B's third cost, and A does not have it ----------
+     074's own rider from the device: *"confirm on back when there is unsaved data"*. In B leaving with
+     staged edits has to ask, and answering "salir" THROWS THEM AWAY. In A there is nothing to ask about,
+     which is why `back` and `juegos` are two different actions here. */
+  if (a === 'back') {
+    if (!dirty()) return go('juegos');
+    return openDialog({
+      title: 'Salir sin guardar',
+      text: 'Los cambios que hiciste se pierden.',
+      yes: 'Salir igual', danger: true,
+      run: () => { const g = byId(S.editing); CLUB_KEYS.forEach(k => g[k] = START[k]); go('juegos'); }
+    });
+  }
   if (a === 'publish') return doPublish();
   if (a === 'dlg-no') return closeDialog();
   if (a === 'dlg-yes') { const r = DLG.run; closeDialog(); r?.(); return; }
@@ -1753,6 +1945,14 @@ document.addEventListener('click', e => {
   /* 077's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so AV1/AV2/AV3
      are three renderings of one walk rather than three walks. It only changes what happens AT the arrival,
      so switching it after the data has landed shows nothing; ↺ and walk it again. */
+  const m = e.target.closest('[data-m-set]');
+  /* switching re-renders from the SAME state: the game is not rebuilt, so A and B are two renderings of
+     one walk. Switching INTO B re-snapshots, so B never starts life already dirty from A's writes. */
+  if (m) {
+    MODE = m.dataset.mSet; mark('[data-m-set]', m);
+    const g = S.editing ? byId(S.editing) : null; if (g) snapshot(g);
+    render(); walkUI(); return;
+  }
   const v = e.target.closest('[data-g-set]');
   /* 078's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so G1/G2/G3 are
      three renderings of one walk rather than three walks. It is live at every step, including after the
@@ -1779,8 +1979,12 @@ document.addEventListener('click', e => {
     const k = w.dataset.walk;
     if (k === 'create') { if (!NEW) addGame('207330'); return; }
     if (k === 'edit') { closeSheet(); openGame(NEW, 'juegos'); walkUI(); return; }
-    if (k === 'nivel') { const g = byId(NEW); if (g) { g.weight_band = 'medio'; render(); walkUI(); } return; }
+    /* THROUGH `setField`, not by assigning the column. Check 21 caught the shortcut: the walk was setting
+       weight_band directly, so A's write never happened and A looked identical to B. A walk step that
+       bypasses the mechanism the round is about measures nothing. */
+    if (k === 'nivel') { const g = byId(NEW); if (g && S.editing === g.id) setField('weight_band', 'medio'); return; }
     if (k === 'publish') { doPublish(); return; }
+    if (k === 'leave') { document.querySelector('.tb-back')?.click(); walkUI(); return; }
     if (k === 'reset') {
       /* ↺ must also LEAVE THE EDITOR. Found by check 25, which reaches the editor through the toast's «Ver»
          and then resets: the game was spliced out of `G` while `S.screen` was still 'editor', so the next
@@ -1813,7 +2017,8 @@ function walkUI() {
      variant that lets you through, and the round's own question would be unmeasurable from the panel.
      What each variant DOES with the tap is the thing being compared. */
   $('[data-walk="publish"]').disabled = !g || !inEditor || g.status !== 'draft';
-  const where = inEditor ? ' · estás en el editor' : '';
+  $('[data-walk="leave"]').disabled = !inEditor;
+  const where = inEditor ? ` · ${MODE} · ${TAPS.taps} toques, ${TAPS.writes} escrituras${dirty() ? ' · SIN GUARDAR' : ''}` : '';
   const gaps = miss.length ? ` · falta ${miss.map(m => m.n).join(' y ')}` : ' · completo';
   $('#walkNow').textContent = !g ? 'Paso 0 — nada creado todavía'
     : e === 'pending' ? `Paso 1 — ${g.name} · draft · pending · el job está encolado`
@@ -1834,7 +2039,10 @@ function walkUI() {
    which would capture `NEW` and `S.editing` stale the moment the walk advanced. */
 Object.defineProperties(window, {
   byId: { get: () => byId }, enrOf: { get: () => enrOf }, gateOpen: { get: () => gateOpen },
-  S: { get: () => S }, NEW: { get: () => NEW }
+  S: { get: () => S }, NEW: { get: () => NEW },
+  /* round 2's additions — and the trap bit AGAIN while writing check 21, which is the fourth time in this
+     lineage. `dirty` and `TAPS` are const bindings; without these lines `window.dirty` is undefined. */
+  dirty: { get: () => dirty }, TAPS: { get: () => TAPS }, MODE: { get: () => MODE }
 });
 
 scroller().addEventListener('scroll', updateBar, { passive: true });
