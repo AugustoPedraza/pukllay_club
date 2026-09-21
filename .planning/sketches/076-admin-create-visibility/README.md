@@ -3,8 +3,8 @@ sketch: 076
 name: admin-create-visibility
 question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2/R3 — what do you get when you tap `+`?"
 winner: null
-tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d53, d38, d35, d36, d46, d64, copy, disabled-state, scenario-walk]
-rounds: 4
+tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d53, d54, d49, d39, d38, d35, d36, d46, d64, copy, disabled-state, scenario-walk]
+rounds: 5
 status: PENDING REVIEW
 ---
 
@@ -24,7 +24,7 @@ The developer's scope for the scenario, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/076-admin-create-visibility/index.html
-node .planning/sketches/076-admin-create-visibility/verify.js     # 33/33
+node .planning/sketches/076-admin-create-visibility/verify.js     # 38/38
 ```
 
 Use the **El paseo** strip in the tool panel: `1 · Agregar 342942`, then `2a · llegan los datos` or
@@ -475,3 +475,91 @@ At 375×740 the page behind it is now visible to three rows.
   (`Agregar como borrador`), which cannot vanish the way a placeholder does.
 - **The link-form example is owed** — d38 settled it, the repair sheet has it, the create sheet does not.
 - **064's `no disabled buttons` conflict** is unchanged from round 3 and still needs settling as a rule.
+
+
+---
+
+## Round 5 — the end of the sync speaks
+
+> *"should return to list with a 'syncing' status to that specific row, and when the sync finish show a toast
+> so user can navigate to that?"*
+
+**Checked against the artefact before building, and the two halves had different status:**
+
+| the proposal | status |
+|---|---|
+| a syncing status on that specific row | **already built** — d24 put `● Trayendo datos de BGG…` on the row's second line. What V1 denies is not the status, it is **the row** |
+| a toast when the sync finishes | **not built anywhere.** `snack()` fires once, at create time. The mechanism exists (`snack(msg, action)` takes a button and lives 10000ms) and has never been called for this |
+
+### It is a second axis, not a fourth variant
+
+Rounds 1-4 asked **where the new row becomes visible**; this asks **whether the completion speaks**. They are
+independent, so it is drawn as a toggle crossing every body-home — the shape d50 found. They are
+**complementary, not substitutes**, and check 26 is the number:
+
+```
+durante la ESPERA (creado, sin terminar, el snack de creación ya se fue)
+V1   la fila no se renderiza     la página no dice nada     el toast todavía no sonó
+V2   «Trayendo datos de BGG…»    ✓
+V3   «Trayendo datos de BGG…»    ✓
+```
+
+The toast covers the **moment** of completion and carries you to the game, so finding the row stops mattering
+*then*. It says nothing about the **interval** before it, and it lasts 10s — miss it and the V1/V2/V3
+question returns intact.
+
+### Why this does not contradict d49
+
+d49 refused a toast for the **broken state**: *"a toast is a container for **events**; this is **state**"* —
+the condition has held since August across 49 games, and `snack()` clears itself.
+
+**Enrichment finishing is genuinely an event.** It happens at a moment, it has a subject, and it is over.
+d49's own reasoning **endorses** a toast here rather than forbidding one.
+
+### What it says, and to whom
+
+```
+ok      "Ark Nova ya tiene sus datos"                     [ Ver ]  [✕]
+falló   "No pudimos traer los datos de Juego #342942"     [ Ver ]  [✕]
+```
+
+**It names the game, and that is not decoration** — staff add in batches (d3's list is newest-first for
+exactly that reason), so a bare *"listo"* would not say which one finished. On success the name is the one
+that just arrived from BGG, which is itself the news; on failure the placeholder is all there is, because
+nothing ever replaces it (check 12).
+
+**Failure counts as finishing.** *"when the sync finish"* — a failure is a finish, and arguably the one most
+worth being told about, since the row otherwise sits in a collapsed section saying *"Error al traer datos de
+BGG"* to nobody.
+
+**No toast for a game whose editor you are already reading** (check 25) — the announcement never lands on top
+of its own subject.
+
+### Measured
+
+```
+toast          y595–661   fold 673   clears the tab bar
+«Ver»          44px, hit-tested, and opens the editor for THAT game (check 24)
+off by default — check 23 negative-tests the silence
+```
+
+**What makes it likely to land:** queue concurrency is **1** with `attempt * 30` backoff, but a single create
+on an empty queue runs immediately — one BGG round-trip — so on the happy path the wait is seconds. The
+backoff only bites on retries, and **d39 already recorded that the job continues whether or not the page is
+open**, so a toast can still be missed entirely.
+
+### A defect in the round's own walk control
+
+`↺` deleted the created game while `S.screen` was still `'editor'` — reached through the toast's own `Ver` —
+so the next render called `renderEditor` on an id that no longer existed. **A reset that deletes what the
+current screen is about has to change the screen too.**
+
+## Open (round 5)
+
+- **Round 1's axis is still open, and the toast does not close it** — check 26 is the reason. With the toast
+  on, V1 is silent for the whole wait; whether that matters depends on how long the wait usually is.
+- **A missed toast has no second chance.** 10s, then nothing — the row is the only durable record, which is
+  the V1/V2/V3 question again.
+- **The real app already broadcasts completion** (`{:game_enriched, game_id}`, `enrich_game_worker.ex:104-106`,
+  consumed at `index.ex:196-198`) — the event reaches the list today and is used only to re-render the row.
+  Whatever wins here is a small change on top of a signal that already exists.

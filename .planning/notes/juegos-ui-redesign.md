@@ -1854,6 +1854,68 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **The sheet across the three rounds: 435px → 313px → 271px.** At 375×740 the page behind it is visible
     to three rows.
 
+
+54. **The end of the sync speaks, and it is a SECOND AXIS rather than a fourth variant.** Sketch **076**,
+    round 5, from the developer: *"should return to list with a 'syncing' status to that specific row, and
+    when the sync finish show a toast so user can navigate to that?"*
+
+    **Checked against the artefact before building, and the two halves had different status:**
+    - *"a syncing status on that specific row"* — **already built.** d24 put `● Trayendo datos de BGG…` on
+      the row's second line as a dot + text. What V1 denies is not the status, it is **the row**.
+    - *"a toast when the sync finishes"* — **not built anywhere.** `snack()` fires once, at create time;
+      nothing has ever fired at completion. The mechanism exists (`snack(msg, action)` takes a button and
+      lives 10000ms instead of 4000) and has simply never been called for this.
+
+    **So the round's first result is that this is ORTHOGONAL to rounds 1-4.** Those asked *where the new row
+    becomes visible*; this asks *whether the completion speaks*. Drawn as a toggle crossing every body-home,
+    the same shape d50 found. The two are **complementary, not substitutes**, and check 26 is the number
+    that shows it:
+
+    ```
+    durante la ESPERA (creado, sin terminar, el snack de creación ya se fue)
+    V1  la fila no se renderiza     la página no dice nada       el toast todavía no sonó
+    V2  «Trayendo datos de BGG…»    ✓
+    V3  «Trayendo datos de BGG…»    ✓
+    ```
+
+    The toast covers the **moment** of completion and carries you to the game, so finding the row stops
+    mattering *then*. It says nothing about the **interval** before it, and it lasts 10000ms — miss it and
+    the V1/V2/V3 question returns intact.
+
+    **Why this does not contradict d49, said rather than slid past.** d49 refused a toast for the broken
+    state on the grounds that *"a toast is a container for **events**; this is **state**"* — the condition
+    has held since the 2026-08-10 import across 49 games, and `snack()` clears itself. **Enrichment
+    finishing is genuinely an event**: it happens at a moment, it has a subject, and it is over. d49's own
+    reasoning endorses a toast here rather than forbidding one.
+
+    **It names the game, and that is not decoration.** Staff add in batches — d3's list is newest-first for
+    exactly that reason — so a bare *"listo"* would not say which one finished. On success the name is the
+    one that just arrived from BGG, which is itself the news; on failure the placeholder is all there is,
+    because nothing ever replaces it.
+
+    **Failure counts as finishing, and gets a toast too.** The developer said *"when the sync finish"*, and
+    a failure is a finish — arguably the one most worth being told about, since the row otherwise sits in a
+    collapsed section saying *"Error al traer datos de BGG"* to nobody. Same anatomy, different verb, same
+    action.
+
+    **Drawn deliberately: no toast for a game whose editor you are already reading.** `S.screen` is checked
+    so the announcement never lands on top of its own subject (check 25).
+
+    **Measured:** toast at y595–661 against a fold of 673, clears the tab bar, `Ver` is a 44px hit-tested
+    target, and it opens the editor for **that** game rather than merely going somewhere (check 24). Off by
+    default, so the toggle is a real axis and check 23 negative-tests the silence.
+
+    **What makes the toast likely to land, and what does not.** Queue concurrency is **1** with
+    `attempt * 30` backoff (`config.exs:38-42`), but a single create on an empty queue runs immediately —
+    one BGG round-trip — so on the happy path the wait is seconds and the toast usually arrives while you
+    are still there. The backoff only bites on retries, and **d39 already recorded that the job continues
+    whether or not the page is open**, so a toast can still be missed entirely.
+
+    **A defect the round found in its own walk control:** `↺` deleted the created game while `S.screen` was
+    still `'editor'` (reached through the toast's own `Ver`), so the next render called `renderEditor` on an
+    id that no longer existed. A reset that deletes what the current screen is about has to change the
+    screen too.
+
 ## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
 
 **The developer's words:** *"This iteration have been becoming harder and harder over time. I want to

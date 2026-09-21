@@ -560,6 +560,7 @@
 </div></div>
 <div id="tools">
   <div>Variante: <button class="vt on" data-var-set="V1">V1 Nada</button> <button class="vt" data-var-set="V2">V2 Se abre</button> <button class="vt" data-var-set="V3">V3 Arriba</button></div>
+  <div>Aviso al terminar: <button class="vt on" data-toast-set="0">Nada</button> <button class="vt" data-toast-set="1">Toast «Ver»</button></div>
   <div>El paseo: <button class="step" data-walk="create">1 · Agregar 342942</button>
     <button class="step" data-walk="enriched" disabled>2a · llegan los datos</button>
     <button class="step" data-walk="failed" disabled>2b · falla</button>
@@ -618,6 +619,36 @@ G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 202
    about; it survives every render and is cleared only by ↺. */
 let VAR = 'V1';
 let NEW = null;
+
+/* ---------- ROUND 5: the SECOND axis — does the end of the sync announce itself? ----------
+   From the developer: *"should return to list with a 'syncing' status to that specific row, and when the
+   sync finish show a toast so user can navigate to that?"*
+
+   THE ROUND'S FIRST RESULT IS THAT THIS IS NOT A FOURTH VARIANT. Rounds 1-4 asked WHERE the new row becomes
+   visible; this asks WHETHER THE COMPLETION SPEAKS. They are independent, so it is drawn as a toggle
+   crossing every body-home — the same shape d50 found when `Cambia (d44)` turned out to be orthogonal to
+   where the remedy lives.
+
+   AND THE TWO HALVES OF THE PROPOSAL ALREADY HAD DIFFERENT STATUS:
+     · "a syncing status on that specific row" — ALREADY BUILT. d24 put `● Trayendo datos de BGG…` on the
+       row's second line as a dot + text. What V1 denies is not the status, it is the ROW.
+     · "a toast when the sync finishes" — NOT BUILT, anywhere. `snack()` fires once, at CREATE time, and
+       nothing fires at completion. The mechanism exists (`snack(msg, action)` gets a button and 10000ms
+       instead of 4000), it has simply never been called for this.
+
+   WHY THIS DOES NOT CONTRADICT d49, said rather than slid past. d49 argued a toast was the WRONG container
+   for the broken state: *"a toast is a container for EVENTS; this is STATE"* — the condition has held since
+   the 2026-08-10 import across 49 games, and `snack()` clears itself. Enrichment FINISHING is genuinely an
+   event: it happens at a moment, it has a subject, and it is over. d49's own reasoning endorses a toast
+   here rather than forbidding one.
+
+   WHAT THE TOAST CAN AND CANNOT COVER, which is why it does not simply delete the V1/V2/V3 question:
+     · it covers the MOMENT of completion, and carries you to the game, so finding the row stops mattering
+     · it does NOT cover the INTERVAL between create and completion — in that window the row is the only
+       thing that says anything, and V1 does not render it
+     · it lasts 10000ms; miss it and you are back to the same question
+   Complementary, not substitutes. Measured by checks 22-26 rather than argued. */
+let TOAST = false;
 
 const enrOf = g => g.enr || 'enriched';
 const byId = id => G.find(g => g.id === id);
@@ -1048,6 +1079,25 @@ function enrichmentArrived(outcome) {
     g.enr = 'failed';                                          /* the name STAYS "Juego #<bgg_id>" — nothing replaces it */
   }
   if (S.screen === 'juegos') render();
+
+  /* ROUND 5: the completion speaks, and it NAMES THE GAME.
+     Naming it is not decoration — the create path can be run repeatedly (d3's list is newest-first precisely
+     because staff add in batches), and a bare "listo" would not say WHICH of them finished. On success the
+     name is the one that just arrived from BGG, which is itself the news; on failure the placeholder is all
+     there is, because nothing ever replaces it (076 round 1, check 12).
+
+     FAILURE ALSO COUNTS AS FINISHING, and gets a toast too. The developer said "when the sync finish" and a
+     failure is a finish — arguably the one you most need told about, since the row will otherwise sit in a
+     collapsed section saying "Error al traer datos de BGG" to nobody. Same anatomy, different verb, and the
+     action is the same: go and look at it.
+
+     NOT DRAWN, deliberately: a toast for a game whose editor you are already looking at. `S.screen` is
+     checked so the announcement never lands on top of the thing it is announcing. */
+  if (TOAST && !(S.screen === 'editor' && S.editing === g.id)) {
+    const ok = outcome === 'enriched';
+    snack(ok ? `${g.name} ya tiene sus datos` : `No pudimos traer los datos de ${g.name}`,
+      { label: 'Ver', run: () => openGame(g.id, 'juegos') });
+  }
   walkUI();
 }
 
@@ -1139,14 +1189,21 @@ document.addEventListener('click', e => {
     render();
     return;
   }
+  const tg = e.target.closest('[data-toast-set]');
+  if (tg) { TOAST = tg.dataset.toastSet === '1'; mark('[data-toast-set]', tg); return; }
   const w = e.target.closest('[data-walk]');
   if (w) {
     const k = w.dataset.walk;
     if (k === 'create') { if (!NEW) addGame('342942'); return; }
     if (k === 'reset') {
+      /* ↺ must also LEAVE THE EDITOR. Found by check 25, which reaches the editor through the toast's «Ver»
+         and then resets: the game was spliced out of `G` while `S.screen` was still 'editor', so the next
+         render called `renderEditor` on an id that no longer existed. A reset that deletes the thing the
+         current screen is about has to change the screen too. */
       if (NEW) { const i = G.findIndex(x => x.id === NEW); if (i > -1) G.splice(i, 1); }
-      NEW = null; S.open = { gap: false, draft: false }; S.shown = PAGE;
-      scroller().scrollTop = 0; render(); walkUI(); return;
+      NEW = null; S.open = { gap: false, draft: false }; S.shown = PAGE; S.editing = null;
+      S.screen = 'juegos'; scroller().scrollTop = 0; lastY = 0;
+      device.classList.remove('hidesearch'); render(); walkUI(); return;
     }
     return enrichmentArrived(k);
   }

@@ -511,6 +511,108 @@ const VARS = ['V1', 'V2', 'V3'];
     `V2 ${twice.V2.rows}+${twice.V2.caps}=${twice.V2.total} · V3 ${twice.V3.rows}+${twice.V3.caps}=${twice.V3.total} ` +
     `(V3 shows the failed row AND d24's caption warning for the same game)`);
 
+  /* ---------- ROUND 5: the second axis — does the end of the sync announce itself? ---------- */
+
+  /* 22 — the toast fires on BOTH endings, names the game, and carries an action. Naming it matters because
+         the create path is run in batches (d3's list is newest-first for exactly that reason) — a bare
+         "listo" would not say which one finished. On failure the name is still the placeholder, because
+         nothing ever replaces it (check 12). */
+  const toast = await p.evaluate(() => {
+    const out = {};
+    for (const end of ['enriched', 'failed']) {
+      document.querySelector('[data-walk="reset"]').click();
+      document.querySelector('[data-var-set="V1"]').click();
+      document.querySelector('[data-toast-set="1"]').click();
+      document.querySelector('[data-walk="create"]').click();
+      const created = byId(NEW).name;
+      document.querySelector('#snack').classList.remove('show');     /* the CREATE snack, out of the way */
+      document.querySelector(`[data-walk="${end}"]`).click();
+      const sn = document.querySelector('#snack'), btn = sn.querySelector('.tbtn');
+      out[end] = {
+        shown: sn.classList.contains('show'),
+        text: sn.querySelector('span').textContent,
+        action: btn.hidden ? null : btn.textContent,
+        namesGame: sn.querySelector('span').textContent.includes(byId(NEW).name),
+        createdAs: created
+      };
+    }
+    return out;
+  });
+  ok(toast.enriched.shown && toast.failed.shown &&
+     toast.enriched.action === 'Ver' && toast.failed.action === 'Ver' &&
+     toast.enriched.namesGame && toast.failed.namesGame,
+    `22 · the completion speaks on both endings and names the game — ok: "${toast.enriched.text}" · falló: "${toast.failed.text}", both with «${toast.enriched.action}»`);
+
+  /* 23 — and it is OFF by default, so the toggle is a real axis rather than a thing that is simply on.
+         Negative test for 22: with the axis off, completion says nothing at all, which is the incumbent. */
+  const silent = await p.evaluate(() => {
+    document.querySelector('[data-walk="reset"]').click();
+    document.querySelector('[data-toast-set="0"]').click();
+    document.querySelector('[data-walk="create"]').click();
+    document.querySelector('#snack').classList.remove('show');
+    document.querySelector('[data-walk="enriched"]').click();
+    return document.querySelector('#snack').classList.contains('show');
+  });
+  ok(silent === false, '23 · negative test: with the axis off, completion is silent — the incumbent, and what check 22 is measured against');
+
+  /* 24 — the action actually goes to THAT game, not merely somewhere. A toast that navigates to the wrong
+         row, or to the list, would pass every "has a button" assertion ever written. */
+  const nav = await p.evaluate(() => {
+    document.querySelector('[data-walk="reset"]').click();
+    document.querySelector('[data-toast-set="1"]').click();
+    document.querySelector('[data-walk="create"]').click();
+    document.querySelector('#snack').classList.remove('show');
+    document.querySelector('[data-walk="enriched"]').click();
+    const want = NEW;
+    document.querySelector('#snack .tbtn').click();
+    return { screen: S.screen, editing: S.editing, want, hit: S.editing === want };
+  });
+  ok(nav.screen === 'editor' && nav.hit,
+    `24 · «Ver» opens the editor for THAT game (wanted ${nav.want}, got ${nav.editing})`);
+
+  /* 25 — the toast never lands on top of the thing it announces. If you are already looking at that game's
+         editor when the data arrives, announcing it is noise. */
+  const quiet = await p.evaluate(() => {
+    document.querySelector('[data-walk="reset"]').click();
+    document.querySelector('[data-toast-set="1"]').click();
+    document.querySelector('[data-walk="create"]').click();
+    document.querySelector('#snack').classList.remove('show');
+    openGame(NEW, 'juegos');                                   /* already looking at it */
+    document.querySelector('[data-walk="enriched"]').click();
+    const r = { screen: S.screen, shown: document.querySelector('#snack').classList.contains('show') };
+    go('juegos');
+    return r;
+  });
+  ok(quiet.screen === 'editor' && quiet.shown === false,
+    '25 · no toast for a game whose editor you are already reading — the announcement never covers its own subject');
+
+  /* 26 — WHAT THE TOAST DOES NOT COVER, measured so the axis is not oversold.
+         It speaks at the MOMENT of completion. It says nothing during the interval between create and
+         completion — and in V1 the row is not rendered in that window, so the page still says nothing at
+         all. The two axes are complementary, not substitutes, and this is the number that shows it. */
+  const gap = await p.evaluate(() => {
+    const out = {};
+    for (const v of ['V1', 'V2', 'V3']) {
+      document.querySelector('[data-walk="reset"]').click();
+      document.querySelector(`[data-var-set="${v}"]`).click();
+      document.querySelector('[data-toast-set="1"]').click();
+      document.querySelector('[data-walk="create"]').click();
+      document.querySelector('#snack').classList.remove('show');   /* the create snack's 4000ms elapses */
+      /* still PENDING — the toast has not fired, because nothing has finished */
+      out[v] = {
+        rowRendered: !!main.querySelector(`.row[data-id="${NEW}"]`),
+        saysSyncing: /Trayendo datos/.test(main.innerText),
+        toastUp: document.querySelector('#snack').classList.contains('show')
+      };
+    }
+    return out;
+  });
+  ok(gap.V1.rowRendered === false && gap.V1.saysSyncing === false && gap.V1.toastUp === false &&
+     gap.V2.saysSyncing === true && gap.V3.saysSyncing === true,
+    `26 · during the WAIT (created, not yet finished, create-snack gone) the page says "sincronizando" — ` +
+    `V1 ${gap.V1.saysSyncing} · V2 ${gap.V2.saysSyncing} · V3 ${gap.V3.saysSyncing}. ` +
+    `The toast covers the END, not the INTERVAL, so V1 is still silent for the whole wait`);
+
   /* 21 — nothing in the page threw while all of the above ran */
   ok(errs.length === 0, `21 · no page errors (${errs.length ? errs.join(' | ') : 'none'})`);
 
