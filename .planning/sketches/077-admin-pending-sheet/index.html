@@ -595,7 +595,7 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>Al llegar los datos: <button class="vt on" data-av-set="AV1">AV1 sólo la hoja</button> <button class="vt" data-av-set="AV2">AV2 los dos</button> <button class="vt" data-av-set="AV3">AV3 se retira</button></div>
+  <div>Al llegar los datos: <button class="vt on" data-av-set="AV1">AV1 sólo la hoja ★</button> <button class="vt" data-av-set="AV2">AV2 los dos</button> <button class="vt" data-av-set="AV3">AV3 se retira</button></div>
   <div>El paseo: <button class="step" data-walk="create">1 · Agregar 342942</button>
     <button class="step" data-walk="sheet" disabled>2 · tocar la fila</button>
     <button class="step" data-walk="enriched" disabled>3a · llegan los datos</button>
@@ -695,7 +695,10 @@ let NEW = null;
    The toast's suppression rule only ever covered the editor (`S.screen === 'editor'`, 076:1114), so on the
    list NOTHING stops them firing together.
 
-     AV1 sólo la hoja   the sheet transforms; the toast is suppressed for the game whose sheet is open.
+   ---- DECIDED 2026-09-21: AV1 sólo la hoja (decision 56) ----
+   AV2 and AV3 stay on the page and navigable; the winner is marked, not the only option.
+
+     AV1 sólo la hoja ★ the sheet transforms; the toast is suppressed for the game whose sheet is open.
                         Check 25's rule — "the announcement never lands on top of its own subject" —
                         reaching one more container rather than a new rule.
      AV2 los dos        both fire. THE DO-NOTHING BASELINE: this is what you get if nobody writes the
@@ -705,7 +708,22 @@ let NEW = null;
                         the sheet is only ever a waiting room.
 
    One axis: who announces the arrival while the sheet is open. The sheet's CONTENT is identical in all
-   three (check 3), so nothing found here can be blamed on treatment. */
+   three (check 11), so nothing found here can be blamed on treatment.
+
+   WHY AV1. AV2 loses under BOTH readings of its own defect — as built the toast is emitted behind the sheet
+   and burns its 10000ms unseen (checks 19b/19c: .snack z-index 30 under .backdrop 40 and .sheet 41), and
+   with the z-order raised it becomes two announcements about one game stacked on each other, which is what
+   check 25's rule exists to prevent.
+
+   AV1 DOMINATES AV3 rather than merely beating it, and the reason is structural: `render()` runs before the
+   sheet repaints, so the row behind the sheet is ALREADY the finished row. AV1 therefore gives you AV3's
+   result PLUS an announcement that persists — measured at t+10.4s, AV1 still says "Ark Nova agregado" while
+   AV3's page says nothing at all (checks 32-33), which is 076 round 1's question returning intact. AV3's
+   only advantage is that the scrim is gone and the list is bright again.
+
+   AND AV1 DEGRADES CORRECTLY: the suppression is conditioned on `S.sheetFor`, which `closeSheet` clears, so
+   closing the sheet before the data lands puts the toast back. The toast is silenced only while you are
+   actually looking at the thing it would announce — which is check 25's rule, not a new one. */
 let AV = 'AV1';
 
 const enrOf = g => g.enr || 'enriched';

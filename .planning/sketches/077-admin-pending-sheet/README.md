@@ -2,15 +2,15 @@
 sketch: 077
 name: admin-pending-sheet
 question: "You tap the row of the game you just made while the data is still coming, a sheet opens and says it is working — who speaks when the data lands?"
-winner: null
+winner: "AV1 sólo la hoja"
 tags: [admin, juegos, create, pending, failed, sheet, d24, d39, d51, d53, d55, d19i, d47, copy, scenario-walk]
 rounds: 1
-status: PENDING REVIEW
+status: DECIDED 2026-09-21 (on the measurements; not device-confirmed)
 ---
 
 # Sketch 077: la hoja mientras llegan los datos
 
-**Slice 2 of four**, picking the walk up exactly where 076 put it down: the game is created, `Borradores` is
+**Slice 2 of four.** Decided on **AV1 sólo la hoja** (decision 56). Picking the walk up exactly where 076 put it down: the game is created, `Borradores` is
 open, the row is under your thumb. 076 asked *where the new game becomes visible*; this asks **what happens
 when you tap it.**
 
@@ -206,21 +206,54 @@ Then `↺`, walk to step 2, and take `3b · falla` instead.
 
 ---
 
-## The recommendation, and it is not a decision
+## Decided — AV1 sólo la hoja (2026-09-21, decision 56)
 
-**AV1**, on the measurements — but the device outranks them, and in this lineage it has caught what the
-harness did not **eight** times.
+AV2 and AV3 stay on the page and navigable; the winner is marked, not the only option.
 
-- **AV2 loses under both readings of its own defect** (buried as built; stacked if the z-order is fixed).
-- **AV1 dominates AV3 rather than merely beating it.** Under AV1 the row behind the sheet is *already*
-  updated — `render()` runs before the sheet repaints — so AV1 gives you AV3's result plus an announcement
-  that persists. AV3's only advantage is that the scrim is gone and the list is bright again.
-- **AV1 degrades correctly**: close the sheet before the data lands and `S.sheetFor` clears, so the toast
-  fires normally. The suppression applies only while you are actually looking at the thing.
+| | la hoja | el toast | a los 10s | «llegó» dicho |
+|---|---|---|---|---|
+| **AV1 ★** | se transforma | **suprimido** | **sigue en pantalla** | **1** |
+| AV2 | se transforma | suena — y **se entierra** | — | 2, una invisible |
+| AV3 | se cierra sola | suena | **nada** | 1 |
+
+**AV2 loses under both readings of its own defect** — as built the toast is emitted behind the sheet and
+burns its 10000ms unseen; with the z-order raised it becomes two announcements about one game stacked on each
+other, which is exactly what check 25's rule exists to prevent.
+
+**AV1 dominates AV3 rather than merely beating it, and the reason is structural.** `render()` runs before the
+sheet repaints, so the row behind the sheet is *already* the finished row. AV1 therefore gives you AV3's
+result **plus** an announcement that persists — at t+10.4s AV1 still says *"Ark Nova agregado"* while AV3's
+page says nothing at all (checks 32-33), which is 076 round 1's question returning intact. AV3's only
+advantage is that the scrim is gone and the list is bright again.
+
+**AV1 degrades correctly, and that is what keeps it from being a new rule.** The suppression is conditioned
+on `S.sheetFor`, which `closeSheet` clears — so closing the sheet before the data lands puts the toast back.
+The toast is silenced only while you are actually looking at the thing it would announce. **That is check
+25's rule reaching one more container, not a second rule beside it.**
+
+### The amendment this decision carries
+
+**d39 is amended, not deleted, and it is written down here rather than left to drift (d47).** 073 gave
+`pending` a dedicated 407px screen inside the editor. Every route to it went through a game row — and a
+pending row now opens a sheet instead, so that screen has no caller left.
+
+- **What d39 got right stands:** a game whose data is still coming has nothing to edit and should not be
+  shown a form. The sheet says the same thing in less space and without leaving the list.
+- **What it could not deliver was its own promise.** Its copy said *"te avisamos cuando lleguen"* while
+  `form.ex` had no subscribe and no `handle_info` anywhere behind it. **AV1 is the first thing in this
+  lineage that actually keeps that promise.**
+- **Not claimed:** d39's other premise — *"nothing editable, an incoming write would overwrite it"* — is
+  **false for three of the six club rows** (`enrichment_changeset` never casts `weight_band`, `units` or
+  `shelf_id`, `game.ex:182-210`). This decision does not rest on that being fixed; it moves the question to
+  a different container rather than answering it. See Open.
+
+### Not device-confirmed
+
+Chosen on the measurements at the developer's request. In this lineage the device has caught what the harness
+did not **eight** times. If AV1 feels wrong in the hand, that finding outranks all of the above.
 
 ## Open
 
-- **PENDING REVIEW from the device.** No variant is marked ★.
 - **`agregado` vs `ya tiene sus datos`** — the round's one live copy question, named above. The developer's
   wording is what is built.
 - **`Ver` vs `Editar`.** d55 already chose `Ver` for this exact destination and there is no read-only admin
