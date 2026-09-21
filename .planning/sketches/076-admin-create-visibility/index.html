@@ -109,6 +109,18 @@
   .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
   :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
   .obtn.wide { width: 100%; }
+  /* ROUND 3 — the first disabled `.obtn` in the project, and 064 banned disabled buttons outright, so this
+     is drawn deliberately rather than by default.
+     WHY IT IS NOT THE CASE d46 ARGUED AGAINST. d46 chose text paint for the top app bar because in the one
+     dead situation the slot had NOTHING to offer — a container there is "the whole silhouette of a live
+     primary" with nothing behind it. Here the button is not dead, it is WAITING: the input that makes it
+     live is 44px above it and one tap away, and the container is what says where typing leads. A control
+     that is about to be enabled by the field above it is a different thing from a control that has nothing
+     to do, and the paint follows that difference rather than the rule's letter.
+     d47 also settles the weight: 064's four roles stand for CONTENT BLOCKS, and a form sheet is one — so
+     this keeps Principal's outline and drops both strokes to the muted stops. */
+  .obtn[disabled] { border-color: var(--color-border); color: var(--color-text-muted); cursor: default; }
+  :root[data-theme="dark"] .obtn.pri[disabled] { border-color: var(--color-border); }
 
   /* D-19g — pending work behind a header icon with a count badge (primary fill, top-right) */
   .ibtn .badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
@@ -915,8 +927,8 @@ function addSheet(from, prefill) {
        <label class="flab" for="bg">Número o link de BGG</label>
        <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
        <p class="ferr" id="bgerr" hidden></p>
-       <p class="hint">Traemos la tapa, los jugadores y la duración. Queda como borrador hasta que lo publiques.</p>
-       <button class="obtn pri wide" data-act="addgo">Agregar</button>
+       <p class="hint">Traemos toda la info de BGG. Queda como borrador hasta que lo publiques.</p>
+       <button class="obtn pri wide" data-act="addgo" id="addgo"${(prefill || '').trim() ? '' : ' disabled'}>Agregar</button>
      </div>`, from, { form: true });
   if (KBD_SIM) device.classList.add('kbd');
 }
@@ -1082,7 +1094,13 @@ $('#backdrop').addEventListener('click', closeSheet);
 $('#dscrim').addEventListener('click', e => { if (e.target.id === 'dscrim') closeDialog(); });
 document.addEventListener('input', e => {
   if (e.target.id === 'q') { S.kept = null; renderSugg(); }
-  if (e.target.id === 'bg') { e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true; }
+  if (e.target.id === 'bg') {
+    e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true;
+    /* ROUND 3: `Agregar` is live only once there is something to submit. The empty-field ERROR path is not
+       deleted with it — it still fires for a non-empty value that does not parse ("mi juego favorito"),
+       which is a different failure and still needs saying. */
+    const b = $('#addgo'); if (b) b.disabled = !e.target.value.trim();
+  }
 });
 document.addEventListener('focusin', e => {
   if (e.target.id === 'q') { if (KBD_SIM) device.classList.add('kbd'); renderSugg(); }

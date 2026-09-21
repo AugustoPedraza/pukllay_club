@@ -1765,6 +1765,51 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     **A build note worth keeping:** `<!--` inside a JS template literal is a legal HTML-like line comment in a
     classic script, so it swallows the rest of the line and breaks the literal. It broke this page twice.
 
+
+52. **`Agregar` is dead until there is something to submit, and the hint is a scoped general claim.**
+    Sketch **076**, round 3. From the developer: *"disable Agregar when the field is empty and the hint is
+    simple, like we sync all the info from BGG."*
+
+    **The hint stops enumerating, and that is what makes it safe.** d51 had to delete `y el nivel` from a
+    LIST of fields; a list has to be kept correct forever against a changing `attrs_from_bgg_item/1`. The new
+    line — *"Traemos toda la info de BGG. Queda como borrador hasta que lo publiques."* (72 chars, down from
+    a two-line enumeration) — **cannot repeat d51's mistake by construction**: the club's `nivel` is not BGG
+    info, so it falls outside the claim rather than having to be remembered out of a list. Guarded as three
+    properties rather than as a string — scoped to BGG, silent about the nivel, and under 90 characters, so
+    it cannot creep back into an enumeration.
+
+    **The first disabled `.obtn` in the project, and 064 banned them outright — so it is drawn deliberately.**
+    The open conflict (064 vs d42/d44/d46/d47/d50, already widened from 1 dead slot to 4) is not resolved
+    here, but this case is argued rather than absorbed into it:
+
+    > **d46 chose text paint for the top app bar because in the one dead situation the slot had NOTHING to
+    > offer.** A container there is "the whole silhouette of a live primary" with nothing behind it. Here the
+    > button is not dead, it is **waiting** — the input that makes it live is 44px above it and one tap away,
+    > and the container is what says where typing leads. A control about to be enabled by the field above it
+    > is a different thing from a control with nothing to do.
+
+    d47 settles the weight: 064's four roles stand for **content blocks**, and a form sheet is one, so this
+    keeps Principal's outline and drops both strokes to the muted stops. Asserted dead-on-open, live-on-type,
+    dead-again-on-clear, and dead on spaces alone, so it cannot latch on.
+
+    **Disabling the empty case does not swallow the invalid case.** A non-empty value that does not parse
+    (*"mi juego favorito"*) still raises *"Pegá un número de BGG o el link del juego."* — a different failure
+    that still needs saying. Guarded separately.
+
+    **Measured on d35's axis, because a disabled state that dies in dark is d35's failure in a new place.**
+    Contrast ratio cannot see hue, so dead-vs-live is CIE76 **ΔE** against d35's bar of 20:
+
+    | | label | borde |
+    |---|---|---|
+    | claro | **43,6** | **80,0** |
+    | oscuro | **28,3** | **81,6** |
+
+    All four clear the bar. **Recorded rather than smoothed over: the deadness is carried by different
+    channels in the two themes.** In light both do the work; in dark the border does nearly all of it while
+    the label moves only 28,3 and still sits at **6,9:1** on the ground — a comfortable reading colour. Same
+    shape as d46's dark-only asymmetry, where W1's prominence came from its white label rather than its fill.
+    Not called a defect: both channels pass, and the border is strongest exactly where the label is weakest.
+
 ## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
 
 **The developer's words:** *"This iteration have been becoming harder and harder over time. I want to

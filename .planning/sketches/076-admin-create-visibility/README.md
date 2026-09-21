@@ -1,10 +1,10 @@
 ---
 sketch: 076
 name: admin-create-visibility
-question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2 — what do you get when you tap `+`?"
+question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2/R3 — what do you get when you tap `+`?"
 winner: null
-tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, copy, scenario-walk]
-rounds: 2
+tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d35, d46, d64, copy, disabled-state, scenario-walk]
+rounds: 3
 status: PENDING REVIEW
 ---
 
@@ -24,7 +24,7 @@ The developer's scope for the scenario, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/076-admin-create-visibility/index.html
-node .planning/sketches/076-admin-create-visibility/verify.js     # 28/28
+node .planning/sketches/076-admin-create-visibility/verify.js     # 32/32
 ```
 
 Use the **El paseo** strip in the tool panel: `1 · Agregar 342942`, then `2a · llegan los datos` or
@@ -337,3 +337,76 @@ warning above it.
   factual correction.
 - **This is a sketch change only.** The shipped `index.ex:269-285` add form and its hint still say whatever
   they say; `Crear a mano` never existed there to remove.
+
+
+---
+
+## Round 3 — the gate and the claim
+
+> *"disable Agregar when the field is empty and the hint is simple, like we sync all the info from BGG."*
+
+### The hint stops enumerating, and that is what makes it safe
+
+d51 had to delete `y el nivel` from a **list** of fields — and a list has to be kept correct forever against
+a changing `attrs_from_bgg_item/1`. The replacement is a **scoped general claim**:
+
+```
+Traemos toda la info de BGG. Queda como borrador hasta que lo publiques.      72 chars, one idea
+```
+
+It **cannot repeat d51's mistake by construction**: the club's `nivel` is not BGG info, so it falls outside
+the claim rather than having to be remembered out of a list. Guarded as three properties rather than as a
+string — scoped to BGG, silent about the nivel, and **under 90 characters**, so it cannot creep back into an
+enumeration (check 16b).
+
+### `Agregar` is dead until there is something to submit
+
+This is the **first disabled `.obtn` in the project**, and **064 banned disabled buttons outright**, so it is
+drawn deliberately rather than by default. The open 064 conflict is not resolved here — but this case is
+argued rather than quietly folded into it:
+
+> **d46 chose text paint for the top app bar because in the one dead situation the slot had NOTHING to
+> offer** — a container there is "the whole silhouette of a live primary" with nothing behind it. Here the
+> button is not dead, it is **waiting**: the input that makes it live is 44px above it and one tap away, and
+> the container is what says where typing leads.
+
+d47 settles the weight — 064's four roles stand for **content blocks**, and a form sheet is one — so it keeps
+Principal's outline and drops both strokes to the muted stops.
+
+Asserted in every direction so it cannot latch on (check 16d): **dead on open, live once you type, dead again
+when cleared, dead on spaces alone**, 44px throughout.
+
+**And disabling the empty case does not swallow the invalid case.** A non-empty value that does not parse
+(*"mi juego favorito"*) still raises *"Pegá un número de BGG o el link del juego."* — a different failure that
+still needs saying (check 16e).
+
+### Measured on d35's axis, because a disabled state that dies in dark is d35's failure in a new place
+
+Contrast ratio **cannot see hue** — d35 threw out a 1.15 contrast bar after the rejected pair scored 1.17 and
+the accepted one 1.21, while the eye read one as obviously purple and the other as identical. Re-measured as
+CIE76 **ΔE** those same pairs were 10.1 and 29.6, and a bar at 20 sat clear of both. Same bar here, both
+channels, both themes (check 16d3):
+
+| | label | borde |
+|---|---|---|
+| **claro** | 43,6 | 80,0 |
+| **oscuro** | **28,3** | 81,6 |
+
+All four clear it. **Recorded rather than smoothed over: the deadness is carried by different channels in the
+two themes.** In light both do the work. In dark the **border does nearly all of it** while the label moves
+only 28,3 and still sits at **6,9:1** on the ground — a perfectly comfortable reading colour, which is why by
+eye the dark button looks more live than the light one does.
+
+Same shape as d46's dark-only asymmetry, where W1's prominence came from its white label rather than its
+fill. Not called a defect: both channels pass the bar, and the border is strongest exactly where the label is
+weakest.
+
+## Open (round 3)
+
+- **Round 1's question is still open** — V1 / V2 / V3 untouched, still PENDING REVIEW.
+- **064's `no disabled buttons` conflict is now touched in a second place.** It was already governed by
+  neither rule after d46/d47 and widened from 1 dead slot to 4 by d50; this adds a fifth disabled control, in
+  a different container, with its own argument. The rule still needs settling as a rule.
+- **The dark label carries little of the deadness.** It passes, and the border covers it, but if the outline
+  ever goes the label alone would not be enough.
+- **The voseo of *"hasta que lo publiques"* is still unchanged** — a copy decision, not a factual one.

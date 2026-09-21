@@ -286,13 +286,104 @@ const VARS = ['V1', 'V2', 'V3'];
     `16 · the by-name path is gone from both doors (sheet ${door.manual}, separator ${door.sep}, search ${door.searchCreate}) ` +
     `and d4's rest survives (+ opens the sheet, BGG field, Agregar, and "Agregar desde BGG" for a pasted id)`);
 
-  /* 16b — the hint no longer promises the one field enrichment never writes. `attrs_from_bgg_item/1` has no
-          `weight_band`; only `admin_changeset` and the band-audit tool ever set the club's `nivel`. */
-  ok(!/nivel/i.test(door.hint) && /tapa/.test(door.hint) && /borrador/.test(door.hint),
-    `16b · the hint claims only what enrichment actually writes: "${door.hint.replace(/\n/g, ' ')}"`);
+  /* 16b — ROUND 3: the hint is now a SCOPED GENERAL claim instead of a list, and that is what makes it
+          safe. "toda la info de BGG" cannot repeat d51's mistake by construction: the club's `nivel`
+          (`weight_band`) is not BGG info — it is a club value written only by `admin_changeset` and the
+          band-audit tool — so it falls outside the claim rather than having to be remembered out of a list.
+          Asserted as three properties, not as a string: scoped to BGG, silent about the nivel, and SHORT,
+          with a length bound so it cannot creep back into an enumeration. */
+  ok(/BGG/.test(door.hint) && !/nivel/i.test(door.hint) && /borrador/.test(door.hint) && door.hint.length <= 90,
+    `16b · the hint is scoped, nivel-free and short (${door.hint.length} chars): "${door.hint.replace(/\n/g, ' ')}"`);
 
   /* 16c — what deleting the manual path bought, measured rather than asserted */
   ok(door.sheetH > 0, `16c · the sheet is now ${door.sheetH}px (it was 435px with the disabled manual path, of which 106px — 24% — was the unbuilt door)`);
+
+  /* 16d — ROUND 3: `Agregar` is live only once there is something to submit, and it goes back when you clear
+          the field. Asserted in all three directions so it cannot latch on. */
+  const gate = await p.evaluate(() => {
+    document.querySelector('[data-act="add"]').click();
+    const b = document.querySelector('#addgo'), f = document.querySelector('#bg');
+    const type = v => { f.value = v; f.dispatchEvent(new Event('input', { bubbles: true })); return b.disabled; };
+    const r = {
+      atOpen: b.disabled,
+      typed: type('342942'),
+      cleared: type(''),
+      spacesOnly: type('   '),
+      retyped: type('155426'),
+      /* the visible box must still be a 44px target once it is live */
+      h: Math.round(b.getBoundingClientRect().height)
+    };
+    /* paint: disabled must actually differ from enabled, or the state is invisible */
+    r.liveColor = getComputedStyle(b).borderColor;
+    type(''); r.deadColor = getComputedStyle(b).borderColor;
+    document.querySelector('[data-act="close"]').click();
+    return r;
+  });
+  ok(gate.atOpen === true && gate.typed === false && gate.cleared === true &&
+     gate.spacesOnly === true && gate.retyped === false && gate.h >= 44,
+    `16d · Agregar is dead on open, live once you type, dead again when cleared, dead on spaces alone, ${gate.h}px`);
+
+  ok(gate.liveColor !== gate.deadColor,
+    `16d2 · the disabled state is actually painted (live ${gate.liveColor} vs dead ${gate.deadColor}) — 064 has no disabled treatment, so this one is drawn on purpose`);
+
+  /* 16d3 — the disabled state must survive the THEME SWITCH, measured on d35's axis.
+           d35 threw out a contrast-ratio bar because contrast measures luminance and CANNOT SEE HUE: the
+           accepted light pair scored 1.21 and the rejected dark pair 1.17, while the eye read one as
+           obviously purple and the other as identical. Re-measured as CIE76 ΔE the same pairs were 29.6 and
+           10.1, and a bar at 20 sat clear of both. Same bar here, on both channels, in both themes —
+           because a disabled state that dies in dark is exactly d35's failure in a new place.
+
+           WHAT THE NUMBERS SAY, recorded rather than smoothed over: the deadness is carried by DIFFERENT
+           channels in the two themes. In light both do the work (label ΔE 43.6, border ΔE 80). In dark the
+           border does nearly all of it (ΔE 81.6) while the label moves only ΔE 28.3 and still sits at 6.9:1
+           on the ground — a perfectly comfortable reading colour. Same shape as d46's dark-only asymmetry,
+           where W1's prominence came from its white label rather than its fill. Flagged, not called a
+           defect: both channels clear the bar, and the border is the stronger signal exactly where the
+           label is weaker. */
+  const themed = await p.evaluate(() => {
+    const rgb = s => s.match(/\d+/g).map(Number);
+    const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const lab = c => { const [r, g, b] = c.map(lin);
+      const X = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, Y = 0.2126 * r + 0.7152 * g + 0.0722 * b,
+            Z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+      const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+      return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))]; };
+    const dE = (a, b) => { const A = lab(a), B = lab(b); return +Math.sqrt(A.reduce((s, v, i) => s + (v - B[i]) ** 2, 0)).toFixed(1); };
+    const out = {};
+    for (const th of ['light', 'dark']) {
+      document.documentElement.dataset.theme = th;
+      document.querySelector('[data-act="add"]').click();
+      const btn = document.querySelector('#addgo'), f = document.querySelector('#bg');
+      const set = v => { f.value = v; f.dispatchEvent(new Event('input', { bubbles: true }));
+        return { label: rgb(getComputedStyle(btn).color), border: rgb(getComputedStyle(btn).borderTopColor) }; };
+      const dead = set(''), live = set('342942');
+      out[th] = { label: dE(dead.label, live.label), border: dE(dead.border, live.border) };
+      document.querySelector('[data-act="close"]').click();
+    }
+    document.documentElement.dataset.theme = 'light';
+    return out;
+  });
+  const BAR = 20;
+  ok(themed.light.label >= BAR && themed.light.border >= BAR && themed.dark.label >= BAR && themed.dark.border >= BAR,
+    `16d3 · dead-vs-live clears d35's ΔE ${BAR} bar on both channels in both themes — ` +
+    `claro label ${themed.light.label} / borde ${themed.light.border} · ` +
+    `oscuro label ${themed.dark.label} / borde ${themed.dark.border} (in dark the BORDER carries it)`);
+
+  /* 16e — disabling the empty case must NOT swallow the INVALID case. A non-empty value that does not parse
+          ("mi juego favorito") is a different failure and still needs saying. */
+  const bad = await p.evaluate(() => {
+    document.querySelector('[data-act="add"]').click();
+    const f = document.querySelector('#bg');
+    f.value = 'mi juego favorito'; f.dispatchEvent(new Event('input', { bubbles: true }));
+    const live = !document.querySelector('#addgo').disabled;
+    document.querySelector('[data-act="addgo"]').click();
+    const err = document.querySelector('#bgerr');
+    const r = { live, shown: !err.hidden, text: err.textContent, invalid: f.getAttribute('aria-invalid') };
+    document.querySelector('[data-act="close"]').click();
+    return r;
+  });
+  ok(bad.live && bad.shown && bad.invalid === 'true' && /BGG/.test(bad.text),
+    `16e · a non-empty value that does not parse still errors rather than being silently blocked: "${bad.text}"`);
 
   /* 17 — the new row clears the 44px touch floor, hit-tested rather than read off a rect */
   await reset(); await setVar('V2'); await create();
