@@ -23,12 +23,15 @@ The developer's scope, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/078-admin-publish-gate/index.html
-node .planning/sketches/078-admin-publish-gate/verify.js     # 30/30
+node .planning/sketches/078-admin-publish-gate/verify.js     # 41/41
 ```
 
 **El paseo**: `1 · Agregar 207330` → `2 · llegan los datos` → `3 · abrir el borrador` → `4 · poner el nivel`
-→ `5 · Publicar`, and `↺`. Two extra levers, neither of them a variant: **Tipo** (juego base / expansión)
-and **Nombre de BGG** (Hellas / el roto). Both exist to make a claim falsifiable — see below.
+→ `5 · Publicar` → `· salir a la mitad ‹`, and `↺`.
+
+Two axes, in this order: **Cuándo escribe** (A / B — ronda 2) and, under it, **La puerta** (G1 / G2 / G3 —
+ronda 1, still open). Plus two levers that are *not* variants and exist only to make a claim falsifiable:
+**Tipo** (juego base / expansión) and **Nombre de BGG** (Hellas / el roto).
 
 ---
 
