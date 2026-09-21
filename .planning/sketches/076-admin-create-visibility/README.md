@@ -3,8 +3,8 @@ sketch: 076
 name: admin-create-visibility
 question: "R1 — after you tap `Agregar` with a BGG id, where does the just-created game become visible? R2/R3 — what do you get when you tap `+`?"
 winner: null
-tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d35, d46, d64, copy, disabled-state, scenario-walk]
-rounds: 3
+tags: [admin, juegos, create, draft, pending, failed, d1, d3, d4, d8, d17, d24, d51, d52, d53, d38, d35, d36, d46, d64, copy, disabled-state, scenario-walk]
+rounds: 4
 status: PENDING REVIEW
 ---
 
@@ -24,7 +24,7 @@ The developer's scope for the scenario, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/076-admin-create-visibility/index.html
-node .planning/sketches/076-admin-create-visibility/verify.js     # 32/32
+node .planning/sketches/076-admin-create-visibility/verify.js     # 33/33
 ```
 
 Use the **El paseo** strip in the tool panel: `1 · Agregar 342942`, then `2a · llegan los datos` or
@@ -410,3 +410,68 @@ weakest.
 - **The dark label carries little of the deadness.** It passes, and the border covers it, but if the outline
   ever goes the label alone would not be enough.
 - **The voseo of *"hasta que lo publiques"* is still unchanged** — a copy decision, not a factual one.
+
+
+---
+
+## Round 4 — the hint is deleted
+
+> *"What if we remove the hint and put on the placeholder something like 'id example' para crear desde bgg?"*
+
+**Measured before answering, because the line carried two different kinds of claim** — and a placeholder can
+only hold one of them, since it vanishes on the first keystroke:
+
+| | kind | can a placeholder carry it? |
+|---|---|---|
+| *"Traemos toda la info de BGG"* | a **format example** | yes — and `Número o link de BGG` + `342942` already do |
+| *"Queda como borrador hasta que lo publiques"* | a **consequence** | no |
+
+Counted across the walk, the second was **the only place the `+` path stated it before you commit**:
+
+```
+«borrador» antes de confirmar
+  hoja del +     1   — y era SÓLO el hint (en el resto de la hoja: 0)
+  la búsqueda    1   — "BGG 342942 · se agrega como borrador", en la fila de sugerencia
+```
+
+**The call was to delete it and replace nothing, and the cost is recorded rather than argued away:** the same
+action now has **two doors, one of which warns**. After the tap there is only the 4000ms snackbar — and in V1
+that is followed by a page with no trace of the game at all. Check 16b2 keeps the asymmetry visible so it
+does not become folklore.
+
+### The placeholder is left alone — and the real gap is the link form
+
+`342942` is a clean example of the **number** form, and the label names both. What the create sheet lacks is
+an example of the **link** form — while the *repair* sheet's identical field has one, because **d38** settled
+a worked `…/boardgame/155426/…` → `155426` walkthrough and 075 built it (`index.html:980-983`).
+
+**Two fields, one parser, one with an example and one without.** Named as its own slice rather than bolted on
+here.
+
+### The rhythm survived the removals, and that was checked
+
+Deleting a block from the middle of a stack is how orphan gaps appear, and nothing else would notice — the
+sheet would simply be 36px taller with a hole in it.
+
+```
+sh-top → label   16        label → campo     6     ← d36's pair, deliberately tighter
+campo  → botón   16        botón → borde    16
+```
+
+### The sheet across four rounds
+
+```
+435px    R1   with the disabled `Crear a mano`  (106px of it — 24% — an unbuilt door)
+313px    R2   door deleted, hint corrected
+271px    R4   hint deleted
+```
+
+At 375×740 the page behind it is now visible to three rows.
+
+## Open (round 4)
+
+- **Round 1's question is still open** — V1 / V2 / V3 untouched, still PENDING REVIEW.
+- **The `+`/search asymmetry is accepted, not fixed.** If it ever grates, the cheapest repair is the button
+  (`Agregar como borrador`), which cannot vanish the way a placeholder does.
+- **The link-form example is owed** — d38 settled it, the repair sheet has it, the create sheet does not.
+- **064's `no disabled buttons` conflict** is unchanged from round 3 and still needs settling as a rule.

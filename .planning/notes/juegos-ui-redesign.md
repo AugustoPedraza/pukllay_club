@@ -1810,6 +1810,50 @@ Harness: **49/49** at the time; **53/53** after sketch 073 round 4 sent two fixe
     shape as d46's dark-only asymmetry, where W1's prominence came from its white label rather than its fill.
     Not called a defect: both channels pass, and the border is strongest exactly where the label is weakest.
 
+
+53. **The hint is deleted outright, and the `+` path stops stating the consequence.** Sketch **076**,
+    round 4, from the developer: *"What if we remove the hint and put on the placeholder something like 'id
+    example' para crear desde bgg?"* **Supersedes d52's hint half; d52's disabled `Agregar` stands.**
+
+    **Measured before answering, because the line carried two different kinds of claim:**
+
+    ```
+    "Traemos toda la info de BGG"                un EJEMPLO DE FORMATO — el label y el placeholder ya lo dicen
+    "Queda como borrador hasta que lo publiques" una CONSECUENCIA — un placeholder no puede sostenerla
+    ```
+
+    A placeholder vanishes on the first keystroke, so it can hold the format example and nothing else. The
+    first sentence was therefore close to redundant against `Número o link de BGG` + `342942`. The second was
+    not — counted across the walk, **it was the only place the `+` path said it before you commit**:
+
+    | | «borrador» antes de confirmar |
+    |---|---|
+    | hoja del `+` | **1 — y era sólo el hint** (en el resto de la hoja: 0) |
+    | la búsqueda | 1 — *"BGG 342942 · se agrega como borrador"*, en la fila de sugerencia |
+
+    **The developer's call is to delete it and replace nothing, and the cost is recorded rather than
+    smoothed over:** the same action now has **two doors, one of which warns**. The `+` path says nothing
+    about the lifecycle before the tap; the search path still does. Afterwards there is only the 4000ms
+    snackbar — and in V1 that is followed by a page with **no trace of the game at all** (076 round 1).
+    Asserted by check 16b2 so the asymmetry stays visible instead of becoming folklore.
+
+    **The placeholder is left alone.** `342942` is a clean example of the number form and the label already
+    names both. What the create sheet still lacks is an example of the **link** form — and the *repair*
+    sheet's identical field has one, because **d38** settled a worked
+    `…/boardgame/155426/…` → `155426` walkthrough and 075 built it (`index.html:980-983`). Two fields, one
+    parser, one with an example and one without. Named as its own slice, not bolted on here.
+
+    **The rhythm survived the removals, and that was checked rather than assumed** — deleting a block from
+    the middle of a stack is how orphan gaps appear, and nothing else would notice:
+
+    ```
+    sh-top → label   16        label → campo     6      <- d36's pair, deliberately tighter
+    campo  → botón   16        botón → borde    16
+    ```
+
+    **The sheet across the three rounds: 435px → 313px → 271px.** At 375×740 the page behind it is visible
+    to three rows.
+
 ## HANDOFF — one scenario at a time (opened 2026-09-20, for a fresh session)
 
 **The developer's words:** *"This iteration have been becoming harder and harder over time. I want to

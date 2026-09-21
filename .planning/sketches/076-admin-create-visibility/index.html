@@ -907,7 +907,18 @@ function closeSheet() { device.classList.remove('kbd'); $('#sheet').classList.re
 /* decision 4 — the "+" sheet. ROUND 2: the manual path and its separator are gone (see the note below the
    function); what remains is the BGG field, the hint, and `Agregar`.
 
-   THE HINT PROMISED A FIELD ENRICHMENT NEVER WRITES. `Enrichment.attrs_from_bgg_item/1`
+   ROUND 4 — THE HINT IS DELETED OUTRIGHT, and nothing replaces it. The developer's call, taken with its
+   cost stated rather than smoothed over: the `+` path now says NOTHING about the lifecycle before you
+   commit, while the SEARCH path still does ("BGG 342942 · se agrega como borrador" in its suggestion row).
+   Two doors into one action, one of which warns. That asymmetry is measured by check 16b2 so it stays
+   visible instead of becoming folklore, and the 4000ms snackbar afterwards is the only other place it is
+   said — in V1, followed by a page with no trace of the game at all.
+   What the label and placeholder still carry: `Número o link de BGG` + `342942`, which is the format
+   example, and is all a placeholder can honestly hold. The LINK form still has no example here while the
+   repair sheet's identical field does (075's idSheet builds d38's worked
+   `…/boardgame/155426/…` → `155426`); left as its own slice rather than bolted on.
+
+   SUPERSEDED, kept for the record — rounds 2 and 3 on the hint's TEXT: `Enrichment.attrs_from_bgg_item/1`
    (enrichment.ex:54-72) returns year, min/max players, min/max playtime, playing_time, min_age, description,
    bgg_weight, bgg_rating, bgg_rank, mechanics, themes, designers, artists and publishers, plus the cover via
    `image_attrs/3`. `weight_band` is NOT among them — the only things that ever write the club's `nivel` are
@@ -927,7 +938,6 @@ function addSheet(from, prefill) {
        <label class="flab" for="bg">Número o link de BGG</label>
        <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
        <p class="ferr" id="bgerr" hidden></p>
-       <p class="hint">Traemos toda la info de BGG. Queda como borrador hasta que lo publiques.</p>
        <button class="obtn pri wide" data-act="addgo" id="addgo"${(prefill || '').trim() ? '' : ' disabled'}>Agregar</button>
      </div>`, from, { form: true });
   if (KBD_SIM) device.classList.add('kbd');

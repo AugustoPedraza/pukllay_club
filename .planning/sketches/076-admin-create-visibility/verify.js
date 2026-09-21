@@ -286,17 +286,56 @@ const VARS = ['V1', 'V2', 'V3'];
     `16 · the by-name path is gone from both doors (sheet ${door.manual}, separator ${door.sep}, search ${door.searchCreate}) ` +
     `and d4's rest survives (+ opens the sheet, BGG field, Agregar, and "Agregar desde BGG" for a pasted id)`);
 
-  /* 16b — ROUND 3: the hint is now a SCOPED GENERAL claim instead of a list, and that is what makes it
-          safe. "toda la info de BGG" cannot repeat d51's mistake by construction: the club's `nivel`
-          (`weight_band`) is not BGG info — it is a club value written only by `admin_changeset` and the
-          band-audit tool — so it falls outside the claim rather than having to be remembered out of a list.
-          Asserted as three properties, not as a string: scoped to BGG, silent about the nivel, and SHORT,
-          with a length bound so it cannot creep back into an enumeration. */
-  ok(/BGG/.test(door.hint) && !/nivel/i.test(door.hint) && /borrador/.test(door.hint) && door.hint.length <= 90,
-    `16b · the hint is scoped, nivel-free and short (${door.hint.length} chars): "${door.hint.replace(/\n/g, ' ')}"`);
+  /* 16b — ROUND 4: the hint is GONE, and nothing replaces it. Rounds 2 and 3 fixed its text (d51 deleted
+          "y el nivel", d52 replaced the list with a scoped claim); round 4 deletes the line. Asserted as
+          absence so it cannot quietly return as a different sentence. */
+  ok(door.hint === '', `16b · the sheet carries no hint line at all (${JSON.stringify(door.hint)})`);
+
+  /* 16b2 — THE COST, measured so it stays visible instead of becoming folklore.
+           "Queda como borrador" was the only place the `+` path stated the lifecycle consequence BEFORE you
+           commit. The SEARCH path still states it, in its suggestion row. So the same action now has two
+           doors, one of which warns and one of which does not. That is the accepted price of deleting the
+           line, and this check exists to keep the number honest rather than to fail. */
+  const saysDraft = await p.evaluate(() => {
+    const n = t => (String(t || '').match(/borrador/gi) || []).length;
+    const r = {};
+    document.querySelector('[data-act="add"]').click();
+    r.plusSheet = n(document.querySelector('#sheet').innerText);
+    document.querySelector('[data-act="close"]').click();
+    const q = document.querySelector('#q');
+    q.value = '342942'; q.dispatchEvent(new Event('input', { bubbles: true }));
+    r.searchSuggestion = n(document.querySelector('#sugg').innerText);
+    q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true }));
+    return r;
+  });
+  ok(saysDraft.plusSheet === 0 && saysDraft.searchSuggestion === 1,
+    `16b2 · before committing, "borrador" is said ${saysDraft.plusSheet}× on the + path and ${saysDraft.searchSuggestion}× on the search path ` +
+    `— the accepted asymmetry of deleting the hint, recorded not fixed`);
 
   /* 16c — what deleting the manual path bought, measured rather than asserted */
-  ok(door.sheetH > 0, `16c · the sheet is now ${door.sheetH}px (it was 435px with the disabled manual path, of which 106px — 24% — was the unbuilt door)`);
+  /* 16c — the height, and the RHYTHM the removals left behind. Deleting a block from the middle of a stack
+          is how orphan gaps appear, and nothing above would notice: the sheet would simply be 36px taller
+          with a hole in it. Asserted as the gap sequence, with the tight label→field pair (d36: "the label
+          and its value are one typographic unit") distinguished from the 16px everywhere else. */
+  const rhythm = await p.evaluate(() => {
+    document.querySelector('[data-act="add"]').click();
+    const r = s => { const e = document.querySelector(s); const b = e.getBoundingClientRect(); return { t: b.top, b: b.bottom }; };
+    const top = r('#sheet .sh-top'), lab = r('.flab'), f = r('#bg'), btn = r('#addgo'), sh = r('#sheet');
+    const out = {
+      h: Math.round(sh.b - sh.t),
+      topToLabel: Math.round(lab.t - top.b),
+      labelToField: Math.round(f.t - lab.b),
+      fieldToButton: Math.round(btn.t - f.b),
+      buttonToBottom: Math.round(sh.b - btn.b)
+    };
+    document.querySelector('[data-act="close"]').click();
+    return out;
+  });
+  ok(rhythm.topToLabel === 16 && rhythm.fieldToButton === 16 && rhythm.buttonToBottom === 16 &&
+     rhythm.labelToField < 16 && rhythm.h === 271,
+    `16c · ${rhythm.h}px (was 435 with the unbuilt door, 313 after it went, 271 with no hint) and the rhythm survived the removals: ` +
+    `${rhythm.topToLabel} / ${rhythm.labelToField} / ${rhythm.fieldToButton} / ${rhythm.buttonToBottom} ` +
+    `— 16 throughout, with only d36's label→field pair tighter. No orphan gap where the hint was.`);
 
   /* 16d — ROUND 3: `Agregar` is live only once there is something to submit, and it goes back when you clear
           the field. Asserted in all three directions so it cannot latch on. */
