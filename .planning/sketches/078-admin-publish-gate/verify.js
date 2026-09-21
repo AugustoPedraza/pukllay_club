@@ -583,6 +583,127 @@ const gateState = p => p.evaluate(() => {
   ok(bands.join() === ',descubre_el_hobby,ingenio_estratega,nivel_experto',
     `30 · la hoja del nivel ofrece las TRES bandas reales, no las cuatro inventadas (${JSON.stringify(bands)})`);
 
+  /* ================= RONDA 4 · la hoja del borrador ================= */
+  const setVal = (pg, v) => pg.evaluate(v => document.querySelector(`[data-v-set="${v}"]`).click(), v);
+  const toSheet = async (pg, val = 'P1') => {
+    await reset(pg); await setVal(pg, val);
+    await step(pg, 'create'); await step(pg, 'enriched'); await step(pg, 'draft');
+  };
+
+  /* ---- 31. la hoja se abre desde la LISTA, y la fila no lleva chevron (D-19i) ---- */
+  await toSheet(page);
+  const sheetOpen = await page.evaluate(() => {
+    const sh = document.getElementById('sheet');
+    return { open: sh.classList.contains('open'), onList: window.S.screen === 'juegos',
+      campos: sh.querySelectorAll('.fld, .seg, .sw').length,
+      botones: [...sh.querySelectorAll('.obtn, .btn')].map(b => b.textContent.trim()),
+      chevEnFila: !!document.querySelector('.row[data-act="draft"] .chev') };
+  });
+  ok(sheetOpen.open && sheetOpen.onList && sheetOpen.botones.length === 1 && sheetOpen.botones[0] === 'Publicar' && !sheetOpen.chevEnFila,
+    `31 · la hoja se abre sobre la LISTA, con UN solo botón (${JSON.stringify(sheetOpen.botones)}) y la fila sin chevron`);
+
+  /* ---- 32. nada se escribe hasta Publicar — cancelar con el ✕ no deja rastro ---- */
+  await toSheet(page);
+  await page.evaluate(() => { document.getElementById('dname').value = 'Otro nombre';
+    document.getElementById('dname').dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.evaluate(() => document.querySelector('.sh-x').click());
+  const cancelled = await page.evaluate(() => { const g = window.byId(window.NEW); return { name: g.name, status: g.status }; });
+  ok(cancelled.name === 'Hellas' && cancelled.status === 'draft',
+    `32 · escribir y cancelar con el ✕ no deja rastro — el juego sigue igual (${JSON.stringify(cancelled)})`);
+
+  /* ---- 33. una expansión no pide nivel, y NO PUEDE quedar con uno ----
+     No es cosmético: `section_query(:weight_band)` (catalog.ex:851) filtra por banda y NO excluye
+     expansiones, así que una expansión con nivel APARECERÍA en una fila de la web — exactamente lo que la
+     regla del desarrollador prohíbe. El formulario no puede ofrecer ese estado. */
+  await toSheet(page); await step(page, 'band');
+  const antes = await page.evaluate(() => window.DRAFT.weight_band);
+  await step(page, 'exp');
+  const despues = await page.evaluate(() => ({ band: window.DRAFT.weight_band, seg: !!document.querySelector('.seg'), valido: window.draftValid() }));
+  await step(page, 'pub');
+  const pubExp = await page.evaluate(() => { const g = window.byId(window.NEW); return { st: g.status, band: g.weight_band, exp: g.is_expansion }; });
+  ok(antes === 'ingenio_estratega' && despues.band === '' && despues.seg === false && despues.valido === true,
+    `33a · marcar expansión borra el nivel y esconde el bloque, y la hoja queda válida (${JSON.stringify(despues)})`);
+  ok(pubExp.st === 'published' && pubExp.band === null && pubExp.exp === true,
+    `33b · y publica sin nivel: una expansión no puede entrar en ninguna fila por banda (${JSON.stringify(pubExp)})`);
+  const pill = await page.evaluate(() => (document.querySelector('.row.fresh .pill-outline') || {}).textContent);
+  ok(pill === 'Expansión', `33c · y la fila de la ludoteca la marca con el pill informativo (${JSON.stringify(pill)})`);
+
+  /* ---- 34. el eje: P1 avisa al tocar · P2 mata el botón ---- */
+  await toSheet(page, 'P1');
+  const p1a = await page.evaluate(() => ({ dis: document.getElementById('dpub').disabled, err: !document.getElementById('dband-e').hidden }));
+  await page.evaluate(() => document.getElementById('dpub').click());
+  const p1b = await page.evaluate(() => ({ st: window.byId(window.NEW).status, err: !document.getElementById('dband-e').hidden,
+    txt: document.getElementById('dband-e').textContent.trim(), foco: document.activeElement.dataset.band !== undefined }));
+  ok(p1a.dis === false && !p1a.err && p1b.st === 'draft' && p1b.err && /no aparece en ninguna fila de la web/.test(p1b.txt) && p1b.foco,
+    `34a · P1 · el botón vive, al tocar NO publica, aparece el error con la consecuencia y el foco va al nivel`);
+
+  await toSheet(page, 'P2');
+  const p2a = await page.evaluate(() => ({ dis: document.getElementById('dpub').disabled, err: !!document.querySelector('#dband-e:not([hidden])') }));
+  await step(page, 'band');
+  const p2b = await page.evaluate(() => document.getElementById('dpub').disabled);
+  ok(p2a.dis === true && !p2a.err && p2b === false,
+    `34b · P2 · el botón nace muerto y sin mensaje, y revive al elegir el nivel (${JSON.stringify(p2a)} -> dis ${p2b})`);
+
+  /* ---- 35. publicar vuelve a la lista, scrollea y resalta — y eso NO es nuevo ----
+     076 (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` para el momento de CREAR.
+     Esto es la misma conducta en el momento de PUBLICAR. Medido con el rect Y con un hit test: una fila
+     resaltada fuera de pantalla no es una pista de nada — que es exactamente lo que 35b encontró. */
+  const vuelta = async (preambuloEditor) => {
+    await reset(page);
+    if (preambuloEditor) {
+      /* el paseo pasa primero por el editor y vuelve — un camino real: mirás el juego, salís, y recién
+         después lo publicás desde la hoja. */
+      await step(page, 'create'); await step(page, 'enriched'); await step(page, 'edit');
+      await page.evaluate(() => document.querySelector('[data-field="weight_band"]').click());
+      await page.evaluate(() => document.querySelector('.sh-x').click());
+      await reset(page);
+    }
+    await setVal(page, 'P1');
+    await step(page, 'create'); await step(page, 'enriched'); await step(page, 'draft');
+    await step(page, 'band'); await step(page, 'pub');
+    await hideTools(page);
+    const r = await page.evaluate(() => {
+      const row = document.querySelector('.row.fresh');
+      const fold = document.querySelector('.tabs').getBoundingClientRect().top;
+      const rr = row && row.getBoundingClientRect();
+      return { pantalla: window.S.screen, hoja: document.getElementById('sheet').classList.contains('open'),
+        st: window.byId(window.NEW).status, resaltada: !!row,
+        visible: !!rr && rr.top >= 0 && rr.bottom <= fold, y: rr && Math.round(rr.top),
+        scrollTop: Math.round(document.getElementById('scroller').scrollTop),
+        hit: rr && rr.top >= 0 ? (document.elementFromPoint(rr.left + rr.width / 2, rr.top + rr.height / 2) || {}).className : 'fuera de pantalla' };
+    });
+    await showTools(page);
+    return r;
+  };
+
+  const limpio = await vuelta(false);
+  await page.screenshot({ path: path.join(OUT, 'R4-lista.png') });
+  ok(limpio.pantalla === 'juegos' && !limpio.hoja && limpio.st === 'published' && limpio.resaltada
+    && limpio.visible && /row/.test(limpio.hit || ''),
+    `35a · publicar cierra la hoja, vuelve a la lista y deja la fila resaltada Y ALCANZABLE en y=${limpio.y} (${JSON.stringify(limpio)})`);
+
+  /* 35b · LO MISMO OTRA VEZ, TRAS PASAR POR EL EDITOR — y el par 35a/35b queda EN ROJO A PROPÓSITO.
+
+     LO QUE SÍ SE SABE, medido:
+       · aislado (página recién cargada, el paseo y nada más) la fila queda en y=165, alcanzable, y hay
+         captura: R4-lista.png. Reproducido tres veces seguidas, idéntico.
+       · dentro de esta suite la MISMA secuencia deja la fila en y=-587 / -467 / -293 según dónde caiga,
+         con el MISMO scrollTop (184), el MISMO `G.length` (436, verificado: no se acumulan juegos) y las
+         MISMAS secciones (`Sin datos:0 | Borradores:1 | Juegos del club:50`).
+
+     LO QUE NO SE SABE: qué estado anterior mueve la fila dentro del documento sin mover el scroll. Se
+     descartaron dos hipótesis con medición — contaminación por el editor (35b la aísla y sigue fallando)
+     y acumulación del fixture (G no crece).
+
+     POR QUÉ NO SE SILENCIA NI SE "ARREGLA" CON UN requestAnimationFrame: el resaltado es la ÚNICA pista
+     que queda después de publicar — el desarrollador pidió *"a subtle affordance of the recently created
+     game"* — así que una pista fuera de pantalla es el hallazgo entero de la ronda fallando en silencio.
+     Y un scroll diferido que hiciera pasar el check sin explicar la causa sería exactamente la clase de
+     verde que este linaje ya contó doce veces. Queda rojo hasta que se entienda. */
+  const sucio = await vuelta(true);
+  ok(sucio.visible,
+    `35b · SIN EXPLICAR — la misma secuencia deja la fila en y=${sucio.y} con scrollTop ${sucio.scrollTop} (igual que 35a: ${limpio.scrollTop}). Aislada da y=165 y es alcanzable; dentro de la suite no. Causa no encontrada.`);
+
   /* ---- 15. no console errors ---- */
   ok(errors.length === 0, `15 · sin errores de consola${errors.length ? ' — ' + errors.slice(0, 2).join(' | ') : ''}`);
 

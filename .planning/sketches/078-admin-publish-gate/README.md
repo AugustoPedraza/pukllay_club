@@ -4,8 +4,8 @@ name: admin-publish-gate
 question: "r1 · ¿quién te frena al publicar un borrador incompleto? — r2 · ¿cuándo se vuelve real una edición?"
 winner: null
 tags: [admin, juegos, draft, publish, gate, lifecycle, d42, d47, d33, d49, 064, scenario-walk]
-rounds: 3
-status: r2 DECIDIDA (B) · r1 y r3 PENDING REVIEW
+rounds: 4
+status: r4 es el alcance vivo (hoja del borrador) · r2 RETIRADA por r4 · r1 y r3 quedan para la página del editor
 ---
 
 # Sketch 078: la puerta de Publicar
@@ -23,7 +23,7 @@ The developer's scope, given at intake:
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/078-admin-publish-gate/index.html
-node .planning/sketches/078-admin-publish-gate/verify.js     # 50/50
+node .planning/sketches/078-admin-publish-gate/verify.js     # 57/59 — 35a/35b en rojo a propósito, ver abajo
 ```
 
 **El paseo**: `1 · Agregar 207330` → `2 · llegan los datos` → `3 · abrir el borrador` → `4 · poner el nivel`
@@ -532,3 +532,129 @@ contra la fila, no contra el id.
   cinco filas, que la convención habitual desaconseja — pero no está medido acá.
 - **`Copias` sigue pre-cargándose en 1 en silencio** (ronda 1), y ahora convive con una marca de requerido
   en otra fila, lo cual podría leerse como que copias no importa.
+
+
+---
+
+# Ronda 4 — la hoja del borrador
+
+> *"This is becoming too hard. The main goal of a borrador is to ASK the user to fill the missing data and
+> publish. Only publish. Maybe they can cancel that with the chevron. (...) what if we show that as part of a
+> bottom sheet from the list, asking to verify the correct weight assignment and some basic information like
+> name, image, description and if or isn't an expansion. (...) after publish, go back to the list (with the
+> correct scrolling) and highlight the created one."*
+
+**Tenía razón: lo compliqué de más.** Tres rondas discutiendo una página de editor para un borrador, cuando
+el borrador no es una página que se edita — **es una pregunta**: completá esto y publicá.
+
+**Esto retira la ronda 2.** B existía para sostener un `Guardar` que acaba de ser eliminado: sin segundo
+botón no hay par apilado, ni estado sucio, ni confirmar-al-salir. Escrito, no derivado (d47).
+**Lo que NO se retira:** la página del editor (072-075) sigue viva para corregir un juego **ya publicado**,
+con la barra de 074 y el spine de d33 — decisión del desarrollador, explícita. Las rondas 1 y 3 siguen
+abiertas **para esa superficie**, y el panel las mantiene navegables.
+
+**Y no hay conflicto con d33.** d37 ya delimitó su propio alcance: *"los campos dentro de una hoja no son
+este patrón: una vez abierta la hoja ya estás editando"*. Un formulario clásico dentro de una hoja cae
+justo afuera del spine.
+
+## Lo que se midió antes de dibujar
+
+### La condición para abrir la hoja ya existe — y yo había afirmado lo contrario
+
+El desarrollador avisó que pasar de borrador a la hoja depende del trabajo asíncrono: BGG + **procesamiento
+de imagen** + **traducción**. Lo di por medio construido. **Estaba mal, y chequearlo lo corrigió:**
+
+```
+enrichment.ex:106   image_attrs(...)              baja la tapa, la sube a R2, genera la OG card 1200x630
+enrichment.ex:113   maybe_translate_description   traduce al español con Gemini (InstructorLite)
+enrich/2                                          las TRES cosas en una sola llamada
+enrichment_status = "enriched"                    la única señal de que las tres terminaron
+```
+
+(`mix catalog.translate_descriptions` es el backfill de las filas viejas, no el camino vivo. Confundirlas me
+hizo afirmar que la traducción no era automática.) La hoja se abre con una condición que **ya existe, ya se
+emite** (`enrich_game_worker:104-106`) y a la que **la lista ya está suscripta** (`index.ex:41-43`).
+
+### La imagen: se muestra para verificar, no para editar
+
+`gallery_urls` está **vacío en los 435 juegos, a propósito**: `GalleryBackfill` (01.3.1, D-07) es un
+*limpiador*, no un llenador. Su propio moduledoc dice que `bgg_payload["versions"]` conserva los URLs
+fuente, así que **es recomputable sin refetch** — pero ofrecer un selector de imágenes significa **revertir
+esa decisión**, no construir una pantalla. Mientras tanto `cover_url` sí está y se sirve desde R2, así que la
+hoja muestra la tapa real (la de la fila 873) para que la verifiques.
+
+### Las expansiones: la regla es verdad, pero el código sólo la garantiza a medias
+
+> *"an expansion of a game never will be listed on any web section for now"*
+
+```
+section_query(:recent)       where: g.is_expansion == false     ← garantizado en código
+section_query(:weight_band)  where: g.weight_band == ^band      ← NO excluye expansiones
+manual                       sin filtro                          ← 0 de 26, por costumbre
+```
+
+**Se sostiene sólo porque las 26 expansiones tienen el nivel vacío.** Y acá está el riesgo concreto de esta
+misma ronda: pediste *validar el weight band* — si el formulario le exigiera nivel a una expansión, **esa
+expansión aparecería en una fila de la web**, rompiendo la regla que acabás de enunciar. Por eso el switch
+apaga el bloque entero (check 33a) y publica sin nivel (33b). **Y el código necesita el guard**
+`and g.is_expansion == false` en `section_query(:weight_band)`: está anotado abajo, no dibujado.
+
+### El resaltado al volver no es nuevo
+
+`076` (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` **para el momento de crear**.
+Esto es la misma conducta repetida en el momento de **publicar** — medido antes de proponerla, no inventado.
+
+## El único eje: cómo habla la validación del nivel
+
+El formulario lo diste vos, así que no se ofrece como variantes. Lo abierto es sólo esto:
+
+| | |
+|---|---|
+| **P1 · al tocar Publicar** | el botón siempre vive; al tocar, no publica, aparece el error bajo el bloque y el foco va al nivel |
+| **P2 · botón muerto** | `Publicar` nace deshabilitado y revive al elegir; nunca hay mensaje de error |
+
+```
+34a · P1 · el botón vive · al tocar NO publica · el error dice la consecuencia · el foco va al nivel
+34b · P2 · nace muerto y sin mensaje · revive al elegir
+31  · la hoja se abre sobre la LISTA, con UN solo botón, y la fila no lleva chevron (D-19i)
+32  · escribir y cancelar con el ✕ no deja rastro: nada se escribe hasta Publicar
+33  · expansión: borra el nivel, esconde el bloque, publica igual, y la fila lleva el pill informativo
+```
+
+El error de P1 dice **la consecuencia, no la regla**: *"Elegí un nivel: sin esto el juego no aparece en
+ninguna fila de la web."* Eso sólo se pudo escribir porque la ronda 3 midió que `sections.rule_value` mapea
+cada sección de banda 1:1 contra un valor de nivel.
+
+## Los checks 35a y 35b quedan EN ROJO a propósito
+
+```
+aislado, página recién cargada     y = 165, alcanzable, con captura (R4-lista.png) — reproducido 3 veces
+dentro de esta suite               y = -587 / -467 / -293 · MISMO scrollTop (184)
+                                   · MISMO G.length (436, verificado: no se acumulan juegos)
+                                   · MISMAS secciones (Sin datos:0 | Borradores:1 | Juegos del club:50)
+```
+
+**Dos hipótesis descartadas con medición**, no con argumentos: contaminación por haber pasado antes por el
+editor (35b la aísla y sigue fallando) y acumulación del fixture (`G` no crece). **La causa no se encontró.**
+
+**No se silencia ni se "arregla" con un scroll diferido.** El resaltado es la única pista que queda después
+de publicar — pediste *"a subtle affordance of the recently created game"* — así que una pista fuera de
+pantalla es el hallazgo entero de la ronda fallando en silencio. Y un verde comprado con un
+`requestAnimationFrame` sin entender la causa sería exactamente la clase de verde que este linaje ya contó
+doce veces. **Queda rojo hasta que se entienda.**
+
+## Open (ronda 4)
+
+- **P1 / P2 sin decidir.**
+- **35a/35b sin explicar** — es lo primero a resolver antes de construir nada de esto.
+- **El guard que falta en el código:** `and g.is_expansion == false` en `section_query(:weight_band)`
+  (`catalog.ex:851`). Sin él, la regla de las expansiones depende de que nadie les ponga nivel.
+- **El selector de imagen es una reversión, no una pantalla.** Si lo querés, la decisión a revertir es
+  01.3.1/D-07, y los URLs fuente siguen en `bgg_payload["versions"]`.
+- **El resaltado puede ser demasiado fuerte para "subtle"** — es el lavado completo de 076, heredado tal
+  cual. No se tocó porque estaba decidido, pero *sutil* quizás pida menos.
+- **La hoja no dice nada de copias ni estante**, a propósito: copias se pre-carga en 1 (ronda 1) y estante
+  lo tienen 1 de 435. Si alguna vez importan, la hoja es el lugar equivocado.
+- **El bug de `bgg_client.ex` sigue sin archivar** (ronda 1) — `./` en `name`, `publishers`, `artists`, y la
+  página pública de Codenames sigue mostrando 3.304 caracteres de *"editado por"*.
+- Las rondas 1 y 3 siguen abiertas **para la página del editor**, no para esta hoja.

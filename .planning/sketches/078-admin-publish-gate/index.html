@@ -786,6 +786,68 @@
   .fr-k .req { font-size: 12px; font-weight: 500; color: var(--warn); letter-spacing: .01em; }
   .fr-v.req { color: var(--warn); font-style: normal; }
 
+
+  /* ================= RONDA 4 · la hoja del borrador =================
+     El desarrollador, cortando el alcance: *"the main goal of a borrador is to ASK the user to fill the
+     missing data and publish. Only publish. Maybe they can cancel that with the chevron. (...) what if we
+     show that as part of a bottom sheet from the list, asking to verify the correct weight assignment and
+     some basic information like name, image, description and if or isn't an expansion."*
+
+     ESTO RETIRA LA RONDA 2. B existía para sostener un `Guardar` que acaba de ser eliminado: sin segundo
+     botón no hay par apilado, no hay estado sucio y no hay confirmar-al-salir. Escrito, no derivado (d47).
+     LO QUE *NO* SE RETIRA: la página del editor (072-075) sigue viva para corregir un juego YA PUBLICADO,
+     con su barra de 074 y su spine de filas->hojas (d33). Son dos superficies con dos trabajos distintos.
+
+     Y LA HOJA ES UN FORMULARIO CLÁSICO, no el spine de d33: acá no mirás valores guardados, los completás
+     de una sentada. d37 ya delimitó su propio alcance — *"los campos dentro de una hoja no son este patrón:
+     una vez abierta la hoja ya estás editando"*. Así que no hay conflicto que enmendar. */
+  .fsheet .fbody { padding: 4px 16px 16px; }
+  .ffield { margin-top: 16px; }
+  .ffield:first-child { margin-top: 4px; }
+  .flabel { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .flabel .req { font-weight: 500; color: var(--warn); }
+  .fhint { font-size: 12px; line-height: 1.4; color: var(--color-text-muted); margin: 6px 0 0; }
+  .ferr { font-size: 12px; line-height: 1.4; color: var(--color-danger); margin: 6px 0 0; display: flex; gap: 6px; }
+  .ferr[hidden] { display: none; }
+  .fld[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+
+  /* la tapa: se muestra para VERIFICAR, no para editar. `gallery_urls` está vacío en los 435 juegos por
+     decisión deliberada (01.3.1 / D-07: GalleryBackfill la LIMPIA), así que un selector de imagen no
+     tendría de dónde elegir — sería la puerta sin construir que 076 borró. */
+  .fcover { display: flex; gap: 12px; align-items: center; }
+  .fcover img, .fcover .ph { width: 56px; height: 60px; border-radius: 7px; object-fit: cover; background: var(--color-surface); flex-shrink: 0; display: grid; place-items: center; color: var(--color-text-muted); }
+  .fcover .cap { font-size: 12px; line-height: 1.4; color: var(--color-text-muted); }
+
+  /* el segmentado de nivel: tres bandas reales, elegidas en el formulario mismo y no en otra hoja —
+     una hoja sobre una hoja es exactamente lo que el "formulario clásico" viene a evitar. */
+  .seg { display: flex; flex-direction: column; gap: 6px; }
+  .seg button { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 10px 12px;
+    min-height: 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg); cursor: pointer; }
+  .seg button .rd { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--stroke); flex-shrink: 0; margin-top: 2px; display: grid; place-items: center; }
+  .seg button[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] { border-color: var(--color-accent-text); background: color-mix(in srgb, var(--color-accent-text) 16%, transparent); }
+  .seg button[aria-pressed="true"] .rd { border-color: var(--color-primary); }
+  .seg button[aria-pressed="true"] .rd::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--color-primary); }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] .rd::after { background: var(--color-accent-text); }
+  .seg .sn { font-size: 15px; font-weight: 500; display: block; }
+  .seg .ss { font-size: 12px; line-height: 1.35; color: var(--color-text-muted); display: block; margin-top: 2px; }
+  .seg[data-invalid="true"] button { border-color: var(--color-danger); }
+
+  /* el switch de expansión, y la razón por la que apaga el nivel entero */
+  .fswitch { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .fswitch .sw { width: 46px; height: 28px; border-radius: 14px; background: color-mix(in srgb, var(--color-text) 26%, var(--color-bg)); position: relative; flex-shrink: 0; transition: background .15s; border: 0; cursor: pointer; }
+  .fswitch .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--color-bg); transition: transform .15s; box-shadow: var(--shadow-sm); }
+  .fswitch .sw[aria-checked="true"] { background: var(--color-primary); }
+  :root[data-theme="dark"] .fswitch .sw[aria-checked="true"] { background: var(--color-accent-text); }
+  .fswitch .sw[aria-checked="true"]::after { transform: translateX(18px); }
+  .fswitch .lb { flex: 1; font-size: 15px; }
+
+  /* d36/041: informativo = pill con borde, relleno transparente. `Expansión` es una CLASIFICACIÓN, no un
+     estado — así que no choca con la regla de punto-+-texto que gobierna Publicado/Borrador/Retirado. */
+  .pill-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border: 1px solid var(--stroke);
+    border-radius: 11px; font-size: 12px; font-weight: 500; line-height: 1; color: var(--color-text); }
+  .row .pill-outline { margin-left: 6px; }
+
 </style>
 </head>
 <body>
@@ -815,16 +877,20 @@
     <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
 </div></div>
 <div id="tools">
-  <div>Marcar requerido: <button class="vt" data-r-set="R1">R1 · en la etiqueta</button> <button class="vt" data-r-set="R2">R2 · en el valor</button> <button class="vt on" data-r-set="R3">R3 · sólo el pie</button></div>
-  <div style="opacity:.8">Ronda 2 (decidida) — cuándo escribe: <button class="vt" data-m-set="A">A</button> <button class="vt on" data-m-set="B">B ★</button></div>
+  <div>Validar el nivel: <button class="vt on" data-v-set="P1">P1 · al tocar Publicar</button> <button class="vt" data-v-set="P2">P2 · botón muerto</button></div>
+  <div style="opacity:.62">Rondas 1-3 (la página del editor, sin retirar) — puerta: <button class="vt" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt on" data-g-set="G3">G3</button> · escribe: <button class="vt" data-m-set="A">A</button> <button class="vt on" data-m-set="B">B</button> · req: <button class="vt" data-r-set="R1">R1</button> <button class="vt" data-r-set="R2">R2</button> <button class="vt on" data-r-set="R3">R3</button></div>
   <div style="opacity:.8">Ronda 1 (abierta) — la puerta: <button class="vt on" data-g-set="G1">G1</button> <button class="vt" data-g-set="G2">G2</button> <button class="vt" data-g-set="G3">G3</button></div>
   <div>El paseo: <button class="stp" data-walk="create">1 · Agregar 207330</button>
     <button class="stp" data-walk="enriched" disabled>2 · llegan los datos</button>
-    <button class="stp" data-walk="edit" disabled>3 · abrir el borrador</button>
-    <button class="stp" data-walk="nivel" disabled>4 · poner el nivel</button>
-    <button class="stp" data-walk="publish" disabled>5 · Publicar</button>
-    <button class="stp" data-walk="leave" disabled>· salir a la mitad ‹</button>
+    <button class="stp" data-walk="draft" disabled>3 · tocar el borrador</button>
+    <button class="stp" data-walk="band" disabled>4 · elegir nivel</button>
+    <button class="stp" data-walk="pub" disabled>5 · Publicar</button>
+    <button class="stp" data-walk="exp" disabled>· marcarlo expansión</button>
     <button class="stp" data-walk="reset">↺</button></div>
+  <div style="opacity:.62">Camino del editor (rondas 1-3, sin retirar): <button class="stp" data-walk="edit" disabled>abrir editor</button>
+    <button class="stp" data-walk="nivel" disabled>poner nivel</button>
+    <button class="stp" data-walk="publish" disabled>Publicar</button>
+    <button class="stp" data-walk="leave" disabled>salir ‹</button></div>
   <div class="now" id="walkNow">Paso 0 — nada creado todavía</div>
   <div>Tipo: <button data-exp-set="0" class="on">juego base</button> <button data-exp-set="1">expansión</button>
     · Nombre de BGG: <button data-nm-set="0" class="on">Hellas</button> <button data-nm-set="1">el roto (bug real)</button></div>
@@ -1132,10 +1198,23 @@ const rowName = g => esc(g.name);
    capture it directly and a harness assignment changes nothing while appearing to. Both of 076's first
    negative tests passed against an unmodified page for exactly that reason. Check 4 restores the chevron
    through this hook and asserts check 3 goes red. */
-function opensSheet(g) { return enrOf(g) === 'pending'; }
-const gameRow = g => { const p = window.opensSheet(g); return `<button class="row${g.id === NEW ? ' fresh' : ''}" data-act="${p ? 'pending' : 'open'}" data-id="${g.id}" aria-label="${esc(g.name)}">
-  ${cover(g)}<span class="txt"><span class="name">${rowName(g)}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
-  ${p ? '' : `<span class="chev" aria-hidden="true">${ic('chevR')}</span>`}</button>`; };
+/* RONDA 4 — una fila de borrador LISTA también abre una hoja, no el editor. D-19i por lo tanto le saca el
+   chevron igual que a la pendiente (077): la fila actúa en el lugar. La fila de un juego PUBLICADO sigue
+   abriendo su página de editor, con su chevron, porque esa superficie no se retira. */
+function opensSheet(g) { return enrOf(g) === 'pending' || (g.status === 'draft' && enrOf(g) === 'enriched'); }
+/* el pill de expansión (d36/041: informativo = borde, relleno transparente). Es una CLASIFICACIÓN, no un
+   estado, así que no choca con la regla de punto-+-texto de Publicado/Borrador/Retirado. El desarrollador:
+   *"when an expansion is used as id to sync a game, this should be listed as extension (that is a pill) and
+   of course takes a real place on the ludoteca"* — de ahí que esté en la FILA de la ludoteca y no en una
+   sección aparte. */
+const gameRow = g => {
+  const p = window.opensSheet(g);
+  const act = enrOf(g) === 'pending' ? 'pending' : (g.status === 'draft' ? 'draft' : 'open');
+  const pill = g.is_expansion ? `<span class="pill-outline">Expansión</span>` : '';
+  return `<button class="row${g.id === NEW ? ' fresh' : ''}" data-act="${act}" data-id="${g.id}" aria-label="${esc(g.name)}">
+  ${cover(g)}<span class="txt"><span class="name">${rowName(g)}${pill}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
+  ${p ? '' : `<span class="chev" aria-hidden="true">${ic('chevR')}</span>`}</button>`;
+};
 
 /* ---------- screens ---------- */
 /* decision 6 — the compact bar mirrors the page's own back link + title. Exactly ONE of the two back controls is
@@ -1782,6 +1861,10 @@ function enrichmentArrived(outcome) {
        concatenates the game's name with every VERSION's name; reproduced byte-identically against the real
        row in the README. NAME_BROKEN paints that string on instead, as a falsifiability lever. */
     g.enr = 'enriched'; g.name = NAME_BROKEN ? BROKEN_NAME : 'Hellas'; g.year = 2002;
+    /* la tapa REAL de la fila 873, servida desde R2 — `image_attrs/3` (enrichment.ex:106) la baja de BGG,
+       la sube y escribe esta URL. Sin ella la hoja decía "la tapa la trajo BoardGameGeek" encima de un
+       placeholder vacío, que es justo el paso que la hoja te pide VERIFICAR. */
+    g.thumb = 'https://pub-8f053d9e82db4d8eb43b5666a37546c4.r2.dev/games/207330/cover-large.webp';
     /* enrichment_changeset DOES cast :is_expansion and :description (game.ex:182-210) — so these arrive
        WITH the data. weight_band, units and shelf_id do not, and stay nil. That asymmetry is the whole
        reason the gate has anything to talk about. */
@@ -1893,6 +1976,119 @@ function setField(key, raw) {
 const TAPS = { taps: 0, writes: 0 };
 document.addEventListener('click', e => { if (e.target.closest('#device')) TAPS.taps++; }, true);
 
+/* ================= RONDA 4 · la hoja del borrador =================
+   UNA PREGUNTA, NO UNA PÁGINA: completá esto y publicá. Un solo botón; cancelar es el chevron.
+
+   SE ABRE SÓLO CUANDO TERMINÓ TODO, y esa condición YA EXISTE — medido antes de dibujar, porque la premisa
+   del desarrollador era que depende del trabajo asíncrono de BGG + imagen + traducción:
+
+     enrichment.ex:106   image_attrs(...)             baja la tapa, la sube a R2, genera la OG card
+     enrichment.ex:113   maybe_translate_description  traduce al español con Gemini (InstructorLite)
+     enrich/2                                         las tres cosas en UNA llamada
+     enrichment_status = "enriched"                   la única señal de que las tres terminaron
+     enrich_game_worker:104-106 broadcast             y index.ex:41-43 ya está suscripto
+
+   (La tarea `mix catalog.translate_descriptions` es el backfill de las filas viejas, no el camino vivo —
+   confundirlas me hizo afirmar lo contrario una vez en esta sesión, y chequearlo lo corrigió.)
+
+   LA VALIDACIÓN ES EL ÚNICO EJE DE ESTA RONDA (`VAL`), porque el formulario en sí lo dio el desarrollador:
+     P1 · al tocar Publicar   el botón siempre vive; al tocar, el error aparece bajo el campo y hace foco
+     P2 · en vivo             el botón está muerto hasta que el nivel esté puesto, sin mensaje de error
+   Todo lo demás es idéntico en las dos (check 31).
+
+   LAS EXPANSIONES NO PIDEN NIVEL, y ahora hay una razón de código y no sólo de costumbre. El desarrollador:
+   *"an expansion of a game never will be listed on any web section for now."* Medido:
+
+     section_query(:recent)       where: g.is_expansion == false     ← garantizado en código
+     section_query(:weight_band)  where: g.weight_band == ^band      ← NO excluye expansiones
+     manual                       sin filtro                          ← 0 de 26, por costumbre
+
+   Así que la regla se sostiene SÓLO porque las 26 expansiones tienen el nivel vacío. Si este formulario
+   exigiera nivel a una expansión, esa expansión APARECERÍA en una fila de la web y rompería la regla que
+   el desarrollador acaba de enunciar. Por eso el switch apaga el bloque entero (check 33), y por eso el
+   README pide el guard `and g.is_expansion == false` en `section_query(:weight_band)`. */
+let VAL = 'P1';
+let DRAFT = null;   /* lo que la hoja tiene en la mano; nada se escribe hasta Publicar */
+
+function openDraftSheet(g, from) {
+  DRAFT = { name: g.name, description: g.description || '', weight_band: g.weight_band || '', is_expansion: !!g.is_expansion, touched: false };
+  S.sheetFor = g.id;
+  paintDraftSheet(g, from);
+}
+
+function draftValid() { return DRAFT.is_expansion || !!DRAFT.weight_band; }
+
+function paintDraftSheet(g, from) {
+  const d = DRAFT;
+  const showErr = VAL === 'P1' && d.touched && !draftValid();
+  /* la tapa: VERIFICAR, no editar. Ver el comentario del CSS sobre gallery_urls. */
+  const cover = g.thumb
+    ? `<img src="${esc(g.thumb)}" alt="">`
+    : `<span class="ph">${ic('img')}</span>`;
+
+  const head = `<div class="sh-txt"><div class="sh-title">Publicar ${esc(d.name)}</div>
+    <div class="sh-sub">Revisá que esté bien y publicalo.</div></div>`;
+
+  const body = `<div class="fbody">
+    <div class="ffield fcover">${cover}<span class="cap">La tapa la trajo BoardGameGeek.<br>Si está mal, se corrige desde el juego.</span></div>
+
+    <div class="ffield"><label class="flabel" for="dname">Nombre</label>
+      <input class="fld" id="dname" value="${esc(d.name)}" autocomplete="off"></div>
+
+    <div class="ffield"><label class="flabel" for="ddesc">Descripción</label>
+      <textarea class="fld" id="ddesc" rows="3">${esc(d.description)}</textarea>
+      <p class="fhint">La tradujimos del inglés automáticamente. Conviene leerla.</p></div>
+
+    <div class="ffield fswitch">
+      <span class="lb" id="dexp-l">Es una expansión</span>
+      <button class="sw" id="dexp" role="switch" aria-checked="${d.is_expansion}" aria-labelledby="dexp-l"></button>
+    </div>
+    ${d.is_expansion ? `<p class="fhint">Las expansiones no aparecen en las filas de la web: van en la ludoteca, junto al juego base.</p>` : ''}
+
+    ${d.is_expansion ? '' : `<div class="ffield">
+      <label class="flabel" id="dband-l">Nivel <span class="req">· hace falta para publicar</span></label>
+      <div class="seg" role="group" aria-labelledby="dband-l" data-invalid="${showErr}">
+        ${BANDS.filter(b => b.v).map(b => `<button data-band="${b.v}" aria-pressed="${d.weight_band === b.v}">
+          <span class="rd" aria-hidden="true"></span><span><span class="sn">${esc(b.n)}</span><span class="ss">${esc(b.s)}</span></span></button>`).join('')}
+      </div>
+      <p class="ferr" id="dband-e"${showErr ? '' : ' hidden'}>${ic('x')}Elegí un nivel: sin esto el juego no aparece en ninguna fila de la web.</p>
+      </div>`}
+
+    <button class="obtn wide pri" id="dpub" data-act="dopub"${VAL === 'P2' && !draftValid() ? ' disabled' : ''}>Publicar</button>
+  </div>`;
+
+  const sh = $('#sheet');
+  sh.className = 'sheet form fsheet full';
+  sh.innerHTML = sheetChrome(head, body);
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  if (from) opener = from;
+}
+
+/* publicar: cerrar, volver a la lista, scrollear y resaltar — y el resaltado NO ES NUEVO.
+   076 (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` para el momento de CREAR; esto
+   es la misma conducta repetida en el momento de PUBLICAR, no una invención. Medido antes de proponerla. */
+function publishFromSheet() {
+  const g = byId(S.sheetFor); if (!g) return;
+  DRAFT.touched = true;
+  if (!draftValid()) {
+    paintDraftSheet(g);
+    const seg = $('.seg'); seg && seg.scrollIntoView({ block: 'center' });
+    $('.seg button')?.focus();
+    return;
+  }
+  g.name = DRAFT.name.trim() || g.name;
+  g.description = DRAFT.description.trim() || null;
+  g.is_expansion = DRAFT.is_expansion;
+  g.weight_band = DRAFT.is_expansion ? null : DRAFT.weight_band;
+  g.status = 'published';
+  if (g.units == null) g.units = UNITS_DEFAULT;   /* el default que falta (ronda 1, check 7) */
+  closeSheet();
+  S.screen = 'juegos'; S.open.draft = true;
+  render(); scrollNewIntoView();
+  snack(`${g.name} está publicado`);
+  walkUI();
+}
+
 /* ---------- dialog / snackbar ---------- */
 const DLG = { run: null };
 /* ---------- FOUND IN A SCREENSHOT: the confirm was painted as a DELETE ----------
@@ -1932,6 +2128,17 @@ document.addEventListener('click', e => {
     if (k === 'description') return setField('description', $('#fdesc').value);
     return setField(k, pk.dataset.val);
   }
+  /* los controles del formulario de la hoja. Nada escribe en el juego: todo vive en DRAFT hasta Publicar. */
+  const bd = e.target.closest('[data-band]');
+  if (bd) { DRAFT.weight_band = bd.dataset.band; return paintDraftSheet(byId(S.sheetFor)); }
+  if (e.target.closest('#dexp')) {
+    DRAFT.is_expansion = !DRAFT.is_expansion;
+    /* apagar el nivel al marcar expansión NO es cosmético: `section_query(:weight_band)` no excluye
+       expansiones, así que una expansión CON nivel aparecería en una fila de la web — justo lo que la
+       regla del desarrollador prohíbe. El formulario no puede ofrecer ese estado. */
+    if (DRAFT.is_expansion) DRAFT.weight_band = '';
+    return paintDraftSheet(byId(S.sheetFor));
+  }
   const stp = e.target.closest('[data-step]');
   if (stp) {
     /* ---------- FOUND BY CHECK 27save, AND IT WAS A REAL DEFECT IN B ----------
@@ -1952,6 +2159,8 @@ document.addEventListener('click', e => {
   if (a === 'open') return openGame(+t.dataset.id, S.screen);
   /* 077 — a pending row acts in place (see gameRow and D-19i above) */
   if (a === 'pending') return openPendingSheet(byId(+t.dataset.id), t);
+  if (a === 'draft') return openDraftSheet(byId(+t.dataset.id), t);
+  if (a === 'dopub') return publishFromSheet();
   /* the sheet's `Ver`. It must CLOSE before navigating: leaving the sheet open over the editor would put a
      status about the game on top of the game, which is check 25's rule in yet another place. */
   if (a === 'sheetgo') { const id = +t.dataset.id; closeSheet(); return openGame(id, 'juegos'); }
@@ -2004,6 +2213,8 @@ function closeSuggest() { const b = $('#sugg'); if (b) { b.hidden = true; $('#q'
 $('#backdrop').addEventListener('click', closeSheet);
 $('#dscrim').addEventListener('click', e => { if (e.target.id === 'dscrim') closeDialog(); });
 document.addEventListener('input', e => {
+  if (e.target.id === 'dname' && DRAFT) DRAFT.name = e.target.value;
+  if (e.target.id === 'ddesc' && DRAFT) DRAFT.description = e.target.value;
   if (e.target.id === 'q') { S.kept = null; renderSugg(); }
   if (e.target.id === 'bg') {
     e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true;
@@ -2034,6 +2245,9 @@ document.addEventListener('click', e => {
   /* 077's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so AV1/AV2/AV3
      are three renderings of one walk rather than three walks. It only changes what happens AT the arrival,
      so switching it after the data has landed shows nothing; ↺ and walk it again. */
+  const vl = e.target.closest('[data-v-set]');
+  if (vl) { VAL = vl.dataset.vSet; mark('[data-v-set]', vl);
+    if (DRAFT && S.sheetFor) { DRAFT.touched = false; paintDraftSheet(byId(S.sheetFor)); } return; }
   const rq = e.target.closest('[data-r-set]');
   if (rq) { REQ = rq.dataset.rSet; mark('[data-r-set]', rq); render(); return; }
   const m = e.target.closest('[data-m-set]');
@@ -2070,6 +2284,10 @@ document.addEventListener('click', e => {
     const k = w.dataset.walk;
     if (k === 'create') { if (!NEW) addGame('207330'); return; }
     if (k === 'edit') { closeSheet(); openGame(NEW, 'juegos'); walkUI(); return; }
+    if (k === 'draft') { openDraftSheet(byId(NEW), null); walkUI(); return; }
+    if (k === 'band') { DRAFT.weight_band = 'ingenio_estratega'; paintDraftSheet(byId(S.sheetFor)); walkUI(); return; }
+    if (k === 'exp') { DRAFT.is_expansion = !DRAFT.is_expansion; if (DRAFT.is_expansion) DRAFT.weight_band = ''; paintDraftSheet(byId(S.sheetFor)); walkUI(); return; }
+    if (k === 'pub') { publishFromSheet(); return; }
     /* THROUGH `setField`, not by assigning the column. Check 21 caught the shortcut: the walk was setting
        weight_band directly, so A's write never happened and A looked identical to B. A walk step that
        bypasses the mechanism the round is about measures nothing. */
@@ -2102,13 +2320,19 @@ function walkUI() {
   const miss = g ? missing(g) : [];
   $('[data-walk="create"]').disabled = !!NEW;
   $('[data-walk="enriched"]').disabled = !g || e !== 'pending';
+  const inSheet = !!g && S.sheetFor === g.id && !!DRAFT && $('#sheet').classList.contains('open');
   $('[data-walk="edit"]').disabled = !g || e !== 'enriched' || inEditor;
+  $('[data-walk="draft"]').disabled = !g || e !== 'enriched' || g.status !== 'draft' || inSheet;
+  $('[data-walk="band"]').disabled = !inSheet || DRAFT.is_expansion;
+  $('[data-walk="exp"]').disabled = !inSheet;
+  $('[data-walk="pub"]').disabled = !inSheet;
   $('[data-walk="nivel"]').disabled = !g || !inEditor || !!g.weight_band || g.status !== 'draft';
+  $('[data-walk="publish"]').disabled = !g || !inEditor || g.status !== 'draft';
+  $('[data-walk="leave"]').disabled = !inEditor;
   /* step 5 stays live even when the gate would refuse it — otherwise the walk could only ever reach the
      variant that lets you through, and the round's own question would be unmeasurable from the panel.
      What each variant DOES with the tap is the thing being compared. */
-  $('[data-walk="publish"]').disabled = !g || !inEditor || g.status !== 'draft';
-  $('[data-walk="leave"]').disabled = !inEditor;
+
   const where = inEditor ? ` · ${MODE} · ${TAPS.taps} toques, ${TAPS.writes} escrituras${dirty() ? ' · SIN GUARDAR' : ''}` : '';
   const gaps = miss.length ? ` · falta ${miss.map(m => m.n).join(' y ')}` : ' · completo';
   $('#walkNow').textContent = !g ? 'Paso 0 — nada creado todavía'
@@ -2129,6 +2353,10 @@ function walkUI() {
    Everything else the harness needs is exported here EXPLICITLY, as getters — never as a one-time copy,
    which would capture `NEW` and `S.editing` stale the moment the walk advanced. */
 Object.defineProperties(window, {
+  /* `draftValid` NO va acá: es una DECLARACIÓN de función, así que ya es propiedad de `window` y
+     redefinirla con defineProperty tira "Cannot redefine property". La misma distinción que hace
+     falsificable al check 12, vista desde el otro lado. */
+  VAL: { get: () => VAL }, DRAFT: { get: () => DRAFT }, G: { get: () => G },
   REQ: { get: () => REQ }, GATE: { get: () => GATE },
   byId: { get: () => byId }, enrOf: { get: () => enrOf }, gateOpen: { get: () => gateOpen },
   S: { get: () => S }, NEW: { get: () => NEW },
