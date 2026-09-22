@@ -1,11 +1,11 @@
 ---
 sketch: 080
 name: admin-guardar-fijo
-question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho? · r4 · la nota, y cuánto contenedor lleva el botón"
+question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho? · r4 · la nota, y cuánto contenedor lleva el botón · r5 · la banda como divisor"
 winner: null
 tags: [admin, editor, guardar, dirty-state, cta, pie-fijo, franja, d47, 064, D-19f, D-19h, phase-01.8.2]
-rounds: 4
-status: PENDING REVIEW — 31/31, no confirmado en dispositivo
+rounds: 5
+status: PENDING REVIEW — 33/33, no confirmado en dispositivo
 ---
 
 # Sketch 080: el `Guardar` del pie, fijo
@@ -24,7 +24,7 @@ estado tampoco, y no aparece ningún control nuevo arriba.
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html
-node .planning/sketches/080-admin-guardar-fijo/verify.js     # 31/31
+node .planning/sketches/080-admin-guardar-fijo/verify.js     # 33/33
 ```
 
 Arriba: **HOY · en el flujo (079)** es el antes, no una variante; **FIJA · al pie** es la ronda.
@@ -219,6 +219,34 @@ inventado por el probe. La escala se deriva de la imagen, no se asume.
 
 ---
 
+## Ronda 5 — la banda vuelve, como divisor
+
+> *"could be banda a lo ancho but not different color. Use a same color that the background so this
+> looks more like a «divisor»"*.
+
+La banda sigue a lo ancho y sigue **opaca** — que es lo que despeja el texto — pero deja de ser una
+**superficie**: toma el fondo de la página, así que lo único que se dibuja es la línea de 1px. Un
+divisor con un botón debajo, en vez de una caja con un botón adentro.
+
+Medido con el cuerpo scrolleado a 700, tinta del cuerpo dentro de la franja del botón:
+
+| | tinta del cuerpo | qué dibuja |
+|---|---|---|
+| **divisor** | **0px** | sólo su línea de 1px |
+| banda tonal | 0px | una superficie `--color-surface` + la línea |
+| vela | 255px | un desvanecido |
+| sin banda | 1456px | nada |
+
+Así que el divisor **compra lo mismo que la banda tonal** (nada del cuerpo se cuela) **sin agregar
+una superficie** (checks 35, 36). Es la regla que la 069 usó para el carril del segmentado —*un
+tono, no un borde*— llevada un paso más: ni siquiera un tono.
+
+**El apagado sobre el divisor:** con el botón en contorno y la barra del color de la página, el trazo
+apagado queda a **1,42:1** en claro — flojo — pero **la etiqueta da 6,17:1**, así que el botón se
+lee por su palabra aunque su contorno sea tenue. En oscuro, 11,67:1.
+
+---
+
 ## Hallazgos de la ronda 1
 
 ### 1. La franja le debe una oración al estado sucio
@@ -304,7 +332,12 @@ en vez de quedar fijo en un número que valía para dos botones.
   la nota, siguiendo tu pedido. Quedan dos lugares posibles para una sola cosa y la decidida por el
   sistema es la de la barra — que ahora no existe como banda.
 - **La vela deja 255px de tinta.** Es el 18% de lo que dejaba sin banda, no cero: cerca del borde
-  superior de la franja el degradado ya es casi transparente, y ahí el texto se lee.
+  superior de la franja el degradado ya es casi transparente, y ahí el texto se lee. (Queda en las
+  herramientas para comparar; el divisor de la r5 deja 0.)
+- **Dos reglas paralelas.** El cuerpo tiene divisores propios (`clubsep`, los separadores de la
+  ficha). Cuando uno de ellos queda cerca de la línea del divisor de abajo se ven dos reglas casi
+  juntas. En la captura medida están a 117px, pero el choque puede pasar según el scroll. Nombrado,
+  no resuelto.
 - **La barra no se esconde nunca.** No se midió una que se oculte mientras está limpio; sería otro eje.
 - **`Publicar` no está en esta ronda.** El editor de un publicado no lo tiene: vive en la hoja del
   borrador (078).

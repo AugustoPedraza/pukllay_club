@@ -929,6 +929,14 @@
        nada    el botón solo, fijo abajo a la derecha; el cuerpo pasa por debajo
        vela    sin borde ni relleno macizo: un desvanecido corto desde el fondo de la página, que
                despeja el texto sin dibujar un contenedor */
+  /* r5 · el divisor. Desarrollador: *"could be banda a lo ancho but not different color. Use a same
+     color that the background so this looks more like a «divisor»"*.
+     La banda sigue existiendo y sigue siendo opaca — que es lo que despeja el texto — pero deja de
+     ser una SUPERFICIE: toma el fondo de la página, así que lo único que se dibuja es la línea de
+     1px. Un divisor con un botón debajo, no una caja con un botón adentro.
+     Es la misma regla que la 069 usó para el carril del segmentado: *un tono, no un borde* — acá
+     llevada al extremo, ni siquiera un tono. */
+  .ctabar.divisor { background: var(--color-bg); border-top: 1px solid var(--color-border); }
   .ctabar.bare { background: none; border-top: 0; pointer-events: none; }
   .ctabar.bare .cta { pointer-events: auto; }
   .ctabar.veil { background: linear-gradient(to top, var(--color-bg) 62%, transparent);
@@ -1349,7 +1357,7 @@
 <div id="tools">
   <div>Ancho: <button data-w="full">A lo ancho</button> <button data-w="nat" class="on">Natural, a la derecha</button></div>
   <div>Tratamiento: <button data-t="fill">Relleno (078)</button> <button data-t="out" class="on">Contorno A1 (064)</button></div>
-  <div>Abajo: <button data-c="band">Banda</button> <button data-c="bare" class="on">Sin banda</button> <button data-c="veil">Vela</button></div>
+  <div>Abajo: <button data-c="divisor" class="on">Divisor</button> <button data-c="band">Banda tonal</button> <button data-c="bare">Sin banda</button> <button data-c="veil">Vela</button></div>
   <div>Estado: <button data-cy="published" class="on">Publicado</button> <button data-cy="retired">Retirado</button></div>
   <div>Tapa: <button data-cov="1" class="on">Tiene</button> <button data-cov="0">Ninguna (los 49)</button></div>
   <div class="now" id="now"></div>
@@ -1621,7 +1629,7 @@ let MODE = 'FIJA';                      /* HOY | FIJA — sólo cambia DÓNDE vi
    perdería cuál de los dos está haciendo el trabajo). */
 let WIDTH = 'nat';                      /* full | nat   — a lo ancho, o su ancho natural a la derecha */
 let TREAT = 'out';                      /* fill | out   — relleno (078, hoja) o contorno A1 (064) */
-let CHROME = 'bare';                    /* band | bare | veil — cuánto contenedor lleva el botón fijo */
+let CHROME = 'divisor';                 /* divisor | band | bare | veil — cuánto contenedor lleva */
 
 /* ---------- EL CHROME DE LA HOJA, COPIADO DE LA 078 EN VEZ DE ESCRITO A MANO ----------
    La primera versión armó su propio marcado: un `<h2>` suelto y un `.sh-hr` que no existe en la hoja

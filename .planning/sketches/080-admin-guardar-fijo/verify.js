@@ -289,9 +289,20 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
       const i = y * img.w * img.bpp + x * img.bpp;
       if (Math.max(Math.abs(img.data[i] - 255), Math.abs(img.data[i + 1] - 255), Math.abs(img.data[i + 2] - 255)) > 28) ink++; }
     return ink; };
-  const inkBare = await stripInk('bare'), inkVeil = await stripInk('veil');
+  const inkBare = await stripInk('bare'), inkVeil = await stripInk('veil'), inkDiv = await stripInk('divisor');
   ok(inkBare > 300, `33 sin banda: ${inkBare}px de texto del cuerpo quedan dentro de la franja del botón`);
-  ok(inkVeil < inkBare / 4, `34 la vela borra ${(100 - inkVeil / inkBare * 100).toFixed(0)}% de eso (${inkBare} → ${inkVeil}px) sin dibujar ningún contenedor`);
+  ok(inkVeil < inkBare / 4, `34 la vela borra ${(100 - inkVeil / inkBare * 100).toFixed(0)}% de eso (${inkBare} → ${inkVeil}px)`);
+  /* r5 · el divisor es OPACO, así que no deja pasar nada: es la banda sin ser una superficie. */
+  ok(inkDiv === 0, `35 el divisor no deja pasar nada del cuerpo (${inkDiv}px, midiendo bajo su línea de 1px)`);
+
+  /* y lo que lo distingue de la banda tonal: NO dibuja una superficie, sólo la línea. */
+  await go('FIJA'); await page.evaluate(() => { CHROME = 'divisor'; render(); }); await page.waitForTimeout(90);
+  const dv = await page.evaluate(() => { const bar = document.querySelector('#ctabar');
+    const cs = getComputedStyle(bar), body = getComputedStyle(document.querySelector('.device'));
+    return { bg: cs.backgroundColor, pageBg: body.backgroundColor, bt: cs.borderTopWidth + ' ' + cs.borderTopColor,
+      h: +bar.getBoundingClientRect().height.toFixed(1) }; });
+  ok(dv.bg === dv.pageBg && dv.bt.startsWith('1px'),
+     `36 el divisor toma el fondo de la página (${dv.bg}) y lo único dibujado es su línea (${dv.bt})`);
 
   /* ---- 17-18 · los otros anchos ---- */
   for (const [w, h] of [[360, 640], [375, 800]]) {
