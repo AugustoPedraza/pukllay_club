@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 072 — el editor de un juego</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 072 — the game editor (notes/juegos-refine-handoff.md). Round 1 asks ONE question: THE SPINE.
+     Is an editable value a ROW THAT OPENS A SHEET (Web decision 17's idiom, where the pencil is gone), or a
+     FORM WITH INLINE FIELDS (what ships today)? Everything else the editor owes — the BGG state, Copias,
+     Estante, Retirar — sits inside whatever this settles, so it is deliberately NOT designed here.
+     Components (device chrome, sheets, dialog, snackbar, rows) are copied from 071, not redrawn. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  /* D-19o (decision 32, sketch 071) — the platform tap highlight is suppressed at the ROOT because the
+     property inherits, and every pressable surface presses to ONE token, --color-surface-2. */
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* ---- chrome, context only (copied from 071) ---- */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+
+  /* 79px clears the 67px tab bar. It does NOT clear the SAVE BAR, which is `position: absolute` above the
+     tab bar (D-19a) and so overlays content rather than pushing it: scrolled to the bottom while dirty, the
+     save bar covered the last row by 53px. Invisible on a resting page, because the bar is pinned and at
+     rest floats over blank space — found in sketch 073 round 4 by scrolling to the END and measuring.
+     Reserved only while the bar is there, so a clean page does not pay for it. */
+  main { padding: 0 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .device.hasbar main { padding-bottom: 144px; }
+
+  /* ---- D-19n: the page bar. An ABSOLUTE OVERLAY, so at rest it costs zero layout; `inert` keeps exactly
+     one focusable back control. Copied from 071's .pbar. ---- */
+  .pbar { position: absolute; left: 0; right: 0; top: 0; height: 44px; z-index: 18; display: flex; align-items: center; gap: 2px;
+    padding: 0 8px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; pointer-events: none; transition: opacity 140ms var(--ease-out-soft); }
+  .pbar.on { opacity: 1; pointer-events: auto; }
+  .pbar .pb-back { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); }
+  .pbar .pb-back svg { width: 22px; height: 22px; }
+  .pbar .pb-t { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* the in-page back row */
+  .back { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: -8px; padding: 0 8px 0 4px;
+    border: 0; background: none; color: var(--color-accent-text); font-size: 15px; font-weight: 600; }
+  .back svg { width: 20px; height: 20px; }
+
+  /* ---- the game's head ---- */
+  .ghead { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 18px; }
+  .ghead .cov { width: 64px; height: 68px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--color-surface); }
+  .ghead .tile { width: 64px; height: 68px; border-radius: 7px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .ghead .tile svg { width: 30px; height: 30px; }
+  .gh-t { flex: 1; min-width: 0; }
+  .gh-name { font-size: 22px; font-weight: 600; line-height: 1.22; }
+  .gh-meta { margin-top: 3px; font-size: 13px; color: var(--color-text-muted); }
+
+  /* ---- form section label. NOT the versalita list caption (decision 28): that rule governs a LIST section
+     header. This is a FORM group label, the BENCHMARK's `Label (group)` rank, 13/600 — conflating the two is
+     exactly what caused decision 20. ---- */
+  .glabel { font-size: 13px; font-weight: 600; color: var(--color-text-muted); letter-spacing: .01em;
+    padding: 22px 0 8px; }
+  .gnote { font-size: 13px; line-height: 1.45; color: var(--color-text-muted); margin: -2px 0 10px; }
+
+  /* ---- the spine (decision 33): every value is a ROW that opens a sheet ----
+     Web decision 17's idiom — the pencil is gone, the VALUE ITSELF is the target, one target per field
+     instead of a label plus a pencil. Taken over an inline form (217px taller in the club block, 4 of 6
+     fields on screen) and over a mixed spine, which measured THREE row anatomies against this one's one:
+     an inline control already IS the value display, so its second line can only carry a hint, which makes
+     it a different kind of row. ---- */
+  .frows { margin: 0 -16px; }
+  .frow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
+    border: 0; background: none; text-align: left; position: relative; }
+  .frow + .frow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--color-border); }
+  .frow:hover { background: var(--color-surface); }
+  .frow:active { background: var(--color-surface-2); }
+  .frow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .fr-t { flex: 1; min-width: 0; }
+  /* block, not inline: these are spans inside a button, and as inline boxes they ran together on one line
+     ("NombreBrass: Birmingham"). Every harness check was green while the page was visibly broken — the
+     numbers measured height, contrast and hit boxes, none of which notice two ranks sharing a line. */
+  .fr-k { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .fr-v { display: block; font-size: 15px; line-height: 1.32; margin-top: 2px; overflow-wrap: anywhere; }
+  /* a long value must not let one row dominate the spine: the description is 4 lines of real text and made
+     its row 116px, nearly two ordinary rows. Clamped to 2 — the row is a SUMMARY that opens the full value. */
+  .fr-v.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fr-v.empty { color: var(--color-text-muted); font-style: italic; }
+  /* ---- decision 34: a row that opens a sheet carries NO glyph ----
+     D-19i literally: "a chevron means this row opens another page. Rows that act in place (show an answer,
+     open a sheet) have none." Round 1 put a chevron-DOWN here, reasoning from Web decision 17's note — but
+     that ⌄ was never actually built (070's row-name button renders a bare <h2> inside the button, and d17's
+     own note records the ⌄ drawing an empty SVG). Measured across the corpus, ⌄ has exactly ONE live
+     meaning: 071's collapse caret, "this section expands/collapses in place". Borrowing it for "opens a
+     sheet" overloads the one glyph the catalogue already spent.
+     What separates this block from the read-only BGG facts is not a glyph but the LAYOUT: 64px rows with the
+     value STACKED under its key (both on the 16 keyline), against 33.6px rows with the value beside it at
+     x=132. */
+
+  /* ---- decision 35: the value is the label's subordinate, and it carries the tint ----
+     Round 2 — the affordance question the ⌄ had been papering over. Four answers were built and measured;
+     what decided it was that BOTH platforms put the LABEL first and the VALUE second in a settings row:
+     iOS's grouped table (label ink left, value grey right) and M3's list item (headline = label, supporting
+     text = value — literally the Android Settings row). This sketch had it inverted, key muted 13 / value
+     ink 15.
+     Flipping the polarity also separates this block from the read-only BGG facts STRUCTURALLY rather than by
+     hue — club rows read ink-label / quiet-value, BGG facts quiet-key / ink-value: opposite polarity in
+     light AND dark. A colour-only signal could not do that. Measured: --color-accent-text resolves to
+     #E3D9F9 in dark, 1.17:1 from body text, so the tint AND the polarity both vanish on the theme switch.
+     Rejected: a bare row (no positive signal); the tint alone (light-only, per the above); and a standing
+     "Tocá un dato para editarlo" hint — 27px forever for a lesson learned once, it pushes DATOS DE BGG off
+     the fold, decision 19 made section hints contextual rather than standing, and the page already teaches
+     the rule from the other side, where the BGG block says "No se editan acá". */
+  /* line-height 1.3 is load-bearing, not cosmetic. Without it the label inherited 1.5 — a 22.5px line box
+     around an 11px cap — while the value sat on 1.32/18.5px, so the two lines of ONE pair were on different
+     leading and the pair sat 1.55px low in its 64px row. Measured at 1.3 the offset is 0.26px, and
+     margin-top 2px puts the ink gap at 10.0, against the app's existing two-line row (071's name + year) at
+     10.5. Same 64px row, nothing around it moves. */
+  .frow .fr-k { font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
+  .frow .fr-v { font-size: 14px; color: var(--val); margin-top: 2px; }
+  .frow .fr-v.empty { font-style: italic; color: var(--color-text-muted); }
+
+  /* TODO(palette) — `--val` is defined HERE, not in themes/default.css, deliberately.
+     default.css is a MIRROR of assets/css/app.css (its own header says so) and check-theme-drift.sh gates
+     the two hex-for-hex, so adding a colour on this side alone would fail that gate. The LIGHT value reuses
+     an existing token; the DARK one (#9F7AEA) does not exist in the palette at all.
+     It must clear three bars at once, which is why the obvious candidates fail:
+       >= 4.5:1 on the dark ground (it is body text), >= 1.5:1 from body text (or it is not a signal),
+       and clear of --color-text-muted (or it collides with the empty state).
+     Measured over nine candidates, #9F7AEA (4.83 / 2.82 / 1.43) is the only strong pass. #D0B3FF passes but
+     separates from body text by just 1.57; #C4B5FD, #A78BFA, #C9A6F5 and #B98CF0 all collide with muted;
+     dark --color-primary #7B2DCE is 2.33:1 and fails as body text; #8B5CF6 is 3.72:1 and fails too.
+     Before this ships: add the stop upstream in app.css, reconciled against its --pk-ramp-* envelope (the
+     palette's comments say the dark stops were moved onto that ramp), mirror it here, re-run
+     check-theme-drift.sh. Note 4.83:1 makes the value the LOWEST-contrast text on the dark page —
+     everything else sits at 6.9+ — so the reconciliation should try to BEAT that number, not match it. */
+  :root { --val: var(--color-accent-text); }
+  :root[data-theme="dark"] { --val: #9F7AEA; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
+
+  /* the sheet's own field controls (the only place an input survives: B's inline form and C's mixed spine
+     were removed when decision 33 took A) */
+  .inp { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px;
+    background: var(--color-bg); font-size: 16px; }
+  .inp:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; border-color: transparent; }
+  textarea.inp { min-height: 96px; resize: vertical; line-height: 1.45; }
+  /* the caret was `var(--caret-bg)`, a variable that does not exist — so every select rendered as a bare
+     box and B's two dropdowns read as text inputs. Comparing a variant against a broken one is not a
+     comparison, so it is an inline data URI (the stroke is baked in; currentColor cannot cross into a
+     background-image). */
+  select.inp { appearance: none; background-repeat: no-repeat; background-position: right 12px center;
+    background-size: 18px; padding-right: 40px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23675C7D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>'); }
+  :root[data-theme="dark"] select.inp {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23B9AACD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>'); }
+  .help { font-size: 12px; color: var(--color-text-muted); margin-top: 5px; line-height: 1.4; }
+
+  /* switch (shared by B and C) */
+  .sw { width: 52px; height: 32px; border-radius: 16px; border: 0; background: var(--color-surface-2); position: relative; flex-shrink: 0; transition: background 160ms var(--ease-out-soft); }
+  /* the track is 32px because that is what a switch LOOKS like; the touch floor is 44. Stretching the hit box
+     with a pseudo-element reaches the floor without inflating the control or moving anything around it —
+     decision 18's technique for the caption caret, reused rather than reinvented. */
+  .sw::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform 160ms var(--ease-out-soft); }
+  .sw[aria-checked="true"] { background: var(--color-primary); }
+  .sw[aria-checked="true"]::after { transform: translateX(20px); }
+  .sw:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .sw, .sw::after { transition: none; } }
+
+  /* stepper (C) */
+  .step { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .step button { width: 44px; height: 44px; border: 1px solid var(--stroke); background: none; border-radius: 10px; display: grid; place-items: center; }
+  .step button:active { background: var(--color-surface-2); }
+  .step button svg { width: 18px; height: 18px; }
+  .step .n { min-width: 40px; text-align: center; font-size: 17px; font-weight: 600; }
+
+  /* ---- BGG read-only block: the same in every variant, because the spine question is about EDITABLE
+     values. It is here only so each spine can be judged with the read-only mass actually present. ---- */
+  .bgg { margin: 0 -16px; padding: 0 16px; }
+  .kv { display: flex; gap: 12px; padding: 7px 0; font-size: 14px; line-height: 1.4; border-top: 1px solid var(--color-border); }
+  .kv:first-child { border-top: 0; }
+  .kv dt { flex: 0 0 104px; color: var(--color-text-muted); font-size: 13px; }
+  .kv dd { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lock { font-size: 13px; line-height: 1.45; color: var(--color-text-muted); margin: 0 0 12px; }
+
+  /* ---- the save bar ---- */
+  .savebar { position: absolute; left: 0; right: 0; bottom: 67px; z-index: 19; display: flex; gap: 10px; align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border);
+    transform: translateY(130%); transition: transform 220ms var(--ease-out-soft); }
+  .savebar.on { transform: none; }
+  .device.kbd .savebar { bottom: 0; }
+  @media (prefers-reduced-motion: reduce) { .savebar { transition: none; } }
+  .savebar .dirty { flex: 1; font-size: 13px; color: var(--color-text-muted); }
+  .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 0; font-size: 15px; font-weight: 600; background: var(--color-primary); color: var(--color-primary-content); }
+  .btn:active { filter: brightness(.92); }
+  .btn.ghost { background: none; color: var(--color-accent-text); padding: 0 12px; }
+  .btn.ghost:active { background: var(--color-surface-2); }
+
+  /* ---- sheets (D-19e), copied from 071 ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  @media (prefers-reduced-motion: reduce) { .sheet, .backdrop { transition: none; } }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sh-head { display: flex; gap: 16px; align-items: flex-start; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .sh-sub { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:active { background: var(--color-surface-2); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .sh-body { padding: 0 16px; }
+  .opt { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px; margin: 0 -16px; border: 0; background: none; text-align: left; }
+  .opt:hover { background: var(--color-surface); }
+  .opt:active { background: var(--color-surface-2); }
+  .opt:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .opt .ot { flex: 1; min-width: 0; }
+  .opt .on2 { font-size: 16px; }
+  .opt .os { display: block; font-size: 13px; color: var(--color-text-muted); margin-top: 2px; line-height: 1.35; }
+  .opt .tick { width: 22px; height: 22px; color: var(--color-primary); flex-shrink: 0; }
+
+  /* simulated keyboard, 292px (the toolkit's number) */
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 45; background: var(--color-surface);
+    border-top: 1px solid var(--color-border); display: none; flex-direction: column; gap: 8px; padding: 10px 6px; }
+  .device.kbd .kbd-sim { display: flex; }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .krow span { flex: 1; max-width: 34px; height: 42px; border-radius: 6px; background: var(--color-bg); display: grid; place-items: center; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,.18); }
+  .krow .wide { max-width: 160px; }
+
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 50; display: flex; align-items: center; gap: 10px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 12px; padding: 12px 14px; font-size: 14px;
+    opacity: 0; transform: translateY(12px); pointer-events: none; transition: all 200ms var(--ease-out-soft); }
+  .snack.on { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; }
+
+  /* ---- tools ---- */
+  #tools { position: fixed; left: 12px; bottom: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(20,8,32,.88); color: #fff; padding: 9px 11px; border-radius: 10px; opacity: .45; transition: opacity .2s;
+    display: flex; flex-direction: column; gap: 6px; max-width: 92vw; }
+  #tools:hover { opacity: 1; }
+  #tools button { font: inherit; background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 4px 8px; margin-right: 2px; }
+  #tools button.on { background: #fff; color: #1a0a2a; font-weight: 600; }
+
+  .variant { display: none; }
+  .variant.on { display: block; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <div class="hdr">
+    <button class="burger" aria-label="Menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <span class="word">PUKLLAY CLUB</span>
+  </div>
+  <div class="pbar" id="pbar" inert><button class="pb-back" aria-label="Volver a Juegos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="pb-t" id="pbt"></span></div>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg></span>Juegos</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg></span>Web</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="savebar" id="savebar"><span class="dirty" id="dirty"></span><button class="btn ghost" id="discard">Descartar</button><button class="btn" id="save">Guardar</button></div>
+  <div class="snack" id="snack" role="status"><span></span></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow"><span>q</span><span>w</span><span>e</span><span>r</span><span>t</span><span>y</span><span>u</span><span>i</span><span>o</span><span>p</span></div><div class="krow"><span>a</span><span>s</span><span>d</span><span>f</span><span>g</span><span>h</span><span>j</span><span>k</span><span>l</span><span>ñ</span></div><div class="krow"><span>z</span><span>x</span><span>c</span><span>v</span><span>b</span><span>n</span><span>m</span></div><div class="krow"><span class="wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div></div>
+
+<div id="tools">
+  <div>Tema: <button data-theme-set="light" class="on">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+const P = {
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevD: '<path d="M5 9l7 7 7-7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  tick: '<path d="M4 12l6 6L20 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* The game: Brass: Birmingham, straight out of the 434-row fixture. The BGG id is real — it is the number in
+   the cover URL — so the read-only facts below are the actual ones, not invented. */
+const SRC = (typeof GAMES067 !== 'undefined' ? GAMES067 : []).find(g => g.n === 'Brass: Birmingham')
+  || { n: 'Brass: Birmingham', y: 2018, t: null };
+const BGG_ID = SRC.t ? (SRC.t.match(/games\/(\d+)\//) || [])[1] : null;
+
+const BANDS = [
+  { v: '', n: 'Sin nivel', s: 'No aparece en ninguna fila por nivel' },
+  { v: 'intro', n: 'Para arrancar', s: 'Se explica en 5 minutos' },
+  { v: 'medio', n: 'Intermedio', s: 'Una tarde tranquila' },
+  { v: 'estratega', n: 'Ingenio estratega', s: 'Pide pensar varias jugadas' },
+  { v: 'experto', n: 'Experto', s: 'Para quien ya tiene rodaje' }
+];
+const SHELVES = [
+  { v: '', n: 'Sin ubicar', s: 'Nadie sabe dónde está' },
+  { v: 'a', n: 'Estante A', s: 'Entrando, a la izquierda' },
+  { v: 'b', n: 'Estante B', s: 'Junto a la ventana' },
+  { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
+];
+
+/* The 6 fields Game.admin_changeset/2 actually casts — no more, so nothing else looks editable.
+   `units` is labelled COPIAS (scope note 18: the schema field stays `units`). */
+const START = {
+  name: 'Brass: Birmingham',
+  units: 1,
+  weight_band: 'experto',
+  is_expansion: false,
+  shelf_id: '',
+  description: 'Secuela de Brass: Lancashire. Construís canales, vías y fábricas en Birmingham durante la revolución industrial.'
+};
+let G = { ...START };
+let KBD_SIM = true;
+
+const bandOf = v => BANDS.find(b => b.v === v) || BANDS[0];
+const shelfOf = v => SHELVES.find(b => b.v === v) || SHELVES[0];
+const dirty = () => Object.keys(START).some(k => G[k] !== START[k]);
+
+/* real BGG facts for 224517 */
+const FACTS = [
+  ['Jugadores', '2 – 4'], ['Duración', '60 – 120 min'], ['Edad mínima', '14+'],
+  ['Mecánicas', 'Colocación de losetas, Gestión de mano, Red/ruta'],
+  ['Temáticas', 'Económico, Industria, Transporte'],
+  ['Diseñadores', 'Gavan Brown, Matt Tolman, Martin Wallace'],
+  ['Editorial', 'Roxley'], ['Valoración', '8,6'], ['Ranking', '#1'], ['Peso', '3,91 / 5']
+];
+
+function headHTML() {
+  const cov = SRC.t ? `<img class="cov" src="${SRC.t}" alt="" loading="lazy">` : `<div class="tile">${ic('img')}</div>`;
+  const meta = [SRC.y, BGG_ID ? 'BGG ' + BGG_ID : null].filter(Boolean).join(' · ');
+  return `<button class="back" id="back">${ic('chevL', 1.9)}Juegos</button>
+    <div class="ghead">${cov}<div class="gh-t"><div class="gh-name" id="ghname">${esc(G.name)}</div>
+      <div class="gh-meta">${esc(meta)}</div></div></div>`;
+}
+
+function bggHTML() {
+  return `<div class="glabel">DATOS DE BGG</div>
+    <p class="lock">Vienen de BoardGameGeek y se actualizan solos. No se editan acá.</p>
+    <dl class="bgg">${FACTS.map(([k, v]) => `<div class="kv"><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+}
+
+/* ---------- A: every value is a row that opens a sheet ---------- */
+function rowsHTML() {
+  const r = (key, k, v, empty, clamp) => `<button class="frow" data-edit="${key}">
+    <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+    </button>`;
+  return `<div class="glabel">DATOS DEL CLUB</div>
+    <div class="frows">
+      ${r('name', 'Nombre', G.name)}
+      ${r('weight_band', 'Nivel', bandOf(G.weight_band).n, !G.weight_band)}
+      ${r('units', 'Copias', String(G.units))}
+      ${r('shelf_id', 'Estante', shelfOf(G.shelf_id).n, !G.shelf_id)}
+      ${r('is_expansion', 'Es una expansión', G.is_expansion ? 'Sí' : 'No')}
+      ${r('description', 'Descripción en español', G.description || 'Sin descripción', !G.description, true)}
+    </div>`;
+}
+
+function render() {
+  const body = rowsHTML();
+  $('#main').innerHTML = `<div class="variant on">${headHTML()}${body}${bggHTML()}</div>`;
+  $('#pbt').textContent = G.name;
+  $('#savebar').classList.toggle('on', dirty());
+  $('#device').classList.toggle('hasbar', dirty());
+  $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
+  updateBar();
+}
+
+/* ---------- the sheet ---------- */
+function openSheet(html) {
+  $('#sheet').innerHTML = html;
+  $('#sheet').classList.add('open'); $('#backdrop').classList.add('open');
+}
+function closeSheet() {
+  $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open');
+  $('#device').classList.remove('kbd');
+}
+const shTop = (title, sub) => `<div class="sh-top"><div class="grab"></div>
+  <div class="sh-head"><div class="sh-txt"><div class="sh-title">${esc(title)}</div>${sub ? `<p class="sh-sub">${esc(sub)}</p>` : ''}</div>
+  <button class="sh-x" data-close aria-label="Cerrar">${ic('x', 1.9)}</button></div></div>`;
+
+function editField(key) {
+  if (key === 'name') {
+    openSheet(shTop('Nombre', 'Así aparece en la ludoteca.') +
+      `<div class="sh-body"><input class="inp" id="s-name" value="${esc(G.name)}"><div style="height:12px"></div>
+       <button class="btn" data-commit="name" style="width:100%">Guardar</button></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => { const i = $('#s-name'); i && (i.focus(), i.select()); }, 80);
+  } else if (key === 'description') {
+    openSheet(shTop('Descripción en español', 'La leen los socios en la ficha del juego.') +
+      `<div class="sh-body"><textarea class="inp" id="s-desc">${esc(G.description)}</textarea><div style="height:12px"></div>
+       <button class="btn" data-commit="description" style="width:100%">Guardar</button></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => $('#s-desc')?.focus(), 80);
+  } else if (key === 'units') {
+    openSheet(shTop('Copias', 'Cuántas cajas del juego tiene el club.') +
+      `<div class="sh-body" style="display:flex;justify-content:center;padding-top:8px">
+        <span class="step"><button data-step="-1" aria-label="Una copia menos">${ic('minus')}</button><span class="n" id="unitsn">${G.units}</span><button data-step="1" aria-label="Una copia más">${ic('plus')}</button></span>
+       </div>`);
+  } else if (key === 'is_expansion') {
+    openSheet(shTop('Es una expansión', 'Se muestra junto al juego base.') +
+      `<div class="sh-body">${[['No', false], ['Sí', true]].map(([n, v]) =>
+        `<button class="opt" data-pick="is_expansion" data-val="${v}"><span class="ot"><span class="on2">${n}</span></span>${G.is_expansion === v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'weight_band') {
+    openSheet(shTop('Nivel', 'Cuánto pide el juego a quien lo juega por primera vez.') +
+      `<div class="sh-body">${BANDS.map(b =>
+        `<button class="opt" data-pick="weight_band" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.weight_band === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'shelf_id') {
+    openSheet(shTop('Estante', 'Dónde está la caja en el club.') +
+      `<div class="sh-body">${SHELVES.map(b =>
+        `<button class="opt" data-pick="shelf_id" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.shelf_id === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  }
+}
+
+function snack(msg) {
+  const s = $('#snack'); s.querySelector('span').textContent = msg; s.classList.add('on');
+  clearTimeout(snack._t); snack._t = setTimeout(() => s.classList.remove('on'), 2200);
+}
+
+/* ---------- the D-19n page bar ---------- */
+function updateBar() {
+  const head = $('.ghead'); if (!head) return;
+  const y = $('#scroller').scrollTop;
+  const on = y > head.offsetTop + head.offsetHeight - 44;
+  const bar = $('#pbar');
+  bar.classList.toggle('on', on);
+  /* `inert` keeps exactly one focusable back control (D-19n) */
+  if (on) { bar.removeAttribute('inert'); $('#back')?.setAttribute('inert', ''); }
+  else { bar.setAttribute('inert', ''); $('#back')?.removeAttribute('inert'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); }
+
+  const ed = e.target.closest('[data-edit]'); if (ed) return editField(ed.dataset.edit);
+  /* Closing must RE-RENDER, not just hide. Found while building sketch 073 (round 2), in a screenshot:
+     step Copias up, close the sheet, and the row behind it still read "Copias 1" while the save bar already
+     said "Cambios sin guardar" — the page contradicting itself about its own state.
+     The stepper commits into `G` live and then refreshes only the save bar, because re-rendering while the
+     sheet is open would tear the sheet out from under the finger. Closing was the missing half. The option
+     sheets never showed it because their own handler already calls `render()` after `closeSheet()`; only the
+     paths that close WITHOUT committing something (the ✕, the backdrop, Esc) skipped it.
+     This harness was 49/49 over it: nothing asserted that a row reflects a change made in its sheet. 073
+     carries that guard now — see `6e` in its verify.js. */
+  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') { closeSheet(); render(); return; }
+
+  const pick = e.target.closest('[data-pick]');
+  if (pick) { const f = pick.dataset.pick; G[f] = f === 'is_expansion' ? pick.dataset.val === 'true' : pick.dataset.val; closeSheet(); render(); return; }
+
+  const st = e.target.closest('[data-step]');
+  if (st) { G.units = Math.max(1, G.units + (+st.dataset.step)); const n = $('#unitsn'); if (n) n.textContent = G.units;
+    if (!$('#sheet').classList.contains('open')) render(); else { $('#savebar').classList.toggle('on', dirty()); $('#device').classList.toggle('hasbar', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; } return; }
+
+  const com = e.target.closest('[data-commit]');
+  if (com) { const f = com.dataset.commit; G[f] = f === 'name' ? $('#s-name').value : $('#s-desc').value; closeSheet(); render(); return; }
+
+  const sw = e.target.closest('.sw');
+  if (sw) { G.is_expansion = !G.is_expansion; sw.setAttribute('aria-checked', String(G.is_expansion));
+    $('#savebar').classList.toggle('on', dirty()); $('#device').classList.toggle('hasbar', dirty()); $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : ''; return; }
+
+  if (e.target.id === 'save') { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
+  if (e.target.id === 'discard') { G = { ...START }; render(); return; }
+});
+
+document.addEventListener('input', e => {
+  const f = e.target.closest('[data-f]'); if (!f) return;
+  const key = f.dataset.f;
+  G[key] = key === 'units' ? Math.max(1, +f.value || 1) : f.value;
+  if (key === 'name') $('#ghname') && ($('#ghname').textContent = G.name);
+  $('#savebar').classList.toggle('on', dirty());
+  $('#device').classList.toggle('hasbar', dirty());
+  $('#dirty').textContent = dirty() ? 'Cambios sin guardar' : '';
+});
+document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
+document.addEventListener('focusout', e => { if (e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement?.matches('input, textarea')) $('#device').classList.remove('kbd'); }, 150); });
+/* Esc is the third close path (D-19e: ✕, tap outside, drag down, Esc) and needs the same re-render as
+   the other two, or it reproduces the stale-row bug on its own. */
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet').classList.contains('open')) { closeSheet(); render(); } });
+
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+$('#scroller').addEventListener('scroll', updateBar, { passive: true });
+render();
+</script>
+</body>
+</html>

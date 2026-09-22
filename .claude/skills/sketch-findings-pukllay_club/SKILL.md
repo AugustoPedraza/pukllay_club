@@ -1,6 +1,6 @@
 ---
 name: sketch-findings-pukllay_club
-description: Validated design decisions, CSS patterns, and visual direction from sketch experiments. Auto-loaded during UI implementation on pukllay_club.
+description: Validated design decisions, CSS patterns, and visual direction from sketch experiments, covering both the public site and the staff admin. Auto-loaded during UI implementation on pukllay_club.
 ---
 
 <context>
@@ -61,7 +61,7 @@ hero tagline (046); developer-authored final content-band copy that also caught 
 the shipped page says "Empezamos en 2024," the real origin is April 2021 (047); a real shared-
 class width bug found (`.pk-band-inner` narrower than the shell, affecting every band, not just
 FAQ) plus a rebuilt Contacto card with real icons/links/Maps and corrected pricing copy (048); and
-a closing-CTA de-duplication plus a real mobile-centering bug fix (049))
+a closing-CTA de-duplication plus a real mobile-centering bug fix (049)), 2026-09-07 (sketches 050–051), **2026-09-22 (sketches 052–080 — 29 sketches: dark-mode/palette chain, share card, About mobile CTA, and the whole staff admin surface; see the note below)**
 
 **Note on this wrap-up round:** most of the Filter & Search and Header/Navigation/Drawer sketches
 turned out to already be implemented in production by the time this wrap-up ran — a separate
@@ -76,6 +76,44 @@ previously recorded as settled (facts-pill placement, the buy-box's CTA-inside-t
 weight-band badge an earlier round had deliberately kept) — a second real UAT pass on the same
 shipped area found the first round's fixes didn't fully land. `detail-page-layout.md` flags each
 revision explicitly against the text it supersedes, rather than silently overwriting it.
+
+**2026-09-22 — the admin surface arrives (sketches 052–080, 29 sketches).** Everything wrapped
+before this was the public site. Sketches 059 onward are a **second application** in the same
+Phoenix app: the staff admin, used standing at a shelf on a phone, with its own shell, its own
+button system and its own composition rules. It is not a smaller version of the public site, and
+the areas prefixed `admin-` below should be read as a set.
+
+Its rules, established across 059–080: mobile-first at phone width; **one row anatomy, one field
+anatomy, one list label, one component per job** (065's ten rounds of drift-hunting); **a value is
+a row that opens a sheet** (d33) and such a row carries **no chevron** (d34); one outline button
+system (064's S3 "Contorno", cited as "064 A1" by every later sketch); **status is a dot + text**,
+never a pill; and **"la hoja PREPARA, el pie escribe"** (080) — sheets stage edits into a draft, a
+fixed footer bar commits. Pages are shaped by what staff actually do, measured against real dev-DB
+counts, rather than by the filter-and-table habit (071, 069 and 070 all opened that way).
+
+**Two restarts run through this batch, and neither is visible from the sketch numbers.** 069
+replaces everything 065-R8 and 066 drew for estantes (the developer's words were *"let's start over
+all of this UI"*); and 071 states that 061 and 063 "predate the estante restart and the Web
+redesign, so they are the starting point to question, not the target." 061, 063, 066, 067 and 068
+therefore appear only in the **What to Avoid** sections of the files that replaced them.
+
+**Sketch 075 is closed with no winner**, and it still changed the product: the broken-BGG-game
+scenario was removed rather than designed for. The 49 games with no/bad BGG id become **drafts, not
+deletions** (`.planning/notes/staff-admin-decisions.md`). A draft is not on the web, so d38's
+accusation copy *«Se está viendo así en la web»* **must not ship on one** — the single easiest thing
+for a build to get wrong here. See `admin-game-editor.md`.
+
+**Caveat that applies to the whole admin set: none of 069–080 is confirmed on a real device.** Every
+one of those sketches says so in its own status line; they are decided on measurements taken in
+headless Chrome at 375×667 and 360×640.
+
+**Two live staleness bugs were found while wrapping up, not while sketching.** The shipped
+`priv/static/images/og-fallback.webp` is baked at `#551670` — the *pre-058* ramp-800 — while the
+current `--pk-ramp-800` is `#4A187F`; verified by reading the file's own pixels, and the per-game
+card pipeline was updated while the fallback was not (see `share-card.md`). And sketch 054's README
+token table is now actively misleading as an implementation input, because 058 rotated the ramp
+underneath it — `dark-mode-palette.md` records the resolved end state and says so.
+
 </context>
 
 <design_direction>
@@ -154,6 +192,15 @@ Three more load-bearing principles emerged from the shell/detail/about sketches:
 | Connection Feedback | references/connection-feedback.md | Not yet built: replaces the stock, unbranded, English `phx.new` connection-lost toast with an on-brand, centered, Spanish inline bar under the header, using the accent tint rather than danger-red |
 | Header, Navigation & Drawer | references/header-navigation-drawer.md | Already shipped: CTA lives on About-page hero only (NOT persistent — supersedes 013/017's recorded winner), bare-icon `sr-only`-labeled theme toggle, underline active-nav, search-icon-morph, category mega-menu, icon-only drawer bottom block |
 | Carousel Mechanics — Native Feel | references/carousel-mechanics.md | Free-momentum scroll + no position indicator already shipped; edge-overlay pointer-fine-gated arrows approved but not yet built (relocates from today's header-embedded circular buttons); shimmer scoped to filter-repopulation is new surface area, distinct from the flat full-page skeleton |
+| Dark Mode & Palette | references/dark-mode-palette.md | **Read as one chain, never in isolation**: 054's lifted ladder + 055's text-contrast fix + 056's split-by-role CTA fix + 058's rotation of the whole shared `--pk-ramp-*` to H300. 9 of 054's 13 tokens were overridden — `--color-primary` is now `var(--pk-ramp-600)` = `#7B2DCE`, base-100 `#2E154E`. Sketch 054's own README token table is stale and misleading as an implementation input |
+| Share Card (OG fallback) | references/share-card.md | 1200×630 centered stack on ramp-800: isologo-dark 190px, Bebas Neue 68px wordmark, Inter 27px tagline. **Live bug flagged:** the shipped `og-fallback.webp` is still baked at the pre-058 `#551670` while the current ramp-800 is `#4A187F` — the per-game pipeline was updated, the fallback was not |
+| About — Mobile CTA | references/about-mobile-cta.md | Full-width flush bar, entry triggered off the existing hero-morph boolean, **never auto-hides**, footer clearance from a live-measured `--pk-about-cta-bar-h`. The anti-pattern is load-bearing: 052's content-sized floating pill was rejected on real-device UAT for covering the footer's "Powered by BGG" line — a defect a scrolling sketch frame cannot surface |
+| Admin — Shell & Navigation | references/admin-shell-navigation.md | One header across 6 states, right drawer with a pinned theme block, phone tab bar (Admin·Juegos·Web·Estantes·Perfil), two-step in-sheet logout; plus 065's cross-cutting consistency rules — one row anatomy, one field anatomy, one list label, one counter source, one save bar, one sheet shell. **065's Estantes work (R8/R9/R10) is dead — replaced by 069** |
+| Admin — Button System | references/admin-button-system.md | 064 S3 "Contorno" — 44px / 8px radius / 14px-600 / 16px icon, four roles, resolved light+dark hex (dark must swap Principal to `--color-accent-text`: `#7B2DCE` on `#2E154E` is 2.33:1). Cited as "064 A1" by every later admin sketch. **Its "no disabled buttons" rule is in open conflict** with 074/078/079 and with 080's deliberately-disabled fixed-foot `Guardar` — recorded unresolved, not smoothed over |
+| Admin — Juegos (list, search, create) | references/admin-juegos.md | Search-first single list, shaped by real dev-DB counts rather than the filter-and-table habit (estado chips would have filtered 435 into 435). 071's d10/11/13/14/15 superseded by its own d17. Create→pending is ONE scenario across 076+077: `+` sheet → "Se abre" → toast «Ver» → the pending sheet speaks alone |
+| Admin — Game Editor | references/admin-game-editor.md | The 072→080 chain resolved into one current chrome: bar `‹ · título · ⋮` with the kebab as its **only** control (074's one-CTA slot is gone), body = note → E3 ficha mirror → club fields, fixed foot bar with 064-A1 `Guardar` at natural width, 14px keel, enabled only when dirty. "La hoja PREPARA, el pie escribe". **075 closed: never ship d38's «Se está viendo así en la web» on a draft** |
+| Admin — Estantes | references/admin-estantes.md | 069's restart, 68 developer decisions: search → the cover lifted between its neighbours → "+" spots → full-height "¿Dónde va?" → Mover as one transaction. 9 estantes of 46–50 boxes. 067's letter-tile cover fallback and 2-line clamp survived; 066's single-open focus and 068 did not |
+| Admin — Web / Destacados | references/admin-web-destacados.md | One page: the destacada rail edited inline, every other home row grouped under "Otras filas"; name-as-sheet-button, "+" in every gap. **070's README is stale on four points** the artefact contradicts (pencil, chevron, separate Filas del inicio page, Quitar confirmation) — the file documents the artefact |
 
 ## Theme
 
@@ -217,4 +264,33 @@ self-contained, interactive HTML mockup (no build step) that can be opened direc
 - 049-about-closing-cta-mobile (winner A, single CTA; found and fixed a real mobile-centering bug on the CTA bar)
 - 050-about-morph-companion-text (companion wordmark baked into isologo mark, ~25px; mark anchored in-flow fixing a real grouping bug; eyebrow synced to dock-crossing state; found+fixed a missing-webfont theme bug and a header mark-slot layout bug)
 - 051-about-full-page-cta-rhythm (14 rounds; Contacto card chrome dropped at all widths, soft-chip contact links + Facebook, Maps moved to Juntadas, Cierre full-screen desktop + unified rhythm, alternating band backgrounds; found+fixed 4 real bugs including a CSS specificity bug and a silently-dropped text-align rule)
+- 052-about-mobile-cta-alternatives (SUPERSEDED by 053 — winner B rejected on real-device UAT; kept as the anti-pattern in about-mobile-cta.md)
+- 053-about-mobile-cta-bar-footer-clearance
+- 054-dark-mode-color-composition (its README token table is STALE — 058 rotated the ramp underneath it)
+- 055-dark-primary-as-text-contrast-fix
+- 056-dark-cta-contrast-fix
+- 057-og-fallback-share-card (live bug flagged: shipped og-fallback.webp still at the pre-058 colour)
+- 058-dark-purple-hue (rotates the shared --pk-ramp-* to H300; overrides 9 of 054's 13 tokens)
+- 059-admin-shell
+- 060-admin-panel-entries (supersedes 059 on tab names/counts)
+- 061-admin-juegos-page (SUPERSEDED by 071 — pre-01.8.2 restart; kept as anti-pattern)
+- 062-admin-list-rows
+- 063-admin-game-editor (SUPERSEDED by the 072-080 chain — pre-01.8.2 restart; kept as anti-pattern)
+- 064-admin-button-system (the canonical admin button; "064 A1" is cited by 074/078/079/080)
+- 065-admin-composition (10 rounds, 11 drift bugs — but its R8/R9/R10 Estantes work is DEAD, replaced by 069)
+- 066-estante-focus (SUPERSEDED by 069)
+- 067-estante-read (SUPERSEDED by 069, but its cover letter-tile + 2-line clamp survived)
+- 068-locate-box (winner null; the developer's "start over all of this UI" is what produced 069)
+- 069-estantes-ubicar (restart — 68 developer decisions, no variants)
+- 070-web-destacados (README stale on four points; the artefact is the record)
+- 071-admin-juegos (d10/11/13/14/15 superseded by its own d17)
+- 072-admin-game-editor (d33 spine + d34 no-chevron — governs every editable value)
+- 073-admin-bgg-state (its r2 action bar superseded by 074/079/080; its d38 accusation copy must NOT ship on a draft)
+- 074-admin-header (its one-CTA slot was later removed entirely by 079)
+- 075-admin-remedy-dirty (CLOSED, no winner — scenario removed from the product; the 49 broken games become drafts, not deletions)
+- 076-admin-create-visibility
+- 077-admin-pending-sheet
+- 078-admin-publish-gate
+- 079-admin-lifecycle
+- 080-admin-guardar-fijo (the current editor chrome)
 </metadata>

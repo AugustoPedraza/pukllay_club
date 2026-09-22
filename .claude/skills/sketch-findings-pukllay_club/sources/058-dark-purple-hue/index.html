@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 058 — Dark Purple Hue</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  body { padding: 0; background: #120818; }
+  .sk-head { max-width: 1100px; margin: 0 auto; padding: 24px 20px 12px; color: #EDE3F5; font-family: var(--font-sans); }
+  .sk-head h1 { font-family: var(--font-display); font-size: 2rem; margin: 0 0 6px; letter-spacing: .02em; }
+  .sk-head p { margin: 0 0 8px; line-height: 1.5; color: #B9A9C8; font-size: .9rem; }
+  .sk-head code { background: #2A1836; padding: 1px 6px; border-radius: 4px; color: #EDE3F5; }
+
+  /* brand-manual reference strip */
+  .sk-ref { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .sk-ref-sw { display: flex; align-items: center; gap: 8px; font-size: .75rem; color: #B9A9C8; font-family: ui-monospace, Menlo, monospace; }
+  .sk-ref-sw i { width: 28px; height: 28px; border-radius: 6px; display: inline-block; border: 1px solid #ffffff22; }
+
+  .sk-controls { max-width: 1100px; margin: 0 auto; padding: 4px 20px 16px; display: flex; flex-wrap: wrap; gap: 8px; font-family: var(--font-sans); }
+  .sk-btn { background: #2A1836; color: #EDE3F5; border: 1px solid #4A3358; border-radius: 999px; padding: 6px 14px; font-size: .8rem; cursor: pointer; transition: all .15s ease; }
+  .sk-btn:hover { border-color: #9C84B0; }
+  .sk-btn.on { background: #EDE3F5; color: #120818; border-color: #EDE3F5; }
+
+  .sk-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 0 20px 64px; max-width: 1500px; margin: 0 auto; }
+  .sk-grid.solo { grid-template-columns: minmax(0, 420px); justify-content: center; }
+  .sk-grid.solo .sk-col:not(.active) { display: none; }
+  .sk-grid.pair { grid-template-columns: repeat(2, minmax(0, 420px)); justify-content: center; }
+  .sk-grid.pair .sk-col[data-h="305"], .sk-grid.pair .sk-col[data-h="292"] { display: none; }
+  @media (max-width: 560px) { .sk-grid.pair { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 1100px) { .sk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .sk-grid { grid-template-columns: minmax(0, 1fr); padding: 0 16px 64px; } }
+
+  .sk-col { display: flex; flex-direction: column; gap: 8px; font-family: var(--font-sans); }
+  .sk-label { color: #EDE3F5; min-height: 4.2em; }
+  .sk-label b { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: .02em; font-weight: 400; }
+  .sk-label small { display: block; color: #B9A9C8; font-size: .75rem; line-height: 1.4; margin-top: 2px; }
+
+  /* ===== the frame: every token declared on the element, shadows the theme ===== */
+  .f { border-radius: 12px; overflow: hidden; background: var(--c-bg); color: var(--c-text); box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+  .f[data-h="313"] { --c-bg:#361148; --c-s1:#45105C; --c-s2:#551670; --c-text:#F6EAFD; --c-primary:#8C2AB7; --c-secondary:#642C77; --c-accent:#3A1F47; --c-accent-t:#EBD7F4; --c-muted:#C59CDC; --c-ink:#C791E5; --c-r500:#B739ED; --c-r400:#CE89F3; --l-primary:#45105C; --l-s1:#F6EAFD; --l-ink2:#7E4CA5; }
+  .f[data-h="305"] { --c-bg:#32134C; --c-s1:#401164; --c-s2:#4F177A; --c-text:#F3EBFD; --c-primary:#822CC5; --c-secondary:#5A3181; --c-accent:#36214B; --c-accent-t:#E6D9F8; --c-muted:#BD9FE2; --c-ink:#BE94EC; --c-r500:#A450ED; --c-r400:#C092F3; --l-primary:#401164; --l-s1:#F3EBFD; --l-ink2:#7E4CA5; }
+  .f[data-h="300"] { --c-bg:#2E154E; --c-s1:#3C1269; --c-s2:#4A187F; --c-text:#F1ECFD; --c-primary:#7B2DCE; --c-secondary:#553384; --c-accent:#33224D; --c-accent-t:#E3D9F9; --c-muted:#B8A0E5; --c-ink:#B797F0; --c-r500:#9959ED; --c-r400:#B896F3; --l-primary:#3C1269; --l-s1:#F1ECFD; --l-ink2:#7E4CA5; }
+  .f[data-h="292"] { --c-bg:#291752; --c-s1:#351370; --c-s2:#421988; --c-text:#EFEDFD; --c-primary:#6E2FDC; --c-secondary:#4D3689; --c-accent:#2E244F; --c-accent-t:#DFDBFB; --c-muted:#B0A3E9; --c-ink:#AC9AF6; --c-r500:#8964ED; --c-r400:#AC9BF3; --l-primary:#351370; --l-s1:#EFEDFD; --l-ink2:#7E4CA5; }
+
+  .f-hdr { background: var(--c-s1); display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; }
+  .f-brand { font-family: var(--font-display); letter-spacing: .03em; font-size: 1.05rem; color: var(--c-text); }
+  .f-nav { display: flex; gap: 12px; font-size: .75rem; }
+  .f-nav a { color: var(--c-text); text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; transition: all .15s ease; cursor: pointer; }
+  .f-nav a:hover { color: var(--c-ink); }
+  .f-nav a.act { color: var(--c-ink); border-bottom-color: var(--c-ink); font-weight: 700; }
+
+  .f-mast { padding: 12px; }
+  .f-poster { aspect-ratio: 16/10; border-radius: 8px; background: linear-gradient(135deg, var(--c-secondary), var(--c-primary)); position: relative; overflow: hidden; }
+  .f-poster img { width: 100%; height: 100%; object-fit: cover; display: block; mix-blend-mode: luminosity; opacity: .55; }
+  .f-title { font-family: var(--font-display); font-size: 1.6rem; letter-spacing: .02em; margin: 10px 0 2px; }
+  .f-tags { display: flex; flex-wrap: wrap; gap: 6px; font-size: .75rem; }
+  .f-tags span { color: var(--c-ink); font-weight: 600; }
+  .f-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .f-pill { font-size: .7rem; padding: 4px 10px; border-radius: 999px; border: 1.5px solid var(--c-s2); color: var(--c-muted); background: transparent; cursor: pointer; transition: all .15s ease; font-family: var(--font-sans); }
+  .f-pill:hover { border-color: var(--c-ink); color: var(--c-ink); }
+  .f-pill.sel { border-color: var(--c-ink); color: var(--c-ink); font-weight: 700; }
+
+  .f-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 12px 0 0; font-size: .75rem; }
+  .f-facts dt { color: var(--c-muted); text-transform: uppercase; letter-spacing: .06em; font-size: .62rem; font-weight: 600; }
+  .f-facts dd { margin: 0; color: var(--c-text); }
+
+  .f-cta { display: flex; gap: 8px; padding: 0 12px 12px; }
+  .f-cta button { flex: 1; border-radius: 999px; padding: 10px 12px; font-weight: 700; font-size: .8rem; cursor: pointer; font-family: var(--font-sans); transition: all .15s ease; }
+  .f-cta .solid { background: var(--c-primary); color: #fff; border: 1.5px solid var(--c-primary); }
+  .f-cta .solid:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .f-cta .ghost { background: transparent; color: var(--c-muted); border: 1.5px solid var(--c-s2); }
+  .f-cta .ghost:hover { color: var(--c-ink); border-color: var(--c-ink); }
+
+  .f-shelf { background: var(--c-s1); padding: 12px; }
+  .f-shelf h4 { font-family: var(--font-display); font-weight: 400; font-size: 1rem; letter-spacing: .02em; margin: 0 0 8px; }
+  .f-cards { display: flex; gap: 8px; }
+  .f-card { flex: 1; min-width: 0; }
+  .f-card div { aspect-ratio: 3/4; border-radius: 6px; background: var(--c-s2); }
+  .f-card:nth-child(2) div { background: linear-gradient(160deg, var(--c-primary), var(--c-accent)); }
+  .f-card:nth-child(3) div { background: linear-gradient(160deg, var(--c-r500), var(--c-secondary)); }
+  .f-card p { font-size: .68rem; margin: 4px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .f-band { background: var(--c-accent); color: var(--c-accent-t); padding: 12px; font-size: .78rem; line-height: 1.45; }
+
+  .f-swatches { display: flex; height: 18px; }
+  .f-swatches i { flex: 1; }
+  .f-light { background: #fff; color: #241238; padding: 10px 12px; display: flex; align-items: center; gap: 10px; font-size: .72rem; }
+  .f-light button { background: var(--l-primary); color: #fff; border: 0; border-radius: 999px; padding: 7px 12px; font-weight: 700; font-size: .72rem; font-family: var(--font-sans); cursor: pointer; }
+  .f-light span { color: var(--l-primary); font-weight: 700; }
+
+  .f-read { background: var(--c-bg); border-top: 1px solid var(--c-s2); padding: 10px 12px; font: .68rem/1.6 ui-monospace, Menlo, monospace; color: var(--c-muted); }
+  .f-read .row { display: flex; justify-content: space-between; }
+  .f-read .ok { color: #5FBE95; font-weight: 700; }
+  .f-read .bad { color: #E06B90; font-weight: 700; }
+
+  #sketch-tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font: 12px system-ui; background: rgba(0,0,0,.75); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: .5; transition: opacity .2s; display: flex; gap: 8px; align-items: center; }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="sk-head">
+  <h1>Sketch 058: tono del violeta en modo oscuro</h1>
+  <p>Toda la rampa <code>--pk-ramp-*</code> está fija en <b>H313°</b> OKLCh. Ese valor salió del
+    relleno del CTA "Sumate" en modo oscuro, no del manual de marca. Los dos colores del manual
+    están en <b>H300°</b> (<code>#3D096D</code> Lila Oscuro) y <b>H308°</b> (<code>#7E4CA5</code> Violeta).
+    En un violeta claro y saturado sobre fondo oscuro, 313° ya se lee como fucsia.</p>
+  <p>Las cuatro columnas usan el mismo generador FLAT (<code>C = 0.85·maxC(L,H)</code>, las mismas
+    lightness por stop) y a los roles fuera de la rampa solo les rota el tono (L y C fijos).
+    <b>Lo único que cambia es el tono.</b> El contraste queda en ±0.1 en todas.</p>
+  <div class="sk-ref">
+    <span class="sk-ref-sw"><i style="background:#3D096D"></i>#3D096D · H300 (manual)</span>
+    <span class="sk-ref-sw"><i style="background:#7E4CA5"></i>#7E4CA5 · H308 (manual)</span>
+    <span class="sk-ref-sw"><i style="background:#8C2AB7"></i>#8C2AB7 · H313 (hoy, primary oscuro)</span>
+  </div>
+</div>
+
+<div class="sk-controls" id="controls">
+  <button class="sk-btn on" data-mode="pair">A vs C</button>
+  <button class="sk-btn" data-mode="all">Las 4 lado a lado</button>
+  <button class="sk-btn" data-mode="313">A · H313 (hoy)</button>
+  <button class="sk-btn" data-mode="305">B · H305</button>
+  <button class="sk-btn" data-mode="300">C · H300 ★ Elegido</button>
+  <button class="sk-btn" data-mode="292">D · H292</button>
+</div>
+
+<div class="sk-grid pair" id="grid"></div>
+
+<div id="sketch-tools">
+  <span>Foto en póster:</span><button id="toggle-photo" type="button">ocultar</button>
+</div>
+
+<script>
+const VARIANTS = [
+  { h: '313', name: 'A · H313, lo que hay hoy', note: 'Rampa en producción. Referencia para comparar.' },
+  { h: '305', name: 'B · H305, entre los dos del manual', note: 'Punto medio entre Lila Oscuro (300) y Violeta (308). Es el cambio más chico que se aleja del magenta.' },
+  { h: '300', name: 'C · H300, Lila Oscuro exacto ★ Elegido', note: 'Mismo tono que el color base del manual. En modo claro, primary vuelve a su tono de marca.' },
+  { h: '292', name: 'D · H292, violeta azulado', note: 'Pasa el manual hacia el azul. Sirve para ver dónde empieza a leerse "índigo" en vez de marca.' },
+];
+const RAMP = {
+  '313': ['#FAF5FE','#F6EAFD','#EACEFA','#DCADF6','#CE89F3','#B739ED','#8C2AB7','#702093','#551670','#45105C','#380B4C'],
+  '305': ['#F9F5FE','#F3EBFD','#E3D1FA','#D1B2F6','#C092F3','#A450ED','#822CC5','#68219F','#4F177A','#401164','#340C52'],
+  '300': ['#F8F6FE','#F1ECFD','#DFD3FA','#CBB5F6','#B896F3','#9959ED','#7B2DCE','#6222A6','#4A187F','#3C1269','#300D56'],
+  '292': ['#F7F6FE','#EFEDFD','#DAD5FA','#C3B9F6','#AC9BF3','#8964ED','#6E2FDC','#5824B1','#421988','#351370','#2B0E5C'],
+};
+
+const frame = v => `
+<div class="sk-col" data-h="${v.h}">
+  <div class="sk-label"><b>${v.name}</b><small>${v.note}</small></div>
+  <div class="f" data-h="${v.h}">
+    <div class="f-hdr">
+      <span class="f-brand">PUKLLAY CLUB</span>
+      <nav class="f-nav"><a class="act">Ludoteca</a><a>Nosotros</a></nav>
+    </div>
+    <div class="f-mast">
+      <div class="f-poster"><img class="photo" src="../../../priv/static/images/about-juego.jpg" alt=""></div>
+      <div class="f-title">Catán</div>
+      <div class="f-tags"><span>#CreaConexiones</span><span>#Negociación</span></div>
+      <div class="f-pills">
+        <button class="f-pill sel" type="button">Comercio</button>
+        <button class="f-pill" type="button">Dados</button>
+        <button class="f-pill" type="button">Klaus Teuber</button>
+      </div>
+      <dl class="f-facts">
+        <div><dt>Jugadores</dt><dd>3 a 4</dd></div>
+        <div><dt>Duración</dt><dd>60–120 min</dd></div>
+      </dl>
+    </div>
+    <div class="f-cta">
+      <button class="solid" type="button">Reservar</button>
+      <button class="ghost" type="button">Compartir</button>
+    </div>
+    <div class="f-shelf">
+      <h4>Juegos similares</h4>
+      <div class="f-cards">
+        <div class="f-card"><div></div><p>Carcassonne</p></div>
+        <div class="f-card"><div></div><p>Ticket to Ride</p></div>
+        <div class="f-card"><div></div><p>Azul</p></div>
+      </div>
+    </div>
+    <div class="f-band">Enseñamos jugando: sin jerga y sin la presión de tener que saber de juegos.</div>
+    <div class="f-swatches">${RAMP[v.h].map(c => `<i style="background:${c}" title="${c}"></i>`).join('')}</div>
+    <div class="f-light"><button type="button">Reservar</button><span>Modo claro · primary = ramp-900</span></div>
+    <div class="f-read" data-read></div>
+  </div>
+</div>`;
+
+document.getElementById('grid').innerHTML = VARIANTS.map(frame).join('');
+
+// interactivity: pills toggle, CTA feedback, nav switch
+document.addEventListener('click', e => {
+  const pill = e.target.closest('.f-pill');
+  if (pill) pill.classList.toggle('sel');
+  const solid = e.target.closest('.f-cta .solid, .f-light button');
+  if (solid) { const t = solid.textContent; solid.textContent = '¡Listo! ✓'; setTimeout(() => solid.textContent = t, 1100); }
+  const nav = e.target.closest('.f-nav a');
+  if (nav) { nav.parentElement.querySelectorAll('a').forEach(a => a.classList.remove('act')); nav.classList.add('act'); }
+});
+
+// compare mode
+const grid = document.getElementById('grid');
+document.getElementById('controls').addEventListener('click', e => {
+  const b = e.target.closest('.sk-btn'); if (!b) return;
+  document.querySelectorAll('.sk-btn').forEach(x => x.classList.toggle('on', x === b));
+  const m = b.dataset.mode;
+  grid.classList.toggle('solo', m !== 'all' && m !== 'pair');
+  grid.classList.toggle('pair', m === 'pair');
+  grid.querySelectorAll('.sk-col').forEach(c => c.classList.toggle('active', c.dataset.h === m));
+});
+document.addEventListener('keydown', e => {
+  const order = ['pair','all','313','305','300','292'];
+  if (!['ArrowLeft','ArrowRight'].includes(e.key)) return;
+  const cur = order.indexOf(document.querySelector('.sk-btn.on').dataset.mode);
+  const next = order[(cur + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length];
+  document.querySelector(`.sk-btn[data-mode="${next}"]`).click();
+});
+
+document.getElementById('toggle-photo').addEventListener('click', e => {
+  const hide = e.target.textContent === 'ocultar';
+  document.querySelectorAll('.photo').forEach(i => i.style.display = hide ? 'none' : '');
+  e.target.textContent = hide ? 'mostrar' : 'ocultar';
+});
+
+// live WCAG readout from computed tokens
+const toLin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+const lum = h => { h = h.trim().slice(1); const [r,g,b] = [0,2,4].map(i => toLin(parseInt(h.substr(i,2),16))); return .2126*r + .7152*g + .0722*b; };
+const cr = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+document.querySelectorAll('.f').forEach(f => {
+  const cs = getComputedStyle(f), t = n => cs.getPropertyValue(n).trim();
+  const rows = [
+    ['texto / fondo', cr(t('--c-text'), t('--c-bg'))],
+    ['ink de marca / fondo', cr(t('--c-ink'), t('--c-bg'))],
+    ['ink de marca / base-300', cr(t('--c-ink'), t('--c-s2'))],
+    ['muted / fondo', cr(t('--c-muted'), t('--c-bg'))],
+    ['blanco / primary', cr('#FFFFFF', t('--c-primary'))],
+    ['blanco / primary claro', cr('#FFFFFF', t('--l-primary'))],
+  ];
+  f.querySelector('[data-read]').innerHTML = `<div>primary ${t('--c-primary')} · ink ${t('--c-ink')}</div>` +
+    rows.map(([k, v]) => `<div class="row"><span>${k}</span><span class="${v >= 4.5 ? 'ok' : 'bad'}">${v.toFixed(2)}:1 ${v >= 4.5 ? '✓' : '✗'}</span></div>`).join('');
+});
+</script>
+</body>
+</html>
