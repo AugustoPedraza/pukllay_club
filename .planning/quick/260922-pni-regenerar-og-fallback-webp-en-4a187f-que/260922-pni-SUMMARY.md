@@ -264,3 +264,91 @@ None — no external service configuration required for Tasks 1-2.
 ## Self-Check: PASSED
 
 All 4 deliverable files plus this SUMMARY.md confirmed present on disk; both commit hashes (`e579072`, `4abfe3d`) confirmed present in `git log --all`. `ideas.txt`'s pre-existing unrelated modification was verified never staged in either commit (`git status --short` before each commit showed only the intended files staged).
+
+---
+
+## Task 3 — Production ship: DONE (2026-09-22)
+
+Completed by the orchestrator after the developer explicitly authorised the production ship.
+This supersedes the "Task 3 deferred" statements above.
+
+### What shipped
+
+PR **#64** (`rebake-og-fallback-260922`), cut from `origin/main` — **not** local `main`, which is
+106 commits ahead under this repo's standing branch-protection divergence. Squash-merged as
+`8078a53`; branch deleted.
+
+### Deviation from plan: three paths, not four
+
+The plan named four paths. `share-card.md` was **deliberately excluded**: it does not exist on
+`origin/main` at all (that skill has 14 references there vs. 23 locally — the rest arrive with the
+pending sketch wrap-up commit `8e90928`). Shipping it alone would have orphaned a reference the
+`origin/main` `SKILL.md` index does not list, and set up a near-certain conflict when that wrap-up
+syncs. It is pure documentation with zero effect on the deployed asset, and is already committed on
+local `main` (`4abfe3d`). Recorded in the PR body.
+
+Pre-push checks that authorised this scope:
+- `assets/css/app.css` is byte-identical across `main` and `origin/main` — so the new gates parse
+  the same values on both sides.
+- `git diff origin/main main -- test/pukllay_club_web/structured_data_test.exs` contains **only**
+  this task's two gates plus their two module attributes; no unrelated local-only test drift.
+- All three shipped paths fall outside `deploy.yml`'s docs deny-list (`*.md`, `.planning/**`,
+  `.claude/**`, `docs/**`, `predicate-quantifier: every`), so the push classified as `code`.
+
+### Unplanned blocker: mint CVE (unrelated to this task)
+
+The first CI run **failed** — `quality` red at 2m01s, run `35790164297`. Not caused by this change:
+`mix test` reported `1475 tests, 0 failures` and the non-zero exit came from `mix deps.audit`, which
+had picked up a newly-published MEDIUM advisory against **mint 1.10.0** (`EEF-CVE-2026-82672`,
+HTTP/1 response smuggling via unvalidated chunk-size line tail).
+
+Ruled out as ours: `mix.lock` and `mix.exs` are byte-identical between `origin/main` and local
+`main`, so the advisory hit both equally; `origin/main`'s own last CI run (2026-09-16, PR #63) was
+green because the advisory did not exist yet. It passed locally only because the installed
+`mix_audit` advisory DB was stale — CI fetches it fresh. It would have blocked **any** PR on this
+repo, not just this one.
+
+Resolved by bumping mint 1.10.0 → 1.10.1 (lockfile-only; mint is transitive via `finch`), committed
+separately as `d47b640` with the CVE id in the message so the security change stays traceable
+despite riding in a PR titled after an image. The developer chose this over a separate PR.
+`mix quality` green locally, exit 0, before push.
+
+### Deploy
+
+Workflow run `35793148761` for `8078a53` — conclusion **success**, with `changes`, `quality`,
+`build-and-push` and `deploy` all reporting `success`. `build-and-push` and `deploy` **ran** rather
+than being skipped, which was the specific silent-failure mode the paths-filter check guarded
+against.
+
+### Live verification (the actual gate — not the deploy's exit code)
+
+Fresh `curl` of `https://pukllay.club/images/og-fallback.webp` with `Cache-Control: no-cache`:
+
+| check | result |
+|---|---|
+| sha256 vs. `origin/main`'s committed file | **identical** — `6296a2ae9b50114ee1d62e75d18f54affc36e979db2d7299826ecc124f00c6f7` |
+| byte length | 10,136 (was 14,330 pre-rebake — differs, as required) |
+| decoded dimensions | 1200×630 |
+| background at (0,0), (1199,0), (0,629), (1199,629), (10,315) | `#4A187F` |
+| `#DED4F3` (current tagline) | present in census |
+| `#551670` (retired bg) | **absent** |
+| `#E3D3F0` (retired tagline) | **absent** |
+| response `etag` | `"177301E"` (was `"3056E4B"`) |
+| response `content-length` | 10136 |
+
+All colour checks ran over decoded pixels, never a text grep on source.
+
+### Developer note — not a gate
+
+WhatsApp, Facebook and X cache OG images on their own servers. Links shared before this deploy may
+keep previewing the old purple until those caches expire or the URL is re-scraped (Facebook Sharing
+Debugger forces it). That is outside this repo's control and must not be read as a failure of the
+live-asset verification above.
+
+### Still outstanding
+
+- `share-card.md`'s update sits on local `main` only; it reaches `origin/main` with the sketch
+  wrap-up sync.
+- Local `main` remains 106 ahead / 2 behind `origin/main`. Untouched deliberately — CLAUDE.md's
+  "Git Sync Discipline" documents it as this repo's standing condition and the plan put reconciling
+  it out of scope.
