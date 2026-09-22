@@ -1,11 +1,11 @@
 ---
 sketch: 080
 name: admin-guardar-fijo
-question: "r1 · ¿alcanza con fijar al pie el `Guardar` que ya está ahí? · r2 · ¿ese botón no es demasiado grande? ¿qué dice la barra fija que la web YA tiene?"
+question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho?"
 winner: null
 tags: [admin, editor, guardar, dirty-state, cta, pie-fijo, franja, d47, 064, D-19f, D-19h, phase-01.8.2]
-rounds: 2
-status: PENDING REVIEW — 24/24, no confirmado en dispositivo
+rounds: 3
+status: PENDING REVIEW — 26/26, no confirmado en dispositivo
 ---
 
 # Sketch 080: el `Guardar` del pie, fijo
@@ -24,11 +24,13 @@ estado tampoco, y no aparece ningún control nuevo arriba.
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html
-node .planning/sketches/080-admin-guardar-fijo/verify.js     # 24/24
+node .planning/sketches/080-admin-guardar-fijo/verify.js     # 26/26
 ```
 
-Arriba: **HOY · en el flujo (079)** es el antes, no una variante. Las dos que sí se comparan son
-**A · 52 (078)** y **B · 44 (como la web)**.
+Arriba: **HOY · en el flujo (079)** es el antes, no una variante; **FIJA · al pie** es la ronda.
+El tamaño quedó decidido en la r2 (el de la web). Los **dos ejes de la r3 son interruptores en las
+herramientas**, no pestañas: `Ancho` (a lo ancho / natural a la derecha) × `Tratamiento` (relleno 078
+/ contorno A1 064).
 Para llegar al estado del que habla la ronda: tocá **Es una expansión** y cambiala.
 
 ---
@@ -110,6 +112,62 @@ el mismo "un tono, no un borde" que la 069 usó para el carril del control segme
 
 ---
 
+## Ronda 3 — ¿tiene que ocupar todo el ancho?
+
+> *"B is better but needs better balance. Not sure having that full width helps. alternatives?"*
+
+**No son alternativas en una lista: son dos ejes independientes**, y si se dibujaran como cuatro
+pestañas no se vería cuál de los dos hace el trabajo. Van como interruptores.
+
+### El número que contesta el desbalance
+
+| | etiqueta | tinta | botón | **relleno de tinta** |
+|---|---|---|---|---|
+| la barra real de la web | "Reservar para el sábado" | 163,5 | 347 | **47,1%** |
+| a lo ancho (lo que traía) | "Guardar" | 54,7 | 347 | **15,8%** |
+| natural, a la derecha | "Guardar" | 54,7 | 86,7 | **61,7%** |
+
+**Copiar el ancho de la web copió una caja dimensionada para 23 caracteres sobre una de 7.** El
+tamaño que aprobaste en la r2 estaba bien; lo que no se transfería era el ancho, porque lo que lo
+justificaba en la web era la etiqueta (check 22).
+
+### Y `064` ya había contestado este contenedor
+
+Su tabla *contexto × rol*, textual:
+
+| contexto | Principal |
+|---|---|
+| **save bar `.eactions`** | **A1, last** |
+| box foot | **never** (a lo ancho es Secundaria/Terciaria, nunca Principal) |
+
+Y **A1 es outlined**: 44px · 16px de padding · 1px de trazo · radio 8 · 14/600. O sea que en el
+sistema del admin un Principal **nunca** va a lo ancho y **nunca** va relleno (064 ganó con *S3
+Contorno*). El relleno a lo ancho venía del `.cta` de la 078, **que es de hoja**.
+
+`natural + contorno` reproduce A1 al píxel y termina en la quilla de 14 (checks 23, 24).
+
+### El hallazgo que sale de mirar la captura: el lado izquierdo no está vacío, está libre
+
+La barra de guardado **ya está decidida y tiene dos mitades**. `.ebar.inline` (construida en la 063,
+asentada en la 065): fondo `--color-surface`, radio 12, padding 12/16 — y adentro **una línea de
+estado de 13/600 con su punto** a la izquierda, con `.eactions` y el **Principal último** a la
+derecha. El scope lo repite: *"the shared `.ebar.inline` (status line + dot, Principal last, one-word
+Guardar)"*.
+
+Dos consecuencias:
+
+1. **El fondo tonal que la r2 tomó de la web coincide con el de `.ebar.inline`.** No es una
+   casualidad afortunada: es la misma superficie.
+2. **La mitad izquierda tiene dueño, y hoy está duplicada arriba.** La 065 dice que *"the status
+   line's own job is the save state — and the dot carries it"*. Es exactamente lo que yo puse en la
+   franja de arriba en la r1. **También resuelve el ítem abierto del punto verde**: el punto de
+   `.ebar.inline` lleva el estado de **guardado**, no el de publicación.
+
+Nombrado, **no construido**: mover el pendiente de la franja a la barra es la pregunta de la próxima
+ronda, no una decisión que me corresponda tomar acá.
+
+---
+
 ## Hallazgos de la ronda 1
 
 ### 1. La franja le debe una oración al estado sucio
@@ -134,9 +192,10 @@ como un hecho consumado.
 ### 2. El snackbar y la barra pelean por el mismo borde, y se salvan por 2px
 
 La 079 r1 ya había encontrado que *"el snack entierra la zona de M2"*. Medido con la barra fija: el
-snack va de 540 a 588 y la barra arranca en 590 — **2px de aire** (check 16). Funciona, pero el `79`
-del `bottom` del snack se eligió para otra cosa (el alto de la barra de pestañas), así que los 2px
-son una coincidencia, no un margen. Si la barra crece un renglón, el snack queda abajo.
+snack va de 540 a 588 y la barra arranca en 598 — **10px de aire** (check 16), que eran **2px** con
+la barra de 77 de la r1: achicarla a la medida de la web también despejó esto. Igual el `79` del
+`bottom` del snack se eligió para otra cosa (el alto de la barra de pestañas), así que el aire es una
+consecuencia, no un margen elegido. Si la barra crece un renglón, el snack vuelve a quedar abajo.
 
 ### 3. Dos defectos del marco del sketch, encontrados por la captura
 
@@ -180,14 +239,15 @@ en vez de quedar fijo en un número que valía para dos botones.
 - Guardá y mirá dónde cae el snackbar: pasa 2px por encima de la barra.
 - Leé la franja limpia y con cambios. ¿La segunda oración es tuya o te sobra?
 - Pasá a **HOY** y buscá el `Guardar`. Está a 880px.
-- Alterná **A · 52** y **B · 44** con el pulgar donde lo tendrías de verdad. ¿B se siente chico o se
-  siente en su lugar?
-- Con `Guardar` apagado en B: ¿lo ves contra la barra tonal?
+- Movete entre los dos interruptores de `Ancho` con el pulgar donde lo tendrías de verdad.
+- Con `Guardar` apagado: ¿lo ves contra la barra tonal? ¿Y en contorno?
+- Mirá el lado izquierdo de la barra vacío. Es el lugar de la línea de estado de `.ebar.inline`.
 
 ## Abierto
 
-- **El punto sigue verde con cambios sin guardar.** El estado *es* `Publicado` y D-19h manda punto +
-  texto, así que no está mal — pero lo pendiente no tiene punto propio. Nombrado, no resuelto.
+- **Dónde vive el pendiente.** La r3 encontró que `.ebar.inline` le da a la barra una línea de estado
+  con punto cuyo trabajo *es* el estado de guardado (065). Hoy eso está en la franja de arriba, que
+  agregué yo en la r1. Son dos casas para una sola cosa — y la decidida es la de la barra.
 - **La barra no se esconde nunca.** No se midió una que se oculte mientras está limpio; sería otro eje.
 - **`Publicar` no está en esta ronda.** El editor de un publicado no lo tiene: vive en la hoja del
   borrador (078).

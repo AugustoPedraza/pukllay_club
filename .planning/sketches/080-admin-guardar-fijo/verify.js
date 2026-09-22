@@ -14,9 +14,9 @@ const { chromium } = loadPlaywright();
 const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html';
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-080-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
-/* el `#vnav` del sketch ocupa 80px de flujo (tres botones, envuelve) y el device es `100vh - 80`: la ventana se pide 80px más
+/* el `#vnav` del sketch ocupa 44px de flujo (dos botones, un renglon) y el device es `100vh - 44`: la ventana se pide 44px más
    alta para que «375×667» sea un device de 667 REALES, no de 623. */
-const VN = 80;
+const VN = 44;
 
 const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number)
   .map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
@@ -57,7 +57,9 @@ const probe = () => {
       return { barH: +bar.getBoundingClientRect().height.toFixed(1), barBg: cs.backgroundColor,
         btnH: barCta ? +barCta.getBoundingClientRect().height.toFixed(1) : null,
         radius: bs && bs.borderRadius, font: bs && (bs.fontSize + '/' + bs.fontWeight),
-        gut: barCta ? +barCta.getBoundingClientRect().left.toFixed(1) : null,
+        /* la quilla se mide del borde DERECHO: con el botón a su ancho natural y alineado a la
+           derecha, su borde izquierdo no es una quilla sino el largo de la palabra. */
+        gut: barCta ? +(bar.getBoundingClientRect().right - barCta.getBoundingClientRect().right).toFixed(1) : null,
         disBg: bs && bs.backgroundColor }; })(),
     barCta: bc ? { txt: barCta.textContent.trim(), dis: barCta.disabled, h: +bc.height.toFixed(1),
       relT: +(bc.top - dev.top).toFixed(1), inView: bc.top >= dev.top && bc.bottom <= dev.bottom + 0.5,
@@ -91,7 +93,7 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   const dirty = async () => { await page.evaluate(soil); await page.waitForTimeout(160);
     await page.evaluate(pickOther); await page.waitForTimeout(220); };
   const M = {};
-  for (const m of ['HOY', 'FIJA', 'WEB']) {
+  for (const m of ['HOY', 'FIJA']) {
     await go(m); M[m] = { clean: await page.evaluate(probe) };
     await dirty(); M[m].d = await page.evaluate(probe);
     await page.screenshot({ path: path.join(OUT, `${m}-sucio.png`) });
@@ -120,7 +122,9 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   ok(M.FIJA.d.barCta.dis === false, '6 con cambios: `Guardar` habilitado');
 
   /* ---- 7 · el botón se puede tocar de verdad (hit-test en su centro) ---- */
-  ok(M.FIJA.d.barCta.centre === 'cta', `7 el centro de la barra da el botón (${M.FIJA.d.barCta.centre})`);
+  /* la clase dejó de ser sólo `cta` al abrirse los ejes de la r3 (`cta nat out`): la aserción
+     miraba una igualdad exacta y fallaba por el nombre, no por el hit. */
+  ok(/\bcta\b/.test(M.FIJA.d.barCta.centre || ''), `7 el centro del botón da el botón (${M.FIJA.d.barCta.centre})`);
 
   /* ---- 8 · HOY sigue sin estado sucio: la hoja escribe, la 079 textual ---- */
   ok(M.HOY.d.flowCta !== null && M.HOY.d.barCta === null, '8 HOY sigue sin estado sucio después de editar');
@@ -159,37 +163,62 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   ok(saved.snack !== null && saved.bar !== null && gap >= 0,
      `16 el snackbar queda por encima de la barra, con ${gap}px de aire (snack ${saved.snack && saved.snack.t}–${saved.snack && saved.snack.b} · barra desde ${saved.bar && saved.bar.t})`);
 
-  /* ================= r2 · ¿el botón es demasiado grande? =================
-     Los números de referencia NO son de este sketch: se midieron EN VIVO contra la app corriendo
-     (`localhost:4000/juegos/10` a 375 de ancho), sobre `.pk-mobile-cta-bar` — la barra fija de la
-     MISMA ficha que E3 dice que este editor espeja. */
-  const WEBREF = { barH: 69, btnH: 44, radius: '4px', font: '14px/600', gut: 14, barBg: 'rgb(241, 236, 253)' };
-  const A = M.FIJA.clean.barStyle, B = M.WEB.clean.barStyle;
-
-  ok(A.btnH === 52 && A.radius === '12px' && A.font === '16px/600',
-     `20 A es el \`.cta\` de la 078: ${A.btnH}px · radio ${A.radius} · ${A.font}`);
-  ok(B.btnH === WEBREF.btnH && B.radius === WEBREF.radius && B.font === WEBREF.font
-     && B.barH === WEBREF.barH && B.gut === WEBREF.gut && B.barBg === WEBREF.barBg,
-     `21 B reproduce la barra real de la web al píxel: barra ${B.barH} · botón ${B.btnH} · radio ${B.radius} · ${B.font} · quilla ${B.gut} · fondo ${B.barBg}`);
-  ok(A.barH - B.barH === 8, `22 la barra de la web recupera ${A.barH - B.barH}px de alto (${A.barH} → ${B.barH})`);
-
-  /* EL DEFECTO QUE TRAE EL FONDO TONAL, y por qué la web nunca lo pisó: su botón no se deshabilita
-     jamás. El nuestro sí. Sin el parche, apagado y barra dan 1:1 — invisible salvo por el anillo. */
+  /* ---- r2 (DECIDIDA): la barra toma el tamaño de la barra fija REAL de la web, medida EN VIVO
+         contra `localhost:4000/juegos/10` a 375 — la misma ficha que E3 dice que el editor espeja:
+         barra 69px tonal · botón 44 · 14/600 · quilla 14 · reserva 148px en el body. ---- */
+  const WEBREF = { barH: 69, btnH: 44, font: '14px/600', gut: 14, barBg: 'rgb(241, 236, 253)' };
+  const B = M.FIJA.clean.barStyle;
+  ok(B.btnH === WEBREF.btnH && B.font === WEBREF.font && B.barH === WEBREF.barH
+     && B.gut === WEBREF.gut && B.barBg === WEBREF.barBg,
+     `20 la barra toma el tamaño de la de la web: barra ${B.barH} · botón ${B.btnH} · ${B.font} · quilla ${B.gut} · fondo ${B.barBg}`);
   ok(ratio(B.disBg, B.barBg) > 1.1,
-     `23 el \`Guardar\` apagado se distingue de la barra tonal (${ratio(B.disBg, B.barBg)}:1; sin el parche daba 1:1)`);
-  ok(ratio(A.disBg, A.barBg) > 1.1,
-     `24 lo mismo en A (${ratio(A.disBg, A.barBg)}:1)`);
+     `21 el \`Guardar\` apagado se distingue de la barra tonal (${ratio(B.disBg, B.barBg)}:1; con el relleno de la web daba 1:1)`);
+
+  /* ================= r3 · ¿tiene que ocupar todo el ancho? =================
+     DOS ejes independientes, barridos como 2×2 y no como cuatro pestañas: si fueran pestañas no se
+     podría ver cuál de los dos está haciendo el trabajo. */
+  const sweep = async (w, t, d) => { await go('FIJA'); if (d) await dirty();
+    await page.evaluate(([w, t]) => { WIDTH = w; TREAT = t; render(); }, [w, t]);
+    await page.waitForTimeout(90);
+    return page.evaluate(() => { const bar = document.querySelector('#ctabar'), btn = bar.querySelector('.cta');
+      const bt = btn.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(btn);
+      const cs = getComputedStyle(btn), bs = getComputedStyle(bar);
+      return { w: +bt.width.toFixed(1), h: +bt.height.toFixed(1), ink: +rg.getBoundingClientRect().width.toFixed(1),
+        radius: cs.borderRadius, bw: cs.borderTopWidth, bc: cs.borderTopColor, bg: cs.backgroundColor,
+        fg: cs.color, padL: cs.paddingLeft, font: cs.fontSize + '/' + cs.fontWeight,
+        right: +(375 - bt.right).toFixed(1), barBg: bs.backgroundColor, dis: btn.disabled }; }); };
+
+  const FF = await sweep('full', 'fill', false), NO = await sweep('nat', 'out', false);
+  const NOd = await sweep('nat', 'out', true), FFd = await sweep('full', 'fill', true);
+  const pct = x => +(x.ink / x.w * 100).toFixed(1);
+
+  /* EL NÚMERO DE LA RONDA. La barra de la web da 47,1% de tinta porque su etiqueta es «Reservar para
+     el sábado» (163,5 de 347). La nuestra dice «Guardar»: 54,7. Copiar el ANCHO copió una caja
+     dimensionada para 23 caracteres sobre una de 7. */
+  ok(pct(FF) < 20 && pct(NO) > 55,
+     `22 tinta: a lo ancho ${pct(FF)}% · natural ${pct(NO)}% (la web real, con su etiqueta larga, da 47,1%)`);
+
+  /* `064` ya contesta este contenedor: save bar `.eactions` → Principal = **A1, last**; y en su tabla
+     un Principal a lo ancho es **never**. A1 = outlined 44 · 16px de padding · 1px · radio 8 · 14/600. */
+  ok(NO.h === 44 && NO.padL === '16px' && NO.bw === '1px' && NO.radius === '8px' && NO.font === '14px/600',
+     `23 natural+contorno reproduce A1 de 064: ${NO.h}px · padding ${NO.padL} · trazo ${NO.bw} · radio ${NO.radius} · ${NO.font}`);
+  ok(NO.right === 14 && NO.w >= 44,
+     `24 termina en la quilla (${NO.right}) y sigue por encima del piso de 44px (${NO.w}×${NO.h})`);
+  ok(NO.bc !== NOd.bc && ratio(NOd.fg, NOd.bg) > 4.5,
+     `25 contorno: el trazo cambia al habilitarse (${NO.bc} → ${NOd.bc}) y el texto da ${ratio(NOd.fg, NOd.bg)}:1`);
+  ok(ratio(FFd.fg, FFd.bg) > 4.5, `26 relleno habilitado: texto ${ratio(FFd.fg, FFd.bg)}:1`);
+
 
   /* ---- 17-18 · los otros anchos ---- */
   for (const [w, h] of [[360, 640], [375, 800]]) {
     const p2 = await browser.newPage({ viewport: { width: w, height: h + VN }, deviceScaleFactor: 1 });
     await p2.goto(URL, { waitUntil: 'networkidle' });
-    await p2.evaluate(setMode, 'WEB'); await p2.evaluate(hideTools);
+    await p2.evaluate(setMode, 'FIJA'); await p2.evaluate(hideTools);
     await p2.evaluate(() => { const s = document.querySelector('#scroller'); s.scrollTop = s.scrollHeight; });
     await p2.waitForTimeout(150);
     const r = await p2.evaluate(probe);
     ok(r.barCta.inView && r.lastClear > 0,
-       `1${w === 360 ? 7 : 8} ${w}×${h}: el botón en pantalla (y=${r.barCta.relT}) y el último bloque ${r.lastClear}px libre`);
+       `${w === 360 ? 27 : 28} ${w}×${h}: el botón en pantalla (y=${r.barCta.relT}) y el último bloque ${r.lastClear}px libre`);
     await p2.close();
   }
 
@@ -203,7 +232,7 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   const dd = await p3.evaluate(probe);
   await p3.screenshot({ path: path.join(OUT, 'FIJA-oscuro-sucio.png') });
   ok(dc.barCta.dis === true && dd.barCta.dis === false && dc.stbg !== dd.stbg,
-     `19 oscuro: el botón enciende y la franja se tiñe (${dc.stbg} → ${dd.stbg})`);
+     `29 oscuro: el botón enciende y la franja se tiñe (${dc.stbg} → ${dd.stbg})`);
   await p3.close();
 
   await browser.close();
