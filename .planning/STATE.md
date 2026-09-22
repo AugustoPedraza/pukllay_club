@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8.2 — Admin UI/UX Redesign
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-16 — Phase 01.8.1 complete, transitioned to Phase 01.8.2
+Last activity: 2026-09-22 — Completed quick task 260922-pni (og-fallback.webp re-baked at #4A187F locally; production ship pending)
 
 ## Performance Metrics
 
@@ -352,6 +352,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 25 | Recompute 01.8-VERIFICATION.md covered_digest (deferred-items.md docs-only change in 338ff7e) | 2026-09-13 | 0511cf3 | — | — |
 | 26 | Document pukllay.club registrar (Spaceship) and DNS runbook | 2026-09-14 | 0576dfe | — | — |
 | 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
+| 260922-pni | Re-bake og-fallback.webp at the current ramp (bg #551670→#4A187F, tagline #E3D3F0→#DED4F3, stale since sketch 058's H313.1→H300 rotation); committed re-runnable Pillow generator at tools/og-fallback/ that parses app.css at run time, lossless WebP so colours are exactly assertable, + 2 ExUnit pixel gates binding the shipped asset to app.css. **Production ship (PR + deploy) deferred — local only** | 2026-09-22 | 4abfe3d | complete (prod deploy pending) | [260922-pni-regenerar-og-fallback-webp-en-4a187f-que](./quick/260922-pni-regenerar-og-fallback-webp-en-4a187f-que/) |
 
 ### Roadmap Evolution
 
