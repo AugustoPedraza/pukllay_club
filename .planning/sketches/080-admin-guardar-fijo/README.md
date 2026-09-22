@@ -1,11 +1,11 @@
 ---
 sketch: 080
 name: admin-guardar-fijo
-question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho?"
+question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho? · r4 · la nota, y cuánto contenedor lleva el botón"
 winner: null
 tags: [admin, editor, guardar, dirty-state, cta, pie-fijo, franja, d47, 064, D-19f, D-19h, phase-01.8.2]
-rounds: 3
-status: PENDING REVIEW — 26/26, no confirmado en dispositivo
+rounds: 4
+status: PENDING REVIEW — 31/31, no confirmado en dispositivo
 ---
 
 # Sketch 080: el `Guardar` del pie, fijo
@@ -24,7 +24,7 @@ estado tampoco, y no aparece ningún control nuevo arriba.
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html
-node .planning/sketches/080-admin-guardar-fijo/verify.js     # 26/26
+node .planning/sketches/080-admin-guardar-fijo/verify.js     # 31/31
 ```
 
 Arriba: **HOY · en el flujo (079)** es el antes, no una variante; **FIJA · al pie** es la ronda.
@@ -168,6 +168,57 @@ ronda, no una decisión que me corresponda tomar acá.
 
 ---
 
+## Ronda 4 — la nota, y cuánto contenedor lleva el botón
+
+> *"that bottom bar for save feels balance breaker. also the «status» label shouldn't be full width
+> and fixed. Just a top «note» about the status and that is all, following the same colors that the
+> rest of the app."*
+
+### La franja deja de ser franja
+
+Se van las dos cosas: el ancho completo y la fijeza. La nota **entra al cuerpo** y se va con el
+scroll como cualquier otro bloque (checks 30, 31).
+
+**Y los colores salen sólo de la paleta.** El tinte que la r1 había usado era `--warn`, que **no
+existe en el tema** — la paleta no tiene parada de advertencia, y ése es exactamente el
+`TODO(palette)` que la 075 dejó debiendo. Con el tinte se va también la necesidad de inventarlo: el
+estado queda en **el punto**, que es lo que D-19h manda (punto + texto, nunca una cápsula):
+
+| | punto | token |
+|---|---|---|
+| publicado | verde | `--color-success` |
+| retirado | apagado | `--color-text-muted` |
+| **sin guardar** | acento | `--color-accent-text` — el mismo con el que el admin marca `Borrador` |
+
+La caja es la caja blanda del admin: `--color-surface` + `--color-border`, radio 12 — la misma de
+`.ebar.inline`. Check 32 asierta que **nada en pantalla usa `--warn`**.
+
+### La banda de abajo
+
+Con el botón ya en su ancho natural, la banda era un contenedor a lo ancho, con relleno y con borde,
+para un control chico a la derecha: pesa más que lo que contiene. Eje: **cuánto chrome lleva el
+`Guardar` fijo** — `Banda` · `Sin banda` · `Vela` (un desvanecido corto desde el fondo de la página,
+sin borde ni relleno macizo).
+
+**Medido en píxeles**, con el cuerpo scrolleado a 700, contando la tinta del cuerpo que queda dentro
+de la franja del botón, fuera de su caja:
+
+| | tinta del cuerpo en la franja |
+|---|---|
+| **sin banda** | **1456px** — el texto choca de verdad |
+| **vela** | **255px — borra el 82%**, sin dibujar ningún contenedor |
+
+Contar nodos no servía: daba **66 para las dos**, porque la vela no saca el texto del DOM, lo tapa.
+Esa diferencia es justo lo que la vela hace (checks 33, 34).
+
+**Y un defecto de mi propia medición**, del tipo que este linaje ya nombró: el arnés corre a
+`deviceScaleFactor: 2`, así que la imagen viene al doble de los píxeles CSS con los que se midió la
+caja del botón. Sin escalar, la ventana de exclusión caía mal y **el propio botón se contaba como
+tinta del cuerpo**: reportaba 3569 contra los ~1456 reales, y hacía fallar el check por un número
+inventado por el probe. La escala se deriva de la imagen, no se asume.
+
+---
+
 ## Hallazgos de la ronda 1
 
 ### 1. La franja le debe una oración al estado sucio
@@ -245,9 +296,15 @@ en vez de quedar fijo en un número que valía para dos botones.
 
 ## Abierto
 
-- **Dónde vive el pendiente.** La r3 encontró que `.ebar.inline` le da a la barra una línea de estado
-  con punto cuyo trabajo *es* el estado de guardado (065). Hoy eso está en la franja de arriba, que
-  agregué yo en la r1. Son dos casas para una sola cosa — y la decidida es la de la barra.
+- **La nota muestra el estado de publicación O «Sin guardar», nunca los dos.** Con cambios sin
+  guardar, `Publicado` desaparece de la nota. Es una consecuencia que introduje al unificar las dos
+  cosas en una sola línea; puede estar bien (lo urgente es lo pendiente) o puede faltar. Nombrado.
+- **Dónde vive el pendiente.** La r3 encontró que `.ebar.inline` le da a la barra de guardado una
+  línea de estado con punto cuyo trabajo *es* el estado de guardado (065). La r4 lo puso arriba, en
+  la nota, siguiendo tu pedido. Quedan dos lugares posibles para una sola cosa y la decidida por el
+  sistema es la de la barra — que ahora no existe como banda.
+- **La vela deja 255px de tinta.** Es el 18% de lo que dejaba sin banda, no cero: cerca del borde
+  superior de la franja el degradado ya es casi transparente, y ahí el texto se lee.
 - **La barra no se esconde nunca.** No se midió una que se oculte mientras está limpio; sería otro eje.
 - **`Publicar` no está en esta ronda.** El editor de un publicado no lo tiene: vive en la hoja del
   borrador (078).

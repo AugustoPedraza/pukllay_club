@@ -899,6 +899,42 @@
      O sea: en el sistema del admin un Principal NUNCA va a lo ancho, y NUNCA va relleno (064 eligió
      S3 Contorno). El relleno a lo ancho que la barra traía viene del `.cta` de la 078, que es de HOJA.
      Son DOS ejes independientes, así que van como dos interruptores y no como cuatro pestañas. */
+  /* ---------- r4 · la franja deja de ser una banda fija a lo ancho ----------
+     Desarrollador: *"the «status» label shouldn't be full width and fixed. Just a top «note» about
+     the status and that is all, following the same colors that the rest of the app."*
+     Dos cosas se van con eso: el ancho completo y la fijeza. La nota entra al cuerpo, arranca con él
+     y se va con el scroll como cualquier otro bloque.
+     **Y los colores salen SÓLO de la paleta.** El tinte `--warn` que la r1 había usado no existe en
+     el tema: la paleta no tiene parada de advertencia y eso es el `TODO(palette)` que la 075 dejó
+     debiendo. La nota usa la caja blanda del admin (`--color-surface` + `--color-border`, radio 12,
+     la misma de `.ebar.inline`) y el punto toma stops que sí existen:
+       publicado        `--color-success`
+       retirado         `--color-text-muted`
+       sin guardar      `--color-accent-text`  — el mismo acento con el que el admin marca `Borrador` */
+  .note { display: flex; align-items: baseline; gap: 8px; margin: 0 var(--gut, 14px) 16px;
+    padding: 10px 12px; background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 12px; font-size: 13px; line-height: 1.35; color: var(--color-text); }
+  .note .dot { flex-shrink: 0; align-self: center; width: 8px; height: 8px; border-radius: 50%; display: block; }
+  .note .dot.ok { background: var(--color-success); }
+  .note .dot.off { background: var(--color-text-muted); }
+  .note .dot.pend { background: var(--color-accent-text); }
+  .note .n { font-weight: 600; }
+  .note .w { color: var(--color-text-muted); }
+
+  /* ---------- r4 · la banda de abajo ----------
+     Desarrollador: *"that bottom bar for save feels balance breaker"*. Con el botón ya en su ancho
+     natural, la banda es un contenedor a lo ancho, con relleno y con borde, para un solo control
+     chico a la derecha — pesa más que lo que contiene. Eje: CUÁNTO chrome lleva el `Guardar` fijo.
+       banda   fondo tonal + borde arriba (lo que hay)
+       nada    el botón solo, fijo abajo a la derecha; el cuerpo pasa por debajo
+       vela    sin borde ni relleno macizo: un desvanecido corto desde el fondo de la página, que
+               despeja el texto sin dibujar un contenedor */
+  .ctabar.bare { background: none; border-top: 0; pointer-events: none; }
+  .ctabar.bare .cta { pointer-events: auto; }
+  .ctabar.veil { background: linear-gradient(to top, var(--color-bg) 62%, transparent);
+    border-top: 0; pointer-events: none; }
+  .ctabar.veil .cta { pointer-events: auto; }
+
   .ctabar.nat { display: flex; justify-content: flex-end; }
   .ctabar.web .cta.nat { width: auto; padding: 0 16px; }
   /* contorno = A1 tal cual (`.obtn.pri` de la 069): el radio pasa a 8 porque es el de A1, no una
@@ -1259,21 +1295,6 @@
    transparente de la 078 y del naranja de hace diez minutos.
    El punto se alinea a la primera línea, no se encoge, y la franja usa la quilla de 14 de la página
    en vez de un padding propio. */
-.stbar { flex-shrink: 0; display: flex; align-items: baseline; gap: 8px; padding: 10px var(--gut, 14px); font-size: 13px;
-  line-height: 1.35; background: var(--color-surface); border-bottom: 1px solid var(--color-border); color: var(--color-text); }
-.stbar .dot { flex-shrink: 0; align-self: center; }
-.stbar .t { min-width: 0; }
-.stbar[hidden] { display: none; }
-.stbar .n { font-weight: 600; }
-.stbar .w { color: var(--color-text-muted); }
-/* un retirado NO se dibuja igual que un publicado: la franja es el único lugar donde la página puede
-   decir que lo que muestra abajo no está en ningún lado. D-19h manda (punto + texto, nunca un pill),
-   así que el peso extra va en el fondo de la franja, no en una cápsula alrededor del estado. */
-.stbar.off { background: color-mix(in srgb, var(--warn) 14%, var(--color-bg)); border-bottom-color: color-mix(in srgb, var(--warn) 38%, var(--color-bg)); }
-.stbar.off .w { color: var(--color-text); }
-/* mientras hay cambios sin guardar la franja no puede seguir afirmando lo que la web muestra. */
-.stbar.pend { background: color-mix(in srgb, var(--warn) 9%, var(--color-bg));
-  border-bottom-color: color-mix(in srgb, var(--warn) 30%, var(--color-bg)); }
 
 /* ---------- EL PUNTO SALÍA NARANJA Y DESPUÉS DESAPARECIÓ ----------
    `.dot` trae `background: #D9892B` de base (078:246) y sus modificadores estaban escritos SÓLO bajo
@@ -1311,7 +1332,6 @@
 
 <div class="stage"><div class="device" id="device">
   <div class="tbar" id="tbar"></div>
-  <div class="stbar" id="stbar"></div>
   <div class="scroller" id="scroller"><main id="main" class="pg"></main></div>
   <div class="ctabar" id="ctabar" hidden></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
@@ -1329,6 +1349,7 @@
 <div id="tools">
   <div>Ancho: <button data-w="full">A lo ancho</button> <button data-w="nat" class="on">Natural, a la derecha</button></div>
   <div>Tratamiento: <button data-t="fill">Relleno (078)</button> <button data-t="out" class="on">Contorno A1 (064)</button></div>
+  <div>Abajo: <button data-c="band">Banda</button> <button data-c="bare" class="on">Sin banda</button> <button data-c="veil">Vela</button></div>
   <div>Estado: <button data-cy="published" class="on">Publicado</button> <button data-cy="retired">Retirado</button></div>
   <div>Tapa: <button data-cov="1" class="on">Tiene</button> <button data-cov="0">Ninguna (los 49)</button></div>
   <div class="now" id="now"></div>
@@ -1542,36 +1563,33 @@ function renderPage() {
     </div>
   </div>`;
 
-  $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
+
+  /* la nota: el estado y su consecuencia, en una caja blanda dentro del cuerpo.
+     `Así se ve en la web.` describe lo GUARDADO, así que con cambios sin guardar esa frase es falsa
+     — la web sirve `SAVED` y la pantalla muestra `G`. */
+  const pend = dirty();
+  const nDot = pend ? 'pend' : (G.status === 'published' ? 'ok' : 'off');
+  const nTxt = pend
+    ? (G.status === 'published' ? 'Tus cambios todavía no están en la web.' : 'Tus cambios todavía no están guardados.')
+    : (G.status === 'published' ? 'Así se ve en la web.' : 'No se ve en la web ni está en el estante.');
+  const note = `<div class="note"><span class="dot ${nDot}"></span><span class="t">`
+    + `<span class="n">${esc(pend ? 'Sin guardar' : st.n)}</span> <span class="w">${nTxt}</span></span></div>`;
+
+  $('#main').innerHTML = `<div class="wrap">${note}${masthead}<div style="height:24px"></div></div>`;
   $('#main').className = 'pg' + (FLAT ? ' flat' : '') + (MODE !== 'HOY' ? ' hasbar' : '');
 
   /* la barra fija. `disabled` cuando no hay nada que guardar — que es lo que el desarrollador pidió
      y, de paso, el conflicto con 064 (`sin botones deshabilitados`) asumido por elección explícita. */
   const bar = $('#ctabar'), d = dirty();
   bar.hidden = MODE === 'HOY';
-  bar.className = 'ctabar' + (MODE === 'HOY' ? '' : ' web') + (WIDTH === 'nat' ? ' nat' : '');
+  bar.className = 'ctabar' + (MODE === 'HOY' ? '' : ' web') + (WIDTH === 'nat' ? ' nat' : '')
+    + (CHROME === 'band' ? '' : ' ' + CHROME);
   bar.innerHTML = MODE !== 'HOY'
     ? `<button class="cta${WIDTH === 'nat' ? ' nat' : ''}${TREAT === 'out' ? ' out' : ''}" data-act="save"${d ? '' : ' disabled'}>Guardar</button>` : '';
   /* el hueco se MIDE, no se estima: si se estima, el último bloque queda tapado por unos pocos
      píxeles y ningún check lo nota. */
   if (MODE !== 'HOY') document.documentElement.style.setProperty('--barh',
     (bar.getBoundingClientRect().height + 24) + 'px');
-
-  /* la franja de estado. `Así se ve en la web` es textual de 075:941, donde ya decía exactamente esto
-     sobre otro problema — no es una frase nueva. */
-  const stb = $('#stbar');
-  stb.className = 'stbar' + (G.status === 'published' ? '' : ' off');
-  /* LO QUE LA FRANJA NO PODÍA DECIR ANTES. `Así se ve en la web.` describe lo GUARDADO; con el
-     estado sucio de vuelta esa frase es falsa justo cuando importa — la web sirve `SAVED` y la
-     pantalla muestra `G`. La franja de la 079 se escribió para una página SIN estado sucio.
-     (Esto lo agregué yo, no salió de una decisión: queda marcado como tal en el README.) */
-  const pend = dirty();
-  const frase = pend
-    ? (G.status === 'published' ? 'Tus cambios todavía no están en la web.' : 'Tus cambios todavía no están guardados.')
-    : (G.status === 'published' ? 'Así se ve en la web.' : 'No se ve en la web ni está en el estante.');
-  stb.classList.toggle('pend', pend);
-  stb.innerHTML = `<span class="dot ${st.k}"></span><span class="t"><span class="n">${esc(st.n)}</span> `
-    + `<span class="w">${frase}</span></span>`;
 
   /* la barra: `‹ · título · ⋮`. El ⋮ es el ÚNICO control — `Guardar` bajó al pie. */
   $('#tbar').innerHTML = `<button class="tb-back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
@@ -1603,6 +1621,7 @@ let MODE = 'FIJA';                      /* HOY | FIJA — sólo cambia DÓNDE vi
    perdería cuál de los dos está haciendo el trabajo). */
 let WIDTH = 'nat';                      /* full | nat   — a lo ancho, o su ancho natural a la derecha */
 let TREAT = 'out';                      /* fill | out   — relleno (078, hoja) o contorno A1 (064) */
+let CHROME = 'bare';                    /* band | bare | veil — cuánto contenedor lleva el botón fijo */
 
 /* ---------- EL CHROME DE LA HOJA, COPIADO DE LA 078 EN VEZ DE ESCRITO A MANO ----------
    La primera versión armó su propio marcado: un `<h2>` suelto y un `.sh-hr` que no existe en la hoja
@@ -1713,6 +1732,7 @@ function render() {
   $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === MODE));
   $$('#tools [data-w]').forEach(b => b.classList.toggle('on', b.dataset.w === WIDTH));
   $$('#tools [data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === TREAT));
+  $$('#tools [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === CHROME));
   const n = actions(G.status).length;
   $('#now').textContent = `${CYC[G.status].n} · ${$$('#main .ed').length} bloques editables`
     + (EDITING ? ` · hoja: ${EDITING}` : '');
@@ -1725,6 +1745,8 @@ document.addEventListener('click', e => {
   if (wd) { WIDTH = wd.dataset.w; render(); return; }
   const tr = e.target.closest('#tools [data-t]');
   if (tr) { TREAT = tr.dataset.t; render(); return; }
+  const ch = e.target.closest('#tools [data-c]');
+  if (ch) { CHROME = ch.dataset.c; render(); return; }
   const cy = e.target.closest('#tools [data-cy]');
   if (cy) { G.status = cy.dataset.cy; closeSheet(); render(); return; }
   const cv = e.target.closest('#tools [data-cov]');

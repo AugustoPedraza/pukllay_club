@@ -11,6 +11,38 @@ function loadPlaywright() {
   console.error('playwright-core not found'); process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* decodificador PNG mínimo, traído de la 079: la r4 necesita un NÚMERO de tinta, no un booleano.
+   Comparar bytes de PNG no sirve — la compresión reescribe el stream con un corrimiento de 1px. */
+const zlib = require('zlib');
+function decodePNG(buf) {
+  let p = 8, w = 0, h = 0, ct = 0, bd = 0; const idat = [];
+  while (p < buf.length) {
+    const len = buf.readUInt32BE(p), type = buf.toString('ascii', p + 4, p + 8);
+    if (type === 'IHDR') { w = buf.readUInt32BE(p + 8); h = buf.readUInt32BE(p + 12); bd = buf[p + 16]; ct = buf[p + 17]; }
+    else if (type === 'IDAT') idat.push(buf.subarray(p + 8, p + 8 + len));
+    else if (type === 'IEND') break;
+    p += 12 + len;
+  }
+  if (bd !== 8 || (ct !== 2 && ct !== 6)) throw new Error(`PNG no soportado: bd=${bd} ct=${ct}`);
+  const bpp = ct === 6 ? 4 : 3, raw = zlib.inflateSync(Buffer.concat(idat)), stride = w * bpp;
+  const out = Buffer.alloc(h * stride);
+  for (let y = 0; y < h; y++) {
+    const f = raw[y * (stride + 1)], line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+    for (let x = 0; x < stride; x++) {
+      const a = x >= bpp ? out[y * stride + x - bpp] : 0;
+      const b = y > 0 ? out[(y - 1) * stride + x] : 0;
+      const c = x >= bpp && y > 0 ? out[(y - 1) * stride + x - bpp] : 0;
+      let v = line[x];
+      if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const pa = Math.abs(b - c), pb = Math.abs(a - c), pc = Math.abs(a + b - 2 * c);
+        v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c); }
+      out[y * stride + x] = v & 255;
+    }
+  }
+  return { w, h, bpp, data: out };
+}
+
 const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html';
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-080-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
@@ -28,7 +60,7 @@ const probe = () => {
   const devEl = document.querySelector('.device'), dev = devEl.getBoundingClientRect();
   const rel = r => ({ t: +(r.top - dev.top).toFixed(1), b: +(r.bottom - dev.top).toFixed(1), h: +r.height.toFixed(1) });
   const g = s => { const e = document.querySelector(s); return (e && e.offsetParent) ? rel(e.getBoundingClientRect()) : null; };
-  const st = document.querySelector('.stbar'), dot = document.querySelector('.stbar .dot');
+  const st = document.querySelector('.note'), dot = document.querySelector('.note .dot');
   const barCta = document.querySelector('#ctabar .cta');
   const flowCta = [...document.querySelectorAll('#main .cta')].find(e => e.offsetParent);
   /* el hit-test se hace sobre el `<button>`, no sobre lo que devuelva `elementFromPoint`:
@@ -68,6 +100,14 @@ const probe = () => {
     lastClear: (lr && barTop !== null) ? +(barTop - lr.bottom).toFixed(1) : null,
     txt: st ? st.innerText.replace(/\s+/g, ' ').trim() : null,
     stbg: st ? getComputedStyle(st).backgroundColor : null,
+    /* la nota ya NO es chrome fijo: vive dentro del scroller y se va con el cuerpo. */
+    noteFixed: st ? (st.closest('#scroller') === null) : null,
+    noteBleed: st ? +(st.getBoundingClientRect().width).toFixed(1) : null,
+    noteDotCls: dot ? dot.className : null,
+    /* ningún elemento EN PANTALLA puede usar el `--warn` inventado: la paleta no tiene parada de
+       advertencia y ese era el `TODO(palette)` que la 075 dejó debiendo. */
+    warnOnScreen: [...document.querySelectorAll('.note, .note *, #ctabar, #ctabar *')]
+      .filter(e => /warn/.test(typeof e.className === 'string' ? e.className : '')).length,
     dot: dot ? { w: +dot.getBoundingClientRect().width.toFixed(1), c: getComputedStyle(dot).backgroundColor } : null,
     hit: { back: at(bk.left + bk.width / 2, bk.top + bk.height / 2), kebab: at(kb.left + kb.width / 2, kb.top + kb.height / 2) },
     /* la clase es `show`, no `on` — leer la equivocada devolvía `null` y el check se leía como
@@ -131,8 +171,11 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
 
   /* ---- 9-10 · la franja deja de afirmar lo que la web muestra ---- */
   ok(/Así se ve en la web/.test(M.FIJA.clean.txt), '9 limpio: «Así se ve en la web.»');
-  ok(/todavía no están en la web/.test(M.FIJA.d.txt) && M.FIJA.clean.stbg !== M.FIJA.d.stbg,
-     `10 con cambios: la franja se corrige y se tiñe (${M.FIJA.clean.stbg} → ${M.FIJA.d.stbg})`);
+  /* la nota YA NO se tiñe: la r4 sacó el tinte `--warn` inventado y el estado queda en el PUNTO,
+     que es lo que D-19h manda (punto + texto, nunca una cápsula). */
+  ok(/todavía no están en la web/.test(M.FIJA.d.txt)
+     && M.FIJA.clean.noteDotCls !== M.FIJA.d.noteDotCls && M.FIJA.clean.stbg === M.FIJA.d.stbg,
+     `10 con cambios: la nota se corrige y cambia su PUNTO (${M.FIJA.clean.noteDotCls} → ${M.FIJA.d.noteDotCls}), sin teñir el fondo (${M.FIJA.d.stbg})`);
 
   /* ---- 11 · EL PUNTO. Cuarta vez en el linaje: rect + color resuelto, nunca el nodo. ---- */
   ok(M.FIJA.d.dot && M.FIJA.d.dot.w === 8 && !/rgba\(0, 0, 0, 0\)/.test(M.FIJA.d.dot.c),
@@ -156,7 +199,7 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   await page.evaluate(() => document.querySelector('#ctabar .cta').click()); await page.waitForTimeout(160);
   const saved = await page.evaluate(probe);
   ok(saved.barCta.dis === true && /Así se ve en la web/.test(saved.txt),
-     '15 al guardar: el botón se apaga y la franja vuelve a afirmar la web');
+     '15 al guardar: el botón se apaga y la nota vuelve a afirmar la web');
   /* la 079 r1 ya había encontrado que «el snack entierra la zona de M2». Con una barra fija al pie,
      el snack y la barra pelean por el mismo borde: se mide, no se supone. */
   const gap = (saved.snack && saved.bar) ? +(saved.bar.t - saved.snack.b).toFixed(1) : null;
@@ -168,11 +211,17 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
          barra 69px tonal · botón 44 · 14/600 · quilla 14 · reserva 148px en el body. ---- */
   const WEBREF = { barH: 69, btnH: 44, font: '14px/600', gut: 14, barBg: 'rgb(241, 236, 253)' };
   const B = M.FIJA.clean.barStyle;
-  ok(B.btnH === WEBREF.btnH && B.font === WEBREF.font && B.barH === WEBREF.barH
-     && B.gut === WEBREF.gut && B.barBg === WEBREF.barBg,
-     `20 la barra toma el tamaño de la de la web: barra ${B.barH} · botón ${B.btnH} · ${B.font} · quilla ${B.gut} · fondo ${B.barBg}`);
-  ok(ratio(B.disBg, B.barBg) > 1.1,
-     `21 el \`Guardar\` apagado se distingue de la barra tonal (${ratio(B.disBg, B.barBg)}:1; con el relleno de la web daba 1:1)`);
+  /* el TAMAÑO es independiente del chrome, así que se asierta sobre el modo por defecto... */
+  ok(B.btnH === WEBREF.btnH && B.font === WEBREF.font && B.gut === WEBREF.gut,
+     `20 el botón toma el tamaño del de la web: ${B.btnH}px · ${B.font} · quilla ${B.gut}`);
+  /* ...y el fondo tonal sólo existe en `band`, así que se mide AHÍ y no en el modo por defecto,
+     que desde la r4 es `veil` y no tiene fondo. Medir el default habría reportado un contraste
+     contra `rgba(0,0,0,0)`, que no es un contraste contra nada. */
+  await go('FIJA');
+  await page.evaluate(() => { CHROME = 'band'; render(); }); await page.waitForTimeout(90);
+  const bandS = (await page.evaluate(probe)).barStyle;
+  ok(bandS.barH === WEBREF.barH && bandS.barBg === WEBREF.barBg && ratio(bandS.disBg, bandS.barBg) > 1.1,
+     `21 en \`banda\` reproduce la de la web (${bandS.barH}px · ${bandS.barBg}) y el apagado se distingue (${ratio(bandS.disBg, bandS.barBg)}:1; con el relleno de la web daba 1:1)`);
 
   /* ================= r3 · ¿tiene que ocupar todo el ancho? =================
      DOS ejes independientes, barridos como 2×2 y no como cuatro pestañas: si fueran pestañas no se
@@ -209,6 +258,41 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   ok(ratio(FFd.fg, FFd.bg) > 4.5, `26 relleno habilitado: texto ${ratio(FFd.fg, FFd.bg)}:1`);
 
 
+  /* ================= r4 · la nota, y cuánto contenedor lleva el botón =================
+     Desarrollador: *"the «status» label shouldn't be full width and fixed. Just a top «note» about
+     the status and that is all, following the same colors that the rest of the app"* y *"that bottom
+     bar for save feels balance breaker"*. */
+  const N = M.FIJA.clean;
+  ok(N.noteFixed === false, '30 la nota vive dentro del scroller: se va con el cuerpo, no es chrome fijo');
+  ok(N.noteBleed < 375 - 20, `31 la nota no va a sangre: mide ${N.noteBleed} en un device de 375 (respeta la quilla)`);
+  ok(N.warnOnScreen === 0, `32 nada en pantalla usa el \`--warn\` inventado: la nota sale sólo de la paleta (${N.warnOnScreen})`);
+
+  /* la medición que contesta lo de la banda: tinta REAL del cuerpo dentro de la franja que ocupa el
+     botón, fuera de su caja, con el cuerpo scrolleado a 700 (decodificando el PNG, no contando nodos
+     — contar nodos daba 66 para «sin banda» Y para «vela», que es justo lo que la vela arregla). */
+  const stripInk = async (chrome) => { await go('FIJA'); await dirty();
+    await page.evaluate(([c, y]) => { CHROME = c; render(); document.querySelector('#scroller').scrollTop = y; }, [chrome, 700]);
+    await page.waitForTimeout(160);
+    const box = await page.evaluate(() => { const dev = document.querySelector('.device').getBoundingClientRect();
+      const bar = document.querySelector('#ctabar').getBoundingClientRect(), btn = document.querySelector('#ctabar .cta').getBoundingClientRect();
+      return { x: Math.round(dev.x), y: Math.round(bar.y), w: Math.round(dev.width), h: Math.round(bar.height),
+        bx: Math.round(btn.x - dev.x), bw: Math.round(btn.width), opaque: getComputedStyle(document.querySelector('#ctabar')).backgroundImage !== 'none' || getComputedStyle(document.querySelector('#ctabar')).backgroundColor !== 'rgba(0, 0, 0, 0)' }; });
+    const png = await page.screenshot({ clip: { x: box.x, y: box.y + 2, width: box.w, height: box.h - 2 } });
+    const img = decodePNG(png); let ink = 0;
+    /* el arnés corre a `deviceScaleFactor: 2`, así que la imagen viene al DOBLE de los px CSS con los
+       que se midió la caja del botón. Sin escalar, la ventana de exclusión cae en el lugar
+       equivocado y el propio botón se cuenta como tinta del cuerpo: daba 3569 contra los 537 reales.
+       La escala se deriva de la imagen, no se asume. */
+    const k = img.w / box.w;
+    for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) {
+      if (x >= (box.bx - 6) * k && x <= (box.bx + box.bw + 6) * k) continue;
+      const i = y * img.w * img.bpp + x * img.bpp;
+      if (Math.max(Math.abs(img.data[i] - 255), Math.abs(img.data[i + 1] - 255), Math.abs(img.data[i + 2] - 255)) > 28) ink++; }
+    return ink; };
+  const inkBare = await stripInk('bare'), inkVeil = await stripInk('veil');
+  ok(inkBare > 300, `33 sin banda: ${inkBare}px de texto del cuerpo quedan dentro de la franja del botón`);
+  ok(inkVeil < inkBare / 4, `34 la vela borra ${(100 - inkVeil / inkBare * 100).toFixed(0)}% de eso (${inkBare} → ${inkVeil}px) sin dibujar ningún contenedor`);
+
   /* ---- 17-18 · los otros anchos ---- */
   for (const [w, h] of [[360, 640], [375, 800]]) {
     const p2 = await browser.newPage({ viewport: { width: w, height: h + VN }, deviceScaleFactor: 1 });
@@ -231,8 +315,8 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   await p3.evaluate(soil); await p3.waitForTimeout(160); await p3.evaluate(pickOther); await p3.waitForTimeout(220);
   const dd = await p3.evaluate(probe);
   await p3.screenshot({ path: path.join(OUT, 'FIJA-oscuro-sucio.png') });
-  ok(dc.barCta.dis === true && dd.barCta.dis === false && dc.stbg !== dd.stbg,
-     `29 oscuro: el botón enciende y la franja se tiñe (${dc.stbg} → ${dd.stbg})`);
+  ok(dc.barCta.dis === true && dd.barCta.dis === false && dc.noteDotCls !== dd.noteDotCls,
+     `29 oscuro: el botón enciende y el punto de la nota cambia (${dc.noteDotCls} → ${dd.noteDotCls})`);
   await p3.close();
 
   await browser.close();
