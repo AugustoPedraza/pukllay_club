@@ -72,3 +72,49 @@ appear in "Ingenio estratega".
 Both `weight_band` and `bgg_weight` are already on `games`, so admin needs a **band audit
 view**: games whose CSV band disagrees with their BGG weight, both values shown, fix or keep
 (explicit override) per game. Band ↔ weight thresholds are to be decided during planning.
+
+## Los 49 sin datos de BGG — se despublican, no se borran
+
+**Decidido 2026-09-22.** Salió de la ronda 4 de la 075, cuando la pregunta pasó a ser si valía la
+pena diseñar un remedio para los juegos rotos o si convenía sacarlos de encima.
+
+Medido sobre `pukllay_club_dev` antes de decidir nada:
+
+```
+enrichment_status   status      count
+bgg_missing         published       8
+no_bgg_id           published      41
+enriched            published     385
+enriched            draft           1
+```
+
+**No son filas basura.** Unas 26 de las 41 `no_bgg_id` son **expansiones y promos** — `Wingspan
+Europa (expa)`, `Root Expansion Los Rivereños`, `Kingdomino Age of Giants (Expansión)`, las dos de
+`El Señor de los Anillos: Viajes por la Tierra Media`, `Catapul Feud (expa 1)` y `(expa 2)`… — cajas
+que el club tiene y presta. El resto son juegos base con el nombre cargado a mano y sin matchear:
+`ganges`, `obscurio`, `luxor`, `discover`, `union`, `bot factory`. Y el cliente ya soporta
+vincularlas: `bgg_client.ex:62` dice textualmente que pedir los dos tipos permite agregar una
+expansión por id de BGG, no sólo un juego base. Están **sin matchear**, no son inmatcheables.
+
+**Y las 8 `bgg_missing` probablemente no estén rotas.** Las ocho llevan ids plausibles y del rango
+correcto para su año de salida (Alma Mater 295777, Great Western Trail: Argentina 364312, Planet
+252981, Alubari 259616). No se pudieron verificar: la API de BGG devuelve **401 Unauthorized** sin
+credenciales. Y `bgg_missing` se asigna con `{:ok, []}` — una lista **vacía**, no un error
+(`enrichment.ex:99`), así que un cambio de auth o de forma de la respuesta es una causa posible de
+ocho falsos positivos. **Sin confirmar en ninguno de los dos sentidos.**
+
+**La decisión:** los 49 pasan a `draft`. No se borran.
+
+- La ludoteca pública deja de servir 49 fichas sin tapa (435 → 386).
+- El editor no vuelve a mostrar un juego roto **publicado**, que es la simplificación pedida.
+- Las 49 filas siguen existiendo y siguen siendo arreglables — el club no pierde el registro de
+  tener esas cajas.
+- Es reversible.
+
+**Lo que hay que mirar aparte:** por qué 8 juegos con ids que parecen válidos quedaron marcados
+`bgg_missing`. Si es el 401, se arreglan solos al re-enriquecer y no habría que haberlos tocado.
+
+**Consecuencia de diseño, y es la parte que más simplifica:** un borrador **no se ve en la web**, así
+que la frase que sostenía todo el sketch 075 — *«Se está viendo así en la web»* — pasa a ser **falsa**
+y se va. Con ella se va también la colisión que la ronda 4 midió a 16px contra la nota de la 080, que
+para un borrador ya dice *«No se ve en la web ni está en el estante.»*

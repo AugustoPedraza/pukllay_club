@@ -2,10 +2,10 @@
 sketch: 075
 name: admin-remedy-dirty
 question: "r1-r3 — where does the remedy live while the editor is dirty and the CTA slot is taken? · r4 — the slot is gone: where does it live AT ALL?"
-winner: null
+winner: null  # ninguna — la pregunta dejó de existir antes de decidirse
 tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, d29, d40, dirty-state, palette, 079, 080, premise-change]
 rounds: 4
-status: PENDING REVIEW — round 4 rebuilt on 079+080's decided chrome, 26/26. A · el cuerpo and B · el pie on the page; the r1-r3 premise is gone (see round 4)
+status: CERRADA 2026-09-22 — el escenario se removió en vez de contestarse: los 49 juegos rotos se despublican (ver el cierre al final y `.planning/notes/staff-admin-decisions.md`). El artefacto queda como registro, 26/26.
 ---
 
 # Sketch 075: the remedy while dirty
@@ -582,3 +582,72 @@ resets the scroll, and the reason is written where it happens.
 - **064's `no disabled buttons` gets its most concrete case yet**: B puts a dead primary next to a live
   secondary in one bar, 261px² against 287px². Still governed by no rule.
 - Not confirmed on a real device.
+
+---
+
+## Closed 2026-09-22 — the scenario was removed, not answered
+
+From the developer, after round 4:
+
+> *"For keep it simple, let's remove that scenario for now. If there is some data without id or with
+> id malo, or with a failed sync, remove it."*
+
+**Checked against the data before acting on it, and the second sentence did not survive the check.**
+The 49 rows are not junk: ~26 of the 41 `no_bgg_id` are expansions and promos the club physically
+owns and lends (`Wingspan Europa (expa)`, `Root Expansion Los Rivereños`, both `ESDLA: Viajes por la
+Tierra Media`…), the rest are base games with unmatched hand-typed names (`ganges`, `obscurio`,
+`luxor`), and the 8 `bgg_missing` all carry plausible ids for their release years — which could not
+be verified because BGG's API now answers **401** unauthenticated, while `bgg_missing` is assigned on
+an **empty list**, not an error (`enrichment.ex:99`). Deleting would have removed 11% of the live
+catalog, possibly over an enrichment bug.
+
+**Decided instead: the 49 are unpublished, not deleted.** Full rationale and counts in
+`.planning/notes/staff-admin-decisions.md` § *Los 49 sin datos de BGG*.
+
+### Why that closes this sketch rather than just narrowing it
+
+A draft is not on the web. So the sentence this entire sketch was built on —
+
+> *"…ni datos. **Se está viendo así en la web.**"*
+
+— becomes **false** and goes. That sentence was the whole moral engine: round 1's finding was not
+"the remedy is inconvenient" but *"a permanent accusation with the remedy removed."* With the
+accusation gone, so is the asymmetry that made the question urgent.
+
+Two of round 4's own measurements go with it:
+
+- **The 16px duplicated sentence dissolves.** 080's note for a draft already reads *"No se ve en la
+  web ni está en el estante."* — it no longer collides with the diagnosis, because they no longer
+  claim the same thing.
+- **The 0-of-8 unreachability stops being a contradiction.** A draft that cannot yet be fixed is
+  merely incomplete; a *published* game that cannot be fixed while telling you it is broken in public
+  was the defect.
+
+### What genuinely survives, and where it goes
+
+**A draft with no BGG id still needs a way to get one.** That question is real, but it is smaller and
+it is not this sketch's: it belongs to the draft flow, where **078** already decided
+`P2 · la hoja del borrador, un solo CTA`, and 078's sheet does **not** currently carry a way to link
+an id — checked, not assumed.
+
+Round 4's two homes stay on the page as the measured record for whoever picks that up:
+
+| | A · el cuerpo | B · el pie |
+|---|---|---|
+| reachable, 4 situations | 4 / 4 | 4 / 4 |
+| travel on edit | 18px (the note's, not the remedy's) | 0 |
+| tap target | 18,990px² | 5,078px² |
+| cost | three stacked surfaces before the title | dead primary beside a live secondary (261 vs 287px²) |
+
+Both were measured on a **published** broken game. Neither number transfers to a draft unchecked —
+the chrome differs and the diagnosis copy changes — so re-measure rather than cite.
+
+### Still owed, and not closed by this
+
+- **The 8 `bgg_missing` need a second look**, because they may never have been broken. If the 401 is
+  the cause they re-enrich clean, and unpublishing them was unnecessary.
+- **The unpublish itself is not done.** It is 49 rows on a live site and wants a reversible
+  migration, not an ad-hoc `UPDATE` — see the note.
+- **`TODO(palette)` #1 and #2 still stand** — `--val` and `--warn` are local tokens inherited through
+  073/075/079/080 and owed upstream, independent of this sketch's fate.
+- **064's `no disabled buttons` conflict is still open.** It was never 075's to close.
