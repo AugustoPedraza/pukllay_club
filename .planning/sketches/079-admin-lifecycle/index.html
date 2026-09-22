@@ -1237,9 +1237,7 @@
 
 <div id="vnav">
   <b>079 · r2</b>
-  <span style="opacity:.55">¿dónde ocurre la edición?</span>
-  <button data-var="I" class="on">I · inline, en el bloque</button>
-  <button data-var="H">H · en una hoja (d33)</button>
+  <span style="opacity:.55">DECIDIDO: el ⋮ arriba · tinte + lápiz · la edición en una hoja</span>
 </div>
 
 <div class="stage"><div class="device" id="device">
@@ -1247,6 +1245,10 @@
   <div class="stbar" id="stbar"></div>
   <div class="scroller" id="scroller"><main id="main" class="pg"></main></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
+  <!-- el teclado simulado, de la 078. Sin él, `device.kbd` sube la hoja 292px y abajo queda un hueco
+       vacío: la captura mostraba la hoja flotando y no se entendía por qué. El check 39 medía bien
+       contra 292 igual, pero una captura que no se puede leer es media medición. -->
+  <div class="kbd-sim" aria-hidden="true"><div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div></div>
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
   <div class="dscrim" id="dscrim"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
@@ -1274,6 +1276,10 @@ const P = {
   kebab: '<circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>',
   box: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
   up: '<path d="M12 19V6M6 12l6-6 6 6"/>',
+  /* el tick de la opción elegida. Faltaba en el mapa, así que `ic('tick')` dibujaba un `<svg>` con
+     `undefined` adentro: un nodo `.tick` presente, con tamaño, y sin nada dibujado. Cualquier check
+     que contara `.tick` habría pasado. Lo encontró la captura — la opción actual no estaba marcada. */
+  tick: '<path d="M4 12.5l5.5 5.5L20 7"/>',
   minus: '<path d="M5 12h14"/>',
   plus: '<path d="M12 5v14M5 12h14"/>'
 };
@@ -1315,8 +1321,7 @@ const G = {
   bgg_rating: 8.1, bgg_weight: 3.5, bgg_rank: 26
 };
 const CYC = { published: { n: 'Publicado', k: 'ok' }, retired: { n: 'Retirado', k: 'off' } };
-let VAR = 'I';   /* el MODO de edición: I inline · H en hoja */
-let EDITING = null;   /* qué campo está abierto, en cualquiera de los dos modos */
+let EDITING = null;   /* qué campo tiene la hoja abierta */
 
 /* ---------- las transiciones: UN SOLO VERBO (decisión del desarrollador) ---------- */
 function actions(status) {
@@ -1340,18 +1345,58 @@ const playersText = () => G.min_players === G.max_players ? `${G.max_players}` :
 /* el lápiz: ahora SIEMPRE, porque la síntesis está decidida. `VAR` pasó a ser el modo de edición. */
 const pen = () => `<span class="pen">${ic('pen', 1.9)}</span>`;
 
-/* ---------- los controles, UNA sola definición para los dos modos ----------
-   Si cada modo tuviera el suyo, un hallazgo sobre el modo sería en realidad sobre el control.
-   Son los de la 078, copiados: `.fld` 48px, textarea 96 mínimo, `.seg` de tres con descriptor,
-   `.stepper` de 44, `.sw` de 52x32. */
+/* ---------- LAS HOJAS DE CAMPO, CONTRA `openFieldSheet` DE LA 078 (1788-1823) ----------
+   DECIDIDO: la edición ocurre en la hoja. El modo inline salió de la página (convención de 072); sus
+   mediciones quedan en el README, que es lo que sostiene la decisión.
+
+   Y al sacarlo apareció algo que el modo inline tapaba: **yo había usado el control equivocado.**
+   La 078 tiene DOS patrones de control, para dos superficies distintas:
+
+     · la HOJA DEL BORRADOR (ronda 4)    un formulario clásico: `.seg` de tres con descriptor, `.sw`,
+                                         `.fld` — todo junto, con UN CTA al final
+     · la HOJA DE CAMPO DEL EDITOR       `.opt` + TICK: una opción por fila, el tick marca la elegida,
+       (078:1788-1823)                   y elegir CIERRA. Más un `Guardar` propio para los de texto.
+
+   Yo había traído el `.seg` de la hoja del borrador al editor. Son superficies distintas y la 078 ya
+   las había separado. Esto es lo que dice el artefacto del editor, textual: subtítulo en cada hoja,
+   tick en la elegida, `Guardar` ancho en los de texto, y el hint de copias con su número real.
+
+   Y los campos de texto SÍ necesitan ese `Guardar`: sin él, escribir el nombre y cerrar con el ✕
+   descartaba lo escrito sin decir nada — un defecto que el modo inline no tenía (su botón `Listo`
+   hacía de commit) y que apareció recién al quedarse la hoja sola. */
+const optRow = (k, v, n, sub, on) => `<button class="opt" data-pick="${k}" data-val="${esc(v)}">
+  <span class="ot"><span class="on2">${esc(n)}</span>${sub ? `<span class="os">${esc(sub)}</span>` : ''}</span>
+  ${on ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`;
+
+const SHELVES = [{ v: '', n: 'Sin estante' }, { v: 'L0', n: 'L0' }];
+
 const FIELD = {
-  name:        { label: 'Nombre',            ctl: () => `<input class="fld" id="f-name" value="${esc(G.name)}" autocomplete="off">` },
-  description: { label: 'Descripción',       ctl: () => `<textarea class="fld" id="f-desc" rows="4">${esc(G.description)}</textarea>` },
-  band:        { label: 'Nivel',             ctl: () => `<div class="seg" role="group">${BANDS.map(b => `<button data-pick-band="${b.v}" aria-pressed="${G.weight_band === b.v}"><span class="rd"></span><span><span class="sn">${esc(b.n)}</span><span class="ss">${esc(b.d)}</span></span></button>`).join('')}</div>` },
-  units:       { label: 'Copias',            ctl: () => `<div class="stepper"><button data-units="-1" aria-label="Menos una copia">${ic('minus', 2)}</button><span class="n">${G.units}</span><button data-units="1" aria-label="Una copia más">${ic('plus', 2)}</button></div>` },
-  shelf:       { label: 'Estante',           ctl: () => `<div class="seg" role="group">${[{ v: '', n: 'Sin estante' }, { v: 'L0', n: 'L0' }].map(o => `<button data-pick-shelf="${o.v}" aria-pressed="${(G.shelf || '') === o.v}"><span class="rd"></span><span><span class="sn">${esc(o.n)}</span></span></button>`).join('')}</div>` },
-  exp:         { label: 'Es una expansión',  ctl: () => `<div class="swrow"><button class="sw" role="switch" aria-checked="${G.is_expansion}" data-toggle-exp></button><span style="font-size:15px">${G.is_expansion ? 'Sí' : 'No'}</span></div>` },
-  cover:       { label: 'Tapa',              ctl: () => `<p style="font-size:13px;color:var(--color-text-muted);line-height:1.4;margin:0">La tapa la trajo BoardGameGeek. Elegir otra es revertir 01.3.1/D-07, que vació <code>gallery_urls</code> a propósito — no está dibujado.</p>` }
+  band: { label: 'Nivel', sub: 'Cuánto pide el juego a quien lo juega por primera vez.',
+    body: () => `<div class="sh-body">${BANDS.map(b => optRow('band', b.v, b.n, b.d, G.weight_band === b.v)).join('')}</div>` },
+
+  shelf: { label: 'Estante', sub: 'Dónde está la caja en el club.',
+    body: () => `<div class="sh-body">${SHELVES.map(o => optRow('shelf', o.v, o.n, '', (G.shelf || '') === o.v)).join('')}</div>` },
+
+  exp: { label: 'Es una expansión', sub: 'Se muestra junto al juego base.',
+    body: () => `<div class="sh-body">${[['No', '0'], ['Sí', '1']].map(([n, v]) => optRow('exp', v, n, '', String(+G.is_expansion) === v)).join('')}</div>` },
+
+  units: { label: 'Copias', sub: 'Cuántas cajas del juego tiene el club.', form: true,
+    body: () => `<div class="sh-body"><div class="stepper">
+      <button data-units="-1" aria-label="Una copia menos">${ic('minus', 2)}</button>
+      <span class="n">${G.units}</span>
+      <button data-units="1" aria-label="Una copia más">${ic('plus', 2)}</button></div>
+      <p class="hint" style="text-align:center">Casi siempre es 1: los 434 juegos publicados tienen una sola caja.</p></div>` },
+
+  name: { label: 'Nombre', sub: 'Como lo llama el club.', form: true,
+    body: () => `<div class="fbody"><input class="fld" id="f-name" value="${esc(G.name)}" aria-label="Nombre" autocomplete="off">
+      <button class="obtn wide pri" data-pick="name">Guardar</button></div>` },
+
+  description: { label: 'Descripción en español', sub: 'Lo que se lee en la ficha del juego.', form: true,
+    body: () => `<div class="fbody"><textarea class="fld" id="f-desc" aria-label="Descripción en español">${esc(G.description)}</textarea>
+      <button class="obtn wide pri" data-pick="description">Guardar</button></div>` },
+
+  cover: { label: 'Tapa', sub: 'La trajo BoardGameGeek.',
+    body: () => `<div class="sh-body"><p class="hint">Elegir otra imagen es revertir 01.3.1/D-07, que vació <code>gallery_urls</code> a propósito. No está dibujado.</p></div>` }
 };
 
 function renderPage() {
@@ -1426,24 +1471,7 @@ function renderPage() {
   </div>`;
 
   $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
-  $('#main').className = 'pg ' + VAR + (FLAT ? ' flat' : '');
-
-  /* ---------- I · inline: el control REEMPLAZA al bloque, en su lugar ----------
-     Se inserta como hermano y se esconde el bloque de lectura. El `[hidden]` funciona porque las dos
-     clases llevan su companion en la hoja de estilos — la trampa que la 078 pisó cinco veces.
-     El control se monta DESPUÉS de pintar, no dentro del template, para que el DOM de lectura sea
-     idéntico en los dos modos y el check 35 pueda compararlos. */
-  if (VAR === 'I' && EDITING && FIELD[EDITING]) {
-    const host = $(`#main [data-edit="${EDITING}"]`);
-    if (host) {
-      const box = document.createElement('div');
-      box.className = 'inl'; box.dataset.inl = EDITING;
-      box.innerHTML = FIELD[EDITING].ctl() + `<button class="done" data-act="done">Listo</button>`;
-      host.insertAdjacentElement('afterend', box);
-      host.hidden = true;
-      setTimeout(() => { const f = box.querySelector('.fld'); f ? f.focus() : box.querySelector('button')?.focus(); }, 40);
-    }
-  }
+  $('#main').className = 'pg' + (FLAT ? ' flat' : '');
 
   /* la franja de estado. `Así se ve en la web` es textual de 075:941, donde ya decía exactamente esto
      sobre otro problema — no es una frase nueva. */
@@ -1469,24 +1497,41 @@ let DESC_OPEN = false, FLAT = false;
 
    Es la forma que este linaje ya nombró dos veces: leer la prosa de una decisión en vez de su
    artefacto. Acá ni siquiera había que leer nada: había una función. Ésta es esa función, textual. */
+const shTop = (t, sub) => `<div class="sh-txt"><div class="sh-title">${esc(t)}</div>${sub ? `<div class="sh-sub">${esc(sub)}</div>` : ''}</div>`;
+
 function sheetChrome(head, body) {
   return `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}
       <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
 }
 
-/* ---------- H · en hoja: el MISMO control, montado en una hoja (d33) ---------- */
+/* un solo escritor para todos los campos (la forma de `setField` en 078:1826-1841). */
+function setField(k, raw) {
+  if (k === 'exp') G.is_expansion = raw === '1';
+  else if (k === 'band') G.weight_band = raw || null;
+  else if (k === 'shelf') G.shelf = raw || null;
+  else if (k === 'name') G.name = ($('#f-name').value || '').trim() || G.name;
+  else if (k === 'description') G.description = ($('#f-desc').value || '').trim() || G.description;
+  EDITING = null;
+  closeSheet(); render();
+}
+
+/* el stepper edita DENTRO de la hoja en vez de elegir y cerrar, así que la hoja tiene que repintarse
+   sola. La 078 encontró este mismo defecto en su ronda 3: una edición hecha adentro de una hoja que
+   el resto de la pantalla no puede ver es el modelo fallando en silencio. */
+function paintSheet() { if (EDITING && $('#sheet').classList.contains('open')) {
+  const f = FIELD[EDITING]; $('#sheet').innerHTML = sheetChrome(shTop(f.label, f.sub), f.body()); } }
+
+/* ---------- la hoja de campo (d33) ---------- */
 function openFieldSheet(k) {
   const f = FIELD[k]; if (!f) return;
   const sh = $('#sheet');
-  sh.className = 'sheet form';
-  sh.innerHTML = sheetChrome(
-    `<div class="sh-txt"><div class="sh-title">${esc(f.label)}</div></div>`,
-    `<div class="sh-body"><div class="inl" data-inl="${k}">${f.ctl()}</div></div>`);
+  sh.className = 'sheet' + (f.form ? ' form' : '');
+  sh.innerHTML = sheetChrome(shTop(f.label, f.sub), f.body());
   sh.classList.add('open'); $('#backdrop').classList.add('open');
-  /* el teclado sólo se simula para los campos de texto — un `.seg` no lo levanta, y simularlo
-     igual haría que el check del pliegue midiera un teclado que no existiría. */
+  /* el teclado sólo se simula donde de verdad aparece. Simularlo en un `.opt` haría que el check del
+     pliegue midiera un teclado que no existiría. */
   device.classList.toggle('kbd', k === 'name' || k === 'description');
-  setTimeout(() => { const fl = sh.querySelector('.fld'); fl ? fl.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
+  setTimeout(() => { const fl = sh.querySelector('.fld'); fl ? fl.focus() : sh.querySelector('.opt')?.focus(); }, 60);
 }
 
 /* ---------- la hoja de ciclo, que abre el ⋮ ---------- */
@@ -1550,13 +1595,11 @@ function render() {
   $$('#tools [data-cov]').forEach(b => b.classList.toggle('on', (b.dataset.cov === '1') === G.hasCover));
   $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === VAR));
   const n = actions(G.status).length;
-  $('#now').textContent = `${VAR === 'I' ? 'inline' : 'en hoja'} · ${CYC[G.status].n} · ${$$('#main .ed').length} bloques`
-    + (EDITING ? ` · editando ${EDITING}` : '');
+  $('#now').textContent = `${CYC[G.status].n} · ${$$('#main .ed').length} bloques editables`
+    + (EDITING ? ` · hoja: ${EDITING}` : '');
 }
 
 document.addEventListener('click', e => {
-  const v = e.target.closest('#vnav [data-var]');
-  if (v) { VAR = v.dataset.var; EDITING = null; closeSheet(); render(); return; }
   const cy = e.target.closest('#tools [data-cy]');
   if (cy) { G.status = cy.dataset.cy; closeSheet(); render(); return; }
   const cv = e.target.closest('#tools [data-cov]');
@@ -1577,28 +1620,17 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-act="desctog"]')) { DESC_OPEN = !DESC_OPEN; render(); return; }
   if (e.target.closest('[data-act="save"]')) return snack('Cambios guardados');
 
-  /* los controles de dentro del editor, antes de que el click caiga al bloque */
-  const pb = e.target.closest('[data-pick-band]');
-  if (pb) { G.weight_band = pb.dataset.pickBand; closeSheet(); EDITING = null; render(); return; }
-  const ps = e.target.closest('[data-pick-shelf]');
-  if (ps) { G.shelf = ps.dataset.pickShelf || null; closeSheet(); EDITING = null; render(); return; }
-  const st = e.target.closest('[data-units]');
-  if (st) { G.units = Math.max(1, G.units + (+st.dataset.units)); render(); return; }
-  if (e.target.closest('[data-toggle-exp]')) { G.is_expansion = !G.is_expansion; render(); return; }
-  if (e.target.closest('[data-act="done"]')) {
-    const inp = $('#f-name'), ta = $('#f-desc');
-    if (inp) G.name = inp.value.trim() || G.name;
-    if (ta) G.description = ta.value.trim() || G.description;
-    EDITING = null; render(); return;
-  }
+  /* ---------- UN SOLO ESCRITOR, como la 078 (`setField`) ----------
+     Si cada control escribiera por su cuenta, la franja de estado y la ficha podrían leer un valor
+     que la hoja escribió de otra forma. Los `.opt` mandan su valor en `data-val`; los de texto
+     mandan el id de su campo y el escritor lee el input. */
+  const pk = e.target.closest('[data-pick]');
+  if (pk) { setField(pk.dataset.pick, pk.dataset.val); return; }
+  const stp = e.target.closest('[data-units]');
+  if (stp) { G.units = Math.max(1, G.units + (+stp.dataset.units)); paintSheet(); render(); return; }
 
   const ed = e.target.closest('[data-edit]');
-  if (ed) {
-    const k = ed.dataset.edit;
-    EDITING = k;
-    if (VAR === 'H') { openFieldSheet(k); return; }
-    render(); return;
-  }
+  if (ed) { EDITING = ed.dataset.edit; openFieldSheet(EDITING); return; }
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;

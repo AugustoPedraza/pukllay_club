@@ -2,10 +2,10 @@
 sketch: 079
 name: admin-lifecycle
 question: "r1 · ¿dónde vive la transición? · r2 · ¿qué dice que un bloque se edita? · r3 · ¿inline o en hoja? · r4 · el estado, explícito"
-winner: "r1 · el ⋮ · r2 · tinte + lápiz sutil (síntesis A1+A2) · r3 abierta, la medición recomienda LA HOJA"
+winner: "el ⋮ arriba · tinte + lápiz sutil · la edición en una hoja (d33) · el estado explícito en una franja"
 tags: [admin, juegos, lifecycle, retire, menu, kebab, ficha, rhythm, d37, d42, d44, d47, D-19i, D-19j, 064, slice-4]
-rounds: 4
-status: PENDING REVIEW — r3 I/H sin decidir; r4 arregló la hoja y el estado. 38/38.
+rounds: 4 + decisión
+status: DECIDIDO 2026-09-22 — sin variantes en la página, 36/36 (no confirmado en dispositivo)
 ---
 
 # Sketch 079: dónde vive la transición de ciclo
@@ -23,11 +23,11 @@ El alcance que trajo el desarrollador al intake:
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/079-admin-lifecycle/index.html
-node .planning/sketches/079-admin-lifecycle/verify.js     # 38/38
+node .planning/sketches/079-admin-lifecycle/verify.js     # 36/36
 ```
 
-**La página que abre es la RONDA 3** (I / H: inline o en hoja). Los toggles de las rondas 1 y 2 están
-eliminados — el ⋮ y la síntesis tinte+lápiz están decididos — y sus mediciones quedan abajo.
+**La página no ofrece ninguna variante**: las cuatro preguntas están contestadas y los toggles eliminados
+(convención de 072). Las mediciones de cada ronda quedan abajo, que es lo que sostiene cada decisión.
 
 **El estado y la tapa** se cambian desde el panel. Son **switches de fixture**, no controles de la página:
 existen para poder contar qué ofrece el ⋮ en cada estado **sin usar el control que se está midiendo**, y
@@ -782,3 +782,116 @@ de texto pretendiendo entender CSS.**
 - **El `Retirado` no tiene sección en la lista** (ronda 1) — la franja dice el estado en el editor, pero la
   lista decidida sigue mandándolo a "Juegos del club" sin marca.
 - Todo lo abierto en las rondas 1, 2 y 3 y en la 078 sigue abierto.
+
+
+---
+
+# Decidido — la edición ocurre en la hoja (2026-09-22)
+
+> *"Yes, the edits happens on the bottom sheet"*
+
+**Las cuatro preguntas están contestadas y los toggles eliminados** (convención de 072: lo que está en
+pantalla es LA DECISIÓN y no un menú de decisiones). El check 1 lo asserta como ausencia, para que no
+vuelvan de a una.
+
+| ronda | | |
+|---|---|---|
+| **r1** · dónde vive la transición | **el ⋮** | único control de la barra, abre una hoja |
+| **r2** · qué dice que se edita | **el tinte de d37 + un lápiz sutil** | síntesis de A1 y A2 |
+| **r3** · dónde ocurre la edición | **en una hoja (d33)** | inline salió de la página |
+| **r4** · el estado | **explícito**, en una franja bajo la barra | dice la consecuencia, no el nombre |
+
+Más las premisas del desarrollador: el verbo colapsado (`Retirar` = despublicar), el cuerpo con el ritmo
+de la ficha pública (E3) y el CTA apilado de 52px.
+
+## Sacar el modo inline destapó que yo había usado el control equivocado
+
+La 078 tiene **dos** patrones de control, para dos superficies distintas, y ya los había separado:
+
+```
+la HOJA DEL BORRADOR (078 r4)      un formulario clásico: `.seg` de tres con descriptor, `.sw`,
+                                   `.fld` — todo junto, con UN CTA al final
+la HOJA DE CAMPO DEL EDITOR        `.opt` + TICK: una opción por fila, el tick marca la elegida,
+(078:1788-1823)                    y elegir CIERRA. Más un `Guardar` propio para los de texto.
+```
+
+**Yo había traído el `.seg` de la hoja del borrador al editor.** Mientras el modo inline existía no se
+notaba, porque inline el `.seg` es lo correcto — es un formulario en la página. En cuanto la hoja quedó
+sola, el editor estaba usando el control de otra superficie. Ahora las hojas son textuales del artefacto
+del editor: subtítulo en cada una, tick en la elegida, `Guardar` ancho en los de texto, y el hint de
+copias con su número real.
+
+Y con eso apareció un defecto que el modo inline tapaba: **los campos de texto no tenían cómo confirmar.**
+Inline tenían un botón `Listo`; en la hoja, escribir el nombre y cerrar con el ✕ lo descartaba en
+silencio. Checks 3a/3b: cerrar no escribe, `Guardar` sí y el valor aparece en **los dos** lugares que lo
+muestran (el título y la barra).
+
+```
+2b   las de elección usan .opt con UN tick, no .seg    band 3/1 · shelf 2/1 · exp 2/1
+2d   los de texto llevan su Guardar; los de elección no (elegir ES el commit)
+3a   escribir y cerrar con el ✕ no escribe nada
+3b   Guardar escribe, cierra, y actualiza título y barra
+3c   elegir escribe y cierra de una
+3e   el stepper repinta la hoja Y la página detrás
+```
+
+El **3e** es el defecto que la 078 encontró en su ronda 3 y que había que no reintroducir: una edición
+hecha *dentro* de una hoja que el resto de la pantalla no puede ver es el modelo fallando en silencio.
+
+## Un tercer nodo presente que no dibujaba nada
+
+```
+2c   el tick tiene un path de verdad, no un <svg> vacío
+```
+
+`P['tick']` no existía en el mapa de iconos, así que `ic('tick')` producía un `<svg>` con `undefined`
+adentro: **nodo presente, con tamaño, sin nada pintado.** Lo encontró la captura — la opción actual no
+estaba marcada. Es la tercera forma del mismo defecto en este sketch, después del lápiz recortado por el
+clamp y del punto de estado (que desapareció tres veces por tres causas distintas). Todos los checks de
+marca leen ahora rect y color resuelto.
+
+## Lo que quedó en la página
+
+```
+la barra        ‹ · título (aparece al scrollear) · ⋮          R359, sin primario
+la franja       ● Publicado · Así se ve en la web.             y=56, 39px, siempre visible
+el cuerpo       la ficha pública, con su ritmo:
+                pills → tapa → título Bebas 30 → chip de sección → descripción
+                → AÑO / DISEÑADORES / ILUSTRADORES / MECÁNICAS / TEMÁTICAS
+                → ——— → COPIAS / ESTANTE / ES UNA EXPANSIÓN
+el affordance   tinte `--val` + lápiz de 14px en los 7 bloques editables
+la edición      cada bloque abre su hoja (.opt + tick, o campo + Guardar)
+el ciclo        el ⋮ abre la hoja de ciclo: UN verbo, con diálogo D-19f
+el CTA          Guardar, 52px, al pie del formulario
+```
+
+## Los cuatro costos que quedan medidos y sin resolver
+
+```
+5c   la quilla de 14 de la web deja el cuerpo en R361 y la barra en R359: dos bordes derechos
+5f   el tinte es el MISMO hex que el chip de sección, que no se edita — lo único que
+     desambigua es un lápiz de 14×14, la marca más chica de la pantalla
+5g   el CTA está a 790px de scroll (1,9 pantallas). La web resuelve el pie con una barra FIJA
+8a   el ⋮ hereda la esquina que cinco pantallas enseñaron como LA ACCIÓN PRINCIPAL
+```
+
+## Open
+
+- **No confirmado en dispositivo.** En este linaje el dispositivo encontró ocho veces lo que el arnés no,
+  y este sketch agregó cinco más que encontró la captura y no el número.
+- **`TODO(palette)`:** el tinte no se puede desambiguar sin tocar la paleta (`--color-primary` y
+  `--color-accent-text` son el mismo hex en claro), y `--warn` —el fondo de la franja para retirado—
+  sigue siendo un token local. Los dos vienen de 073/075.
+- **D-19j y la quilla quedan pisadas para esta página** y hay que escribirlo como decisión, no dejarlo
+  como deriva (d47). Lo mismo el lápiz: 072 había aterrizado en "ningún glifo" después de sacar el `›` y
+  el `⌄`.
+- **El pie sigue contradiciéndose**: el CTA de la 078 contra la barra fija de la web.
+- **El retirado no tiene sección en la lista** (r1): la franja lo dice en el editor, pero la lista
+  decidida lo manda a "Juegos del club" sin marca.
+- **La tapa no se puede editar de verdad** — es una reversión de 01.3.1/D-07, no una pantalla.
+- **El guard que falta en el código**: `and g.is_expansion == false` en `section_query(:weight_band)`
+  (`catalog.ex:850`).
+- **El bug de `bgg_client.ex` sigue sin archivar** — `./` en `name`, `publishers`, `artists`; la página
+  pública de Codenames sigue mostrando 3.304 caracteres de *"editado por"*.
+- **`publish_game` y `retire_game` siguen sin guard de origen** (`catalog.ex:491`, `:502`). Vive en el
+  contexto, no en la pantalla.

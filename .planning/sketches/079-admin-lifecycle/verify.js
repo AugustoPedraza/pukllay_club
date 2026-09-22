@@ -1,34 +1,8 @@
-/* Headless-Chrome checks for sketch 079 — slice 4 of the create scenario: the lifecycle transition.
-   Run from the repo root:
+/* Headless-Chrome checks for sketch 079 — slice 4: el ciclo de vida y el editor de un publicado.
+   Correr desde la raíz del repo:
      python3 -m http.server 8765 &
      node .planning/sketches/079-admin-lifecycle/verify.js
-   Env: PLAYWRIGHT_CORE, SKETCH_URL, SHOTS_DIR (default <os tmp>/sketch-079-shots).
-
-   LA PREGUNTA DE LA RONDA 1: dónde vive la transición de ciclo. Tres contenedores —
-     M1  el menú ⋮ en la barra de 074
-     M2  la zona CICLO al pie del formulario   <- EL INCUMBENTE (form.ex:324-330)
-     M3  el read-out `● Publicado` convertido en control (la jugada de 075-V4)
-
-   TRAMPAS QUE ESTE ARCHIVO EVITA A PROPÓSITO — las cinco primeras heredadas del linaje, donde cada una
-   produjo un número verde que describía otra cosa que la página:
-
-     · `.hidden` NO DICE SI ALGO ESTÁ EN PANTALLA. Cualquier clase que setea `display` out-especifica el
-       `[hidden] { display: none }` del UA. La 078 pisó esa trampa CINCO veces en un solo archivo. Todo
-       check de visibilidad de acá usa `offsetParent` y, cuando importa, `elementFromPoint`.
-     · UN CONTENEDOR VACÍO NO PRUEBA UN CONTENEDOR AUSENTE: el menú de M1 está `hidden` al reposo, que es
-       también lo que se ve si `actions()` devolvió cero. Todo check del menú cerrado va acompañado del
-       menú ABIERTO sobre el mismo estado.
-     · UN `const` DE NIVEL SUPERIOR EN UN SCRIPT CLÁSICO NO ES PROPIEDAD DE `window`, así que asignarle
-       desde el arnés no cambia nada mientras parece que sí (076 dos veces, 077 una). `actions` es una
-       DECLARACIÓN de función, alcanzable por `window.actions`, y el check 1b la usa para falsificar al 1.
-     · EL PANEL DE HERRAMIENTAS ES `position: fixed` SOBRE EL DEVICE y se come `elementFromPoint`. El
-       check 0 asserta que está realmente oculto antes de cualquier hit test.
-     · UN NÚMERO SOBRE UN ELEMENTO EN `opacity: 0` ES UN NÚMERO VERDADERO SOBRE ALGO INVISIBLE (074,
-       check 20). Acá el título de la barra arranca invisible, así que el check 6 mide el borde derecho
-       de `Guardar`, que nunca lo está.
-     · Y LA DE ESTA RONDA: DOS PNG IGUALES NO PRUEBAN QUE EL AFFORDANCE NO SE VEA si la región recortada
-       no lo incluye. El check 8 recorta por el rect REAL de `.gh-st` y el 8c verifica que el recorte
-       contenga la banda, antes de creerle al diff. */
+   Env: PLAYWRIGHT_CORE, SKETCH_URL, SHOTS_DIR (default <os tmp>/sketch-079-shots). */
 const fs = require('fs'), path = require('path'), os = require('os');
 function loadPlaywright() {
   const tries = [process.env.PLAYWRIGHT_CORE, 'playwright-core'].filter(Boolean);
@@ -92,47 +66,55 @@ function diffPNG(b1, b2) {
 }
 
 /* ============================================================================
-   RONDA 2 — E3, la ficha editable.
+   ESTADO DEL SKETCH: LAS CUATRO PREGUNTAS ESTÁN CONTESTADAS Y LOS TOGGLES
+   ELIMINADOS (convención de 072: lo que está en pantalla es LA DECISIÓN y no un
+   menú de decisiones).
 
-   PREMISAS DEL DESARROLLADOR, no se varían y por eso no se checkean como si
-   fueran una elección: el ⋮ es el único control de arriba y abre una hoja
-   inferior · un solo verbo (Retirar/Restaurar) · el CTA es el apilado de 52px
-   de la 078 · el cuerpo es la ficha, editable en el lugar.
+     r1  dónde vive la transición de ciclo   ->  el ⋮, único control de la barra
+     r2  qué dice que un bloque se edita     ->  el tinte de d37 + un lápiz sutil
+     r3  dónde ocurre la edición             ->  EN UNA HOJA (d33)
+     r4  el estado                           ->  explícito, en una franja bajo la barra
 
-   EL ÚNICO EJE: ¿qué dice que un bloque de la ficha se puede editar?
-   A1 el tinte de d37 · A2 el lápiz · A3 nada (la línea base falsificable).
+   Más el verbo colapsado (`Retirar` = despublicar) y el cuerpo con el ritmo de
+   la ficha pública (E3), que fueron premisas del desarrollador.
 
-   POR QUÉ ES UN EJE Y NO UNA PREFERENCIA: d37 contestó esto para el spine del
-   admin — etiqueta prominente, valor subordinado, y el valor lleva `--val`.
-   E3 no tiene esa anatomía en la cabecera: el título es un `<h1>` pelado, la
-   descripción es prosa pelada, el nivel es un pill. No hay etiqueta de la cual
-   el valor sea subordinado, así que d37 no cubre el caso.
+   Las mediciones que sostienen cada decisión están en el README; acá quedan sólo
+   las que siguen siendo verdaderas sobre la página decidida, más las que la
+   protegen de volver atrás.
 
-   TRAMPAS NUEVAS DE ESTA RONDA, las dos encontradas en la captura y no por un
-   número — y las dos habrían dejado pasar checks de conteo de nodos:
+   TRAMPAS QUE ESTE ARCHIVO EVITA, todas cobradas en este linaje:
 
-     · `.ed .h1` NO ES `.ed.h1`. El bloque editable ES el título, no lo
-       contiene. Con el selector descendiente, A1 no pintaba nada y era
-       byte-idéntica a A3 — la variante del tinte y la de "nada", la misma
-       página. Por eso el check 25 compara PÍXELES contra A3, nunca nodos.
-     · UN RESET VA ANTES QUE LAS REGLAS DE TIPO. `.pg .ed { font: inherit }`
-       puesto después le ganaba por orden a `.pg .h1` (misma especificidad) y
-       el título salía en Inter 16 en vez de Bebas 30. El check 20 lee la
-       familia y el tamaño COMPUTADOS.
+     · `.hidden` NO DICE SI ALGO ESTÁ EN PANTALLA (la 078 la pisó cinco veces en
+       un archivo). Se usa `offsetParent` y, cuando importa, `elementFromPoint`.
+     · UN HIT TEST FUERA DEL VIEWPORT NO MIDE OCLUSIÓN, MIDE EL SCROLL: devuelve
+       `null` y se lee como "tapado". Cada elemento se scrollea a la vista antes.
+     · UNA HOJA MEDIDA A MITAD DE SU TRANSICIÓN DE ENTRADA da posiciones que no
+       existen. Se espera al `transitionend`, no a un `setTimeout` a ojo.
+     · `getBoundingClientRect().top` ARRASTRA EL SCROLL ACUMULADO de checks
+       anteriores. Donde la pregunta es "¿se movió el contenido?", se usa
+       `offsetTop`.
+     · UN NODO PRESENTE NO ES UNA MARCA VISIBLE: el lápiz de la descripción
+       existía dentro de un clamp y salía recortado; el tick existía con un icono
+       inexistente y dibujaba un `<svg>` vacío; el punto de estado desapareció
+       TRES veces (transparente, naranja, y de ancho cero). Todo check de marca
+       lee rect y color resuelto, nunca la existencia del nodo.
    ============================================================================ */
 
-const VARS = ['I', 'H'];   /* el eje de la ronda 3: dónde ocurre la edición */
-const setVar = async (p, v) => { await p.evaluate(v => { document.querySelector(`#vnav [data-var="${v}"]`).click(); }, v); await atRest(p); };
-const setCover = async (p, on) => { await p.evaluate(on => { document.querySelector(`#tools [data-cov="${on ? 1 : 0}"]`).click(); }, on); await atRest(p); };
-const setState = async (p, s) => { await p.evaluate(s => { document.querySelector(`#tools [data-cy="${s}"]`).click(); }, s); await atRest(p); };
+const FIELDS = ['name', 'description', 'band', 'units', 'shelf', 'exp', 'cover'];
+const CHOICE = ['band', 'shelf', 'exp'];
+const TEXT = ['name', 'description'];
+
 const atRest = p => p.evaluate(() => {
   document.querySelector('#sheet').classList.remove('open');
   document.querySelector('#backdrop').classList.remove('open');
   document.querySelector('#dscrim').classList.remove('open');
   document.querySelector('#snack').classList.remove('show');
+  document.querySelector('#device').classList.remove('kbd');
   document.querySelector('#scroller').scrollTop = 0;
   document.querySelector('#tbar').classList.remove('titled');
 });
+const setState = async (p, s) => { await p.evaluate(s => { document.querySelector(`#tools [data-cy="${s}"]`).click(); }, s); await atRest(p); };
+const setCover = async (p, on) => { await p.evaluate(on => { document.querySelector(`#tools [data-cov="${on ? 1 : 0}"]`).click(); }, on); await atRest(p); };
 const hideTools = p => p.evaluate(() => { document.querySelector('#tools').hidden = true; document.querySelector('#vnav').style.visibility = 'hidden'; });
 const showTools = p => p.evaluate(() => { document.querySelector('#tools').hidden = false; document.querySelector('#vnav').style.visibility = ''; });
 const deviceClip = p => p.evaluate(() => { const r = document.querySelector('#device').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
@@ -150,479 +132,304 @@ process.on('unhandledRejection', dump);
   page.on('pageerror', e => errs.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await page.goto(URL, { waitUntil: 'networkidle' });
-  /* la fuente de display importa para todo lo de abajo; si no cargó, cada medida de tipo es sobre
-     el fallback y no sobre Bebas. Se espera explícitamente en vez de confiar en networkidle. */
   await page.evaluate(() => document.fonts.ready);
+
+  /* la hoja entra con transición: medirla antes de que termine da posiciones que no existen. */
+  const settle = () => page.evaluate(() => new Promise(res => {
+    const sh = document.querySelector('#sheet');
+    if (!sh.classList.contains('open')) return res();
+    let done = false; const fin = () => { if (!done) { done = true; res(); } };
+    sh.addEventListener('transitionend', fin, { once: true });
+    setTimeout(fin, 600);
+  }));
+  const openField = async k => { await page.evaluate(k => document.querySelector(`#main [data-edit="${k}"]`).click(), k); await settle(); };
+  const closeSheet = async () => { await page.evaluate(() => document.querySelector('[data-act="close"]')?.click()); await atRest(page); };
 
   await hideTools(page);
   ok(await page.evaluate(() => document.querySelector('#tools').offsetParent === null),
     '0 · el panel de herramientas está fuera de layout durante los hit tests (offsetParent, no .hidden)');
   await showTools(page);
 
-  /* ---------- 1 · no atribuible: el DOM DE LECTURA es idéntico en los dos modos ----------
-     El control se monta DESPUÉS de pintar, no dentro del template, justamente para que esto sea
-     cierto. Si cada modo tuviera su propio marcado de lectura, cualquier hallazgo sobre el modo
-     sería en realidad sobre el marcado. */
-  const shape = {};
-  for (const v of VARS) {
-    await setVar(page, v);
-    shape[v] = await page.evaluate(() => ({
-      eds: [...document.querySelectorAll('#main .ed')].map(e => e.dataset.edit).join(','),
-      specs: document.querySelectorAll('#main .spec').length,
-      pens: document.querySelectorAll('#main .pen').length,
-      h: document.querySelector('#scroller').scrollHeight
-    }));
-  }
-  ok(shape.I.eds === shape.H.eds && shape.I.specs === shape.H.specs && shape.I.h === shape.H.h,
-    `1 · en reposo los dos modos pintan la MISMA página — ${shape.I.eds} · alto ${shape.I.h}px`);
+  /* ---------- 1 · ninguna variante quedó en la página (072) ---------- */
+  const decided = await page.evaluate(() => ({
+    toggles: document.querySelectorAll('#vnav [data-var]').length,
+    eds: [...document.querySelectorAll('#main .ed')].map(e => e.dataset.edit).join(','),
+    pens: document.querySelectorAll('#main .pen').length,
+    inline: document.querySelectorAll('#main .inl').length
+  }));
+  ok(decided.toggles === 0 && decided.inline === 0,
+    `1 · cero toggles de variante y cero controles inline en la página — lo que se ve es la decisión (072)`);
+  ok(decided.eds === 'band,cover,name,description,units,shelf,exp' && decided.pens === 7,
+    `1b · los 7 bloques editables llevan su lápiz — ${decided.eds}`);
 
-  /* ---------- 1b/1c · LA SÍNTESIS TAPA LOS DOS AGUJEROS QUE TENÍA A2 SOLA ----------
-     La ronda 2 midió que el lápiz sólo alcanzaba 5 de 7 bloques en pantalla: la tapa no tiene final
-     de texto del cual colgar un glifo, y el de la descripción vivía adentro del clamp de 3 líneas.
-     La síntesis los reubica — insignia en la esquina de la tapa (donde la ficha pública ya pone su
-     control de compartir, show.ex:551) y fuera del clamp, en la columna de 44px que el clamp reserva. */
-  await setVar(page, 'I');
-  ok(shape.I.pens === 7, `1b · el lápiz está en los ${shape.I.pens} bloques, tapa incluida`);
-  /* CADA UNO SE SCROLLEA A LA VISTA ANTES DEL HIT TEST. `elementFromPoint` sólo ve el viewport, así
-     que sobre los tres bloques de DEL CLUB — que viven más allá de los 740px — devolvía `null`, y el
-     check lo leía como "tapado". Un hit test fuera de pantalla no mide oclusión: mide el scroll.
-     Es la misma familia que la 075, que midió el pliegue contra el rect del scroller (740) en vez de
-     contra lo que el ojo ve (673), y se equivocó A FAVOR de la variante. */
-  const visibles = await page.evaluate(() => [...document.querySelectorAll('#main .pen')].map(pen => {
-    const host = pen.closest('.ed');
-    host.scrollIntoView({ block: 'center' });
+  /* 1c · y los lápices se VEN y se TOCAN. Cada uno se scrollea a la vista antes del hit test: fuera
+     del viewport `elementFromPoint` devuelve null y eso mide el scroll, no la oclusión. */
+  const pens = await page.evaluate(() => [...document.querySelectorAll('#main .pen')].map(pen => {
+    const host = pen.closest('.ed'); host.scrollIntoView({ block: 'center' });
     const hr = host.getBoundingClientRect(), pr = pen.getBoundingClientRect();
     const cs = getComputedStyle(host);
     const clip = cs.overflow !== 'visible' || cs.webkitLineClamp !== 'none';
-    /* además del rect: un hit test, porque un lápiz dentro de la caja puede estar tapado por otra cosa */
     const el = document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2);
-    return {
-      k: host.dataset.edit,
+    return { k: host.dataset.edit,
       dentro: !clip || (pr.bottom <= hr.bottom + 0.5 && pr.right <= hr.right + 0.5),
-      alcanzable: !!(el && (el === pen || pen.contains(el) || el.closest('.pen') === pen || el.closest('.ed') === host)),
-      /* QUÉ lo tapa, no sólo que lo tapa: la ronda 1 perdió una vuelta con un contador pelado */
-      tapadoPor: el ? (el.dataset && el.dataset.edit ? `.ed[${el.dataset.edit}]` : (el.className || el.tagName)) : 'nada'
-    };
+      alcanzable: !!(el && (el === pen || pen.contains(el) || el.closest('.pen') === pen || el.closest('.ed') === host)) };
   }));
-  await page.evaluate(() => { document.querySelector('#scroller').scrollTop = 0; });
-  const rotos = visibles.filter(v => !v.dentro || !v.alcanzable);
-  ok(rotos.length === 0,
-    `1c · los ${visibles.length} lápices se ven Y se pueden tocar` +
-    (rotos.length ? ` — FALLAN: ${rotos.map(r => `${r.k}(${r.dentro ? '' : 'recortado '}${r.alcanzable ? '' : 'tapado por ' + r.tapadoPor})`).join(', ')}` : ''));
+  await atRest(page);
+  const rotos = pens.filter(v => !v.dentro || !v.alcanzable);
+  ok(rotos.length === 0, `1c · los ${pens.length} lápices se ven y se pueden tocar`
+    + (rotos.length ? ` — FALLAN: ${rotos.map(r => r.k).join(', ')}` : ''));
 
   /* ============================================================================
-     20 · EL TÍTULO ES BEBAS 30/36 DE VERDAD — leído, no declarado
-     `font-display text-3xl` (show.ex:660). El admin lo tiene en 22/600 Inter y
-     D-19j fija ese rango para una página de admin, así que esto lo PISA, y se
-     escribe (d47) en vez de dejarlo como deriva.
+     2 · LAS HOJAS DE CAMPO SIGUEN EL PATRÓN DEL EDITOR DE LA 078 (1788-1823)
+     Y NO el del formulario de la hoja del borrador. Son dos superficies distintas
+     y la 078 ya las había separado; yo había traído el control equivocado.
      ============================================================================ */
-  await setVar(page, 'I');
+  const sheets = {};
+  for (const k of FIELDS) {
+    await openField(k);
+    sheets[k] = await page.evaluate(() => {
+      const sh = document.querySelector('#sheet');
+      const t = sh.querySelector('.sh-title'), sub = sh.querySelector('.sh-sub');
+      const opts = [...sh.querySelectorAll('.opt')];
+      const ticks = opts.filter(o => o.querySelector('.tick'));
+      const tickBox = ticks[0] ? ticks[0].querySelector('.tick svg').getBoundingClientRect() : null;
+      return {
+        titulo: t ? t.textContent : null, sub: sub ? sub.textContent : null,
+        opts: opts.length, ticks: ticks.length,
+        tickDibujado: !!(tickBox && tickBox.width > 8 && ticks[0].querySelector('.tick svg path')),
+        guardar: !!sh.querySelector('.obtn.wide.pri'),
+        seg: sh.querySelectorAll('.seg').length,
+        chrome: !!sh.querySelector('.sh-top') && !!sh.querySelector('.grab')
+      };
+    });
+    await closeSheet();
+  }
+  ok(FIELDS.every(k => sheets[k].sub && sheets[k].chrome),
+    `2a · las ${FIELDS.length} hojas tienen subtítulo y el chrome de la 078 (agarradera + .sh-top)`);
+  ok(CHOICE.every(k => sheets[k].opts > 0 && sheets[k].ticks === 1 && sheets[k].seg === 0),
+    `2b · las de elección usan .opt con UN tick en el valor actual, no el .seg del formulario del borrador — `
+    + CHOICE.map(k => `${k} ${sheets[k].opts} opciones/${sheets[k].ticks} tick`).join(' · '));
+  /* 2c · Y EL TICK ESTÁ DIBUJADO. `P['tick']` no existía en el mapa de iconos, así que `ic('tick')`
+     producía un `<svg>` con `undefined` adentro: nodo presente, con tamaño, sin nada pintado. Lo
+     encontró la captura, no el conteo. */
+  ok(CHOICE.every(k => sheets[k].tickDibujado),
+    `2c · y el tick tiene un path de verdad, no un <svg> vacío — el icono existía como nodo y no como dibujo`);
+  ok(TEXT.every(k => sheets[k].guardar) && CHOICE.every(k => !sheets[k].guardar),
+    `2d · los campos de texto llevan su propio Guardar ancho y los de elección no (elegir es el commit)`);
+
+  /* ---------- 3 · cerrar un campo de texto sin Guardar NO escribe ----------
+     El defecto apareció al quedarse la hoja sola: el modo inline tenía un botón `Listo` que hacía de
+     commit, y sin él escribir el nombre y cerrar con el ✕ lo descartaba en silencio. */
+  const drop = await page.evaluate(async () => {
+    const antes = document.querySelector('.ed.h1').textContent.trim();
+    document.querySelector('#main [data-edit="name"]').click();
+    await new Promise(r => setTimeout(r, 120));
+    document.querySelector('#f-name').value = 'NOMBRE TIRADO';
+    document.querySelector('[data-act="close"]').click();
+    await new Promise(r => setTimeout(r, 320));
+    return { antes, despues: document.querySelector('.ed.h1').textContent.trim() };
+  });
+  await atRest(page);
+  ok(drop.antes === drop.despues,
+    `3a · escribir y cerrar con el ✕ no escribe nada ("${drop.despues}") — nada se guarda sin tocar Guardar`);
+
+  const commit = await page.evaluate(async () => {
+    document.querySelector('#main [data-edit="name"]').click();
+    await new Promise(r => setTimeout(r, 120));
+    document.querySelector('#f-name').value = 'Scythe (edición 2016)';
+    document.querySelector('[data-pick="name"]').click();
+    await new Promise(r => setTimeout(r, 320));
+    return { titulo: document.querySelector('.ed.h1').textContent.trim(), barra: document.querySelector('#tbar .tb-t').textContent.trim(),
+      cerrada: !document.querySelector('#sheet').classList.contains('open') };
+  });
+  ok(commit.cerrada && /2016/.test(commit.titulo) && /2016/.test(commit.barra),
+    `3b · y Guardar sí escribe, cierra, y el valor aparece en LOS DOS lugares que lo muestran (título y barra): "${commit.titulo}"`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+
+  /* 3c · elegir una opción escribe y cierra de una (d33: la elección ES el commit). */
+  await openField('band');
+  const pick = await page.evaluate(async () => {
+    const opts = [...document.querySelectorAll('#sheet .opt')];
+    const otra = opts.find(o => !o.querySelector('.tick'));
+    const txt = otra.querySelector('.on2').textContent;
+    otra.click();
+    await new Promise(r => setTimeout(r, 320));
+    return { txt, cerrada: !document.querySelector('#sheet').classList.contains('open'),
+      pill: document.querySelector('.ed.pill').textContent.trim() };
+  });
+  await atRest(page);
+  ok(pick.cerrada && pick.pill.includes(pick.txt),
+    `3c · elegir escribe y cierra: el pill del nivel dice "${pick.pill}"`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+
+  /* 3d · el stepper edita DENTRO de la hoja, así que la hoja tiene que repintarse sola. La 078 perdió
+     una ronda con este defecto: una edición hecha adentro de una hoja que el resto de la pantalla no
+     puede ver es el modelo fallando en silencio. */
+  await openField('units');
+  const step = await page.evaluate(async () => {
+    const n = () => document.querySelector('#sheet .stepper .n').textContent.trim();
+    const antes = n();
+    document.querySelector('#sheet [data-units="1"]').click();
+    await new Promise(r => setTimeout(r, 60));
+    return { antes, enHoja: n(), enPagina: [...document.querySelectorAll('.spec')].find(s => /Copias/.test(s.textContent)).querySelector('.ed').textContent.trim() };
+  });
+  await closeSheet();
+  ok(step.enHoja === '2' && step.enPagina === '2',
+    `3e · el stepper repinta la hoja Y la página detrás (${step.antes} → ${step.enHoja} / ${step.enPagina})`);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.evaluate(() => document.fonts.ready);
+
+  /* ---------- 4 · la hoja no mueve la ficha, y sube sobre el teclado ----------
+     Las dos cosas son por qué se eligió la hoja sobre el inline. `offsetTop`, no el rect: la pregunta
+     es si el CONTENIDO se movió, y el rect arrastra el scroll de checks anteriores. */
+  const quieto = await page.evaluate(async () => {
+    const sc = document.querySelector('#scroller');
+    const ref = () => document.querySelector('.glab').offsetTop;
+    const antes = ref(), alto = sc.scrollHeight;
+    document.querySelector('#main [data-edit="band"]').click();
+    await new Promise(r => setTimeout(r, 320));
+    return { delta: ref() - antes, dPage: sc.scrollHeight - alto };
+  });
+  await closeSheet();
+  ok(quieto.delta === 0 && quieto.dPage === 0,
+    `4a · abrir una hoja no mueve la ficha ni un píxel (${quieto.delta}px, alto ${quieto.dPage}px) — es lo que compra d33`);
+
+  await hideTools(page);
+  await openField('description');
+  const kb = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const f = document.querySelector('.fld').getBoundingClientRect();
+    const piso = d.bottom - 292;                  /* el borde superior del teclado, 078:537 */
+    const hit = document.elementFromPoint(f.left + f.width / 2, f.top + f.height / 2);
+    return { top: Math.round(f.top - d.top), bottom: Math.round(f.bottom - d.top),
+      tapado: f.bottom > piso, tocable: !!(hit && hit.closest('.fld')) };
+  });
+  await page.screenshot({ path: path.join(OUT, 'r5-teclado.png'), clip: await deviceClip(page) });
+  await closeSheet(); await showTools(page);
+  ok(!kb.tapado && kb.tocable,
+    `4b · con el teclado arriba, el textarea queda en y=${kb.top}-${kb.bottom}, sobre el piso de 448, y es tocable — `
+    + `la hoja lo sube sola (.sheet.form + device.kbd, 078:537). Inline quedaba en y=595-713, debajo.`);
+
+  /* ============================================================================
+     5 · EL RITMO DE LA FICHA, que es la premisa de E3
+     ============================================================================ */
   const type = await page.evaluate(() => {
     const cs = s => { const c = getComputedStyle(document.querySelector(s)); return { ff: c.fontFamily.split(',')[0].replace(/"/g, ''), fs: c.fontSize, fw: c.fontWeight, lh: c.lineHeight }; };
     return { h1: cs('.h1'), desc: cs('.desc'), dt: cs('.spec dt'), pill: cs('.pill.neutral'), tag: cs('.pill.tag') };
   });
   ok(type.h1.ff === 'Bebas Neue' && type.h1.fs === '30px' && type.h1.lh === '36px',
-    `20a · el título es ${type.h1.ff} ${type.h1.fs}/${type.h1.lh} — la web (show.ex:660), no los 22/600 Inter de D-19j`);
-  ok(type.desc.fs === '16px' && type.dt.fs === '12px' && type.pill.fs === '11px' && type.pill.fw === '600' && type.tag.fs === '14px' && type.tag.fw === '400',
-    `20b · el resto del rango también es el de la web — descripción ${type.desc.fs} · etiquetas ${type.dt.fs} · pills ${type.pill.fs}/${type.pill.fw} · chip de sección ${type.tag.fs}/${type.tag.fw}`);
+    `5a · el título es ${type.h1.ff} ${type.h1.fs}/${type.h1.lh} — el de la web (show.ex:660), no los 22/600 Inter de D-19j`);
+  ok(type.desc.fs === '16px' && type.dt.fs === '12px' && type.pill.fs === '11px' && type.pill.fw === '600' && type.tag.fs === '14px',
+    `5b · y el resto del rango también — descripción ${type.desc.fs} · etiquetas ${type.dt.fs} · pills ${type.pill.fs}/${type.pill.fw} · chip ${type.tag.fs}`);
 
-  /* ---------- 21 · LA QUILLA: 14, no 16 — y qué le hace a R359 ---------- */
   const keyline = await page.evaluate(() => {
     const d = document.querySelector('#device').getBoundingClientRect();
-    const w = document.querySelector('.wrap').getBoundingClientRect();
     const cta = document.querySelector('.cta').getBoundingClientRect();
     const kb = document.querySelector('#kebab').getBoundingClientRect();
-    return {
-      /* el padding se lee COMPUTADO, no del rect: `.wrap` ES el elemento que lo lleva, así que su
-         borde izquierdo está en 0 y el rect no dice nada de la quilla. La primera versión medía
-         `w.left - d.left` y reportaba 0 — un número verdadero sobre el borde equivocado. */
-      gut: Math.round(parseFloat(getComputedStyle(document.querySelector('.wrap')).paddingLeft)),
-      ctaR: Math.round(cta.right - d.left),
-      kebabR: Math.round(kb.right - d.left)
-    };
-  });
-  ok(keyline.gut === 14, `21a · la quilla es ${keyline.gut}px, la de la web a ≤480 (--pk-gutter 0.875rem), no los 16 del admin`);
-  ok(keyline.ctaR === 361 && keyline.ctaR !== 359,
-    `21b · así que el CTA termina en R${keyline.ctaR}, no en R359 — d42 fijó ese borde y 074/075/078 lo sostuvieron. `
-    + `Adoptar el ritmo de la web lo mueve 2px. Medido, no evitado eligiendo 16 y llamándolo "el ritmo de la web".`);
-  ok(keyline.kebabR === 359,
-    `21c · y la barra NO se mudó: el ⋮ sigue en R${keyline.kebabR}, así que la página tiene ahora DOS bordes derechos — `
-    + `la barra en 359 y el cuerpo en 361`);
-
-  /* ---------- 22 · y DOS bordes izquierdos, que es como es la web ---------- */
-  const edges = await page.evaluate(() => {
-    const d = document.querySelector('#device').getBoundingClientRect();
     const t = document.querySelector('.h1').getBoundingClientRect();
     const c = document.querySelector('.cardposter').getBoundingClientRect();
-    const p = document.querySelector('.poster').getBoundingClientRect();
-    return { texto: Math.round(t.left - d.left), tapa: Math.round(c.left - d.left), panel: Math.round(p.left - d.left) };
+    return { gut: Math.round(parseFloat(getComputedStyle(document.querySelector('.wrap')).paddingLeft)),
+      ctaR: Math.round(cta.right - d.left), kebabR: Math.round(kb.right - d.left),
+      texto: Math.round(t.left - d.left), tapa: Math.round(c.left - d.left) };
   });
-  /* 31, NO 30 — Y LA CUENTA DE 30 ERA LA MÍA, NO LA DE LA PÁGINA. `.pk-poster-panel` lleva
-     `border: 1px solid` además del `padding: 1rem` (app.css:4875-4884), así que la tapa arranca a
-     14 (quilla) + 1 (borde) + 16 (padding) = 31. Había escrito 30 sumando sólo padding + quilla.
-     El check pasó a afirmar el número medido y a mostrar la suma, para que el próximo que lo lea no
-     tenga que rehacerla. */
-  ok(edges.texto === 14 && edges.tapa === 31,
-    `22 · dos bordes izquierdos: el texto a ${edges.texto}px y la tapa a ${edges.tapa} (= 14 quilla + 1 borde + 16 padding del `
-    + `panel, app.css:4875-4884). Es fiel a la web, que tiene los dos; el editor tenía UNO solo.`);
+  ok(keyline.gut === 14 && keyline.ctaR === 361 && keyline.kebabR === 359,
+    `5c · la quilla es la de la web (${keyline.gut}px), así que el cuerpo termina en R${keyline.ctaR} y la barra en R${keyline.kebabR} — `
+    + `d42 fijó R359 y 074/075/078 lo sostuvieron. DOS bordes derechos, medido y no evitado.`);
+  ok(keyline.texto === 14 && keyline.tapa === 31,
+    `5d · y dos bordes izquierdos: texto a ${keyline.texto}, tapa a ${keyline.tapa} (= 14 quilla + 1 borde + 16 padding del panel). Es fiel a la web.`);
 
-  /* ============================================================================
-     23 · LOS DOS "APILADO ABAJO" NO SON EL MISMO, Y ACÁ SE VE CUÁNTO
-     El desarrollador pidió el patrón de `Publicar` de la 078: `.cta` como último
-     hijo, que scrollea. La web en mobile hace otra cosa: `.pk-mobile-cta-bar` es
-     `position: fixed` con 148px de body reservado (app.css:5375-5398, 5440-5441).
-     ============================================================================ */
-  await hideTools(page);
-  const cta = await page.evaluate(() => {
-    const d = document.querySelector('#device').getBoundingClientRect();
-    const sc = document.querySelector('#scroller');
-    const c = document.querySelector('.cta').getBoundingClientRect();
-    const hit = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2);
-    return {
-      top: Math.round(c.top - d.top), floor: Math.round(d.height), alto: Math.round(c.height),
-      visible: c.top < d.bottom, tocable: !!(hit && hit.closest('.cta')),
-      scrollTotal: sc.scrollHeight - sc.clientHeight, pantallas: +((sc.scrollHeight) / d.height).toFixed(1)
-    };
-  });
-  await showTools(page);
-  ok(cta.alto >= 52, `23a · el CTA mide ${cta.alto}px de alto, el patrón de Publicar de la 078 (078:860)`);
-  ok(cta.visible === false && cta.tocable === false,
-    `23b · y al reposo está en y=${cta.top}, contra un piso de ${cta.floor}: invisible y no tocable. `
-    + `Hay que scrollear ${cta.scrollTotal}px — la página mide ${cta.pantallas} pantallas — para llegar a Guardar. `
-    + `La web resuelve esto con una barra FIJA; la 078 no, porque su formulario entraba en una hoja corta.`);
-
-  /* ============================================================================
-     24 · EN E3, EL RANGO YA NO PUEDE DECIR QUÉ SE EDITA
-     La web sólo tiene UN vocabulario etiqueta→valor: 12px mayúsculas 0.08em. Y
-     en la web pertenece EXCLUSIVAMENTE a datos de BGG que no se tocan (AÑO,
-     DISEÑADORES, ILUSTRADORES, MECÁNICAS, TEMÁTICAS, COMUNIDAD BGG). E3 obliga a
-     usarlo también para COPIAS, ESTANTE y EXPANSIÓN, que sí se editan.
-     ============================================================================ */
+  /* 5e · el rango no puede decir qué se edita, que es por qué el affordance existe. */
   const rank = await page.evaluate(() => {
     const pick = el => { const c = getComputedStyle(el); return [c.fontSize, c.fontWeight, c.textTransform, c.letterSpacing, c.color].join('|'); };
     const dts = [...document.querySelectorAll('.spec dt')];
     const bgg = dts.filter(d => !d.closest('.spec').querySelector('.ed'));
     const club = dts.filter(d => d.closest('.spec').querySelector('.ed'));
-    return {
-      bggN: bgg.length, clubN: club.length,
-      iguales: bgg.length > 0 && club.length > 0 && new Set([...bgg, ...club].map(pick)).size === 1,
-      muestra: pick(dts[0]),
-      bggLabels: bgg.map(d => d.textContent), clubLabels: club.map(d => d.textContent)
-    };
+    return { bggN: bgg.length, clubN: club.length, iguales: new Set([...bgg, ...club].map(pick)).size === 1, muestra: pick(dts[0]) };
   });
   ok(rank.iguales && rank.bggN === 5 && rank.clubN === 3,
-    `24 · las ${rank.clubN} etiquetas editables (${rank.clubLabels.join(', ')}) son BYTE-IDÉNTICAS en rango a las ${rank.bggN} `
-    + `no editables (${rank.bggLabels.join(', ')}) — ${rank.muestra}. En E3 el rango no puede decir qué se puede tocar: `
-    + `todo el peso queda en el affordance, que es el eje de esta ronda.`);
+    `5e · las ${rank.clubN} etiquetas editables son byte-idénticas en rango a las ${rank.bggN} de BGG (${rank.muestra}) — `
+    + `el rango no puede decir qué se toca, y por eso todo el peso queda en el tinte y el lápiz`);
 
-  /* ============================================================================
-     25 · LA SÍNTESIS: ¿el lápiz desambigua lo que el tinte no podía?
-     La ronda 2 dejó 25d en rojo: el tinte salía del MISMO morado que el chip de
-     sección, que no es editable (`--color-primary` y `--color-accent-text` son
-     el mismo hex en claro, medido desde 074 r3). El lápiz no cambia ese color;
-     lo que cambia es que ahora el chip es lo único morado SIN lápiz.
-     ============================================================================ */
-  await setVar(page, 'I');
+  /* 5f · COSTO MEDIDO (verde = el costo existe): el tinte es el mismo color que el chip de sección,
+     que NO se edita. No se arregla sin tocar la paleta; lo único que desambigua es el lápiz. */
   const amb = await page.evaluate(() => {
     const c = el => getComputedStyle(el).color;
-    const chip = document.querySelector('.pill.tag');
-    const h1 = document.querySelector('.ed.h1');
-    return {
-      mismoColor: c(chip) === c(h1), color: c(chip),
-      chipTienePen: !!chip.querySelector('.pen'),
-      /* cuántos elementos morados hay, y cuántos de ésos llevan lápiz */
-      morados: [...document.querySelectorAll('#main *')].filter(e => e.children.length === 0 || e.classList.contains('ed') || e.classList.contains('pill')).filter(e => c(e) === c(h1)).length
-    };
+    const chip = document.querySelector('.pill.tag'), h1 = document.querySelector('.ed.h1');
+    const pen = document.querySelector('.ed.h1 .pen svg').getBoundingClientRect();
+    return { mismo: c(chip) === c(h1), color: c(chip), chipPen: !!chip.querySelector('.pen'), pen: [Math.round(pen.width), Math.round(pen.height)] };
   });
-  /* mismo caso que el 39b: pasa cuando la ambigüedad SIGUE ahí. */
-  ok(amb.mismoColor && !amb.chipTienePen,
-    `25 · COSTO MEDIDO (verde = el costo existe) — el tinte sigue siendo el mismo color que el chip de sección `
-    + `(${amb.color}), eso no se arregló `
-    + `y no se puede arreglar sin tocar la paleta. Lo que cambia es que el chip es lo único de ese color SIN lápiz: `
-    + `la desambiguación pasó a depender del glifo, no del tinte.`);
+  ok(amb.mismo && !amb.chipPen,
+    `5f · COSTO MEDIDO — el tinte (${amb.color}) es el mismo color que el chip de sección, que no se edita. `
+    + `--color-primary y --color-accent-text son el mismo hex en claro (074 r3), así que lo único que desambigua `
+    + `es un lápiz de ${amb.pen[0]}×${amb.pen[1]}: la marca más chica de la pantalla.`);
 
-  /* 25b · y el precio de eso, medido: el lápiz es de 14px en el rango más bajo de la ficha. */
-  const penSize = await page.evaluate(() => {
-    const pen = document.querySelector('.ed.h1 .pen svg');
-    const h1 = document.querySelector('.ed.h1');
-    const pr = pen.getBoundingClientRect(), hr = h1.getBoundingClientRect();
-    return { w: Math.round(pr.width), h: Math.round(pr.height), titulo: Math.round(hr.height), color: getComputedStyle(pen.parentElement).color };
-  });
-  ok(penSize.w === 14 && penSize.h === 14,
-    `25b · el lápiz mide ${penSize.w}×${penSize.h} en ${penSize.color}, contra un título de ${penSize.titulo}px — `
-    + `"sutil" tomado literal, y por eso lo único que desambigua es también lo más chico de la pantalla`);
-
-  /* ---------- 27 · el ⋮ como único control: no empuja nada, pero hereda el borde del primario ---------- */
-  await setVar(page, 'I');
-  const bar = await page.evaluate(() => {
+  /* 5g · COSTO MEDIDO: el CTA está a casi dos pantallas. La web resuelve el pie con una barra FIJA. */
+  await hideTools(page);
+  const cta = await page.evaluate(() => {
     const d = document.querySelector('#device').getBoundingClientRect();
-    const kb = document.querySelector('#kebab').getBoundingClientRect();
-    const tb = document.querySelector('#tbar');
-    return {
-      right: Math.round(kb.right - d.left), w: Math.round(kb.width), h: Math.round(kb.height),
-      otros: tb.querySelectorAll('button').length,
-      primarioArriba: !!tb.querySelector('.btn')
-    };
+    const sc = document.querySelector('#scroller');
+    const c = document.querySelector('.cta').getBoundingClientRect();
+    return { top: Math.round(c.top - d.top), alto: Math.round(c.height), visible: c.top < d.bottom,
+      scroll: sc.scrollHeight - sc.clientHeight, pantallas: +(sc.scrollHeight / d.height).toFixed(1) };
   });
-  ok(bar.otros === 2 && !bar.primarioArriba,
-    `27a · la barra tiene ${bar.otros} controles (‹ y ⋮) y NINGÚN primario — Guardar bajó al pie, así que el ⋮ no empuja nada. `
-    + `Esto borra el único costo que la ronda 1 le midió a M1 (empujaba Guardar de R359 a R307).`);
-  ok(bar.right === 359,
-    `27b · pero el ⋮ hereda R${bar.right}, la esquina que cinco pantallas enseñaron como LA ACCIÓN PRINCIPAL. `
-    + `Es la forma inversa de lo que la 074 ronda 1 encontró con Descartar heredando el borde del primario.`);
+  await showTools(page);
+  ok(cta.alto >= 52 && !cta.visible,
+    `5g · COSTO MEDIDO — el CTA de 52px (el patrón de Publicar, 078:860) está en y=${cta.top} contra un piso de 740: `
+    + `${cta.scroll}px de scroll, ${cta.pantallas} pantallas. La web resuelve el pie con una barra FIJA + 148px reservados; `
+    + `la 078 no, porque su formulario entraba en una hoja corta.`);
 
-  /* ---------- 28 · el nivel aparece DOS veces en la ficha ---------- */
+  /* 5h · el nivel aparece dos veces, y no es el fixture. */
   const twice = await page.evaluate(() => {
-    const band = 'Ingenio estratega';
-    const hits = [...document.querySelectorAll('#main .pill')].filter(p => p.textContent.includes(band));
+    const hits = [...document.querySelectorAll('#main .pill')].filter(p => /Ingenio estratega/.test(p.textContent));
     const d = document.querySelector('#device').getBoundingClientRect();
-    return hits.map(h => ({ cls: h.className, y: Math.round(h.getBoundingClientRect().top - d.top), editable: h.classList.contains('ed') }));
+    return hits.map(h => ({ y: Math.round(h.getBoundingClientRect().top - d.top), editable: h.classList.contains('ed') }));
   });
   ok(twice.length === 2 && twice.filter(h => h.editable).length === 1,
-    `28 · el nivel está DOS veces: el pill de facts (y=${twice[0]?.y}, editable) y el chip de sección bajo el título `
-    + `(y=${twice[1]?.y}, NO editable, porque es section_names, que es virtual). Mismo texto, dos rangos, uno se toca y el otro no. `
-    + `No es el fixture: es cómo se ve la ficha, porque publicar mete el juego en la sección de su banda.`);
+    `5h · el nivel está dos veces — el pill de facts (y=${twice[0]?.y}, editable) y el chip de sección (y=${twice[1]?.y}, no editable, `
+    + `porque es section_names, virtual). Publicar mete el juego en la sección de su banda: es cómo se ve la ficha.`);
 
-  /* ---------- 29 · los 49 sin tapa abren sobre un hueco del tamaño de la pantalla ---------- */
-  await setCover(page, false);
-  await hideTools(page);
+  /* 5i · los 49 sin tapa. */
+  await setCover(page, false); await hideTools(page);
   const nocover = await page.evaluate(() => {
     const d = document.querySelector('#device').getBoundingClientRect();
     const c = document.querySelector('.cardposter').getBoundingClientRect();
-    const h1 = document.querySelector('.h1').getBoundingClientRect();
-    return { alto: Math.round(c.height), pctPantalla: Math.round(c.height / d.height * 100), tituloY: Math.round(h1.top - d.top) };
+    return { alto: Math.round(c.height), pct: Math.round(c.height / d.height * 100), titulo: Math.round(document.querySelector('.h1').getBoundingClientRect().top - d.top) };
   });
-  await page.screenshot({ path: path.join(OUT, 'r2-sin-tapa.png'), clip: await deviceClip(page) });
-  await showTools(page);
-  await setCover(page, true);
-  ok(nocover.pctPantalla >= 30,
-    `29 · sin tapa (los 49 = no_bgg_id 41 + bgg_missing 8, verificado contra la base) el hueco mide ${nocover.alto}px, `
-    + `el ${nocover.pctPantalla}% de la pantalla, y empuja el título a y=${nocover.tituloY}. `
-    + `Son exactamente los juegos que abrís el editor para arreglar.`);
+  await page.screenshot({ path: path.join(OUT, 'r5-sin-tapa.png'), clip: await deviceClip(page) });
+  await showTools(page); await setCover(page, true);
+  ok(nocover.pct >= 30,
+    `5i · sin tapa (los 49 = no_bgg_id 41 + bgg_missing 8, contra la base) el hueco mide ${nocover.alto}px, el ${nocover.pct}% de la pantalla, `
+    + `y empuja el título a y=${nocover.titulo}. Son los juegos que abrís el editor para arreglar.`);
 
-  /* ---------- 30 · piso táctil de 44px en cada bloque editable ---------- */
-  await setVar(page, 'I');
-  const touch = await page.evaluate(() => [...document.querySelectorAll('#main .ed')].map(e => {
-    const r = e.getBoundingClientRect();
-    const after = getComputedStyle(e, '::after').height;
-    return { k: e.dataset.edit, h: Math.round(r.height), after };
-  }));
+  /* ---------- 6 · el piso táctil ---------- */
+  const touch = await page.evaluate(() => [...document.querySelectorAll('#main .ed')].map(e => ({
+    k: e.dataset.edit, h: Math.round(e.getBoundingClientRect().height), after: getComputedStyle(e, '::after').height })));
   const chicos = touch.filter(t => t.h < 44 && !/44px/.test(t.after));
-  ok(chicos.length === 0,
-    `30a · los ${touch.length} bloques editables llegan al piso de 44px` + (chicos.length ? ` — no llegan: ${chicos.map(c => c.k + ' ' + c.h + 'px').join(', ')}` : ''));
-
-  /* 30b · Y NO SE PISAN. Un piso de 44 sobre un valor de 22 se desborda 11px por lado, y las filas del
-     bloque DEL CLUB están a 16px una de otra. Si dos capas se solapan, un toque en la zona compartida
-     le llega a la de arriba y editás el campo equivocado sin que nada lo diga. Se mide con rects, y
-     además con un hit test en el punto medio entre dos filas. */
+  ok(chicos.length === 0, `6a · los ${touch.length} bloques editables llegan al piso de 44px`
+    + (chicos.length ? ` — no llegan: ${chicos.map(c => c.k + ' ' + c.h).join(', ')}` : ''));
   const overlap = await page.evaluate(() => {
     const boxes = [...document.querySelectorAll('#main .spec dd .ed')].map(e => {
-      const r = e.getBoundingClientRect();
-      const h = parseFloat(getComputedStyle(e, '::after').height) || r.height;
-      const cy = r.top + r.height / 2;
-      return { k: e.dataset.edit, top: cy - h / 2, bottom: cy + h / 2, x: r.left + 4 };
+      const r = e.getBoundingClientRect(), h = parseFloat(getComputedStyle(e, '::after').height) || r.height;
+      const cy = r.top + r.height / 2; return { k: e.dataset.edit, top: cy - h / 2, bottom: cy + h / 2 };
     });
-    const pares = [];
-    for (let i = 1; i < boxes.length; i++) if (boxes[i].top < boxes[i - 1].bottom) pares.push(`${boxes[i - 1].k}/${boxes[i].k}`);
-    /* el hit test: justo en el medio entre el primer y el segundo valor */
-    let medio = null;
-    if (boxes.length > 1) {
-      const y = (boxes[0].bottom + boxes[1].top) / 2;
-      const el = document.elementFromPoint(boxes[0].x, y);
-      medio = el && el.closest('.ed') ? el.closest('.ed').dataset.edit : 'nada';
-    }
-    return { pares, medio, n: boxes.length };
+    const pares = []; for (let i = 1; i < boxes.length; i++) if (boxes[i].top < boxes[i - 1].bottom) pares.push(`${boxes[i - 1].k}/${boxes[i].k}`);
+    return { pares, n: boxes.length };
   });
-  ok(overlap.pares.length === 0,
-    `30b · las ${overlap.n} capas de toque del bloque DEL CLUB no se solapan` +
-    (overlap.pares.length ? ` — SE SOLAPAN: ${overlap.pares.join(', ')}; un toque en la zona compartida edita el campo de arriba (en el punto medio cae: ${overlap.medio})` : ` (en el punto medio entre dos cae: ${overlap.medio})`));
-
-  /* ---------- 31 · la hoja del ⋮ funciona y commitea ---------- */
-  await setState(page, 'published');
-  const cycle = await page.evaluate(() => {
-    document.querySelector('#kebab').click();
-    const abierta = document.querySelector('#sheet').classList.contains('open');
-    const opts = [...document.querySelectorAll('#sheet .opt')].map(o => o.querySelector('.on2').textContent);
-    document.querySelector('[data-cyc="retire"]').click();
-    const txt = document.querySelector('#dlg-d').textContent;
-    document.querySelector('[data-act="dlg-yes"]').click();
-    return { abierta, opts, txt, after: document.querySelector('#tools [data-cy].on').dataset.cy };
-  });
-  await setState(page, 'published');
-  ok(cycle.abierta && cycle.opts.length === 1 && cycle.after === 'retired',
-    `31a · el ⋮ abre la hoja, ofrece ${cycle.opts.length} opción (${cycle.opts.join('')}) y commitea a \`${cycle.after}\``);
-  ok(/ya no lo tiene/i.test(cycle.txt) && /ludoteca pública/i.test(cycle.txt) && /estantes/i.test(cycle.txt),
-    `31b · y el diálogo dice AHORA LAS DOS MITADES — el club y la web — que es lo que el verbo colapsado exige. `
-    + `La copia que corre hoy (form.ex:352-356) sólo decía la mitad de la web.`);
+  ok(overlap.pares.length === 0, `6b · y las ${overlap.n} capas de toque de DEL CLUB no se solapan`
+    + (overlap.pares.length ? ` — SE SOLAPAN: ${overlap.pares.join(', ')}` : ''));
 
   /* ============================================================================
-     35-38 · EL EJE DE LA RONDA 3 — ¿dónde ocurre la edición?
-     Los controles son los MISMOS en los dos modos (una sola definición, `FIELD`),
-     montados en lugares distintos. Así, todo lo de abajo es sobre el LUGAR.
+     7 · EL ESTADO, EXPLÍCITO (r4)
      ============================================================================ */
-  const FIELDS = ['name', 'description', 'band', 'units', 'shelf', 'exp'];
-
-  /* 35 · el control es el mismo: mismo alto, mismo marcado, en los dos modos. */
-  const ctlSame = {};
-  for (const v of VARS) {
-    await setVar(page, v);
-    ctlSame[v] = {};
-    for (const k of FIELDS) {
-      await page.evaluate(k => { document.querySelector(`#main [data-edit="${k}"]`).click(); }, k);
-      ctlSame[v][k] = await page.evaluate(() => {
-        const box = document.querySelector('.inl');
-        if (!box) return null;
-        const ctl = box.firstElementChild;
-        return { tag: ctl.tagName + '.' + (ctl.className || ''), h: Math.round(ctl.getBoundingClientRect().height) };
-      });
-      await page.evaluate(() => { document.querySelector('[data-act="done"]')?.click(); document.querySelector('[data-act="close"]')?.click(); });
-      await atRest(page);
-    }
-  }
-  const mismoTag = FIELDS.every(k => ctlSame.I[k] && ctlSame.H[k] && ctlSame.I[k].tag === ctlSame.H[k].tag);
-  const dif = FIELDS.filter(k => ctlSame.I[k] && ctlSame.H[k] && Math.abs(ctlSame.I[k].h - ctlSame.H[k].h) > 2)
-    .map(k => `${k} ${ctlSame.I[k].h}/${ctlSame.H[k].h}`);
-  ok(mismoTag, `35a · los ${FIELDS.length} controles son el MISMO elemento en los dos modos — una sola definición (\`FIELD\`), `
-    + `montada en dos lugares, así que todo lo de abajo es sobre DÓNDE y no sobre QUÉ`);
-  /* 35b · pero NO miden igual, y eso es un dato del eje, no ruido: la página tiene quilla de 14 y la
-     hoja padding de 16, así que el mismo control tiene 4px menos de ancho adentro de la hoja y los
-     descriptores del nivel envuelven distinto. Se reporta en vez de forzarse a cero. */
-  ok(dif.length === 0 || dif.length <= FIELDS.length,
-    `35b · y miden casi igual: ${dif.length ? `difieren ${dif.join(', ')} (inline/hoja) — la página tiene quilla de 14 y la hoja padding de 16, así que el mismo control tiene 4px menos de ancho adentro y los descriptores envuelven distinto` : 'idénticos en alto'}`);
-
-  /* ============================================================================
-     36 · EL NÚMERO QUE DECIDE LA RONDA: cuánto crece cada bloque al editar inline
-     El espejo es la premisa de E3. Inline, el espejo se rompe en el momento
-     exacto en que lo usás — y esto es cuánto.
-     ============================================================================ */
-  await setVar(page, 'I');
-  const growth = [];
-  for (const k of FIELDS) {
-    const g = await page.evaluate(k => {
-      const sc = document.querySelector('#scroller');
-      const host = document.querySelector(`#main [data-edit="${k}"]`);
-      const antes = { h: Math.round(host.getBoundingClientRect().height), page: sc.scrollHeight };
-      host.click();
-      const box = document.querySelector('.inl');
-      const despues = { h: Math.round(box.getBoundingClientRect().height), page: sc.scrollHeight };
-      document.querySelector('[data-act="done"]')?.click();
-      return { k, antes, despues };
-    }, k);
-    await atRest(page);
-    growth.push({ k: g.k, de: g.antes.h, a: g.despues.h, x: +(g.despues.h / Math.max(1, g.antes.h)).toFixed(1), dPage: g.despues.page - g.antes.page });
-  }
-  const peor = growth.reduce((m, g) => g.x > m.x ? g : m, growth[0]);
-  ok(peor.x >= 3,
-    `36 · editar inline agranda el bloque: ${growth.map(g => `${g.k} ${g.de}→${g.a}px (${g.x}×)`).join(' · ')}. `
-    + `El peor es ${peor.k}: ${peor.x}× — el control del nivel son tres opciones APILADAS CON DESCRIPTOR, que es el `
-    + `control que la 078 decidió, y contra un pill de ${peor.de}px no hay forma de que entre sin recortarlo.`);
-
-  /* 37 · y lo de abajo se corre. El espejo no es sólo el bloque: es el ritmo entero. */
-  /* `offsetTop`, NO `getBoundingClientRect().top`. El rect es relativo al viewport, así que arrastra
-     cualquier scroll que haya dejado un check anterior — el 38 reportó -180px de movimiento en modo H
-     que, aislado, es 0. Un número verdadero sobre el scroll acumulado, leído como un número sobre el
-     modo. `offsetTop` mide la posición dentro del contenido, que es lo que estos dos checks preguntan. */
-  const push = await page.evaluate(() => {
-    const ref = () => document.querySelector('.glab').offsetTop;
-    const antes = ref();
-    document.querySelector('#main [data-edit="band"]').click();
-    const despues = ref();
-    document.querySelector('[data-act="done"]')?.click();
-    return { antes, despues, delta: despues - antes };
-  });
-  await atRest(page);
-  ok(push.delta > 100,
-    `37 · y al abrir el nivel inline, todo lo de abajo baja ${push.delta}px (Comunidad BGG de y=${push.antes} a y=${push.despues}). `
-    + `La premisa de E3 es que el editor SE VE como la ficha; inline deja de verse como la ficha justo cuando lo usás.`);
-
-  /* 38 · en modo H la página de atrás NO se mueve. */
-  await setVar(page, 'H');
-  const quieto = await page.evaluate(() => {
-    const sc = document.querySelector('#scroller');
-    const ref = () => document.querySelector('.glab').offsetTop;
-    const antes = ref(), alto = sc.scrollHeight;
-    document.querySelector('#main [data-edit="band"]').click();
-    return { delta: ref() - antes, dPage: sc.scrollHeight - alto };
-  });
-  await page.evaluate(() => document.querySelector('[data-act="close"]')?.click());
-  await atRest(page);
-  ok(quieto.delta === 0 && quieto.dPage === 0,
-    `38 · en modo H la ficha de atrás no se mueve ni un píxel (${quieto.delta}px, alto ${quieto.dPage}px) — `
-    + `el espejo sigue intacto mientras editás, que es exactamente lo que d33 compra`);
-
-  /* ============================================================================
-     39 · EL TECLADO — el costo que sólo aparece en los campos de texto
-     La 078 modela el teclado en 292px (078:537). Inline, el campo vive donde
-     estaba el bloque; en hoja, la hoja se sienta arriba del teclado.
-     ============================================================================ */
-  /* LA HOJA ENTRA CON UNA TRANSICIÓN, y la primera versión medía a mitad de camino: el textarea daba
-     y=600-719, o sea debajo del piso del teclado, y el check reportaba que la hoja NO lo sube. Era la
-     hoja todavía translada hacia abajo. Se espera al `transitionend` del propio elemento — no un
-     `setTimeout` a ojo, que es la clase de verde que se compra sin entender la causa. */
-  const settle = () => page.evaluate(() => new Promise(res => {
-    const sh = document.querySelector('#sheet');
-    if (!sh.classList.contains('open')) return res();
-    let done = false;
-    const fin = () => { if (!done) { done = true; res(); } };
-    sh.addEventListener('transitionend', fin, { once: true });
-    setTimeout(fin, 600);   /* red de seguridad: si no hay transición, no colgarse */
-  }));
-  const kbd = {};
-  for (const v of VARS) {
-    await setVar(page, v);
-    await page.evaluate(v => {
-      const sc = document.querySelector('#scroller'); sc.scrollTop = 0;
-      document.querySelector('#main [data-edit="description"]').click();
-      if (v === 'I') document.querySelector('#device').classList.add('kbd');
-    }, v);
-    await settle();
-    kbd[v] = await page.evaluate(v => {
-      const d = document.querySelector('#device').getBoundingClientRect();
-      const f = document.querySelector('.fld');
-      const r = f ? f.getBoundingClientRect() : null;
-      const piso = d.bottom - 292;                    /* el borde superior del teclado, 078:537 */
-      const res = r ? { top: Math.round(r.top - d.top), bottom: Math.round(r.bottom - d.top), tapado: r.bottom > piso } : null;
-      document.querySelector('[data-act="done"]')?.click();
-      document.querySelector('[data-act="close"]')?.click();
-      document.querySelector('#device').classList.remove('kbd');
-      return res;
-    }, v);
-    await atRest(page);
-  }
-  ok(kbd.H && kbd.H.tapado === false,
-    `39a · en modo H el textarea queda en y=${kbd.H && kbd.H.top}-${kbd.H && kbd.H.bottom}, arriba del teclado (piso 448) — la hoja lo sube sola`);
-  /* OJO A LA POLARIDAD, y vale escribirla: este check pasa CUANDO EL DEFECTO EXISTE. No es una
-     aserción de que algo esté bien — es una medición de un costo, y su verde significa que el costo
-     está ahí. Un arnés donde todo verde quiere decir "todo bien" no puede contener mediciones de
-     costo; éste sí las contiene, y por eso cada una lo dice en su propio texto. */
-  ok(kbd.I && kbd.I.tapado === true,
-    `39b · COSTO MEDIDO (verde = el costo existe) — inline, el textarea queda en y=${kbd.I && kbd.I.top}-${kbd.I && kbd.I.bottom} `
-    + `y el teclado arranca en 448, así que ${kbd.I && kbd.I.tapado ? 'LO TAPA' : 'no lo tapa'}. Inline hereda la posición del bloque, `
-    + `y el bloque está donde la ficha lo puso, no donde un campo de texto necesita estar.`);
-
-  /* ============================================================================
-     40-42 · RONDA 4 — EL ESTADO, EXPLÍCITO
-     Antes de la franja, un publicado y un retirado renderizaban una página
-     BYTE-IDÉNTICA: mismo texto, mismo PNG. El estado sólo vivía adentro de la
-     hoja del ⋮. La causa es la de la ronda 2: la ficha pública no muestra el
-     estado, así que espejarla lo borró.
-     ============================================================================ */
-  await setVar(page, 'H');
   await hideTools(page);
   const stShot = async st => { await setState(page, st); return page.screenshot({ clip: await deviceClip(page) }); };
   const sPub = await stShot('published'), sRet = await stShot('retired');
-  fs.writeFileSync(path.join(OUT, 'r4-publicado.png'), sPub);
-  fs.writeFileSync(path.join(OUT, 'r4-retirado.png'), sRet);
-  const dSt = diffPNG(sPub, sRet);
-  ok(dSt.diffPx > 0,
-    `40a · publicado y retirado ya NO son la misma página: diffPx ${dSt.diffPx} de ${dSt.total} (${Math.round(dSt.diffPx / dSt.total * 100)}%) · `
-    + `maxDelta ${dSt.maxDelta}. OJO: ese porcentaje NO mide la franja — mide que la franja empuja todo lo de abajo. `
-    + `Un número enorme sobre un reflow. Lo que de verdad prueba el punto es el 40b.`);
+  fs.writeFileSync(path.join(OUT, 'r5-publicado.png'), sPub);
+  fs.writeFileSync(path.join(OUT, 'r5-retirado.png'), sRet);
+  ok(diffPNG(sPub, sRet).diffPx > 0, `7a · publicado y retirado ya no son la misma página`);
 
-  /* 40b · EL CHECK QUE DE VERDAD IMPORTA: sacando la franja, los dos estados vuelven a ser
-     IDÉNTICOS. Eso prueba que la franja es lo ÚNICO que carga el estado — y, al mismo tiempo,
-     reproduce el defecto que esta ronda vino a arreglar. Un check que sólo dijera "las páginas
-     difieren" habría pasado igual con una franja en blanco. */
   const bare = async st => { await setState(page, st);
     await page.evaluate(() => { document.querySelector('#stbar').style.display = 'none'; });
     const png = await page.screenshot({ clip: await deviceClip(page) });
@@ -630,88 +437,95 @@ process.on('unhandledRejection', dump);
     return png; };
   const dBare = diffPNG(await bare('published'), await bare('retired'));
   ok(dBare.diffPx === 0,
-    `40b · NEGATIVO — sin la franja, publicado y retirado vuelven a ser IDÉNTICOS: diffPx ${dBare.diffPx} de ${dBare.total}. `
-    + `Ése es exactamente el defecto que esta ronda arregla, y es la prueba de que la franja es lo único que lleva el estado: `
-    + `la ficha espejada no lo dice en ninguna parte, porque la ficha pública tampoco.`);
+    `7b · NEGATIVO — sin la franja vuelven a ser IDÉNTICOS (diffPx ${dBare.diffPx} de ${dBare.total}): la franja es lo ÚNICO que lleva el estado, `
+    + `porque la ficha espejada no lo dice en ninguna parte — la ficha pública tampoco. Ése era el defecto de la r4.`);
+  await showTools(page);
 
-  /* 40b · y el punto se LEE: rect y color resuelto, nunca la existencia del nodo.
-     Tercera vez en este linaje que un punto de estado desaparece — transparente en la 078
-     (`--color-accent` no existía), naranja acá (los modificadores vivían bajo `.gh-st`, que el espejo
-     borró) y después de ANCHO CERO (`.dot` no declara `display`, así que un `<span>` vacío en un flex
-     se queda `inline` y el alto y el ancho no aplican). Las tres veces los checks de nodos pasaron. */
   const dots = {};
   for (const st of ['published', 'retired']) {
     await setState(page, st);
     dots[st] = await page.evaluate(() => {
-      const d = document.querySelector('#stbar .dot');
-      const r = d.getBoundingClientRect(), c = getComputedStyle(d);
-      return { w: Math.round(r.width), h: Math.round(r.height), bg: c.backgroundColor, display: c.display,
+      const d = document.querySelector('#stbar .dot'), r = d.getBoundingClientRect(), c = getComputedStyle(d);
+      return { w: Math.round(r.width), h: Math.round(r.height), bg: c.backgroundColor,
         texto: document.querySelector('#stbar').textContent.replace(/\s+/g, ' ').trim() };
     });
   }
   const vivo = d => d.w === 8 && d.h === 8 && !/rgba\(0, 0, 0, 0\)|transparent/.test(d.bg);
   ok(vivo(dots.published) && vivo(dots.retired) && dots.published.bg !== dots.retired.bg,
-    `40c · el punto mide 8×8 y tiene color resuelto en los dos estados, y son DISTINTOS — `
-    + `publicado ${dots.published.bg} · retirado ${dots.retired.bg}`);
+    `7c · el punto mide 8×8 con color resuelto en los dos estados, y son distintos — ${dots.published.bg} / ${dots.retired.bg}. `
+    + `Se lee rect + color porque este punto desapareció TRES veces: transparente (078), naranja y de ancho cero (acá).`);
 
-  /* 41 · la franja está SOBRE el pliegue y sin scrollear: eso es lo que "explícito" quiere decir. */
+  await setState(page, 'published');
   const vis = await page.evaluate(() => {
     const d = document.querySelector('#device').getBoundingClientRect();
     const sb = document.querySelector('#stbar').getBoundingClientRect();
     const hit = document.elementFromPoint(sb.left + sb.width / 2, sb.top + sb.height / 2);
-    return { top: Math.round(sb.top - d.top), alto: Math.round(sb.height), enPantalla: sb.bottom <= d.bottom,
-      tapada: !!(hit && !hit.closest('#stbar')), lineas: Math.round(sb.height / 18) };
+    return { top: Math.round(sb.top - d.top), alto: Math.round(sb.height), enPantalla: sb.bottom <= d.bottom, tapada: !!(hit && !hit.closest('#stbar')) };
   });
-  await showTools(page);
   ok(vis.enPantalla && !vis.tapada && vis.top < 100,
-    `41 · la franja está en y=${vis.top}, ${vis.alto}px de alto, sin scrollear y sin nada encima — `
-    + `no hay que abrir nada para saber el estado, que era el pedido`);
-
-  /* 42 · y NO dice sólo el nombre del estado: dice qué significa para ESTA página.
-     La frase es textual de 075:941, donde ya existía para el diagnóstico de BGG. */
+    `7d · la franja está en y=${vis.top}, ${vis.alto}px, sin scrollear y sin nada encima — no hay que abrir nada para saber el estado`);
   ok(/Así se ve en la web/.test(dots.published.texto) && /No se ve en la web/.test(dots.retired.texto),
-    `42 · la franja dice la consecuencia, no el nombre — "${dots.published.texto}" / "${dots.retired.texto}". `
-    + `Para un retirado, la premisa de E3 ("así se ve en la web") es FALSA, y la franja es lo único que puede decirlo.`);
+    `7e · y dice la consecuencia, no el nombre — "${dots.published.texto}" / "${dots.retired.texto}". `
+    + `Para un retirado, la premisa de E3 ("así se ve en la web") es falsa, y la franja es lo único que puede decirlo.`);
 
-  /* 43 · la hoja ya no repite el estado en su cuerpo: lo dice su subtítulo y lo dice la página.
-     Tenerlo tres veces es la forma que la 077 contó cuando la fila y la hoja decían lo mismo. */
-  await setState(page, 'published');
-  const veces = await page.evaluate(() => {
+  /* ---------- 8 · el ⋮ y el ciclo ---------- */
+  const bar = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const kb = document.querySelector('#kebab').getBoundingClientRect();
+    return { right: Math.round(kb.right - d.left), otros: document.querySelectorAll('#tbar button').length,
+      primario: !!document.querySelector('#tbar .btn') };
+  });
+  ok(bar.otros === 2 && !bar.primario && bar.right === 359,
+    `8a · la barra tiene ${bar.otros} controles (‹ y ⋮) y ningún primario: Guardar bajó al pie, así que el ⋮ no empuja nada y toma R${bar.right}. `
+    + `El costo que queda es que hereda la esquina que cinco pantallas enseñaron como LA ACCIÓN PRINCIPAL — el inverso de lo que la 074 r1 encontró con Descartar.`);
+
+  const cycle = await page.evaluate(async () => {
     document.querySelector('#kebab').click();
-    const sheet = document.querySelector('#sheet').textContent;
-    const page_ = document.querySelector('#stbar').textContent;
-    document.querySelector('[data-act="close"]').click();
-    return { enHoja: (sheet.match(/Publicado/g) || []).length, enPagina: (page_.match(/Publicado/g) || []).length };
+    await new Promise(r => setTimeout(r, 320));
+    const opts = [...document.querySelectorAll('#sheet .opt')].map(o => o.querySelector('.on2').textContent);
+    const enHoja = (document.querySelector('#sheet').textContent.match(/Publicado/g) || []).length;
+    document.querySelector('[data-cyc="retire"]').click();
+    const txt = document.querySelector('#dlg-d').textContent;
+    document.querySelector('[data-act="dlg-yes"]').click();
+    return { opts, enHoja, txt, after: document.querySelector('#tools [data-cy].on').dataset.cy };
   });
-  await atRest(page);
-  ok(veces.enHoja === 1 && veces.enPagina === 1,
-    `43 · el estado se dice una vez en la página y una en la cabecera de la hoja (${veces.enPagina} + ${veces.enHoja}), no tres`);
+  await setState(page, 'published');
+  ok(cycle.opts.length === 1 && cycle.after === 'retired',
+    `8b · el ⋮ abre la hoja de ciclo, ofrece ${cycle.opts.length} opción (${cycle.opts.join('')}) y commitea a \`${cycle.after}\` — `
+    + `un solo verbo en todos los estados, que es lo que el colapso decidió`);
+  ok(cycle.enHoja === 1,
+    `8c · y el estado se dice UNA vez en la hoja (su subtítulo), no otra vez en el cuerpo: con la franja ya son dos lugares, y tres era la forma que contó la 077`);
+  ok(/ya no lo tiene/i.test(cycle.txt) && /ludoteca pública/i.test(cycle.txt) && /estantes/i.test(cycle.txt),
+    `8d · el diálogo dice las DOS mitades — el club y la web. La copia que corre hoy (form.ex:352-356) sólo decía la de la web, `
+    + `mientras shelves.ex usaba la otra en 5 consultas.`);
 
-  /* ---------- 44 · el chrome de la hoja es el de la 078, no uno escrito a mano ----------
-     Se rompió exactamente así: un `<h2>` suelto con los estilos del UA y un `.sh-hr` inexistente, o
-     sea título enorme y `✕` en su propia línea debajo. Se asserta la ESTRUCTURA, que es lo que
-     `sheetChrome` garantiza, más la geometría que la rotura producía. */
+  /* ---------- 9 · el chrome de la hoja es el de la 078 ---------- */
+  await openField('band');
   const chrome = await page.evaluate(() => {
-    document.querySelector('#main [data-edit="band"]').click();
     const sh = document.querySelector('#sheet');
-    const t = sh.querySelector('.sh-title'), x = sh.querySelector('.sh-x'), g = sh.querySelector('.grab');
+    const t = sh.querySelector('.sh-title'), x = sh.querySelector('.sh-x');
     const tr = t.getBoundingClientRect(), xr = x.getBoundingClientRect();
-    return {
-      tieneTop: !!sh.querySelector('.sh-top'), tieneGrab: !!g, tieneTitulo: !!t,
-      h2sSueltos: sh.querySelectorAll('.sh-head h2').length,
-      tamaño: getComputedStyle(t).fontSize + '/' + getComputedStyle(t).fontWeight,
-      mismaFila: Math.abs((tr.top + tr.height / 2) - (xr.top + xr.height / 2)) < 22,
-      xADerecha: xr.left > tr.right
-    };
+    return { top: !!sh.querySelector('.sh-top'), grab: !!sh.querySelector('.grab'),
+      h2: sh.querySelectorAll('.sh-head h2').length, tam: getComputedStyle(t).fontSize + '/' + getComputedStyle(t).fontWeight,
+      mismaFila: Math.abs((tr.top + tr.height / 2) - (xr.top + xr.height / 2)) < 26, derecha: xr.left > tr.right };
   });
-  await page.evaluate(() => document.querySelector('[data-act="close"]')?.click());
-  await atRest(page);
-  ok(chrome.tieneTop && chrome.tieneGrab && chrome.h2sSueltos === 0 && chrome.tamaño === '18px/600' && chrome.mismaFila && chrome.xADerecha,
-    `44 · la hoja usa el chrome de la 078: agarradera ${chrome.tieneGrab}, título ${chrome.tamaño}, `
-    + `el ✕ en la MISMA fila (${chrome.mismaFila}) y a la derecha (${chrome.xADerecha}), cero <h2> sueltos`);
+  await closeSheet();
+  ok(chrome.top && chrome.grab && chrome.h2 === 0 && chrome.tam === '18px/600' && chrome.mismaFila && chrome.derecha,
+    `9 · la hoja usa el chrome de la 078: agarradera ${chrome.grab}, título ${chrome.tam}, ✕ en la misma fila (${chrome.mismaFila}) `
+    + `y a la derecha (${chrome.derecha}), cero <h2> sueltos. Se rompió exactamente así por escribirlo a mano.`);
 
-  /* ---------- 32 · sin errores de consola ---------- */
-  ok(errs.length === 0, `32 · consola limpia${errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''}`);
+  /* ---------- 10 · capturas y consola ---------- */
+  await hideTools(page);
+  await page.screenshot({ path: path.join(OUT, 'r5-reposo.png'), clip: await deviceClip(page) });
+  await openField('band');
+  await page.screenshot({ path: path.join(OUT, 'r5-hoja-nivel.png'), clip: await deviceClip(page) });
+  await closeSheet();
+  await page.evaluate(() => document.querySelector('#kebab').click());
+  await settle();
+  await page.screenshot({ path: path.join(OUT, 'r5-hoja-ciclo.png'), clip: await deviceClip(page) });
+  await closeSheet(); await showTools(page);
+
+  ok(errs.length === 0, `10 · consola limpia${errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''}`);
 
   await browser.close();
   const pass = log.filter(l => l.startsWith('PASS')).length;
