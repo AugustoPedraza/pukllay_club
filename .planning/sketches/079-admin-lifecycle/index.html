@@ -863,13 +863,210 @@
 </style>
 <style>
 /* ============================================================================
-   SKETCH 079 — lo que esta ronda AGREGA. Todo lo de arriba es la hoja de la 078
-   copiada VERBATIM (líneas 14-866), a propósito: si un hallazgo de esta ronda
-   fuera atribuible a que redibujé el editor, no sería un hallazgo sobre el
-   contenedor. El editor no se toca.
+   SKETCH 079 · RONDA 2 — E3, la ficha editable
+   Todo lo de arriba es la hoja de la 078 verbatim. Esto es lo que agrega la
+   ronda 2.
+
+   LOS TOGGLES DE LA RONDA 1 ESTÁN ELIMINADOS (convención de 072): el
+   desarrollador eligió el ⋮ como único control de arriba, así que M1 es la
+   decisión y M2/M3 salieron de la página. Sus mediciones quedan en el README.
    ============================================================================ */
 
-/* ---------- el panel de variantes ---------- */
+/* ---------- las fuentes REALES de la app, no las de fallback ----------
+   La ronda es sobre un ritmo tipográfico. Medirlo con `ui-sans-serif` en lugar
+   de Bebas Neue mediría otra cosa: Bebas es una condensada de caja alta, así
+   que el mismo `font-size: 30px` ocupa un ancho y una altura de línea
+   completamente distintos. Los archivos son los que sirve la app. */
+@font-face { font-family: "Bebas Neue"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("../../../priv/static/fonts/bebas-neue-400-latin.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("../../../priv/static/fonts/inter-400-latin.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("../../../priv/static/fonts/inter-600-latin.woff2") format("woff2"); }
+
+/* ---------- LA QUILLA: 14px, NO 16 ----------
+   `--pk-gutter` es 2rem, y a ≤480px baja a 0.875rem = 14px (app.css:6659-6662). El admin usa 16 en
+   todos lados, y R359 — el borde derecho que d42 fija para el primario, sostenido por 074/075/078 —
+   ES 375−16. Adoptar la quilla de la web mueve ese borde a R361.
+   Se adopta, porque el pedido fue el ritmo de la web, y el costo se MIDE (check 21) en vez de
+   evitarse eligiendo 16 y llamándolo "el ritmo de la web". */
+/* `main` trae `padding: 16px 16px 79px` de la 078 (línea 146). Sin anularlo, la quilla de 14 se SUMA
+   a esos 16 y el texto queda a 30px — que es exactamente lo que midieron los checks 21 y 22 en rojo,
+   y que se leía como "es fiel a la web, la web tiene dos bordes". No: eran los 16 del admin abajo de
+   todo. Un borde heredado que se parece al hallazgo que uno espera es la peor clase de falso verde. */
+.pg { --gut: 14px; padding-left: 0; padding-right: 0; padding-bottom: 0; }
+.pg .wrap { padding-left: var(--gut); padding-right: var(--gut); }
+
+/* ---------- EL RESET DEL BLOQUE EDITABLE VA PRIMERO, Y COSTÓ AVERIGUARLO ----------
+   Un bloque editable es un `<button>` real — foco, teclado, rol. Para eso hay que resetear el
+   chrome del UA, y el reflejo es `font: inherit`.
+
+   PERO `font` ES UN ATAJO QUE RESETEA font-family, font-size, font-weight Y line-height de una, y
+   `.pg .ed` tiene la MISMA especificidad (0,2,0) que `.pg .h1`. Puesto después, le ganaba: el título
+   salía en Inter 16px en vez de Bebas 30/36, y la página se veía razonable, así que sólo lo encontró
+   una medición de `getComputedStyle`.
+
+   ES LA TERCERA VEZ EN ESTE LINAJE. 075-V4 perdió una ronda con `font: inherit` reseteando el
+   `line-height` y bajando el spine 8px. La ronda 1 de este mismo sketch lo volvió a pisar con el
+   `margin` en atajo de `.gh-st.ctl`. Y yo escribí el comentario que lo advertía, y lo hice igual.
+   La regla, de una vez: EN ESTA PÁGINA UN RESET VA ANTES QUE LAS REGLAS DE TIPO, NUNCA DESPUÉS —
+   y el check 20 lee la familia y el tamaño computados en vez de confiar en que la hoja diga lo
+   correcto. */
+/* Y NO SETEA `display` NI `width`, por la misma razón: la fila de pills es un flex, y un
+   `width: 100%` acá estiraba el pill del nivel a todo el ancho mientras los otros dos quedaban del
+   tamaño de su texto. Se veía en la captura como "el nivel es una barra". Cada bloque declara su
+   propia caja en su propia regla, que además viene después. */
+.pg .ed { border: 0; background: none; text-align: inherit; font: inherit; color: inherit; padding: 0; cursor: pointer;
+  position: relative; }
+.pg .ed:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 4px; }
+/* EL PISO DE 44px POR PSEUDO-ELEMENTO, la técnica que la web ya usa para sus pills
+   (`.pk-pill-interactive::after`, app.css:1446-1461) y que 074 usa para el CTA de 36px: la caja
+   visible y la de toque son cajas distintas. Hace falta porque el ritmo de la ficha da bloques
+   chicos — el título mide 36 y los valores del club 22 — y engordarlos movería el ritmo que la
+   ronda existe para copiar. El check 30 verifica que lleguen a 44 Y el 30b que no se pisen entre
+   ellos, porque las filas del club están a 16px y dos capas de 44 sobre valores de 22 se solapan. */
+.pg .ed::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.pg .ed.desc::after, .pg .ed.cardposter::after { content: none; }
+
+/* ---------- el panel del póster (app.css:4875-4884) ----------
+   OJO AL SEGUNDO BORDE: el panel agrega 16px de padding propio, así que la tapa arranca a 14+16=30px
+   del borde de la pantalla mientras el texto arranca a 14. La ficha pública tiene DOS bordes
+   izquierdos y el editor tenía uno. Medido en el check 22. */
+.pg .poster { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 16px; box-shadow: 0 4px 12px rgba(36,18,56,.12); display: flex; flex-direction: column; gap: 12px; }
+.pg .poster[hidden] { display: none; }
+/* app.css:1486-1488 + 1505-1509: aspect 1/1.05 y `contain`, NUNCA `cover` — la tapa se apaisa sobre
+   base-300, no se recorta. Un `cover` acá haría que el editor mostrara un encuadre que la web no
+   muestra, o sea mentiría sobre lo que publicaste. */
+.pg .cardposter { aspect-ratio: 1 / 1.05; width: 100%; border-radius: 8px; background: var(--color-surface-2);
+  overflow: hidden; display: grid; place-items: center; border: 0; padding: 0; cursor: pointer; position: relative; }
+.pg .cardposter img { width: 100%; height: 100%; object-fit: contain; }
+.pg .cardposter .ph { color: var(--color-primary); display: grid; place-items: center; }
+.pg .cardposter .ph svg { width: 64px; height: 64px; }
+
+/* ---------- los pills (app.css:1224-1288), byte a byte ----------
+   Base 11px/600, padding 4px 9px, radio 9999, borde 1px transparente. Las tonalidades cambian SÓLO
+   color/fondo/borde. `.pill-tag` es la única que pisa escala y padding, y así es en la app. */
+.pg .facts { display: flex; flex-wrap: wrap; gap: 6px; row-gap: 8px; }
+.pg .pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; border-radius: 9999px;
+  border: 1px solid transparent; font-weight: 600; font-size: 11px; padding: 4px 9px; font-family: var(--font-sans); }
+.pg .pill.neutral { color: var(--color-text-muted); background: var(--color-surface); border-color: var(--color-border); }
+.pg .pill.outline { color: var(--color-text-muted); background: none; border-color: var(--color-border); }
+.pg .pill.tag { font-size: 14px; font-weight: 400; padding: 0 3px; color: var(--color-primary); background: none; border-color: transparent; }
+:root[data-theme="dark"] .pg .pill.tag { color: var(--color-text-muted); }
+/* el piso de 44px invisible de app.css:1446-1461 — un pill mide 28px y se toca en 44 */
+.pg .pill.act { position: relative; min-height: 28px; cursor: pointer; }
+.pg .pill.act::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+/* los tres puntos de dificultad (app.css:1142-1157) */
+.pg .dots { display: inline-flex; gap: 2px; }
+.pg .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-border); }
+.pg .dots i.on { background: var(--color-text-muted); }
+
+/* ---------- la columna de lectura ----------
+   `.pk-text-col` NO tiene gap: cada separación es un margen con nombre (app.css:4992-5022).
+   Se copia así, con los nombres, porque un `gap` uniforme daría otro ritmo. */
+.pg .masthead { display: flex; flex-direction: column; gap: 48px; }   /* app.css:4767-4772 */
+.pg .textcol { display: flex; flex-direction: column; }
+.pg .textcol > .r8 { margin-top: 8px; }
+.pg .textcol > .r16 { margin-top: 16px; }
+.pg .textcol > .r32 { margin-top: 32px; }
+.pg .sect { display: flex; flex-direction: column; gap: 8px; }        /* app.css:5029-5033 */
+
+/* ---------- el título: Bebas 30/36 (show.ex:660, `font-display text-3xl`) ----------
+   El admin lo tiene en 22/600 Inter y D-19j fija ese rango para una página de admin. Esto lo pisa
+   para esta página. Escrito, no derivado (d47), y medido en el check 20. */
+.pg .h1 { font-family: var(--font-display); font-size: 30px; line-height: 36px; font-weight: 400;
+  color: var(--color-text); margin: 0; display: block; width: 100%; }
+
+/* ---------- la descripción (app.css:5063-5234) ----------
+   16px, interlínea 1.5, JUSTIFICADA, clamp de 3 líneas = 72px, con 44px de padding derecho para que
+   el chevron no se le encime al texto. */
+.pg .descshell { position: relative; display: flex; align-items: flex-end; min-height: 44px; }
+.pg .desc { font-size: 16px; line-height: 1.5; text-align: justify; text-justify: inter-word; margin: 0; flex: 1; display: block; }
+.pg .desc.clamped { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; padding-right: 44px; }
+.pg .desctog { position: absolute; right: 0; bottom: 0; width: 44px; height: 44px; border: 0; background: none;
+  color: var(--color-text-muted); display: grid; place-items: center; cursor: pointer; }
+.pg .desctog svg { width: 16px; height: 16px; }
+
+/* ---------- la ficha técnica (app.css:5281-5309) ----------
+   ETIQUETAS DE 12px MAYÚSCULAS CON 0.08em — y acá está el hallazgo que esta ronda tiene que mostrar:
+   en la web ese rango es EXCLUSIVAMENTE de datos de BGG que no se editan (AÑO, DISEÑADORES,
+   ILUSTRADORES, MECÁNICAS, TEMÁTICAS, COMUNIDAD BGG). E3 obliga a usarlo también para COPIAS,
+   ESTANTE y EXPANSIÓN, que sí se editan. Así que el rango deja de poder decir qué se puede tocar,
+   y todo el peso queda en el affordance — que es el eje de la ronda. Check 24.
+   Y SIN hairline entre filas (005 ronda 16): el ritmo sale del padding. El spine de d33 dibuja una
+   línea entre cada fila. Dos ritmos distintos para la misma cosa. */
+.pg .specs { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.pg .spec { display: flex; flex-direction: column; }
+.pg .spec dt, .pg .glab { font-size: 12px; font-weight: 400; line-height: 1.3; color: var(--color-text-muted);
+  text-transform: uppercase; letter-spacing: .08em; margin: 0 0 6px; }
+.pg .spec dd { margin: 0; font-size: 16px; line-height: 1.4; }
+.pg .chiprow { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- el bloque DEL CLUB ----------
+   Un solo divisor, como la web tiene uno solo (app.css:5247-5249). */
+.pg .clubsep { height: 1px; background: var(--color-border); margin: 0; }
+
+/* ---------- el CTA apilado de 52px (078:860) ----------
+   El patrón de `Publicar` que pidió el desarrollador: último hijo del formulario, no barra fija.
+   LA WEB NO HACE ESTO: `.pk-mobile-cta-bar` es `position: fixed` con 148px de body reservado
+   (app.css:5375-5398, 5440-5441). Los dos "apilado abajo" no son el mismo. Se dibuja el de la 078
+   porque es el que se pidió, y el desacuerdo se MIDE en el check 23. */
+.pg .cta { width: 100%; min-height: 52px; margin-top: 32px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--color-primary); color: var(--color-primary-content); font-size: 16px; font-weight: 600;
+  font-family: var(--font-sans); }
+:root[data-theme="dark"] .pg .cta { background: var(--color-accent-text); color: #1b1024; }
+.pg .cta:active { filter: brightness(.92); }
+.pg .cta[disabled] { background: var(--color-surface); color: var(--color-text-muted); cursor: default;
+  box-shadow: inset 0 0 0 1px var(--color-border); }
+
+/* ============================================================================
+   EL EJE DE LA RONDA 2 — ¿qué dice que un bloque de la ficha se puede editar?
+
+   La ficha pública no tiene NINGUNA marca: el título es un `<h1>` pelado, la
+   descripción es prosa pelada, el nivel es un pill. d37 contestó esta pregunta
+   para el spine del admin — *"etiqueta prominente, valor subordinado, y el
+   valor lleva `--val`, un tinte que marca el dato que estás por cambiar"* —
+   pero E3 NO TIENE ESA ANATOMÍA en la cabecera: no hay etiqueta de la cual el
+   valor pueda ser subordinado. Así que d37 no cubre esto, y ése es el hueco.
+
+   Y 072 ya cerró dos salidas: la ronda 1 sacó el chevron (D-19i: un chevron
+   significa que la fila abre OTRA PÁGINA) y la ronda 2 sacó el `⌄` que lo había
+   reemplazado, aterrizando en NINGÚN glifo.
+   ============================================================================ */
+
+/* ---- A1 · el tinte de d37, estirado a bloques sin etiqueta ----
+   El valor lleva `--val`. En el spine eso es una línea corta. Acá el "valor" es un H1 de 30px y un
+   párrafo justificado de 3 líneas, así que el tinte cubre mucha más superficie. Ése es su costo y se
+   mide, no se argumenta (check 25). */
+/* OJO AL SELECTOR, Y LO ENCONTRÓ LA CAPTURA: la primera versión decía `.ed .h1`, o sea un `.h1`
+   DESCENDIENTE de `.ed`. Pero el `.h1` ES el `.ed` — es el mismo `<button class="h1 ed">`. Lo mismo
+   con `.desc` y con el pill. Así que A1 no pintaba absolutamente nada y era, byte por byte, A3:
+   la variante del tinte y la variante de "nada" eran la misma página, y los tres checks de conteo
+   de nodos habrían pasado igual. Es la misma forma que el punto invisible de la 078 (tres checks
+   verdes sobre cuadraditos transparentes). El check 25 ahora compara PÍXELES contra A3, no nodos. */
+.pg.A1 .ed.h1, .pg.A1 .ed.desc { color: var(--val); }
+.pg.A1 dd .ed { color: var(--val); }
+.pg.A1 .ed.pill { color: var(--val); border-color: var(--val); }
+
+/* ---- A2 · el lápiz ----
+   UN GLIFO NUEVO, y hay que decirlo: D-19i gobierna el chevron, no el lápiz, así que técnicamente no
+   lo prohíbe — pero 072 aterrizó en "ningún glifo" después de sacar dos, y esto los trae de vuelta.
+   Se dibuja al ras del bloque, nunca en el slot trailing de la fila (que D-19i reserva). */
+.pg.A2 .ed { position: relative; }
+.pg.A2 .ed .pen { display: inline-grid; place-items: center; width: 16px; height: 16px; vertical-align: -2px;
+  margin-left: 6px; color: var(--color-text-muted); }
+.pg.A2 .ed .pen svg { width: 14px; height: 14px; }
+
+/* ---- A3 · nada ----
+   La línea base, y la forma pura que 075-V4 midió: `diffPx 0 of 270000`. Si A3 resulta indistinguible
+   de la misma página con los bloques inertes, el editor se ve EXACTAMENTE como la ficha pública y
+   nada dice que se pueda tocar. El check 26 lo mantiene vivo. */
+
+/* los bloques inertes del negativo del check 26 */
+.pg.flat .ed { cursor: default; }
+
+/* ---------- el panel de variantes y herramientas ---------- */
 #vnav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; display: flex; gap: 6px; align-items: center;
   padding: 7px 12px; background: #1b1b1f; color: #fff; font: 500 12px/1.2 system-ui, sans-serif; flex-wrap: wrap; }
 #vnav b { font-weight: 700; letter-spacing: .04em; opacity: .55; margin-right: 4px; }
@@ -878,136 +1075,42 @@
 .stage { padding-top: 58px; }
 @media (max-width: 430px) { .stage { padding-top: 46px; } }
 
-/* ---------- M1 · el menú ⋮ ----------
-   NO EXISTE NINGÚN ⋮ EN EL PROYECTO — verificado sobre lib/ y assets/ completos: cero `⋮`, cero
-   `hero-ellipsis-*`, cero `class="dropdown"`, cero daisyUI `dropdown`. Lo único parecido es
-   `layouts.ex:792-794`, que es el registro de haber EVALUADO el `dropdown` de daisyUI y haberlo
-   RECHAZADO ("no first-class way to pair a dimmed backdrop, a document-level Escape handler, and the
-   scroll-spy's is-active class"), y haberlo hecho a mano. Así que el precedente del proyecto no es
-   "usar el dropdown del framework": es "si hace falta un panel, se escribe a mano". Esto es a mano.
-
-   Y `.tb-act` NO es el contenedor precedentado que parecía: existe en 074:157 y 075:181 con un comentario
-   que dice "dos controles", pero en los dos sketches `slot` renderiza UN SOLO botón — el gap de 6px nunca
-   se ejerció — y la 078 lo eliminó entero (078:1436-1438 pone el botón como hijo directo de `.tbar`).
-   Acá se reintroduce, y el costo de reintroducirlo se mide en el check 6, no se argumenta. */
-.kebab { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none;
-  color: var(--color-accent-text); border-radius: 9px; cursor: pointer; position: relative; }
-.kebab svg { width: 20px; height: 20px; }
-/* el piso táctil de 44px por pseudo-elemento, la técnica que 074 ya usa para el CTA de 36px: la caja
-   visible y la caja de toque son cajas distintas, así que el ⋮ puede medir 36 y tocarse en 44. */
-.kebab::before { content: ""; position: absolute; inset: -4px; }
-.kebab:active { background: var(--color-surface-2); }
-.kebab[aria-expanded="true"] { background: var(--color-surface-2); }
-
-.menu { position: absolute; z-index: 32; min-width: 196px; background: var(--color-bg); border-radius: 12px;
-  box-shadow: var(--shadow-lg); border: 1px solid var(--color-border); padding: 6px; overflow: hidden;
-  transform-origin: top right; }
-.menu[hidden] { display: none; }
-.menu .mi { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 10px; border: 0;
-  background: none; text-align: left; font-size: 15px; color: var(--color-text); border-radius: 8px; cursor: pointer; }
-.menu .mi:hover { background: var(--color-surface); }
-.menu .mi:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-.menu .mi.dan { color: var(--color-danger); }
-.menu .mi svg { width: 18px; height: 18px; flex-shrink: 0; }
-/* el scrim del menú es transparente, no atenuado: un menú anclado no es un modal. Existe sólo para que
-   un toque afuera cierre y para que nada de abajo se toque por accidente. */
-.mscrim { position: absolute; inset: 0; z-index: 31; background: none; }
-.mscrim[hidden] { display: none; }
-
-/* ---------- M2 · la zona de ciclo al pie — EL INCUMBENTE ----------
-   Esto NO es una propuesta nueva. Es lo que corre hoy: `form.ex:324-330` pone `Retirar` / `Restaurar` en
-   un `<div class="flex">` pelado DESPUÉS de `</.form>`, o sea al pie del cuerpo del formulario, fuera del
-   submit. La misma forma que la ronda 3 de la 074 encontró con W2: la variante que parecía la propuesta
-   era el sistema de registro, y la pregunta real era si seguir apartándose de él.
-
-   Y hay algo más fuerte: en TODO el linaje rediseñado (074, 075, 078) la palabra `Retirar` no aparece ni
-   una vez. Se dibujó UNA sola vez, en la G2 de la 073 (073:797), dentro de la barra de acción de abajo —
-   y d42 rechazó G2 justamente por poner un control destructivo al lado del slot seguro. Después la 074
-   borró esa barra. Desde entonces la transición de ciclo no tiene contenedor en ningún lado. */
-.cyc { padding: 26px 0 0; }
-.cyc .cyl { font-size: 13px; font-weight: 600; color: var(--color-text-muted); letter-spacing: .01em; padding: 0 0 4px; }
-.cyc .cya { margin: 0 -16px; }
-/* misma anatomía que `.frow`: un solo tipo de fila por superficie. La diferencia con una fila del spine es
-   que ésta NO lleva `.fr-v` — no tiene valor, es un verbo — y ésa es toda la distinción que necesita. */
-.cyc .cact { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 16px;
-  border: 0; background: none; text-align: left; position: relative; cursor: pointer; font-size: 15px; font-weight: 500;
-  color: var(--color-accent-text); }
-.cyc .cact + .cact::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--color-border); }
-.cyc .cact:hover { background: var(--color-surface); }
-.cyc .cact:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
-.cyc .cact.dan { color: var(--color-danger); }
-.cyc .cact svg { width: 19px; height: 19px; flex-shrink: 0; }
-.cyc .cact .sub { display: block; font-size: 13px; font-weight: 400; color: var(--color-text-muted); margin-top: 2px; line-height: 1.32; }
-.cyc .cact .ct { flex: 1; min-width: 0; }
-
-/* ---------- M3 · el read-out ES el control (la jugada de 075-V4) ----------
-   075 ronda 2 dibujó V4 — "el diagnóstico ES el remedio" — SIN pintura, y el pixel-diff contra V1 dio
-   `diffPx 0 of 270000`. Idéntico. No un affordance débil: NINGUNO. Y el chevron estaba prohibido por d34.
-   La salida fue la banda de d29: un `::before` anclado a la caja de contenido, que no mueve NADA de texto.
-
-   Acá el riesgo es el mismo y peor, porque `● Publicado` es más chico que un bloque de prosa. Se reusa la
-   banda de d29 VERBATIM en vez de inventar un affordance nuevo, y el check 8 mantiene vivo el resultado
-   puro: si se le saca `.band`, el diff tiene que volver a 0. Si no vuelve a 0, es que algo más lo está
-   pintando y la banda no era lo que se estaba midiendo. */
-/* ---------- LA CAJA CRECE HACIA AFUERA, EL CONTENIDO NO SE MUEVE ----------
-   La primera versión puso `margin-left: -10px` con `padding-left: 14px` — un neto de +4px — y padding
-   vertical sin margen que lo compensara. Resultado medido por los checks 7 y 8b: el punto se corría 4px
-   a la derecha, `.glabel` bajaba 10px, y sacarle la banda NO devolvía a M3 a ser idéntico a M2, porque
-   lo que los diferenciaba no era la banda sino mi caja. Un pixel-diff ahí habría reportado mi CSS como
-   affordance — que es exactamente lo que 075-V4 perdió una ronda en descubrir con `font: inherit`.
-   Cada padding tiene ahora su margin negativo del mismo tamaño. `font: inherit` sigue prohibido: setea
-   `line-height` y con (0,2,0) le gana a `.gh-st`. Se listan las propiedades una por una. */
-/* y el `margin` en atajo PISA el `margin-top: 4px` que `.gh-st` trae — medido: el punto subía 4px. El
-   top es `4px - 5px` para que el contenido caiga donde caía. Escrito como resta y no como `-1px` para
-   que se vea de dónde sale cada número. */
-.gh-st.ctl { align-self: flex-start; margin: calc(4px - 5px) -10px -5px -14px; padding: 5px 10px 5px 14px; border: 0;
-  background: none; border-radius: 8px; position: relative; isolation: isolate; cursor: pointer;
-  font-family: inherit; font-size: 13px; font-weight: inherit; line-height: inherit;
-  color: inherit; text-align: left; }
-/* d29's band: 3px, en el borde de arranque de la caja de contenido. No mueve texto — el padding-left de 14
-   contra el margin-left de -10 deja el punto exactamente donde estaba en el read-out. Check 7 lo asserta. */
-.gh-st.ctl::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 2px;
-  background: var(--color-accent-text); z-index: -1; }
-.gh-st.ctl:hover { background: var(--color-surface); }
-.gh-st.ctl:active { background: var(--color-surface-2); }
-.gh-st.ctl:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
-/* el piso de 44px otra vez por pseudo-elemento: la línea de estado mide ~23px y no se la puede engordar
-   sin mover el nombre del juego que tiene encima. */
-.gh-st.ctl::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
-
-/* ---------- la hoja de ciclo (M3) ---------- */
-.cysheet .opt.dan .on2 { color: var(--color-danger); }
-
-/* ---------- el aviso de destino ----------
-   No es decoración: es el hallazgo del check 9 puesto en la pantalla donde ocurre. */
-.dest { margin-top: 10px; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
-.dest b { font-weight: 600; color: var(--color-text); }
-
-/* ---------- el panel de herramientas ---------- */
-#tools { position: fixed; right: 10px; bottom: 10px; z-index: 9999; max-width: 330px;
+#tools { position: fixed; right: 10px; bottom: 10px; z-index: 9999; max-width: 340px;
   font: 12px/1.45 system-ui, sans-serif; background: #1b1b1fef; color: #fff; padding: 9px 11px; border-radius: 10px;
   display: flex; flex-direction: column; gap: 6px; }
 #tools[hidden] { display: none; }
 #tools button { font: inherit; padding: 3px 8px; border-radius: 6px; border: 1px solid #ffffff33; background: none; color: #fff; cursor: pointer; }
 #tools button.on { background: #fff; color: #1b1b1f; }
-#tools button[disabled] { opacity: .35; cursor: default; }
 #tools .now { opacity: .72; font-style: italic; }
+
+/* ---------- el ⋮, ahora el único control de la barra ----------
+   Y esto BORRA el único costo que la ronda 1 le midió a M1: el check 6b lo cargaba por empujar
+   `Guardar` de R359 a R307. Sin `Guardar` en la barra, el ⋮ toma el borde legítimamente.
+   Lo que sí abre, y se mide en el check 27: durante cinco pantallas esa esquina enseñó que ahí vive
+   LA ACCIÓN PRINCIPAL, y ahora vive un menú. Es la forma inversa de lo que la 074 ronda 1 encontró
+   con `Descartar` heredando el borde del primario. */
+.kebab { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none;
+  color: var(--color-accent-text); border-radius: 9px; cursor: pointer; position: relative; }
+.kebab svg { width: 20px; height: 20px; }
+.kebab::before { content: ""; position: absolute; inset: -4px; }
+.kebab:active, .kebab[aria-expanded="true"] { background: var(--color-surface-2); }
+
+.cysheet .opt.dan .on2 { color: var(--color-danger); }
 </style>
 </head>
 <body>
 
 <div id="vnav">
-  <b>079</b>
-  <button data-var="M1" class="on">M1 · el menú ⋮</button>
-  <button data-var="M2">M2 · al pie (el incumbente)</button>
-  <button data-var="M3">M3 · el read-out es el control</button>
+  <b>079 · r2</b>
+  <span style="opacity:.55">¿qué dice que se puede editar?</span>
+  <button data-var="A1" class="on">A1 · el tinte de d37</button>
+  <button data-var="A2">A2 · el lápiz</button>
+  <button data-var="A3">A3 · nada</button>
 </div>
 
 <div class="stage"><div class="device" id="device">
   <div class="tbar" id="tbar"></div>
-  <div class="scroller" id="scroller"><main id="main"></main></div>
-  <div class="mscrim" id="mscrim" hidden></div>
-  <div class="menu" id="menu" role="menu" hidden></div>
+  <div class="scroller" id="scroller"><main id="main" class="pg"></main></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
@@ -1017,25 +1120,23 @@
 </div></div>
 
 <div id="tools">
-  <div>Estado del juego:
-    <button data-cy="published" class="on">Publicado</button>
-    <button data-cy="retired">Retirado</button>
-    <button data-cy="draft">Borrador</button></div>
+  <div>Estado: <button data-cy="published" class="on">Publicado</button> <button data-cy="retired">Retirado</button></div>
+  <div>Tapa: <button data-cov="1" class="on">Tiene</button> <button data-cov="0">Ninguna (los 49)</button></div>
   <div class="now" id="now"></div>
   <div>Tema: <button data-theme-set="light" class="on">Claro</button> <button data-theme-set="dark">Oscuro</button></div>
 </div>
 
 <script>
-/* ---------- iconos: los de la 078, más los dos que esta ronda necesita ---------- */
 const P = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
   chevL: '<path d="M15 5l-7 7 7 7"/>',
-  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
-  tick: '<path d="M4 12.5l5.5 5.5L20 7"/>',
-  /* el ⋮: tres puntos rellenos, no tres círculos con stroke — a 20px un stroke de 1.7 deja el punto
-     casi hueco y el glifo se lee como tres oes. */
+  chevD: '<path d="M5 9l7 7 7-7"/>',
+  chevU: '<path d="M19 15l-7-7-7 7"/>',
+  puzzle: '<path d="M10 4h4a1 1 0 0 1 1 1v1.5a1.5 1.5 0 1 0 3 0V5a1 1 0 0 1 1-1h1v4.5a1.5 1.5 0 1 0 0 3V20H15v-1.5a1.5 1.5 0 1 0-3 0V20H5a1 1 0 0 1-1-1v-4h1.5a1.5 1.5 0 1 0 0-3H4V5a1 1 0 0 1 1-1h5z"/>',
+  users: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6.5a3 3 0 0 1 0 5.8"/><path d="M18 14.6A5.5 5.5 0 0 1 21 20"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   kebab: '<circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>',
-  eyeOff: '<path d="M3 3l18 18"/><path d="M10.6 10.7a2 2 0 0 0 2.8 2.8"/><path d="M9.4 5.2A9.3 9.3 0 0 1 12 5c5 0 9 4.5 9 7a12 12 0 0 1-2.4 3.4"/><path d="M6.2 6.7C4 8.2 3 10.4 3 12c0 2.5 4 7 9 7a9.5 9.5 0 0 0 3.6-.7"/>',
   box: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
   up: '<path d="M12 19V6M6 12l6-6 6 6"/>'
 };
@@ -1045,182 +1146,164 @@ const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const device = $('#device');
 
-/* ---------- la fila real ----------
-   Scythe, id 43 del dev DB: 2016, BGG 169786, `ingenio_estratega`, `units: 1`, `shelf_id: NULL`.
-   Sin estante como los 434 de 435, y con nivel como los 408 de 408 juegos base. */
-const BANDS = {
-  descubre_el_hobby: 'Descubre el hobby',
-  ingenio_estratega: 'Ingenio estratega',
-  nivel_experto: 'Nivel experto'
-};
+/* ---------- la fila real: Scythe, id 43 de pukllay_club_dev ----------
+   Todo lo de abajo salió de la fila, no está inventado. Las mecánicas y temáticas son las que el
+   glosario de `vocabulary.ex` mapea al español — de las 17 mecánicas que trae BGG, el glosario de 35
+   términos cubre estas cuatro; las demás no se muestran, que es lo que hace la app.
+
+   `section_names` es virtual, y para Scythe da UNA: "Ingenio estratega", que es su propia banda.
+   O sea que EL NIVEL APARECE DOS VECES en la ficha pública — como pill arriba de la tapa y como chip
+   de sección debajo del título. No es un error del fixture; es cómo se ve. Check 28. */
+const BANDS = [
+  { v: 'descubre_el_hobby', n: 'Descubre el hobby', lvl: 1 },
+  { v: 'ingenio_estratega', n: 'Ingenio estratega', lvl: 2 },
+  { v: 'nivel_experto', n: 'Nivel experto', lvl: 3 }
+];
 const G = {
-  id: 43, name: 'Scythe', year: 2016, bgg_id: 169786,
-  weight_band: 'ingenio_estratega', units: 1, shelf_id: null, is_expansion: false,
-  description: 'Es una época de agitación en la Europa de los años 20. Las capitales están en ruinas y hay hambre, pero la gente tiene esperanza.',
-  status: 'published'
+  id: 43, name: 'Scythe', year: 2016, bgg_id: 169786, status: 'published',
+  cover: '../../../priv/static/images/isologo-light.png',
+  hasCover: true,
+  min_players: 1, max_players: 5, playtime: 115,
+  weight_band: 'ingenio_estratega',
+  units: 1, shelf: null, is_expansion: false,
+  description: 'Es una época de agitación en la Europa de los años 20. Las cenizas de la primera gran guerra todavía oscurecen la nieve. La ciudad-estado capitalista conocida simplemente como “The Factory”, que abasteció la guerra con mechs fuertemente blindados, cerró sus puertas y atrajo la atención de las potencias vecinas.',
+  designers: ['Jamey Stegmaier'],
+  artists: ['Jakub Rozalski'],
+  mechanics: ['Domina zonas', 'Movimiento en casillas', 'Ataques directos', 'Poderes únicos'],
+  themes: ['Economía', 'Combate', 'Ciencia ficción'],
+  sections: ['Ingenio estratega'],
+  bgg_rating: 8.1, bgg_weight: 3.5, bgg_rank: 26
 };
+const CYC = { published: { n: 'Publicado', k: 'ok' }, retired: { n: 'Retirado', k: 'off' } };
+let VAR = 'A1';
 
-/* 075:886 / 078:1359 verbatim */
-const CYC = { published: { n: 'Publicado', k: 'ok' }, draft: { n: 'Borrador', k: 'warn' }, retired: { n: 'Retirado', k: 'off' } };
-let VAR = 'M1';
-
-/* ============================================================================
-   EL CORAZÓN DE LA RONDA: `actions()` se computa UNA SOLA VEZ y las tres
-   variantes leen el MISMO array. Es la misma disciplina que la 078 usó con
-   `missing()` (check 4): si M1 tuviera dos ítems y M2 tres, cualquier hallazgo
-   sobre el contenedor sería atribuible al contenido, no al contenedor.
-   El check 1 lo asserta en los tres, en los tres estados.
-
-   LO QUE EL CÓDIGO TIENE HOY, verificado línea por línea sobre catalog.ex y
-   form.ex completos — no de memoria:
-
-     publish_game/1   catalog.ex:491   SIN guard de origen  (%Game{} = game)
-     retire_game/1    catalog.ex:502   SIN guard de origen  (%Game{} = game)
-     restore_game/1   catalog.ex:514   CON guard            (%Game{status: :retired})
-                      catalog.ex:520   + fallback {:error, :not_retired}
-
-   Y el único llamador de las tres es `admin/game_live/form.ex` (112, 127, 166).
-   El índice no llama ninguna.
-
-   DESPUBLICAR NO EXISTE, Y EL DESTINO TAMPOCO. `:draft` es un estado de UNA SOLA
-   VÍA: `draft_changeset/2` (game.ex:159) es lo único que escribe `:draft`, y su
-   único llamador es un `Multi.insert` (catalog.ex:325). O sea, se entra a
-   borrador al CREAR y nunca más. `enrichment_changeset` lo dice en su propio
-   docstring: *"Never casts `:status` — a draft stays a draft until staff publish
-   it."* Ni `admin_changeset` ni `seed_changeset` castean `:status`. No hay
-   `update_all` ni SQL crudo que lo toque. Más la CHECK constraint
-   `games_status_must_be_known` y el default `'published'` NOT NULL en la columna.
-
-   Así que "Despublicar" no es un botón que falta: es un destino que hoy no
-   existe. Por eso va dibujado igual y su costo se mide (check 9), en vez de
-   dibujar sólo lo que ya se puede hacer.
-   ============================================================================ */
+/* ---------- las transiciones: UN SOLO VERBO (decisión del desarrollador) ---------- */
 function actions(status) {
   if (status === 'published') return [
-    { id: 'unpublish', label: 'Despublicar', icon: 'eyeOff', dan: false,
-      sub: 'Deja de verse en la web. Podés volver a publicarlo.',
-      dlg: { title: '¿Despublicar Scythe?', text: 'No va a aparecer más en la ludoteca pública. Vas a poder publicarlo de nuevo.', yes: 'Despublicar', danger: false },
-      to: 'draft', snack: 'Juego despublicado' },
     { id: 'retire', label: 'Retirar', icon: 'box', dan: true,
-      sub: 'El club ya no tiene el juego.',
-      /* ESTA COPIA ES LA QUE CORRE HOY, form.ex:352-356, citada carácter por carácter.
-         Y es exactamente el hallazgo: describe DESPUBLICAR, no retirar. */
-      dlg: { title: '¿Retirar Scythe?', text: 'Vas a poder restaurarlo después. No va a aparecer más en la ludoteca pública.', yes: 'Retirar', danger: true },
+      sub: 'Deja de verse en la web y sale del estante.',
+      dlg: { title: '¿Retirar Scythe?', text: 'El club ya no lo tiene. No va a aparecer más en la ludoteca pública ni en los estantes. Vas a poder restaurarlo después.', yes: 'Retirar', danger: true },
       to: 'retired', snack: 'Juego retirado' }
   ];
   if (status === 'retired') return [
     { id: 'restore', label: 'Restaurar', icon: 'up', dan: false,
-      sub: 'Vuelve a verse en la web.',
+      sub: 'Vuelve a la ludoteca y a la web.',
       dlg: null, to: 'published', snack: 'Juego restaurado' }
   ];
-  /* Un borrador NO llega a esta página: la 078 decidió que la fila de borrador abre la HOJA
-     (078:1212, `opensSheet`). Se deja computado y en cero para que el check 2 pueda decir
-     "cero" sobre algo que existe, en vez de sobre una rama que no escribí. */
   return [];
 }
 
-/* ---------- el editor: la 078 decidida, sin tocar ---------- */
-function renderEditor() {
-  const st = CYC[G.status];
-  const meta = [G.year, G.bgg_id ? 'BGG ' + G.bgg_id : null].filter(Boolean).join(' · ');
-  const acts = actions(G.status);
+const bandOf = () => BANDS.find(b => b.v === G.weight_band);
+const playersText = () => G.min_players === G.max_players ? `${G.max_players}` : `${G.min_players}-${G.max_players}`;
 
-  const r = (key, k, v, empty, clamp) => `<button class="frow" data-field="${key}">
-      <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
-      </button>`;
+/* el lápiz de A2. Devuelve vacío en A1 y A3, así que el DOM de los tres difiere SÓLO en esto y en la
+   clase de la página — cualquier diff entre variantes es atribuible al affordance y a nada más. */
+const pen = () => VAR === 'A2' ? `<span class="pen">${ic('pen', 1.9)}</span>` : '';
 
-  /* M3: la MISMA línea de estado, con el mismo punto y el mismo texto — lo único que cambia es que
-     es un <button> con la banda de d29. Si fuera otro texto o otro punto, el pixel-diff del check 8
-     mediría mi redacción y no el affordance. */
-  const stLine = VAR === 'M3' && acts.length
-    ? `<button class="gh-st ctl" id="cycctl" aria-haspopup="dialog"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</button>`
-    : `<div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>`;
+function renderPage() {
+  const b = bandOf();
+  const dots = n => `<span class="dots">${[1,2,3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+  const cover = G.hasCover
+    ? `<img src="${esc(G.cover)}" alt="">`
+    : `<span class="ph">${ic('puzzle', 1.6)}</span>`;
 
-  /* M2: la zona de ciclo al pie. Es `form.ex:324-330` — un div pelado después de `</.form>` — con la
-     anatomía de fila de esta superficie en vez de dos `.btn` de daisyUI sueltos. */
-  const cyc = VAR === 'M2' && acts.length ? `
-    <div class="cyc" id="cyczone">
-      <div class="cyl">CICLO</div>
-      <div class="cya">${acts.map(a => `<button class="cact${a.dan ? ' dan' : ''}" data-cyc="${a.id}">
-        ${ic(a.icon, 1.8)}<span class="ct">${esc(a.label)}<span class="sub">${esc(a.sub)}</span></span></button>`).join('')}</div>
-    </div>` : '';
-
-  $('#main').innerHTML = `
-    <div class="ghead"><span class="cov l" style="--h:210" aria-hidden="true">S</span><div class="gh-t">
-      <div class="gh-name">${esc(G.name)}</div>
-      ${stLine}
-    </div></div>
-    <div class="glabel">DATOS DEL CLUB</div>
-    <div class="frows">
-      ${r('name', 'Nombre', G.name)}
-      ${r('band', 'Nivel', BANDS[G.weight_band] || 'Sin nivel', !G.weight_band)}
-      ${r('units', 'Copias', String(G.units == null ? 1 : G.units))}
-      ${r('shelf', 'Estante', G.shelf_id ? 'L0' : 'Sin estante', !G.shelf_id)}
-      ${r('exp', 'Es una expansión', G.is_expansion ? 'Sí' : 'No')}
-      ${r('description', 'Descripción en español', G.description, false, true)}
+  /* ---- la cabecera, en el orden REAL de la ficha en mobile (005 ronda 12, show.ex:548-623) ----
+     pills ARRIBA de la tapa, dentro del panel. No abajo: la 005 ronda 3 los movió antes del título y
+     la ronda 12 los sacó del buy box, y la ronda 5 los agrupó con el título. El orden es el medido. */
+  const masthead = `<div class="masthead">
+    <div class="poster"${G.hasCover || !G.hasCover ? '' : ' hidden'}>
+      <div class="facts">
+        <span class="pill neutral">${ic('users', 1.9)}${playersText()}</span>
+        <span class="pill neutral">${ic('clock', 1.9)}${G.playtime} min</span>
+        <button class="pill neutral act ed" data-edit="band">${dots(b ? b.lvl : 0)}${esc(b ? b.n : 'Sin nivel')}${pen()}</button>
+      </div>
+      <button class="cardposter ed" data-edit="cover">${cover}</button>
     </div>
-    ${cyc}
-    <div style="height:28px"></div>`;
 
-  /* la barra de 074 (d43/d44, W3 texto), copiada de 078:1436-1438.
-     M1 es lo único que la toca: mete el ⋮ a la derecha del CTA. Ese es su costo y el check 6 lo mide. */
-  const kb = VAR === 'M1' && acts.length
-    ? `<button class="kebab" id="kebab" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false">${ic('kebab')}</button>` : '';
+    <div class="textcol">
+      <div class="sect">
+        <button class="h1 ed" data-edit="name">${esc(G.name)}${pen()}</button>
+      </div>
+      <div class="r8 chiprow">${G.sections.map(s => `<span class="pill tag">${esc(s)}</span>`).join('')}</div>
+
+      <div class="r16 sect">
+        <div class="descshell">
+          <button class="desc ed${DESC_OPEN ? '' : ' clamped'}" data-edit="description">${esc(G.description)}${pen()}</button>
+          <button class="desctog" data-act="desctog" aria-expanded="${DESC_OPEN}" aria-label="${DESC_OPEN ? 'Ver menos' : 'Ver más'}">${ic(DESC_OPEN ? 'chevU' : 'chevD', 2)}</button>
+        </div>
+      </div>
+
+      <div class="r16 sect"><dl class="specs">
+        <div class="spec"><dt>Año</dt><dd>${G.year}</dd></div>
+        <div class="spec"><dt>Diseñadores</dt><dd><div class="chiprow">${G.designers.map(d => `<span class="pill outline">${esc(d)}</span>`).join('')}</div></dd></div>
+        <div class="spec"><dt>Ilustradores</dt><dd><div class="chiprow">${G.artists.map(d => `<span class="pill outline">${esc(d)}</span>`).join('')}</div></dd></div>
+        <div class="spec"><dt>Mecánicas</dt><dd><div class="chiprow">${G.mechanics.map(d => `<span class="pill outline">${esc(d)}</span>`).join('')}</div></dd></div>
+        <div class="spec"><dt>Temáticas</dt><dd><div class="chiprow">${G.themes.map(d => `<span class="pill outline">${esc(d)}</span>`).join('')}</div></dd></div>
+      </dl></div>
+
+      <div class="r32 sect">
+        <div class="glab">Comunidad BGG</div>
+        <div style="font-size:14px">
+          <b style="font-weight:600">${G.bgg_rating.toFixed(1)}/10</b> <span style="font-size:12px;color:var(--color-text-muted)">Valoración</span>
+          &nbsp; <b style="font-weight:600">${G.bgg_weight.toFixed(1)}/5</b> <span style="font-size:12px;color:var(--color-text-muted)">Peso</span>
+          &nbsp; <b style="font-weight:600">#${G.bgg_rank}</b> <span style="font-size:12px;color:var(--color-text-muted)">Ranking</span>
+        </div>
+      </div>
+
+      <!-- ---- DEL CLUB: los tres campos que la ficha pública NO TIENE ----
+           is_expansion, units y shelf no se renderizan en ninguna parte de show.ex, verificado sobre
+           el archivo entero. E3 los obliga a usar el ÚNICO rango etiqueta-valor que la web tiene,
+           que es el de 12px mayúsculas de la ficha técnica: un rango que en la web pertenece
+           exclusivamente a datos de BGG que no se editan. Check 24.
+           (Sin backticks en este comentario A PROPÓSITO: está dentro de un template literal, así que
+           un backtick acá lo termina. Costó un SyntaxError averiguarlo.) -->
+      <div class="r32"><div class="clubsep"></div></div>
+      <div class="r16 sect"><dl class="specs">
+        <div class="spec"><dt>Copias</dt><dd><button class="ed inline" data-edit="units">${G.units}${pen()}</button></dd></div>
+        <div class="spec"><dt>Estante</dt><dd><button class="ed inline" data-edit="shelf">${G.shelf ? esc(G.shelf) : 'Sin estante'}${pen()}</button></dd></div>
+        <div class="spec"><dt>Es una expansión</dt><dd><button class="ed inline" data-edit="exp">${G.is_expansion ? 'Sí' : 'No'}${pen()}</button></dd></div>
+      </dl></div>
+
+      <button class="cta" data-act="save">Guardar</button>
+    </div>
+  </div>`;
+
+  $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
+  $('#main').className = 'pg ' + VAR + (FLAT ? ' flat' : '');
+
+  /* la barra: `‹ · título · ⋮`. El ⋮ es el ÚNICO control — `Guardar` bajó al pie. */
   $('#tbar').innerHTML = `<button class="tb-back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
     <span class="tb-t">${esc(G.name)}</span>
-    <button class="btn" id="save">Guardar</button>${kb}`;
+    <button class="kebab" id="kebab" aria-label="Más acciones" aria-haspopup="dialog">${ic('kebab')}</button>`;
 }
 
-/* ---------- M1: el menú anclado ---------- */
-function openMenu() {
-  const acts = actions(G.status);
-  const m = $('#menu'), k = $('#kebab');
-  m.innerHTML = acts.map(a => `<button class="mi${a.dan ? ' dan' : ''}" role="menuitem" data-cyc="${a.id}">${ic(a.icon, 1.8)}${esc(a.label)}</button>`).join('');
-  m.hidden = false; $('#mscrim').hidden = false;
-  k.setAttribute('aria-expanded', 'true');
-  /* anclado al ⋮, dentro del device. `.device` tiene `overflow: hidden`, así que un menú que se pasara
-     del borde se CORTARÍA en silencio — se ancla por la derecha para que no pueda pasar. */
-  const kr = k.getBoundingClientRect(), dr = device.getBoundingClientRect();
-  m.style.top = (kr.bottom - dr.top + 6) + 'px';
-  m.style.right = (dr.right - kr.right) + 'px';
-  setTimeout(() => m.querySelector('.mi')?.focus(), 40);
-}
-/* ---------- ESCONDER NO ES VACIAR, y el check 5b lo encontró ----------
-   La primera versión sólo ponía `hidden`. Los `.mi[data-cyc]` quedaban en el DOM, así que en estado
-   `borrador` — donde `actions()` devuelve CERO y no debería existir ningún control de ciclo en ninguna
-   parte — la página seguía teniendo dos verbos de un estado anterior, listos para que algo los tocara.
-   Es la misma forma que la 076 registró: un reset que borra la cosa de la que habla la pantalla tiene
-   que cambiar la pantalla también. Se vacía, no se esconde. */
-function closeMenu() {
-  const m = $('#menu');
-  m.hidden = true; m.innerHTML = ''; $('#mscrim').hidden = true;
-  $('#kebab')?.setAttribute('aria-expanded', 'false');
-}
+let DESC_OPEN = false, FLAT = false;
 
-/* ---------- M3: la hoja de ciclo ---------- */
-function openCycleSheet(from) {
+/* ---------- la hoja de ciclo, que abre el ⋮ ---------- */
+function openCycleSheet() {
   const acts = actions(G.status);
-  const body = `<div class="sh-body">${acts.map(a => `<button class="opt${a.dan ? ' dan' : ''}" data-cyc="${a.id}">
-    <span class="ot"><span class="on2">${esc(a.label)}</span><span class="os">${esc(a.sub)}</span></span></button>`).join('')}</div>`;
+  const st = CYC[G.status];
+  const body = `<div class="sh-body">
+    <div style="padding:2px 0 10px;font-size:13px;display:flex;align-items:center;gap:6px">
+      <span class="dot ${st.k}"></span>${esc(st.n)}</div>
+    ${acts.map(a => `<button class="opt${a.dan ? ' dan' : ''}" data-cyc="${a.id}">
+      <span class="ot"><span class="on2">${esc(a.label)}</span><span class="os">${esc(a.sub)}</span></span></button>`).join('')}</div>`;
   const sh = $('#sheet');
   sh.className = 'sheet cysheet';
   sh.innerHTML = `<div class="sh-head"><div class="sh-hr"><h2>Ciclo del juego</h2>
     <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
   sh.classList.add('open'); $('#backdrop').classList.add('open');
+  $('#kebab').setAttribute('aria-expanded', 'true');
   setTimeout(() => sh.querySelector('.opt')?.focus(), 60);
 }
-/* misma razón que `closeMenu`: la hoja cerrada no puede seguir conteniendo los verbos del estado
-   anterior. El `setTimeout` espera a que termine la transición de salida para no vaciarla en pantalla. */
 function closeSheet() {
   const sh = $('#sheet');
   sh.classList.remove('open'); $('#backdrop').classList.remove('open');
+  $('#kebab')?.setAttribute('aria-expanded', 'false');
+  /* esconder no es vaciar — el defecto que encontró el check 5b de la ronda 1 */
   setTimeout(() => { if (!sh.classList.contains('open')) sh.innerHTML = ''; }, 260);
 }
 
-/* ---------- el diálogo de D-19f, de la 078 verbatim ----------
-   `danger` arranca en FALSE por decisión de la 078: el diálogo se comparte, y cuando lo heredaba
-   siempre rojo, "Publicar igual" salía del color de tirar algo a la basura. Acá la usa `Retirar`
-   (que sí pierde algo del mundo real) y NO la usa `Despublicar` (que es reversible). */
 const DLG = { run: null };
 function openDialog({ title, text, yes, run, danger = false }) {
   DLG.run = run; $('#dlg-t').textContent = title; $('#dlg-d').textContent = text;
@@ -1239,60 +1322,55 @@ function snack(msg) {
   s.classList.add('show'); clearTimeout(snackT); snackT = setTimeout(() => s.classList.remove('show'), 4000);
 }
 
-/* ---------- ejecutar una transición ----------
-   Una sola función para las tres variantes. Si cada contenedor tuviera su propio camino de commit,
-   un hallazgo sobre el diálogo o el destino sería atribuible al contenedor. */
 function runAction(id) {
   const a = actions(G.status).find(x => x.id === id);
   if (!a) return;
-  closeMenu(); closeSheet();
+  closeSheet();
   const go = () => { G.status = a.to; render(); snack(a.snack); };
   if (a.dlg) openDialog({ ...a.dlg, run: go });
   else go();
 }
 
 function render() {
-  renderEditor();
+  renderPage();
   $$('#tools [data-cy]').forEach(b => b.classList.toggle('on', b.dataset.cy === G.status));
+  $$('#tools [data-cov]').forEach(b => b.classList.toggle('on', (b.dataset.cov === '1') === G.hasCover));
   $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === VAR));
   const n = actions(G.status).length;
-  $('#now').textContent = `${CYC[G.status].n} — ${n} ${n === 1 ? 'transición posible' : 'transiciones posibles'}`;
+  $('#now').textContent = `${CYC[G.status].n} — ${n} transición · ${$$('#main .ed').length} bloques editables`;
 }
 
-/* ---------- eventos ---------- */
 document.addEventListener('click', e => {
   const v = e.target.closest('#vnav [data-var]');
-  if (v) { VAR = v.dataset.var; closeMenu(); closeSheet(); render(); return; }
+  if (v) { VAR = v.dataset.var; closeSheet(); render(); return; }
   const cy = e.target.closest('#tools [data-cy]');
-  if (cy) { G.status = cy.dataset.cy; closeMenu(); closeSheet(); render(); return; }
+  if (cy) { G.status = cy.dataset.cy; closeSheet(); render(); return; }
+  const cv = e.target.closest('#tools [data-cov]');
+  if (cv) { G.hasCover = cv.dataset.cov === '1'; render(); return; }
   const th = e.target.closest('[data-theme-set]');
   if (th) { document.documentElement.setAttribute('data-theme', th.dataset.themeSet);
     $$('[data-theme-set]').forEach(b => b.classList.toggle('on', b === th)); return; }
 
-  if (e.target.closest('#kebab')) { $('#menu').hidden ? openMenu() : closeMenu(); return; }
-  if (e.target.closest('#mscrim')) return closeMenu();
-  if (e.target.closest('#cycctl')) return openCycleSheet(e.target.closest('#cycctl'));
+  if (e.target.closest('#kebab')) { $('#sheet').classList.contains('open') ? closeSheet() : openCycleSheet(); return; }
   if (e.target.closest('#backdrop') || e.target.closest('[data-act="close"]')) return closeSheet();
-
   const act = e.target.closest('[data-cyc]');
   if (act) return runAction(act.dataset.cyc);
-
   if (e.target.closest('[data-act="dlg-no"]')) return closeDialog();
   if (e.target.closest('[data-act="dlg-yes"]')) { const r = DLG.run; closeDialog(); r && r(); return; }
 
-  if (e.target.closest('#save')) return snack('Cambios guardados');
-  /* las filas del spine abren su hoja en la app real; acá no son la pregunta, así que sólo avisan
-     — y lo avisan en vez de no hacer nada, porque una fila muerta se lee como una fila rota. */
-  if (e.target.closest('[data-field]')) return snack('La hoja del campo no es la pregunta de esta ronda');
+  /* el chevron de la descripción se maneja ANTES que el bloque editable: está adentro del shell y
+     si cayera al `[data-edit]` abriría el editor de la descripción en vez de expandirla. */
+  if (e.target.closest('[data-act="desctog"]')) { DESC_OPEN = !DESC_OPEN; render(); return; }
+  if (e.target.closest('[data-act="save"]')) return snack('Cambios guardados');
+
+  const ed = e.target.closest('[data-edit]');
+  if (ed) return snack(`Editar: ${ed.dataset.edit}`);
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (!$('#menu').hidden) return closeMenu();
   if ($('#dscrim').classList.contains('open')) return closeDialog();
   if ($('#sheet').classList.contains('open')) return closeSheet();
 });
-
-/* el título de la barra aparece al scrollear — 074 ronda 2, `.titled` */
 $('#scroller').addEventListener('scroll', () => {
   $('#tbar').classList.toggle('titled', $('#scroller').scrollTop > 46);
 });

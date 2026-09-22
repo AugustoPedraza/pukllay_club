@@ -1,11 +1,11 @@
 ---
 sketch: 079
 name: admin-lifecycle
-question: "r1 · ¿dónde vive la transición de ciclo, ahora que la barra de 074 ya tiene su único CTA?"
-winner: null
-tags: [admin, juegos, lifecycle, publish, unpublish, retire, menu, kebab, d42, d44, d29, D-19i, D-19h, 064, slice-4]
-rounds: 1
-status: PENDING REVIEW — M1 / M2 / M3, 39/40 (el 11c en rojo a propósito)
+question: "r1 · ¿dónde vive la transición de ciclo? · r2 · en la ficha editable, ¿qué dice que un bloque se puede editar?"
+winner: "r1 · M1 el ⋮ (premisa del desarrollador) · r2 abierta"
+tags: [admin, juegos, lifecycle, retire, menu, kebab, ficha, rhythm, d37, d42, d44, d47, D-19i, D-19j, 064, slice-4]
+rounds: 2
+status: PENDING REVIEW — r2 A1/A2/A3, 26/29 (25d, 1c y 26c en rojo: los tres son hallazgos, no aserciones rotas)
 ---
 
 # Sketch 079: dónde vive la transición de ciclo
@@ -23,13 +23,20 @@ El alcance que trajo el desarrollador al intake:
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/079-admin-lifecycle/index.html
-node .planning/sketches/079-admin-lifecycle/verify.js     # 39/40
+node .planning/sketches/079-admin-lifecycle/verify.js     # 26/29
 ```
 
-**El estado del juego** se cambia desde el panel (Publicado / Retirado / Borrador). Es un **switch de
-fixture**, no un control de la página — existe para poder contar qué ofrece el menú en cada estado **sin
-usar el control que se está midiendo**. Es la lección de la 075: una página que sólo puede llegar a un
-estado a través del control bajo prueba no puede medir ese control.
+**La página que abre es la RONDA 2** (A1 / A2 / A3, la ficha editable). Los toggles de la ronda 1 están
+eliminados — el desarrollador eligió el ⋮ — y sus mediciones quedan abajo, en la sección de la ronda 1.
+
+**El estado y la tapa** se cambian desde el panel. Son **switches de fixture**, no controles de la página:
+existen para poder contar qué ofrece el ⋮ en cada estado **sin usar el control que se está midiendo**, y
+para ver los 49 juegos sin tapa. Es la lección de la 075: una página que sólo puede llegar a un estado a
+través del control bajo prueba no puede medir ese control.
+
+---
+
+## Ronda 1 — dónde vive la transición (DECIDIDA: el ⋮)
 
 ---
 
@@ -319,3 +326,224 @@ Y en las tres, tocá `Retirar` y **leé el diálogo**: esa copia es la que corre
   retirado puede publicarse directo salteando el guard de `restore_game`. Ninguna variante de esta ronda
   puede arreglar eso: vive en el contexto, no en la pantalla.
 - Todo lo abierto en la 078 sigue abierto.
+
+
+---
+
+# Ronda 2 — E3, la ficha editable
+
+> *"son lo mismo — un solo verbo, y que despublicar sea retirar. The 3 dots opens a bottom sheet with the
+> options. for this, the form is closer to how this looks like on the web. the CTA must to have same
+> patterh that the 'publish' stacked at bottom."*
+>
+> *"Yes, second round with ⋮ as the only CTA at top. For 'edit', yes, the full form with the same
+> rythm(UI/UX) that how the details looks on the web"*
+
+**Los toggles de la ronda 1 están eliminados** (convención de 072): M1 es la decisión, M2 y M3 salieron de
+la página y sus mediciones quedan arriba.
+
+## Premisas del desarrollador — no se varían
+
+```
+el ⋮ es el ÚNICO control de arriba, y abre una hoja inferior
+un solo verbo: Retirar / Restaurar
+el CTA es el apilado de 52px de la 078 (`.cta`, 078:860)
+el cuerpo es la FICHA, editable en el lugar          ← E3, elegida sobre E1 y E2
+```
+
+## El colapso del verbo: lo que resuelve y lo que cuesta
+
+La ronda 1 midió un desacuerdo — el diálogo de `form.ex:352-356` describe `Retirar` como *despublicar*
+(*"No va a aparecer más en la ludoteca pública"*) mientras `shelves.ex` lo usa en **5** consultas como
+*"el club no lo tiene"*. **Colapsados, el desacuerdo desaparece en vez de resolverse a favor de uno:**
+las 5 consultas quedan correctas, y lo que estaba incompleto era la copia, que decía una sola mitad.
+Ahora dice las dos (check 31b).
+
+Y evita el destino que la ronda 1 midió y era peor que no existir: `:draft` no es un estado al que volver
+(check 9b).
+
+**Lo que cuesta, escrito y no derivado (d47):** se pierde el caso *"lo publiqué por error y todavía lo
+tengo"* — ese juego sale también del mapa de estantes. Hoy vale cero (0 retirados, 1 de 435 con estante),
+pero es la decisión, no un efecto secundario.
+
+---
+
+## La medición que reencuadró la ronda, antes de dibujar nada
+
+**"El ritmo de la web" sólo está definido para la mitad de los campos.** El editor castea seis:
+
+| campo | ¿está en la ficha pública? | cómo |
+|---|---|---|
+| **name** | sí | `<h1 class="font-display text-3xl">` — Bebas 30/36, **sin etiqueta** |
+| **description** | sí | prosa 16px justificada, clamp de 3 líneas, **sin etiqueta ni título** |
+| **weight_band** | sí | un pill de 11px/600 arriba de la tapa, con 3 puntos, **sin etiqueta** |
+| **is_expansion** | **no** | cero ocurrencias en `show.ex` |
+| **units** | **no** | el campo existe, ninguna plantilla lo lee |
+| **shelf** | **no** | sólo en comentarios sobre el carousel |
+
+Y **el único vocabulario etiqueta→valor que tiene la web es de 12px mayúsculas con 0.08em** — `AÑO ·
+DISEÑADORES · ILUSTRADORES · MECÁNICAS · TEMÁTICAS · COMUNIDAD BGG` — **y los seis son datos de BGG que el
+editor no deja tocar.** El rango de etiqueta de la web existe exactamente para lo que no se edita.
+
+### Por eso el eje de la ronda es el affordance, y no una preferencia
+
+E3 obliga a usar ese mismo rango para `COPIAS`, `ESTANTE` y `ES UNA EXPANSIÓN`, que sí se editan:
+
+```
+24   las 3 etiquetas editables son BYTE-IDÉNTICAS en rango a las 5 no editables
+     12px | 400 | uppercase | 0.96px | rgb(103,92,125)
+```
+
+**En E3 el rango no puede decir qué se puede tocar. Todo el peso queda en el affordance.**
+
+Y d37 no cubre el caso: contestó esta pregunta para el spine del admin — *"etiqueta prominente, valor
+subordinado, y el valor lleva `--val`"* — pero la cabecera de E3 **no tiene esa anatomía**: el título es un
+`<h1>` pelado, la descripción prosa pelada, el nivel un pill. No hay etiqueta de la cual el valor sea
+subordinado. Y 072 ya cerró dos salidas: sacó el chevron (D-19i) y después sacó el `⌄` que lo reemplazó,
+aterrizando en **ningún glifo**.
+
+## Las tres respuestas
+
+| | qué marca el bloque editable |
+|---|---|
+| **A1 · el tinte de d37** | el valor lleva `--val` |
+| **A2 · el lápiz** | un glifo de 14px al final de cada bloque |
+| **A3 · nada** | la línea base — la forma pura que 075-V4 midió en `diffPx 0` |
+
+## Lo que midió
+
+### El check central queda en rojo, y es el hallazgo
+
+```
+26a  A1   el valor editable SÍ se distingue del de BGG      rgb(60,18,105) vs rgb(35,19,57)
+26b  A2   se distingue por un NODO, no por tratamiento — el estilo es idéntico al de BGG
+26c  A3   editable y no editable son "rgb(35,19,57)|400|none|transparent|none" — LOS DOS
+```
+
+Se compara `Copias` (editable) contra `Año` (de BGG), que están en el mismo rango. **En A3 nada distingue
+lo que podés cambiar de lo que no.** Es el `diffPx 0` de 075-V4 dicho sobre el par que importa — y se mide
+por estilo computado, no por píxeles, porque los dos valores tienen textos distintos ("1" contra "2016") y
+un diff de píxeles mediría los glifos, no el tratamiento.
+
+### A1 pinta 6,1× lo que A2 — y choca con algo que no se edita
+
+```
+25a  A1 (el tinte)   20.364 px de 1.110.000 contra A3    maxDelta 194
+25b  A2 (el lápiz)    3.333 px                            maxDelta 163
+25c  el tinte cubre 6,1× — en el spine de d37 el valor es una línea corta;
+     acá es un H1 de 30px y un párrafo justificado de tres líneas
+25d  EN ROJO — el tinte (rgb 60,18,105) es EL MISMO COLOR que el chip de sección,
+     que NO es editable (es `section_names`, virtual)
+```
+
+**25d lo encontró la captura.** La causa está medida desde la 074 ronda 3: en tema claro
+`--color-primary` y `--color-accent-text` **son el mismo hex**, y `--val` se define sobre el segundo
+mientras `.pill.tag` usa el primero. Así que en A1 el tinte **no puede significar "esto se edita": ya
+significa otra cosa en la misma pantalla.**
+
+### A2 marca 5 de 7 bloques, no 7 — y contar nodos no lo veía
+
+```
+1b   6 lápices de 7 bloques      la TAPA se queda sin marca:
+                                 un glifo inline necesita un final de texto del cual colgarse
+1c   de esos 6, uno está RECORTADO   el de la descripción vive dentro del clamp de 3 líneas
+                                     (el lápiz en y=861, la caja termina en 736)
+```
+
+**El check 1b contaba nodos y daba verde sobre una marca que en pantalla no existe.** Es la forma del punto
+invisible de la 078 y de la banda de la ronda 1 que pintaba detrás de `.device`. El 1c mide contra el rect
+del ancestro que recorta.
+
+### Los dos "apilado abajo" no son el mismo, y acá se ve cuánto
+
+```
+23a  el CTA mide 52px, el patrón de Publicar de la 078
+23b  y al reposo está en y=1415 contra un piso de 740 — invisible y no tocable.
+     Hay que scrollear 751px (1,9 pantallas) para llegar a Guardar
+```
+
+La 078 podía permitírselo porque su formulario entraba en una hoja corta. **La ficha de la web mide casi
+dos pantallas, y la web resuelve el pie con una barra FIJA** (`.pk-mobile-cta-bar`, `position: fixed`, más
+148px de `padding-bottom` reservados en el body). Las dos cosas que se pidieron —el ritmo de la web y el
+CTA de la 078— **se contradicen exactamente en el pie**, y esto es cuánto.
+
+### Adoptar la quilla de la web rompe R359
+
+```
+21a  la quilla es 14px (--pk-gutter 0.875rem a ≤480), no los 16 del admin
+21b  así que el CTA termina en R361, no en R359 — el borde que d42 fijó y 074/075/078 sostuvieron
+21c  y la barra NO se mudó: el ⋮ sigue en R359 → la página tiene DOS bordes derechos
+22   y dos izquierdos: texto a 14, tapa a 31 (= 14 quilla + 1 borde + 16 padding del panel)
+```
+
+### El ⋮ como único control: borra su costo y hereda otro
+
+```
+27a  la barra tiene 2 controles y NINGÚN primario — Guardar bajó al pie, así que el ⋮ no empuja nada.
+     Esto BORRA el único costo que la ronda 1 le midió a M1 (empujaba Guardar de R359 a R307)
+27b  pero el ⋮ hereda R359 — la esquina que cinco pantallas enseñaron como LA ACCIÓN PRINCIPAL
+```
+
+Es la forma inversa de lo que la 074 ronda 1 encontró con `Descartar` heredando el borde del primario.
+
+### El nivel aparece dos veces, y no es el fixture
+
+```
+28   el pill de facts (y=89, EDITABLE) y el chip de sección bajo el título (y=567, NO editable)
+```
+
+El chip es `section_names`, que es virtual: publicar mete el juego en la sección de su banda. **Mismo
+texto, dos rangos, uno se toca y el otro no.**
+
+### Los 49 sin tapa abren sobre un hueco de media pantalla
+
+```
+29   el hueco mide 329px — el 44% de la pantalla — y empuja el título a y=523
+```
+
+Son exactamente `no_bgg_id` (41) + `bgg_missing` (8), verificado contra la base: de los 435, los 386
+`enriched` tienen tapa y los 49 restantes no, 1:1. **Son los juegos que abrís el editor para arreglar.**
+
+### Tres defectos míos que encontraron los checks y la captura
+
+1. **`font: inherit` en el reset le ganó a la regla del título.** `.pg .ed` puesto *después* de `.pg .h1`,
+   misma especificidad (0,2,0): el título salía en **Inter 16** en vez de Bebas 30, y la página se veía
+   razonable. **Tercera vez en este linaje** — 075-V4 con el `line-height`, la ronda 1 de este mismo sketch
+   con el `margin` en atajo, y yo escribí el comentario que lo advertía y lo hice igual. La regla, de una
+   vez: **un reset va antes que las reglas de tipo**, y el check 20 lee lo computado.
+2. **`.ed .h1` no es `.ed.h1`.** El bloque editable **es** el título, no lo contiene. Con el selector
+   descendiente **A1 no pintaba nada y era byte-idéntica a A3** — la variante del tinte y la de "nada", la
+   misma página. Un check de conteo de nodos habría pasado.
+3. **La quilla de 14 se sumaba a los 16 que `main` trae de la 078** (línea 146), así que el texto quedaba a
+   30px — y eso **se leía como el hallazgo esperado** ("es fiel a la web, la web tiene dos bordes"). Un
+   borde heredado que se parece al hallazgo que uno busca es la peor clase de falso verde.
+
+## Qué mirar
+
+Abrí **A3** primero y buscá qué te dice que podés tocar algo. Después **A1**: mirá el párrafo entero en
+morado, y fijate que el chip *Ingenio estratega* debajo del título está del mismo color **y no se edita**.
+Después **A2**: buscá el lápiz de la descripción — no está, se lo comió el clamp — y el de la tapa, que no
+existe.
+
+En las tres, bajá hasta `Guardar`: son casi dos pantallas.
+
+## Open (ronda 2)
+
+- **A1 / A2 / A3 sin decidir.** Y ninguna de las tres pasa limpia: A1 choca de color con un elemento no
+  editable (25d), A2 no alcanza 2 de 7 bloques (1b/1c), A3 no marca nada (26c).
+- **La cuarta salida no está dibujada:** que el affordance no sea por bloque sino **de página** — un
+  estado *"estás editando"* declarado una vez. Nombrada, no construida, porque cambia la premisa de E3
+  (la ficha editable *en el lugar*).
+- **El pie se contradice y hay que elegir**: el CTA de la 078 a y=1415, o la barra fija de la web con sus
+  148px reservados. Medido (23b), no resuelto.
+- **La quilla: 14 o 16.** Con 14 el cuerpo termina en R361 y la barra en R359. Con 16 se rompe el espejo.
+- **D-19j queda pisada para esta página** (título Bebas 30 en vez de 22/600 Inter) y hay que escribirlo
+  como decisión, no dejarlo como deriva — es lo que d47 existe para evitar.
+- **El nivel duplicado (28) no se tocó.** El chip de sección es `section_names` y no es editable; que el
+  mismo texto aparezca dos veces con dos rangos distintos es de la ficha pública, no del editor.
+- **La tapa del sketch es el isologo, no la portada real** (`cover_url` vive en R2 y el arnés corre sin
+  red). El `aspect-ratio: 1/1.05` y el `object-fit: contain` sí son los de la app, pero una portada real
+  apaisa distinto y eso no está visto.
+- **No confirmado en dispositivo.** Esta ronda agregó dos hallazgos más que encontró la captura y no el
+  número (el lápiz recortado y el choque de color de A1).
+- Todo lo abierto en la ronda 1 y en la 078 sigue abierto.

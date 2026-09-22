@@ -91,41 +91,57 @@ function diffPNG(b1, b2) {
   return { diffPx, maxDelta, total: px, note: '' };
 }
 
-const VARS = ['M1', 'M2', 'M3'];
-const STATES = ['published', 'retired', 'draft'];
+/* ============================================================================
+   RONDA 2 — E3, la ficha editable.
 
-/* ---------- EL RESET ES OBLIGATORIO Y LO DESCUBRIÓ UN CHECK EN ROJO ----------
-   Abrir el menú o la hoja les da foco al primer ítem, y enfocar algo dentro del `.scroller` LO SCROLLEA.
-   Sin esto, el check 7 leía la geometría de la cabecera con la página ya corrida (name: -240) y el
-   recorte del check 8 salía con `y` negativo — un número verdadero sobre una página que no era la que
-   la variante muestra al reposo. Es la misma familia que la trampa del `opacity: 0` de la 074: medir
-   bien algo que no está donde se cree. Cada set deja la página en reposo. */
+   PREMISAS DEL DESARROLLADOR, no se varían y por eso no se checkean como si
+   fueran una elección: el ⋮ es el único control de arriba y abre una hoja
+   inferior · un solo verbo (Retirar/Restaurar) · el CTA es el apilado de 52px
+   de la 078 · el cuerpo es la ficha, editable en el lugar.
+
+   EL ÚNICO EJE: ¿qué dice que un bloque de la ficha se puede editar?
+   A1 el tinte de d37 · A2 el lápiz · A3 nada (la línea base falsificable).
+
+   POR QUÉ ES UN EJE Y NO UNA PREFERENCIA: d37 contestó esto para el spine del
+   admin — etiqueta prominente, valor subordinado, y el valor lleva `--val`.
+   E3 no tiene esa anatomía en la cabecera: el título es un `<h1>` pelado, la
+   descripción es prosa pelada, el nivel es un pill. No hay etiqueta de la cual
+   el valor sea subordinado, así que d37 no cubre el caso.
+
+   TRAMPAS NUEVAS DE ESTA RONDA, las dos encontradas en la captura y no por un
+   número — y las dos habrían dejado pasar checks de conteo de nodos:
+
+     · `.ed .h1` NO ES `.ed.h1`. El bloque editable ES el título, no lo
+       contiene. Con el selector descendiente, A1 no pintaba nada y era
+       byte-idéntica a A3 — la variante del tinte y la de "nada", la misma
+       página. Por eso el check 25 compara PÍXELES contra A3, nunca nodos.
+     · UN RESET VA ANTES QUE LAS REGLAS DE TIPO. `.pg .ed { font: inherit }`
+       puesto después le ganaba por orden a `.pg .h1` (misma especificidad) y
+       el título salía en Inter 16 en vez de Bebas 30. El check 20 lee la
+       familia y el tamaño COMPUTADOS.
+   ============================================================================ */
+
+const VARS = ['A1', 'A2', 'A3'];
+const setVar = async (p, v) => { await p.evaluate(v => { document.querySelector(`#vnav [data-var="${v}"]`).click(); }, v); await atRest(p); };
+const setCover = async (p, on) => { await p.evaluate(on => { document.querySelector(`#tools [data-cov="${on ? 1 : 0}"]`).click(); }, on); await atRest(p); };
+const setState = async (p, s) => { await p.evaluate(s => { document.querySelector(`#tools [data-cy="${s}"]`).click(); }, s); await atRest(p); };
 const atRest = p => p.evaluate(() => {
-  const m = document.querySelector('#menu'); m.hidden = true; m.innerHTML = '';
-  document.querySelector('#mscrim').hidden = true;
   document.querySelector('#sheet').classList.remove('open');
   document.querySelector('#backdrop').classList.remove('open');
   document.querySelector('#dscrim').classList.remove('open');
-  const sc = document.querySelector('#scroller'); sc.scrollTop = 0;
-  document.querySelector('#tbar').classList.remove('titled');
-  /* EL SNACK TAMBIÉN. Sin esto, la captura de M2 salió con un `Juego despublicado` de un check anterior
-     sentado justo encima de la zona CICLO — y por accidente mostró el choque que ahora mide el check 17.
-     El accidente vale como hallazgo; dejarlo dentro del arnés no, porque contamina todo lo demás. */
   document.querySelector('#snack').classList.remove('show');
+  document.querySelector('#scroller').scrollTop = 0;
+  document.querySelector('#tbar').classList.remove('titled');
 });
-const setVar = async (p, v) => { await p.evaluate(v => { document.querySelector(`#vnav [data-var="${v}"]`).click(); }, v); await atRest(p); };
-const setState = async (p, s) => { await p.evaluate(s => { document.querySelector(`#tools [data-cy="${s}"]`).click(); }, s); await atRest(p); };
 const hideTools = p => p.evaluate(() => { document.querySelector('#tools').hidden = true; document.querySelector('#vnav').style.visibility = 'hidden'; });
 const showTools = p => p.evaluate(() => { document.querySelector('#tools').hidden = false; document.querySelector('#vnav').style.visibility = ''; });
+const deviceClip = p => p.evaluate(() => { const r = document.querySelector('#device').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
 
-/* si el arnés revienta a mitad de camino, lo que YA se midió se imprime igual. Sin esto un error en el
-   check 14 borra los trece anteriores de la pantalla y parece que no se midió nada. */
 const dump = e => { console.log(log.join('\n')); console.error('\nREVENTÓ: ' + (e && e.message)); process.exit(2); };
 process.on('uncaughtException', dump);
 process.on('unhandledRejection', dump);
 
 (async () => {
-  /* 078:108 verbatim — playwright-core viene sin navegador acá, así que se usa el Chrome del sistema. */
   const exe = [process.env.CHROME_BIN, '/usr/bin/google-chrome-stable', '/usr/bin/google-chrome', '/usr/bin/chromium-browser']
     .filter(Boolean).find(p => fs.existsSync(p));
   const browser = await chromium.launch(exe ? { executablePath: exe } : {});
@@ -134,529 +150,331 @@ process.on('unhandledRejection', dump);
   page.on('pageerror', e => errs.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await page.goto(URL, { waitUntil: 'networkidle' });
+  /* la fuente de display importa para todo lo de abajo; si no cargó, cada medida de tipo es sobre
+     el fallback y no sobre Bebas. Se espera explícitamente en vez de confiar en networkidle. */
+  await page.evaluate(() => document.fonts.ready);
 
-  /* ---------- 0 · el panel no se come los hit tests ---------- */
   await hideTools(page);
-  ok(await page.evaluate(() => {
-    const t = document.querySelector('#tools');
-    return t.offsetParent === null;
-  }), '0 · el panel de herramientas está realmente fuera de layout durante los hit tests (offsetParent, no .hidden)');
+  ok(await page.evaluate(() => document.querySelector('#tools').offsetParent === null),
+    '0 · el panel de herramientas está fuera de layout durante los hit tests (offsetParent, no .hidden)');
   await showTools(page);
 
-  /* ============================================================================
-     1 · NO ATRIBUIBLE — las tres variantes leen el MISMO array
-     Es la disciplina de `missing()` en la 078 (check 4). Si M1 ofreciera dos ítems
-     y M2 tres, todo hallazgo sobre el contenedor sería en realidad sobre el
-     contenido.
-     ============================================================================ */
-  const byVar = {};
+  /* ---------- 1 · no atribuible: el DOM de las tres difiere SÓLO en el affordance ---------- */
+  const shape = {};
   for (const v of VARS) {
     await setVar(page, v);
-    byVar[v] = await page.evaluate(ss => ss.map(s => window.actions(s).map(a => a.id).join(',')), STATES);
-  }
-  ok(JSON.stringify(byVar.M1) === JSON.stringify(byVar.M2) && JSON.stringify(byVar.M2) === JSON.stringify(byVar.M3),
-    `1 · las tres variantes computan las MISMAS transiciones en los tres estados — ${JSON.stringify(byVar.M1)}`);
-
-  /* 1b · el negativo: si `actions` se puede pisar desde el arnés, el check 1 puede fallar.
-     Sin esto, el 1 pasaría igual si las tres variantes leyeran una constante muerta. */
-  const falsifiable = await page.evaluate(() => {
-    const real = window.actions;
-    window.actions = s => (s === 'published' ? [{ id: 'X' }] : real(s));
-    const tampered = window.actions('published').map(a => a.id).join(',');
-    window.actions = real;
-    return tampered === 'X' && real('published').map(a => a.id).join(',') === 'unpublish,retire';
-  });
-  ok(falsifiable, '1b · NEGATIVO — `actions` es alcanzable y pisable desde el arnés, así que el check 1 puede fallar de verdad');
-
-  /* ============================================================================
-     2 · EL NÚMERO QUE DECIDE SI UN MENÚ ES UN MENÚ
-     Medido ANTES de mirar ningún contenedor, que es la instrucción de la ronda.
-     ============================================================================ */
-  const counts = await page.evaluate(ss => ss.map(s => [s, window.actions(s).length]), STATES);
-  const cmap = Object.fromEntries(counts);
-  ok(cmap.published === 2, `2a · publicado ofrece ${cmap.published} transiciones (Despublicar + Retirar)`);
-  ok(cmap.retired === 1, `2b · retirado ofrece ${cmap.retired} — `
-    + `un menú de UN ítem es un botón con un toque de más y la etiqueta escondida`);
-  ok(cmap.draft === 0, `2c · borrador ofrece ${cmap.draft} — no llega a esta página: la 078 manda la fila de borrador a la HOJA`);
-
-  /* ============================================================================
-     3 · QUÉ SE VE AL REPOSO, SIN TOCAR NADA
-     El eje que la ronda nombró: el ⋮ es una salida a la prohibición de botones
-     deshabilitados de la 064 — una opción se ESCONDE en vez de deshabilitarse —
-     pero esconderla también esconde que existe. Esto lo cuenta.
-     ============================================================================ */
-  const rest = {};
-  for (const v of VARS) {
-    await setVar(page, v); await setState(page, 'published');
-    rest[v] = await page.evaluate(() => {
-      const laid = el => !!el && el.offsetParent !== null;
-      /* los VERBOS visibles al reposo, contados por offsetParent — nunca por .hidden */
-      const verbs = [...document.querySelectorAll('#main [data-cyc], #menu:not([hidden]) [data-cyc]')].filter(laid);
-      return {
-        verbs: verbs.map(b => b.textContent.trim().split('\n')[0].trim()),
-        kebab: laid(document.querySelector('#kebab')),
-        ctl: laid(document.querySelector('#cycctl'))
-      };
-    });
-  }
-  ok(rest.M1.verbs.length === 0 && rest.M1.kebab,
-    `3a · M1 al reposo muestra ${rest.M1.verbs.length} verbos y un ⋮ — el glifo dice que hay algo, no QUÉ`);
-  ok(rest.M2.verbs.length === 2,
-    `3b · M2 al reposo muestra los ${rest.M2.verbs.length} verbos en palabras — ${JSON.stringify(rest.M2.verbs)}`);
-  ok(rest.M3.verbs.length === 0 && rest.M3.ctl,
-    `3c · M3 al reposo muestra ${rest.M3.verbs.length} verbos; lo único que hay es la línea de estado hecha control`);
-
-  /* 3d · EL CONTENEDOR VACÍO NO PRUEBA NADA. El mismo cero de M1 se ve si `actions()` devolvió cero.
-     Abrir el menú sobre el mismo estado es lo que separa "escondido" de "inexistente". */
-  await setVar(page, 'M1'); await setState(page, 'published');
-  const opened = await page.evaluate(() => {
-    document.querySelector('#kebab').click();
-    const m = document.querySelector('#menu');
-    return { laid: m.offsetParent !== null, items: [...m.querySelectorAll('.mi')].map(b => b.textContent.trim()) };
-  });
-  ok(opened.laid && opened.items.length === 2,
-    `3d · POSITIVO del 3a — abierto, el menú de M1 sí tiene los dos: ${JSON.stringify(opened.items)}`);
-
-  /* ---------- 4 · toques hasta la transición ---------- */
-  const taps = { M1: 2, M2: 1, M3: 2 };
-  await page.evaluate(() => document.querySelector('#mscrim').click());
-  const realTaps = {};
-  for (const v of VARS) {
-    await setVar(page, v); await setState(page, 'published');
-    realTaps[v] = await page.evaluate(v => {
-      let n = 0;
-      if (v === 'M1') { document.querySelector('#kebab').click(); n++; }
-      if (v === 'M3') { document.querySelector('#cycctl').click(); n++; }
-      const t = document.querySelector('[data-cyc="unpublish"]');
-      if (!t) return -1;
-      t.click(); n++;
-      return n;
-    }, v);
-    /* cerrar el diálogo que quedó abierto */
-    await page.evaluate(() => document.querySelector('[data-act="dlg-no"]')?.click());
-  }
-  ok(JSON.stringify(realTaps) === JSON.stringify(taps),
-    `4 · toques hasta Despublicar — M1 ${realTaps.M1} · M2 ${realTaps.M2} · M3 ${realTaps.M3}`);
-
-  /* ============================================================================
-     5 · 064 — NINGÚN CONTROL DE CICLO DESHABILITADO, EN NINGUNA VARIANTE
-     La 078 contó SIETE excepciones a la prohibición de la 064. Esta ronda no
-     agrega la octava: donde una transición no aplica, no se dibuja.
-     ============================================================================ */
-  let disabled = 0; const strays = [];
-  for (const v of VARS) for (const s of STATES) {
-    await setVar(page, v); await setState(page, s);
-    const r = await page.evaluate(() => ({
-      dis: document.querySelectorAll('[data-cyc][disabled], #kebab[disabled], #cycctl[disabled]').length,
-      /* cada nodo sobrante se REPORTA con su selector — un contador pelado dice que algo sobra y no qué,
-         y el primer rojo de este check costó una vuelta entera averiguándolo */
-      any: [...document.querySelectorAll('[data-cyc], #kebab, #cycctl')]
-        .map(e => (e.id ? '#' + e.id : e.tagName.toLowerCase() + '[data-cyc=' + e.dataset.cyc + ']') + ' en ' + (e.closest('#menu,#sheet,#main,#tbar')?.id || '?')),
-      n: window.actions(document.querySelector('#tools [data-cy].on').dataset.cy).length
+    shape[v] = await page.evaluate(() => ({
+      eds: [...document.querySelectorAll('#main .ed')].map(e => e.dataset.edit).join(','),
+      specs: document.querySelectorAll('#main .spec').length,
+      pens: document.querySelectorAll('#main .pen').length
     }));
-    disabled += r.dis;
-    if (r.n === 0 && r.any.length) strays.push(`${v}/${s}: ${r.any.join(', ')}`);
   }
-  ok(disabled === 0, `5a · cero controles de ciclo deshabilitados en 3 variantes × 3 estados (064 sin una octava excepción)`);
-  ok(strays.length === 0, `5b · y donde no hay transición no queda contenedor NI NODO — ni ⋮, ni zona, ni control`
-    + (strays.length ? ` — sobran: ${strays.join(' | ')}` : ''));
+  ok(shape.A1.eds === shape.A2.eds && shape.A2.eds === shape.A3.eds && shape.A1.specs === shape.A3.specs,
+    `1 · las tres variantes tienen los MISMOS bloques editables y las mismas filas — ${shape.A3.eds}`);
+  /* 6, no 7: LA TAPA NO LLEVA LÁPIZ, y eso es un hallazgo de A2, no un descuido del fixture. Un glifo
+     inline se cuelga del final de un texto; una imagen no tiene final de texto del cual colgarse, así
+     que el lápiz tendría que ir superpuesto sobre la tapa — que es otro affordance, no el mismo.
+     A2 marca 6 de los 7 bloques. */
+  ok(shape.A1.pens === 0 && shape.A3.pens === 0 && shape.A2.pens === 6,
+    `1b · el único nodo que difiere es el lápiz: A1 ${shape.A1.pens} · A2 ${shape.A2.pens} · A3 ${shape.A3.pens} — `
+    + `y son 6 de 7 bloques: LA TAPA SE QUEDA SIN MARCA en A2, porque un glifo inline necesita un final de texto `
+    + `del cual colgarse y una imagen no lo tiene.`);
 
-  /* ============================================================================
-     6 · EL COSTO DE M1, MEDIDO EN LA REGLA QUE ROMPE
-     d42: *"el primario siempre termina en el mismo borde"* — R359 en la 074, y
-     074 ronda 3 volvió a poner la tinta de W3 exactamente ahí. Meter un ⋮ a su
-     derecha lo EMPUJA. No es una opinión sobre el glifo: es la regla que el
-     linaje entero sostuvo durante tres sketches.
-     ============================================================================ */
-  const edge = {};
-  for (const v of VARS) {
-    await setVar(page, v); await setState(page, 'published');
-    edge[v] = await page.evaluate(() => {
-      const d = document.querySelector('#device').getBoundingClientRect();
-      const b = document.querySelector('#save').getBoundingClientRect();
-      const k = document.querySelector('#kebab')?.getBoundingClientRect();
-      return { save: Math.round(b.right - d.left), kebab: k ? Math.round(k.right - d.left) : null };
+  /* ---------- 1c · CONTAR NODOS NO ES CONTAR MARCAS VISIBLES, y lo encontró la captura ----------
+     El lápiz de la descripción se cuelga del final del párrafo, y el párrafo está clampeado a 3
+     líneas con `-webkit-line-clamp`. El nodo existe, tiene tamaño, y está recortado fuera de la caja.
+     El check 1b lo contaba como marca; en pantalla no hay ninguna.
+     Es la forma del punto invisible de la 078 (tres checks verdes sobre cuadraditos transparentes) y
+     de la banda de la ronda 1 que pintaba detrás de `.device`. Se mide contra el rect del ancestro
+     que recorta, no contra la existencia del nodo. */
+  await setVar(page, 'A2');
+  const visibles = await page.evaluate(() => {
+    return [...document.querySelectorAll('#main .pen')].map(pen => {
+      const host = pen.closest('.ed');
+      const hr = host.getBoundingClientRect(), pr = pen.getBoundingClientRect();
+      const clip = getComputedStyle(host).overflow !== 'visible' || getComputedStyle(host).webkitLineClamp !== 'none';
+      const dentro = !clip || (pr.bottom <= hr.bottom + 0.5 && pr.right <= hr.right + 0.5);
+      return { k: host.dataset.edit, dentro, penY: Math.round(pr.top), hostBottom: Math.round(hr.bottom) };
     });
-  }
-  ok(edge.M2.save === edge.M3.save && edge.M2.save === 359,
-    `6a · M2 y M3 dejan el borde de Guardar en R${edge.M2.save} — la quilla de 16px de d42, intacta`);
-  ok(edge.M1.save < edge.M2.save,
-    `6b · M1 lo empuja a R${edge.M1.save} — ${edge.M2.save - edge.M1.save}px adentro, y quien queda en la quilla es el ⋮ (R${edge.M1.kebab})`);
+  });
+  const ocultos = visibles.filter(v => !v.dentro);
+  ok(ocultos.length === 0,
+    `1c · los ${visibles.length} lápices de A2 se ven de verdad (no sólo existen en el DOM)`
+    + (ocultos.length ? ` — RECORTADOS: ${ocultos.map(o => `${o.k} (el lápiz en y=${o.penY}, la caja termina en ${o.hostBottom})`).join(', ')}. `
+       + `Sumado a la tapa, A2 marca ${visibles.length - ocultos.length} de 7 bloques en pantalla.` : ''));
 
-  /* 6c · el negativo del 6b: si el ⋮ no estuviera, el borde volvería a R359. Sin esto, el 6b podría
-     estar midiendo cualquier otra cosa que mueva la barra. */
-  await setVar(page, 'M1'); await setState(page, 'published');
-  const without = await page.evaluate(() => {
-    const k = document.querySelector('#kebab');
-    if (!k) return null;                      /* si no hay ⋮ el negativo no prueba nada — se reporta null y falla */
-    k.remove();
+  /* ============================================================================
+     20 · EL TÍTULO ES BEBAS 30/36 DE VERDAD — leído, no declarado
+     `font-display text-3xl` (show.ex:660). El admin lo tiene en 22/600 Inter y
+     D-19j fija ese rango para una página de admin, así que esto lo PISA, y se
+     escribe (d47) en vez de dejarlo como deriva.
+     ============================================================================ */
+  await setVar(page, 'A3');
+  const type = await page.evaluate(() => {
+    const cs = s => { const c = getComputedStyle(document.querySelector(s)); return { ff: c.fontFamily.split(',')[0].replace(/"/g, ''), fs: c.fontSize, fw: c.fontWeight, lh: c.lineHeight }; };
+    return { h1: cs('.h1'), desc: cs('.desc'), dt: cs('.spec dt'), pill: cs('.pill.neutral'), tag: cs('.pill.tag') };
+  });
+  ok(type.h1.ff === 'Bebas Neue' && type.h1.fs === '30px' && type.h1.lh === '36px',
+    `20a · el título es ${type.h1.ff} ${type.h1.fs}/${type.h1.lh} — la web (show.ex:660), no los 22/600 Inter de D-19j`);
+  ok(type.desc.fs === '16px' && type.dt.fs === '12px' && type.pill.fs === '11px' && type.pill.fw === '600' && type.tag.fs === '14px' && type.tag.fw === '400',
+    `20b · el resto del rango también es el de la web — descripción ${type.desc.fs} · etiquetas ${type.dt.fs} · pills ${type.pill.fs}/${type.pill.fw} · chip de sección ${type.tag.fs}/${type.tag.fw}`);
+
+  /* ---------- 21 · LA QUILLA: 14, no 16 — y qué le hace a R359 ---------- */
+  const keyline = await page.evaluate(() => {
     const d = document.querySelector('#device').getBoundingClientRect();
-    return Math.round(document.querySelector('#save').getBoundingClientRect().right - d.left);
-  });
-  ok(without === 359, `6c · NEGATIVO — sacando el ⋮ de M1, Guardar vuelve solo a R${without}: el empuje es del glifo y de nada más`);
-
-  /* ============================================================================
-     7 · M3 NO MUEVE TEXTO
-     075-V4 perdió una ronda a `font: inherit`, que resetea el `line-height` y le
-     bajó el spine 8px — un pixel-diff habría reportado mi CSS como affordance.
-     La geometría se asserta ANTES de leer ningún diff.
-     ============================================================================ */
-  const geo = {};
-  for (const v of ['M2', 'M3']) {
-    await setVar(page, v); await setState(page, 'published');
-    geo[v] = await page.evaluate(() => {
-      const d = document.querySelector('#device').getBoundingClientRect();
-      const nm = document.querySelector('.gh-name').getBoundingClientRect();
-      const dot = document.querySelector('.gh-st .dot').getBoundingClientRect();
-      const lbl = document.querySelector('.glabel').getBoundingClientRect();
-      return { name: Math.round(nm.top - d.top), dotX: Math.round(dot.left - d.left), dotY: Math.round(dot.top - d.top), label: Math.round(lbl.top - d.top) };
-    });
-  }
-  ok(JSON.stringify(geo.M2) === JSON.stringify(geo.M3),
-    `7 · M3 no mueve ni el nombre, ni el punto, ni el label de abajo — M2 ${JSON.stringify(geo.M2)} · M3 ${JSON.stringify(geo.M3)}`);
-
-  /* ============================================================================
-     8 · EL PIXEL-DIFF QUE 075-V4 DEJÓ VIVO
-     Dibujado puro, "el diagnóstico ES el remedio" dio `diffPx 0`: indistinguible
-     de la variante donde no hacía nada. Acá el riesgo es peor, porque la línea
-     de estado es más chica que un bloque de prosa. El 8b mantiene vivo el
-     resultado puro: sacándole la banda, el diff TIENE que volver a cero.
-     ============================================================================ */
-  await hideTools(page);
-  const clip = await page.evaluate(() => {
-    const r = document.querySelector('.gh-st').getBoundingClientRect();
-    return { x: Math.floor(r.left) - 14, y: Math.floor(r.top) - 4, width: 210, height: Math.ceil(r.height) + 8 };
-  });
-  await setVar(page, 'M2'); await setState(page, 'published');
-  const shotM2 = await page.screenshot({ clip });
-  await setVar(page, 'M3'); await setState(page, 'published');
-  const shotM3 = await page.screenshot({ clip });
-  fs.writeFileSync(path.join(OUT, 'M2-head.png'), shotM2);
-  fs.writeFileSync(path.join(OUT, 'M3-head.png'), shotM3);
-  const dA = diffPNG(shotM2, shotM3);
-  ok(dA.diffPx > 0, `8a · con la banda de d29, M3 se distingue del read-out inerte de M2 — `
-    + `diffPx ${dA.diffPx} de ${dA.total} · maxDelta ${dA.maxDelta}${dA.note && ' · ' + dA.note}`);
-
-  /* 8c · antes de creerle a ningún diff: ¿el recorte contiene la banda? Un recorte que la dejara afuera
-     haría que 8a fuera imposible de pasar y 8b imposible de fallar — la trampa nueva de esta ronda. */
-  const inClip = await page.evaluate(c => {
-    const el = document.querySelector('#cycctl');
-    const r = el.getBoundingClientRect();
-    const band = { x: r.left, y: r.top, w: 3, h: r.height };
-    return band.x >= c.x && band.x + band.w <= c.x + c.width && band.y >= c.y && band.y + band.h <= c.y + c.height;
-  }, clip);
-  ok(inClip, '8c · el recorte contiene la banda entera, así que 8a y 8b hablan de ella y no del recorte');
-
-  const shotM3bare = await page.evaluate(() => {
-    const s = document.createElement('style');
-    s.id = 'nb'; s.textContent = '.gh-st.ctl::before { content: none !important; }';
-    document.head.appendChild(s);
-  }).then(() => page.screenshot({ clip }));
-  fs.writeFileSync(path.join(OUT, 'M3-head-sin-banda.png'), shotM3bare);
-  /* ---------- 8b · EL DIFF CONTRA M2 NO PUEDE AISLAR LA BANDA, Y ESO ES EL HALLAZGO ----------
-     La primera versión afirmaba que M3 sin banda tenía que volver a ser idéntico a M2, copiando el
-     `diffPx 0 of 270000` de 075-V4. Dio 2535 de 31920 con maxDelta 91.
-     La causa NO es pintura: la geometría entera coincide (check 7, redondeada al píxel) y ningún color
-     computado difiere. Es que un `<button>` con ancho de ajuste al contenido mide 231,141px contra los
-     265 del `<div>`, y ese ancho fraccionario corre las posiciones subpíxel de las letras, así que el
-     mismo texto se rasteriza distinto. Invisible a ojo — maxDelta 91 sobre glifos antialiaseados — pero
-     imposible de separar de un affordance real por un diff.
-     O sea: LA COMPARACIÓN DE 075-V4 NO ES PORTABLE ACÁ. Allá las dos variantes eran el mismo `<div>` y
-     el único cambio era pintura. Acá el contenedor cambia de tipo de caja. El diff se reporta como
-     número, y la banda se aísla contra M3-SIN-BANDA en el 8d, que es la única comparación en la que las
-     dos imágenes tienen la misma caja. */
-  const dB = diffPNG(shotM2, shotM3bare);
-  ok(dB.diffPx > 0 && dB.maxDelta < 128,
-    `8b · TRAMPA MEDIDA — M3 sin banda todavía difiere de M2 en ${dB.diffPx} px de ${dB.total} (maxDelta ${dB.maxDelta}), `
-    + `y no por pintura: el <button> mide 231,141px contra 265 del <div>, y el ancho fraccionario corre el subpíxel de las letras. `
-    + `El diff contra M2 NO aísla la banda; el 8d sí.`);
-
-  const dC = diffPNG(shotM3bare, shotM3);
-  ok(dC.diffPx > 0,
-    `8d · la banda de d29, aislada contra la MISMA caja: diffPx ${dC.diffPx} de ${dC.total} · maxDelta ${dC.maxDelta}. `
-    + `Es lo único que separa "la línea de estado es un control" de "la línea de estado no hace nada" — `
-    + `y en 075-V4 esa diferencia, sin banda, fue exactamente cero.`);
-  await page.evaluate(() => document.querySelector('#nb')?.remove());
-  await showTools(page);
-
-  /* ============================================================================
-     9 · EL DESTINO DE DESPUBLICAR, EVALUADO CONTRA EL CÓDIGO DE LA 078
-     No lo afirmo: corro los predicados REALES de la 078 contra la fila que queda
-     después de despublicar. Si la 078 cambia, este check se entera.
-     ============================================================================ */
-  const s078 = fs.readFileSync(path.join(ROOT, '.planning/sketches/078-admin-publish-gate/index.html'), 'utf8');
-  const groupsSrc = (s078.match(/const GROUPS = \[[\s\S]*?\n\];/) || [])[0];
-  const opensSrc = (s078.match(/function opensSheet\(g\)[^\n]*\n?/) || [])[0];
-  /* `opensSheet` llama a `enrOf`, que vive en otra línea del mismo archivo. Traerlo también, en vez de
-     escribirlo a mano acá, es lo que mantiene al check atado al archivo: si la 078 cambia cualquiera de
-     los dos, esto se entera. Escribir `enrOf` de memoria sería exactamente la clase de transcripción que
-     el 9a existe para prohibir. */
-  const enrSrc = (s078.match(/const enrOf = [^\n]*\n?/) || [])[0];
-  ok(!!groupsSrc && !!opensSrc && !!enrSrc, '9a · los tres predicados de la 078 se leyeron del archivo, no se transcribieron acá');
-  const landing = await page.evaluate(([gs, os2, es]) => {
-    const enrOf = eval('(' + es.replace('const enrOf =', '').replace(/;\s*$/, '') + ')');
-    const GROUPS = eval(gs.replace('const GROUPS =', '(').replace(/;\s*$/, ')'));
-    const opensSheet = eval('(' + os2.replace('function opensSheet', 'function').replace(/;?\s*$/, '') + ')');
-    const row = { status: 'draft', gap: false, enr: 'enriched' };
-    const g = GROUPS.find(x => x.has(row));
-    return { section: g.name, shut: !!g.shut, sheet: opensSheet(row) };
-  }, [groupsSrc, opensSrc, enrSrc]);
-  ok(landing.section === 'Borradores' && landing.shut === true && landing.sheet === true,
-    `9b · un publicado que despublicás cae en "${landing.section}" (sección cerrada al reposo: ${landing.shut}), pierde el chevron, `
-    + `y al tocarla abre la hoja que te pide completar y PUBLICAR — o sea, deshacer lo que acabás de hacer`);
-
-  /* 9c · y el destino no existe en el código: `:draft` es de una sola vía. */
-  const gameEx = fs.readFileSync(path.join(ROOT, 'lib/pukllay_club/catalog/game.ex'), 'utf8');
-  const catalogEx = fs.readFileSync(path.join(ROOT, 'lib/pukllay_club/catalog.ex'), 'utf8');
-  /* contar `draft_changeset` a secas daba 2 en catalog.ex: uno es una MENCIÓN en un docstring (línea 299).
-     Un check que cuenta menciones no está contando llamadas. Se cuentan sitios de llamada —
-     `Game.draft_changeset(` — y por separado que el único esté dentro de un `Multi.insert`. */
-  const draftWriters = (gameEx.match(/put_change\(:status,\s*:draft\)/g) || []).length;
-  const callSites = catalogEx.split('\n').filter(l => /Game\.draft_changeset\(/.test(l));
-  const insertOnly = callSites.every(l => /Multi\.insert\(/.test(l));
-  ok(draftWriters === 1 && callSites.length === 1 && insertOnly,
-    `9c · en todo game.ex hay ${draftWriters} escritura de \`:draft\` y en catalog.ex ${callSites.length} sitio de llamada, `
-    + `y es un \`Multi.insert\` (${insertOnly}) — se entra a borrador al CREAR y nunca más. `
-    + `"Despublicar" no es un botón que falta: es un destino que hoy no existe.`);
-
-  /* ============================================================================
-     10 · "RETIRAR" DICE LO QUE NO ES — y lo dice el archivo, no yo
-     Se compara la copia del diálogo dibujada acá contra form.ex carácter por
-     carácter. Si alguien arregla la copia en el código, este check se rompe, que
-     es lo que uno quiere que pase.
-     ============================================================================ */
-  const formEx = fs.readFileSync(path.join(ROOT, 'lib/pukllay_club_web/live/admin/game_live/form.ex'), 'utf8');
-  const shipped = 'Vas a poder restaurarlo después. No va a aparecer más en la ludoteca pública.';
-  ok(formEx.includes(shipped),
-    `10a · la copia del diálogo de Retirar que corre hoy (form.ex) es, literal: "${shipped}"`);
-  await setVar(page, 'M2'); await setState(page, 'published');
-  const drawn = await page.evaluate(() => {
-    document.querySelector('[data-cyc="retire"]').click();
-    const t = document.querySelector('#dlg-d').textContent;
-    document.querySelector('[data-act="dlg-no"]').click();
-    return t;
-  });
-  ok(drawn === shipped, '10b · la página dibuja esa copia sin retocarla, para que el hallazgo sea del código y no de mi redacción');
-  /* el hallazgo en sí: esa frase describe DESPUBLICAR. "el club ya no tiene el juego" no aparece. */
-  ok(/no va a aparecer más en la ludoteca pública/i.test(shipped) && !/ya no (lo )?tien|se vendió|se perdió|no está más en el club/i.test(shipped),
-    '10c · esa copia describe DESPUBLICAR (deja de verse en la web, reversible) y no dice en ningún lado que el club ya no tenga el juego');
-
-  /* 10d · y el otro sentido de `retired` SÍ está en el código, en otro archivo: shelves.ex lo trata como
-     "no está en la colección física". Dos significados, dos archivos, en desacuerdo. */
-  const shelvesEx = fs.readFileSync(path.join(ROOT, 'lib/pukllay_club/catalog/shelves.ex'), 'utf8');
-  const shelfFilters = (shelvesEx.match(/status\s*!=\s*:retired/g) || []).length;
-  ok(shelfFilters >= 4,
-    `10d · shelves.ex excluye \`:retired\` en ${shelfFilters} consultas (ubicación, sin ubicar, en estante, pick list): ahí `
-    + `\`retired\` significa "el club no lo tiene". El diálogo dice "no se ve en la web". Un estado, dos significados.`);
-
-  /* ============================================================================
-     11 · EL PLIEGUE — donde murió la V3 de la 075
-     La 078 sacó la barra de tabs (destino a pantalla completa), así que el piso
-     es 740, no 673. Ese detalle es justamente el que la 075 midió mal en favor
-     de V3, así que acá se mide contra el device Y con hit test.
-     ============================================================================ */
-  await setVar(page, 'M2'); await setState(page, 'published');
-  await hideTools(page);
-  const fold = await page.evaluate(() => {
-    const d = document.querySelector('#device').getBoundingClientRect();
-    const z = document.querySelector('#cyczone').getBoundingClientRect();
-    /* fila POR FILA, y cada una con hit test: "la zona es visible" es una media verdad si la segunda
-       acción está cortada. La 075 midió V3 contra el rect del scroller (740) en vez de contra lo que el
-       ojo ve (673, por la barra de tabs encima) y el error salió A FAVOR de la variante. Acá la 078 sacó
-       la barra, así que el piso ES el device — pero eso hay que afirmarlo midiendo, no heredarlo. */
-    const rows = [...document.querySelectorAll('#cyczone .cact')].map(el => {
-      const r = el.getBoundingClientRect();
-      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return {
-        label: el.textContent.trim().split('\n')[0].slice(0, 12),
-        top: Math.round(r.top - d.top), bottom: Math.round(r.bottom - d.top),
-        entera: r.bottom <= d.bottom,
-        tocable: !!(hit && hit.closest('#cyczone .cact'))
-      };
-    });
-    return { top: Math.round(z.top - d.top), floor: Math.round(d.height), rows };
-  });
-  await showTools(page);
-  ok(fold.floor === 740, `11a · el piso es ${fold.floor}px — la 078 sacó la barra de tabs, así que nada superpone al scroller`);
-
-  /* ---------- 11b · LO QUE LA MEDICIÓN DESMINTIÓ ----------
-     Este check estaba escrito para asertar `visible === false`: la predicción era que M2 moriría en el
-     pliegue como la V3 de la 075. LA MEDICIÓN DIJO LO CONTRARIO y el check se reescribió para medir en
-     vez de para confirmar. Se deja anotado porque una aserción escrita antes de medir que después se
-     ajusta al resultado es la forma exacta en que un arnés deja de poder fallar. */
-  const enteras = fold.rows.filter(r => r.entera && r.tocable).length;
-  ok(fold.rows.length === 2 && enteras >= 1,
-    `11b · la zona CICLO de M2 arranca en y=${fold.top}, SOBRE el piso de ${fold.floor} — `
-    + fold.rows.map(r => `${r.label} y${r.top}-${r.bottom} ${r.entera && r.tocable ? 'entera y tocable' : 'CORTADA'}`).join(' · ')
-    + `. NO es el caso de V3 (que quedaba entera detrás de la barra de tabs): acá la 078 sacó la barra y el editor mide poco.`);
-  /* ---------- 11c QUEDA EN ROJO A PROPÓSITO ----------
-     No es una aserción rota: es el costo de M2, contado. La primera acción entra entera; la segunda
-     cruza el piso. Así que M2 no muere en el pliegue como murió V3, pero tampoco ofrece las dos —
-     ofrece UNA y media. Y cuál queda cortada depende del ORDEN, que no es un dato del diseño: hoy
-     `Retirar` queda afuera porque `actions()` lo devuelve segundo. Rojo hasta que se decida. */
-  ok(enteras === fold.rows.length,
-    `11c · EL COSTO DE M2, EN ROJO A PROPÓSITO — al reposo entran ${enteras} de ${fold.rows.length} filas enteras. `
-    + `"${fold.rows.find(r => !(r.entera && r.tocable))?.label}" cruza el piso de ${fold.floor}. `
-    + `Cuál se corta lo decide el orden del array, no el diseño.`);
-
-  /* 11c · pero acá el paseo es distinto de V3, y hay que decirlo: en el editor uno BAJA igual para leer
-     la descripción. Se mide cuánto scroll hace falta contra cuánto tiene la página. */
-  const scrollCost = await page.evaluate(() => {
-    const sc = document.querySelector('#scroller');
-    sc.scrollTop = sc.scrollHeight;
-    const d = document.querySelector('#device').getBoundingClientRect();
-    const z = document.querySelector('#cyczone').getBoundingClientRect();
-    const r = { max: sc.scrollTop, topAfter: Math.round(z.top - d.top), visible: z.top < d.bottom };
-    sc.scrollTop = 0;
-    return r;
-  });
-  ok(scrollCost.visible === true,
-    `11d · al fondo de la página sí aparece (y=${scrollCost.topAfter}), y el scroll total del editor es de ${scrollCost.max}px — `
-    + `M2 no pide un scroll DE MÁS, pide el que la página ya tiene`);
-
-  /* ---------- 12 · escape, scrim y foco ---------- */
-  await setVar(page, 'M1'); await setState(page, 'published');
-  const esc1 = await page.evaluate(async () => {
-    document.querySelector('#kebab').click();
-    const wasOpen = !document.querySelector('#menu').hidden;
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    return { wasOpen, closed: document.querySelector('#menu').hidden };
-  });
-  ok(esc1.wasOpen && esc1.closed, '12a · Escape cierra el menú de M1 (y el positivo de que estaba abierto)');
-  const scrimC = await page.evaluate(() => {
-    document.querySelector('#kebab').click();
-    document.querySelector('#mscrim').click();
-    return document.querySelector('#menu').hidden;
-  });
-  ok(scrimC, '12b · un toque afuera también lo cierra');
-
-  /* ---------- 13 · el menú no se corta contra el borde del device ----------
-     `.device` tiene `overflow: hidden`: un menú que se pasara se recortaría EN SILENCIO. */
-  await setVar(page, 'M1'); await setState(page, 'published');
-  const clipped = await page.evaluate(() => {
-    document.querySelector('#kebab').click();
-    const d = document.querySelector('#device').getBoundingClientRect();
-    const m = document.querySelector('#menu').getBoundingClientRect();
-    const out = m.left < d.left || m.right > d.right || m.bottom > d.bottom;
-    document.querySelector('#mscrim').click();
-    return { out, w: Math.round(m.width), right: Math.round(d.right - m.right) };
-  });
-  ok(!clipped.out, `13 · el menú (${clipped.w}px) entra entero en el device, a ${clipped.right}px del borde derecho`);
-
-  /* ---------- 14 · la transición realmente cambia el estado ----------
-     Un contenedor que no commitea es pintura. La 078 encontró que G1 publicaba un borrador sin nivel
-     con el botón visiblemente muerto — la forma opuesta del mismo defecto. */
-  await setVar(page, 'M2'); await setState(page, 'published');
-  const commit = await page.evaluate(() => {
-    document.querySelector('[data-cyc="unpublish"]').click();
-    document.querySelector('[data-act="dlg-yes"]').click();
-    const after = document.querySelector('#tools [data-cy].on').dataset.cy;
-    const dot = document.querySelector('.gh-st .dot').className;
-    const txt = document.querySelector('.gh-st').textContent;
-    return { after, dot, txt: txt.trim().split('·')[0].trim() };
-  });
-  ok(commit.after === 'draft' && /warn/.test(commit.dot) && commit.txt === 'Borrador',
-    `14 · Despublicar commitea de verdad: el estado queda \`${commit.after}\` y el read-out pasa a "${commit.txt}" con su punto`);
-
-  /* ============================================================================
-     16-18 · LOS TRES QUE ENCONTRÓ LA PANTALLA, NO EL ARNÉS
-     Novena, décima y undécima vez en este linaje. Ninguno de los tres era
-     detectable por los checks que ya estaban: el 1 al 15 estaban todos verdes.
-     ============================================================================ */
-
-  /* ---------- 16 · el menú de M1 tapa el juego del que habla ----------
-     En el momento exacto en que elegís entre "Despublicar" y "Retirar", la página deja de decirte
-     QUÉ juego y EN QUÉ estado está. Misma forma que el choque toast/barra que la 078 midió en su
-     check 16, pero peor en un sentido: lo tapado no es un anuncio, es la identidad del objeto. */
-  await setVar(page, 'M1'); await setState(page, 'published');
-  await hideTools(page);
-  const occl = await page.evaluate(() => {
-    document.querySelector('#kebab').click();
-    const probe = sel => {
-      const r = document.querySelector(sel).getBoundingClientRect();
-      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return { tapado: !!(hit && hit.closest('#menu')), sobre: hit ? (hit.closest('#menu') ? '#menu' : (hit.className || hit.tagName)) : null };
-    };
-    const n = probe('.gh-name'), s = probe('.gh-st');
-    const m = document.querySelector('#menu').getBoundingClientRect();
-    const g = document.querySelector('.ghead').getBoundingClientRect();
-    const ix = Math.max(0, Math.min(m.right, g.right) - Math.max(m.left, g.left));
-    const iy = Math.max(0, Math.min(m.bottom, g.bottom) - Math.max(m.top, g.top));
-    document.querySelector('#mscrim').click();
-    return { name: n, st: s, overlap: Math.round(ix * iy) };
-  });
-  await showTools(page);
-  ok(occl.name.tapado && occl.st.tapado,
-    `16 · el menú abierto de M1 tapa el nombre del juego Y su estado (${occl.overlap}px² de la cabecera) — `
-    + `elegís entre despublicar y retirar sin ver de qué juego ni desde qué estado`);
-
-  /* ---------- 17 · d55 entierra la zona CICLO de M2 ----------
-     La 078 midió que el toast de 10s tapaba su `Publicar`. Acá el snack de 4s aterriza exactamente
-     sobre la zona de ciclo — y el snack que lo hace es EL DE LA PROPIA TRANSICIÓN. */
-  await setVar(page, 'M2'); await setState(page, 'published');
-  await hideTools(page);
-  const snackHit = await page.evaluate(() => {
-    document.querySelector('#snack').classList.add('show');
-    const s = document.querySelector('#snack').getBoundingClientRect();
-    const rows = [...document.querySelectorAll('#cyczone .cact')].map(el => {
-      const r = el.getBoundingClientRect();
-      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return { label: el.textContent.trim().split('\n')[0].slice(0, 11), sobre: hit ? (hit.closest('#snack') ? '#snack' : 'la fila') : 'nada' };
-    });
-    const lbl = document.querySelector('#cyczone .cyl').getBoundingClientRect();
-    const cov = !(lbl.bottom < s.top || lbl.top > s.bottom);
-    document.querySelector('#snack').classList.remove('show');
-    return { rows, labelTapado: cov, zSnack: getComputedStyle(document.querySelector('#snack')).zIndex };
-  });
-  await showTools(page);
-  const buried = snackHit.rows.filter(r => r.sobre === '#snack').length;
-  ok(buried > 0 || snackHit.labelTapado,
-    `17 · el snack (z-index ${snackHit.zSnack}) cae encima de la zona CICLO de M2 — label tapado: ${snackHit.labelTapado}, `
-    + `filas enterradas: ${buried} de ${snackHit.rows.length} (${snackHit.rows.map(r => r.label + '→' + r.sobre).join(', ')}). `
-    + `Y el snack que lo tapa es el de la transición que acabás de hacer ahí mismo. Misma forma que el check 16 de la 078.`);
-
-  /* ---------- 18 · la banda de M3 cae en la canaleta, no sobre la línea ----------
-     Encontrado mirando la captura: la banda de d29 aterriza EXACTAMENTE en el borde derecho de la tapa,
-     dentro del gap de 14px de `.ghead`, así que se lee como un separador entre las dos columnas y no
-     como un affordance de `● Publicado`. En 075-V4 la banda funcionaba porque el bloque era de ancho
-     completo y no tenía nada a la izquierda. Acá tiene una tapa de 64px. */
-  await setVar(page, 'M3'); await setState(page, 'published');
-  const band = await page.evaluate(() => {
-    const ctl = document.querySelector('#cycctl').getBoundingClientRect();
-    const cov = document.querySelector('.ghead .cov').getBoundingClientRect();
-    const dot = document.querySelector('#cycctl .dot').getBoundingClientRect();
-    const name = document.querySelector('.gh-name').getBoundingClientRect();
+    const w = document.querySelector('.wrap').getBoundingClientRect();
+    const cta = document.querySelector('.cta').getBoundingClientRect();
+    const kb = document.querySelector('#kebab').getBoundingClientRect();
     return {
-      aLaTapa: Math.round(ctl.left - cov.right),      /* 0 = pegada al borde de la tapa */
-      alPunto: Math.round(dot.left - ctl.left),        /* cuánto la separa del dato que marca */
-      alNombre: Math.round(ctl.left - name.left),      /* negativo = está a la izquierda de la columna */
-      alto: Math.round(ctl.height), altoLinea: Math.round(dot.height)
+      /* el padding se lee COMPUTADO, no del rect: `.wrap` ES el elemento que lo lleva, así que su
+         borde izquierdo está en 0 y el rect no dice nada de la quilla. La primera versión medía
+         `w.left - d.left` y reportaba 0 — un número verdadero sobre el borde equivocado. */
+      gut: Math.round(parseFloat(getComputedStyle(document.querySelector('.wrap')).paddingLeft)),
+      ctaR: Math.round(cta.right - d.left),
+      kebabR: Math.round(kb.right - d.left)
     };
   });
-  ok(band.aLaTapa === 0 && band.alNombre < 0,
-    `18 · la banda de M3 arranca a ${band.aLaTapa}px del borde de la tapa y ${Math.abs(band.alNombre)}px a la IZQUIERDA de la `
-    + `columna de texto: cae en la canaleta de 14px de .ghead, no sobre la línea de estado. `
-    + `Queda a ${band.alPunto}px del punto que supuestamente marca, y mide ${band.alto}px contra los ${band.altoLinea} del punto. `
-    + `075-V4 no tenía este problema: allá el bloque era de ancho completo y no tenía una tapa a la izquierda.`);
+  ok(keyline.gut === 14, `21a · la quilla es ${keyline.gut}px, la de la web a ≤480 (--pk-gutter 0.875rem), no los 16 del admin`);
+  ok(keyline.ctaR === 361 && keyline.ctaR !== 359,
+    `21b · así que el CTA termina en R${keyline.ctaR}, no en R359 — d42 fijó ese borde y 074/075/078 lo sostuvieron. `
+    + `Adoptar el ritmo de la web lo mueve 2px. Medido, no evitado eligiendo 16 y llamándolo "el ritmo de la web".`);
+  ok(keyline.kebabR === 359,
+    `21c · y la barra NO se mudó: el ⋮ sigue en R${keyline.kebabR}, así que la página tiene ahora DOS bordes derechos — `
+    + `la barra en 359 y el cuerpo en 361`);
 
-  /* ---------- 19 · sin errores de consola ---------- */
-  ok(errs.length === 0, `19 · consola limpia${errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''}`);
+  /* ---------- 22 · y DOS bordes izquierdos, que es como es la web ---------- */
+  const edges = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const t = document.querySelector('.h1').getBoundingClientRect();
+    const c = document.querySelector('.cardposter').getBoundingClientRect();
+    const p = document.querySelector('.poster').getBoundingClientRect();
+    return { texto: Math.round(t.left - d.left), tapa: Math.round(c.left - d.left), panel: Math.round(p.left - d.left) };
+  });
+  /* 31, NO 30 — Y LA CUENTA DE 30 ERA LA MÍA, NO LA DE LA PÁGINA. `.pk-poster-panel` lleva
+     `border: 1px solid` además del `padding: 1rem` (app.css:4875-4884), así que la tapa arranca a
+     14 (quilla) + 1 (borde) + 16 (padding) = 31. Había escrito 30 sumando sólo padding + quilla.
+     El check pasó a afirmar el número medido y a mostrar la suma, para que el próximo que lo lea no
+     tenga que rehacerla. */
+  ok(edges.texto === 14 && edges.tapa === 31,
+    `22 · dos bordes izquierdos: el texto a ${edges.texto}px y la tapa a ${edges.tapa} (= 14 quilla + 1 borde + 16 padding del `
+    + `panel, app.css:4875-4884). Es fiel a la web, que tiene los dos; el editor tenía UNO solo.`);
 
-  /* ---------- capturas ---------- */
+  /* ============================================================================
+     23 · LOS DOS "APILADO ABAJO" NO SON EL MISMO, Y ACÁ SE VE CUÁNTO
+     El desarrollador pidió el patrón de `Publicar` de la 078: `.cta` como último
+     hijo, que scrollea. La web en mobile hace otra cosa: `.pk-mobile-cta-bar` es
+     `position: fixed` con 148px de body reservado (app.css:5375-5398, 5440-5441).
+     ============================================================================ */
   await hideTools(page);
-  for (const v of VARS) {
-    await setVar(page, v); await setState(page, 'published');
-    await page.screenshot({ path: path.join(OUT, `${v}-reposo.png`), clip: await page.evaluate(() => {
-      const r = document.querySelector('#device').getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width, height: r.height };
-    }) });
-  }
-  await setVar(page, 'M1'); await page.evaluate(() => document.querySelector('#kebab').click());
-  await page.screenshot({ path: path.join(OUT, 'M1-abierto.png'), clip: await page.evaluate(() => {
-    const r = document.querySelector('#device').getBoundingClientRect();
-    return { x: r.x, y: r.y, width: r.width, height: r.height };
-  }) });
+  const cta = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const sc = document.querySelector('#scroller');
+    const c = document.querySelector('.cta').getBoundingClientRect();
+    const hit = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2);
+    return {
+      top: Math.round(c.top - d.top), floor: Math.round(d.height), alto: Math.round(c.height),
+      visible: c.top < d.bottom, tocable: !!(hit && hit.closest('.cta')),
+      scrollTotal: sc.scrollHeight - sc.clientHeight, pantallas: +((sc.scrollHeight) / d.height).toFixed(1)
+    };
+  });
   await showTools(page);
+  ok(cta.alto >= 52, `23a · el CTA mide ${cta.alto}px de alto, el patrón de Publicar de la 078 (078:860)`);
+  ok(cta.visible === false && cta.tocable === false,
+    `23b · y al reposo está en y=${cta.top}, contra un piso de ${cta.floor}: invisible y no tocable. `
+    + `Hay que scrollear ${cta.scrollTotal}px — la página mide ${cta.pantallas} pantallas — para llegar a Guardar. `
+    + `La web resuelve esto con una barra FIJA; la 078 no, porque su formulario entraba en una hoja corta.`);
+
+  /* ============================================================================
+     24 · EN E3, EL RANGO YA NO PUEDE DECIR QUÉ SE EDITA
+     La web sólo tiene UN vocabulario etiqueta→valor: 12px mayúsculas 0.08em. Y
+     en la web pertenece EXCLUSIVAMENTE a datos de BGG que no se tocan (AÑO,
+     DISEÑADORES, ILUSTRADORES, MECÁNICAS, TEMÁTICAS, COMUNIDAD BGG). E3 obliga a
+     usarlo también para COPIAS, ESTANTE y EXPANSIÓN, que sí se editan.
+     ============================================================================ */
+  const rank = await page.evaluate(() => {
+    const pick = el => { const c = getComputedStyle(el); return [c.fontSize, c.fontWeight, c.textTransform, c.letterSpacing, c.color].join('|'); };
+    const dts = [...document.querySelectorAll('.spec dt')];
+    const bgg = dts.filter(d => !d.closest('.spec').querySelector('.ed'));
+    const club = dts.filter(d => d.closest('.spec').querySelector('.ed'));
+    return {
+      bggN: bgg.length, clubN: club.length,
+      iguales: bgg.length > 0 && club.length > 0 && new Set([...bgg, ...club].map(pick)).size === 1,
+      muestra: pick(dts[0]),
+      bggLabels: bgg.map(d => d.textContent), clubLabels: club.map(d => d.textContent)
+    };
+  });
+  ok(rank.iguales && rank.bggN === 5 && rank.clubN === 3,
+    `24 · las ${rank.clubN} etiquetas editables (${rank.clubLabels.join(', ')}) son BYTE-IDÉNTICAS en rango a las ${rank.bggN} `
+    + `no editables (${rank.bggLabels.join(', ')}) — ${rank.muestra}. En E3 el rango no puede decir qué se puede tocar: `
+    + `todo el peso queda en el affordance, que es el eje de esta ronda.`);
+
+  /* ============================================================================
+     25-26 · EL EJE, EN PÍXELES Y EN ESTILO COMPUTADO
+     ============================================================================ */
+  await hideTools(page);
+  const shot = async v => { await setVar(page, v); return page.screenshot({ clip: await deviceClip(page) }); };
+  const sA1 = await shot('A1'), sA2 = await shot('A2'), sA3 = await shot('A3');
+  fs.writeFileSync(path.join(OUT, 'r2-A1.png'), sA1);
+  fs.writeFileSync(path.join(OUT, 'r2-A2.png'), sA2);
+  fs.writeFileSync(path.join(OUT, 'r2-A3.png'), sA3);
+  const d1 = diffPNG(sA3, sA1), d2 = diffPNG(sA3, sA2);
+  ok(d1.diffPx > 0, `25a · A1 (el tinte) pinta ${d1.diffPx} px de ${d1.total} contra A3 · maxDelta ${d1.maxDelta}`);
+  ok(d2.diffPx > 0, `25b · A2 (el lápiz) pinta ${d2.diffPx} px de ${d2.total} contra A3 · maxDelta ${d2.maxDelta}`);
+  ok(d1.diffPx > d2.diffPx * 3,
+    `25c · y el tinte cubre ${(d1.diffPx / Math.max(1, d2.diffPx)).toFixed(1)}× lo que el lápiz — en el spine de d37 el valor es `
+    + `una línea corta; acá es un H1 de 30px y un párrafo justificado de tres líneas`);
+
+  /* ---------- 25d · EL TINTE DE A1 CHOCA CON UN ELEMENTO QUE NO SE EDITA ----------
+     Encontrado en la captura: el chip de sección bajo el título ("Ingenio estratega") sale del mismo
+     morado que los bloques tinteados, y NO es editable — es `section_names`, un campo virtual.
+     La causa está medida desde la 074 ronda 3: en tema claro `--color-primary` y `--color-accent-text`
+     son EL MISMO HEX, y `--val` se define sobre el segundo mientras `.pill.tag` usa el primero.
+     Así que en A1 el tinte no puede significar "esto se edita": ya significa otra cosa en esta página. */
+  await setVar(page, 'A1');
+  const clash = await page.evaluate(() => {
+    const c = el => getComputedStyle(el).color;
+    return {
+      tinte: c(document.querySelector('.ed.h1')),
+      chip: c(document.querySelector('.pill.tag')),
+      noEditable: c([...document.querySelectorAll('.spec dd')].find(d => !d.querySelector('.ed')))
+    };
+  });
+  ok(clash.tinte !== clash.chip,
+    `25d · EN ROJO SI FALLA — el tinte de A1 (${clash.tinte}) contra el chip de sección NO editable (${clash.chip}). `
+    + `Si son iguales, el tinte ya significa otra cosa en esta misma pantalla: la 074 ronda 3 midió que en claro `
+    + `--color-primary y --color-accent-text son el mismo hex, y --val se define sobre el segundo.`);
+  await showTools(page);
+
+  /* ---------- 26 · EL CHECK CENTRAL, y está escrito para poder salir en rojo ----------
+     La pregunta no es "¿A3 pinta algo?" (no, por construcción) sino la que importa:
+     ¿SE DISTINGUE UN VALOR EDITABLE DE UNO QUE NO LO ES, estando los dos en el mismo rango?
+     `Copias` (editable) contra `Año` (de BGG). Si en A3 son idénticos, el editor se ve exactamente
+     como la ficha pública y nada dice que se pueda tocar — que es el `diffPx 0` de 075-V4, dicho
+     sobre el par que de verdad importa.
+     Se compara estilo COMPUTADO y no píxeles a propósito: los dos valores tienen textos distintos
+     ("1" contra "2016"), así que un diff de píxeles mediría los glifos, no el tratamiento. */
+  const distinguible = {};
+  for (const v of VARS) {
+    await setVar(page, v);
+    distinguible[v] = await page.evaluate(() => {
+      const pick = el => { const c = getComputedStyle(el); return [c.color, c.fontWeight, c.textDecorationLine, c.backgroundColor, c.borderBottomStyle].join('|'); };
+      const club = document.querySelector('.spec dd .ed');                      /* Copias — editable */
+      const bgg = [...document.querySelectorAll('.spec dd')].find(d => !d.querySelector('.ed')); /* Año — de BGG */
+      return { club: pick(club), bgg: pick(bgg), extraNodes: club.querySelectorAll('.pen').length };
+    });
+  }
+  ok(distinguible.A1.club !== distinguible.A1.bgg, `26a · A1 · el valor editable SÍ se distingue del de BGG (${distinguible.A1.club.split('|')[0]} contra ${distinguible.A1.bgg.split('|')[0]})`);
+  ok(distinguible.A2.extraNodes === 1, `26b · A2 · se distingue por un nodo (el lápiz), no por tratamiento — el estilo es idéntico al de BGG`);
+  ok(distinguible.A3.club !== distinguible.A3.bgg || distinguible.A3.extraNodes > 0,
+    `26c · A3 · EN ROJO A PROPÓSITO SI FALLA — editable y no editable son "${distinguible.A3.club}" contra "${distinguible.A3.bgg}", `
+    + `y el editable no agrega ningún nodo. Si son iguales, en A3 nada distingue lo que podés cambiar de lo que no: `
+    + `es el diffPx 0 de 075-V4, sobre el par que importa.`);
+
+  /* ---------- 27 · el ⋮ como único control: no empuja nada, pero hereda el borde del primario ---------- */
+  await setVar(page, 'A3');
+  const bar = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const kb = document.querySelector('#kebab').getBoundingClientRect();
+    const tb = document.querySelector('#tbar');
+    return {
+      right: Math.round(kb.right - d.left), w: Math.round(kb.width), h: Math.round(kb.height),
+      otros: tb.querySelectorAll('button').length,
+      primarioArriba: !!tb.querySelector('.btn')
+    };
+  });
+  ok(bar.otros === 2 && !bar.primarioArriba,
+    `27a · la barra tiene ${bar.otros} controles (‹ y ⋮) y NINGÚN primario — Guardar bajó al pie, así que el ⋮ no empuja nada. `
+    + `Esto borra el único costo que la ronda 1 le midió a M1 (empujaba Guardar de R359 a R307).`);
+  ok(bar.right === 359,
+    `27b · pero el ⋮ hereda R${bar.right}, la esquina que cinco pantallas enseñaron como LA ACCIÓN PRINCIPAL. `
+    + `Es la forma inversa de lo que la 074 ronda 1 encontró con Descartar heredando el borde del primario.`);
+
+  /* ---------- 28 · el nivel aparece DOS veces en la ficha ---------- */
+  const twice = await page.evaluate(() => {
+    const band = 'Ingenio estratega';
+    const hits = [...document.querySelectorAll('#main .pill')].filter(p => p.textContent.includes(band));
+    const d = document.querySelector('#device').getBoundingClientRect();
+    return hits.map(h => ({ cls: h.className, y: Math.round(h.getBoundingClientRect().top - d.top), editable: h.classList.contains('ed') }));
+  });
+  ok(twice.length === 2 && twice.filter(h => h.editable).length === 1,
+    `28 · el nivel está DOS veces: el pill de facts (y=${twice[0]?.y}, editable) y el chip de sección bajo el título `
+    + `(y=${twice[1]?.y}, NO editable, porque es section_names, que es virtual). Mismo texto, dos rangos, uno se toca y el otro no. `
+    + `No es el fixture: es cómo se ve la ficha, porque publicar mete el juego en la sección de su banda.`);
+
+  /* ---------- 29 · los 49 sin tapa abren sobre un hueco del tamaño de la pantalla ---------- */
+  await setCover(page, false);
+  await hideTools(page);
+  const nocover = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const c = document.querySelector('.cardposter').getBoundingClientRect();
+    const h1 = document.querySelector('.h1').getBoundingClientRect();
+    return { alto: Math.round(c.height), pctPantalla: Math.round(c.height / d.height * 100), tituloY: Math.round(h1.top - d.top) };
+  });
+  await page.screenshot({ path: path.join(OUT, 'r2-sin-tapa.png'), clip: await deviceClip(page) });
+  await showTools(page);
+  await setCover(page, true);
+  ok(nocover.pctPantalla >= 30,
+    `29 · sin tapa (los 49 = no_bgg_id 41 + bgg_missing 8, verificado contra la base) el hueco mide ${nocover.alto}px, `
+    + `el ${nocover.pctPantalla}% de la pantalla, y empuja el título a y=${nocover.tituloY}. `
+    + `Son exactamente los juegos que abrís el editor para arreglar.`);
+
+  /* ---------- 30 · piso táctil de 44px en cada bloque editable ---------- */
+  await setVar(page, 'A3');
+  const touch = await page.evaluate(() => [...document.querySelectorAll('#main .ed')].map(e => {
+    const r = e.getBoundingClientRect();
+    const after = getComputedStyle(e, '::after').height;
+    return { k: e.dataset.edit, h: Math.round(r.height), after };
+  }));
+  const chicos = touch.filter(t => t.h < 44 && !/44px/.test(t.after));
+  ok(chicos.length === 0,
+    `30a · los ${touch.length} bloques editables llegan al piso de 44px` + (chicos.length ? ` — no llegan: ${chicos.map(c => c.k + ' ' + c.h + 'px').join(', ')}` : ''));
+
+  /* 30b · Y NO SE PISAN. Un piso de 44 sobre un valor de 22 se desborda 11px por lado, y las filas del
+     bloque DEL CLUB están a 16px una de otra. Si dos capas se solapan, un toque en la zona compartida
+     le llega a la de arriba y editás el campo equivocado sin que nada lo diga. Se mide con rects, y
+     además con un hit test en el punto medio entre dos filas. */
+  const overlap = await page.evaluate(() => {
+    const boxes = [...document.querySelectorAll('#main .spec dd .ed')].map(e => {
+      const r = e.getBoundingClientRect();
+      const h = parseFloat(getComputedStyle(e, '::after').height) || r.height;
+      const cy = r.top + r.height / 2;
+      return { k: e.dataset.edit, top: cy - h / 2, bottom: cy + h / 2, x: r.left + 4 };
+    });
+    const pares = [];
+    for (let i = 1; i < boxes.length; i++) if (boxes[i].top < boxes[i - 1].bottom) pares.push(`${boxes[i - 1].k}/${boxes[i].k}`);
+    /* el hit test: justo en el medio entre el primer y el segundo valor */
+    let medio = null;
+    if (boxes.length > 1) {
+      const y = (boxes[0].bottom + boxes[1].top) / 2;
+      const el = document.elementFromPoint(boxes[0].x, y);
+      medio = el && el.closest('.ed') ? el.closest('.ed').dataset.edit : 'nada';
+    }
+    return { pares, medio, n: boxes.length };
+  });
+  ok(overlap.pares.length === 0,
+    `30b · las ${overlap.n} capas de toque del bloque DEL CLUB no se solapan` +
+    (overlap.pares.length ? ` — SE SOLAPAN: ${overlap.pares.join(', ')}; un toque en la zona compartida edita el campo de arriba (en el punto medio cae: ${overlap.medio})` : ` (en el punto medio entre dos cae: ${overlap.medio})`));
+
+  /* ---------- 31 · la hoja del ⋮ funciona y commitea ---------- */
+  await setState(page, 'published');
+  const cycle = await page.evaluate(() => {
+    document.querySelector('#kebab').click();
+    const abierta = document.querySelector('#sheet').classList.contains('open');
+    const opts = [...document.querySelectorAll('#sheet .opt')].map(o => o.querySelector('.on2').textContent);
+    document.querySelector('[data-cyc="retire"]').click();
+    const txt = document.querySelector('#dlg-d').textContent;
+    document.querySelector('[data-act="dlg-yes"]').click();
+    return { abierta, opts, txt, after: document.querySelector('#tools [data-cy].on').dataset.cy };
+  });
+  await setState(page, 'published');
+  ok(cycle.abierta && cycle.opts.length === 1 && cycle.after === 'retired',
+    `31a · el ⋮ abre la hoja, ofrece ${cycle.opts.length} opción (${cycle.opts.join('')}) y commitea a \`${cycle.after}\``);
+  ok(/ya no lo tiene/i.test(cycle.txt) && /ludoteca pública/i.test(cycle.txt) && /estantes/i.test(cycle.txt),
+    `31b · y el diálogo dice AHORA LAS DOS MITADES — el club y la web — que es lo que el verbo colapsado exige. `
+    + `La copia que corre hoy (form.ex:352-356) sólo decía la mitad de la web.`);
+
+  /* ---------- 32 · sin errores de consola ---------- */
+  ok(errs.length === 0, `32 · consola limpia${errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''}`);
 
   await browser.close();
   const pass = log.filter(l => l.startsWith('PASS')).length;
