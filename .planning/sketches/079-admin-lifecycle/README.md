@@ -1,11 +1,11 @@
 ---
 sketch: 079
 name: admin-lifecycle
-question: "r1 · ¿dónde vive la transición de ciclo? · r2 · en la ficha editable, ¿qué dice que un bloque se puede editar?"
-winner: "r1 · M1 el ⋮ (premisa del desarrollador) · r2 abierta"
+question: "r1 · ¿dónde vive la transición? · r2 · ¿qué dice que un bloque se edita? · r3 · ¿inline o en hoja?"
+winner: "r1 · el ⋮ · r2 · tinte + lápiz sutil (síntesis A1+A2) · r3 abierta, la medición recomienda LA HOJA"
 tags: [admin, juegos, lifecycle, retire, menu, kebab, ficha, rhythm, d37, d42, d44, d47, D-19i, D-19j, 064, slice-4]
-rounds: 2
-status: PENDING REVIEW — r2 A1/A2/A3, 26/29 (25d, 1c y 26c en rojo: los tres son hallazgos, no aserciones rotas)
+rounds: 3
+status: PENDING REVIEW — r3 I/H, 31/31 (dos checks son COSTOS MEDIDOS: verde = el costo existe)
 ---
 
 # Sketch 079: dónde vive la transición de ciclo
@@ -23,11 +23,11 @@ El alcance que trajo el desarrollador al intake:
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/079-admin-lifecycle/index.html
-node .planning/sketches/079-admin-lifecycle/verify.js     # 26/29
+node .planning/sketches/079-admin-lifecycle/verify.js     # 31/31
 ```
 
-**La página que abre es la RONDA 2** (A1 / A2 / A3, la ficha editable). Los toggles de la ronda 1 están
-eliminados — el desarrollador eligió el ⋮ — y sus mediciones quedan abajo, en la sección de la ronda 1.
+**La página que abre es la RONDA 3** (I / H: inline o en hoja). Los toggles de las rondas 1 y 2 están
+eliminados — el ⋮ y la síntesis tinte+lápiz están decididos — y sus mediciones quedan abajo.
 
 **El estado y la tapa** se cambian desde el panel. Son **switches de fixture**, no controles de la página:
 existen para poder contar qué ofrece el ⋮ en cada estado **sin usar el control que se está midiendo**, y
@@ -547,3 +547,119 @@ En las tres, bajá hasta `Guardar`: son casi dos pantallas.
 - **No confirmado en dispositivo.** Esta ronda agregó dos hallazgos más que encontró la captura y no el
   número (el lápiz recortado y el choque de color de A1).
 - Todo lo abierto en la ronda 1 y en la 078 sigue abierto.
+
+
+---
+
+# Ronda 3 — ¿dónde ocurre la edición?
+
+> *"I like A1 + a2 with a subtle pencil. should the edit happen 'inline' the field or on a bottom sheet?"*
+
+**El affordance queda decidido: el tinte de d37 MÁS un lápiz sutil.** A1/A2/A3 salieron de la página
+(convención de 072). Lo que queda abierto es la pregunta que hiciste.
+
+## La síntesis tapa los dos agujeros que cada mitad tenía sola — y deja uno
+
+```
+1b/1c   el lápiz llega a los 7 bloques, se ve y se toca
+```
+
+- **el tinte no podía marcar la tapa** (es una imagen, no tiene color de texto que tintar) → el lápiz va
+  de insignia en la esquina, que es donde la ficha pública ya pone su control de compartir
+  (`absolute right-3 top-3`, `show.ex:551`)
+- **el lápiz no podía marcar la descripción** (vivía dentro del clamp de 3 líneas y salía recortado) → sale
+  del párrafo y se ancla en la columna de 44px que el clamp ya reserva para el chevron
+
+**Lo que NO se arregló, y se mide en vez de afirmarse:**
+
+```
+25    el tinte sigue siendo el MISMO color que el chip de sección (rgb 60,18,105), que NO se edita
+25b   el lápiz mide 14×14 contra un título de 36px
+```
+
+`--color-primary` y `--color-accent-text` son el mismo hex en claro (medido desde la 074 r3) y no se
+arregla sin tocar la paleta. **Así que la desambiguación pasó a depender del glifo, no del tinte** — y el
+glifo es lo más chico de la pantalla. "Sutil" tomado literal tiene ese precio.
+
+---
+
+## La respuesta a tu pregunta: **en hoja**, y son cuatro números
+
+El eje se dibujó con **el mismo control en los dos modos** — una sola definición, montada en dos lugares
+(check 35a) — para que todo lo de abajo sea sobre *dónde* y no sobre *qué*.
+
+### 1 · Inline, el bloque se multiplica por hasta 11
+
+```
+36   name 36→96px (2,7×) · description 72→173 (2,4×) · band 28→305 (10,9×)
+     units 22→100 (4,5×) · shelf 22→142 (6,5×) · exp 22→88 (4×)
+```
+
+El control del nivel son **tres opciones apiladas con descriptor** — el que la 078 decidió, con los textos
+de `vocabulary.ex:24-40`. Contra un pill de 28px no hay forma de que entre sin recortarlo, y recortarlo
+sería rehacer una decisión tomada.
+
+### 2 · Y el ritmo entero se corre
+
+```
+37   al abrir el nivel inline, todo lo de abajo baja 317px
+38   en modo H la ficha de atrás no se mueve NI UN PÍXEL
+```
+
+**Éste es el argumento, y no es de preferencia.** La premisa de E3 —la que elegiste sobre E1 y E2— es que
+el editor *se ve como la ficha*. Inline, deja de verse como la ficha **exactamente cuando lo estás usando**.
+La hoja es lo único que deja el espejo intacto mientras editás, que es lo que d33 compra.
+
+### 3 · El teclado
+
+```
+39a   en hoja   el textarea queda en y=315-434, arriba del piso del teclado (448)
+39b   inline    queda en y=595-713 → EL TECLADO LO TAPA
+```
+
+Inline hereda la posición del bloque, y el bloque está donde la ficha lo puso, **no donde un campo de texto
+necesita estar**. La hoja lo sube sola porque `.sheet.form` ya tiene `bottom: 292px` bajo `device.kbd`
+(078:537) — o sea que el problema ya estaba resuelto, en la hoja.
+
+### 4 · Y d33 ya lo había contestado, para filas
+
+`d33` — *"cada valor es una fila que abre una hoja"* — es sobre lo que se construyeron seis sketches. No
+cubre E3 **literalmente**, porque E3 no tiene filas en la cabecera (el título es un `<h1>`, la descripción
+un párrafo clampeado, la tapa una imagen, el nivel un pill). Pero las tres mediciones de arriba llegan al
+mismo lugar por caminos que d33 no había recorrido. **Es la regla vieja confirmada en un caso nuevo, no
+extendida por analogía.**
+
+### El único punto a favor de inline, dicho igual
+
+En hoja, el mismo control mide distinto: la página tiene quilla de 14 y la hoja padding de 16, así que el
+control tiene 4px menos de ancho adentro y los descriptores envuelven distinto (check 35b: `band` 257 vs
+249, `exp` 40 vs 25). Es chico, pero es real: **el control que ves al editar no es exactamente el que
+verías en la página.**
+
+---
+
+## Qué mirar
+
+Poné **I** y tocá el pill del nivel: mirá cuánto baja todo lo de abajo. Después la descripción, con el
+teclado: el campo queda debajo.
+
+Poné **H** y hacé lo mismo: la ficha de atrás no se mueve, y el textarea sube solo.
+
+Y en las dos, buscá el chip *Ingenio estratega* bajo el título — es del mismo morado que todo lo editable,
+y es lo único de ese color **sin lápiz**.
+
+## Open (ronda 3)
+
+- **El modo no está decidido por vos todavía** — la medición recomienda la hoja, fuerte.
+- **La ambigüedad del tinte no se arregla en la pantalla** (check 25): `--color-primary` y
+  `--color-accent-text` son el mismo hex en claro. O se toca la paleta, o el lápiz de 14px es lo único que
+  desambigua. **Es el mismo `TODO(palette)` que 073/075 vienen debiendo.**
+- **La tapa no se puede editar de verdad** — elegir otra imagen es revertir 01.3.1/D-07, que vació
+  `gallery_urls` a propósito. El control de la tapa dice eso y no hace nada.
+- **El pie sigue contradiciéndose** (ronda 2, check 23b): el CTA de la 078 a 1,9 pantallas de scroll contra
+  la barra fija de la web. Con la hoja decidida esto se vuelve más agudo, no menos: si cada campo abre una
+  hoja, el `Guardar` del fondo es el único momento en que volvés a ver la página entera.
+- **El lápiz es un glifo nuevo** y 072 había aterrizado en "ningún glifo" después de sacar el `›` y el `⌄`.
+  D-19i gobierna el chevron, no el lápiz, así que no lo prohíbe — pero hay que escribirlo como decisión.
+- **D-19j y la quilla siguen pisadas** (ronda 2) y siguen sin escribirse como decisión.
+- Todo lo abierto en las rondas 1 y 2 y en la 078 sigue abierto.

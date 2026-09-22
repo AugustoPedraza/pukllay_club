@@ -1035,33 +1035,98 @@
    reemplazado, aterrizando en NINGÚN glifo.
    ============================================================================ */
 
-/* ---- A1 · el tinte de d37, estirado a bloques sin etiqueta ----
-   El valor lleva `--val`. En el spine eso es una línea corta. Acá el "valor" es un H1 de 30px y un
-   párrafo justificado de 3 líneas, así que el tinte cubre mucha más superficie. Ése es su costo y se
-   mide, no se argumenta (check 25). */
+/* ============================================================================
+   RONDA 3 — LA SÍNTESIS DECIDIDA: el tinte de d37 MÁS un lápiz sutil.
+   *"I like A1 + a2 with a subtle pencil."*
+
+   Las dos juntas se tapan los agujeros que cada una tenía sola, y eso se mide
+   en vez de afirmarse:
+
+     · el tinte no podía marcar LA TAPA (es una imagen, no tiene color de texto
+       que tintar) — el lápiz sí, como insignia en la esquina, que es donde la
+       ficha pública ya pone su control de compartir (`absolute right-3 top-3`,
+       show.ex:551). Check 33.
+     · el lápiz no podía marcar LA DESCRIPCIÓN (vivía adentro del clamp de 3
+       líneas y salía recortado, check 1c) — acá sale del párrafo y se ancla
+       arriba a la derecha, en la columna de 44px que el clamp ya reserva para
+       el chevron. Check 1c ahora corre sobre la síntesis.
+     · y el tinte solo era AMBIGUO: salía del mismo morado que el chip de
+       sección, que no se edita (check 25d, en rojo). Con el lápiz, el chip es
+       lo único morado SIN lápiz. Check 34 mide si eso alcanza.
+
+   "Sutil" se toma literal: 14px, `--color-text-muted`, el rango más bajo que
+   la ficha usa. No un botón, no un contenedor. */
 /* OJO AL SELECTOR, Y LO ENCONTRÓ LA CAPTURA: la primera versión decía `.ed .h1`, o sea un `.h1`
    DESCENDIENTE de `.ed`. Pero el `.h1` ES el `.ed` — es el mismo `<button class="h1 ed">`. Lo mismo
    con `.desc` y con el pill. Así que A1 no pintaba absolutamente nada y era, byte por byte, A3:
    la variante del tinte y la variante de "nada" eran la misma página, y los tres checks de conteo
    de nodos habrían pasado igual. Es la misma forma que el punto invisible de la 078 (tres checks
    verdes sobre cuadraditos transparentes). El check 25 ahora compara PÍXELES contra A3, no nodos. */
-.pg.A1 .ed.h1, .pg.A1 .ed.desc { color: var(--val); }
-.pg.A1 dd .ed { color: var(--val); }
-.pg.A1 .ed.pill { color: var(--val); border-color: var(--val); }
+.pg .ed.h1, .pg .ed.desc { color: var(--val); }
+.pg dd .ed { color: var(--val); }
+.pg .ed.pill { color: var(--val); border-color: var(--val); }
 
-/* ---- A2 · el lápiz ----
-   UN GLIFO NUEVO, y hay que decirlo: D-19i gobierna el chevron, no el lápiz, así que técnicamente no
-   lo prohíbe — pero 072 aterrizó en "ningún glifo" después de sacar dos, y esto los trae de vuelta.
-   Se dibuja al ras del bloque, nunca en el slot trailing de la fila (que D-19i reserva). */
-.pg.A2 .ed { position: relative; }
-.pg.A2 .ed .pen { display: inline-grid; place-items: center; width: 16px; height: 16px; vertical-align: -2px;
+/* el lápiz. UN GLIFO NUEVO, y hay que decirlo: D-19i gobierna el chevron, no el lápiz, así que
+   técnicamente no lo prohíbe — pero 072 aterrizó en "ningún glifo" después de sacar dos (el `›` y el
+   `⌄`), y esto los trae de vuelta. Se escribe como decisión (d47), no como deriva. */
+.pg .ed .pen { display: inline-grid; place-items: center; width: 16px; height: 16px; vertical-align: -2px;
   margin-left: 6px; color: var(--color-text-muted); }
-.pg.A2 .ed .pen svg { width: 14px; height: 14px; }
+.pg .ed .pen svg { width: 14px; height: 14px; }
+/* la tapa: insignia en la esquina, donde la ficha pública ya pone su control de compartir */
+.pg .cardposter .pen { position: absolute; right: 8px; top: 8px; margin: 0; width: 28px; height: 28px;
+  border-radius: 50%; background: var(--color-bg); box-shadow: var(--shadow-sm); color: var(--color-text-muted); }
+/* la descripción: FUERA del clamp, en la columna de 44px que el propio clamp ya reserva */
+.pg .descshell .pen { position: absolute; right: 0; top: 0; margin: 0; width: 44px; height: 28px; }
 
-/* ---- A3 · nada ----
-   La línea base, y la forma pura que 075-V4 midió: `diffPx 0 of 270000`. Si A3 resulta indistinguible
-   de la misma página con los bloques inertes, el editor se ve EXACTAMENTE como la ficha pública y
-   nada dice que se pueda tocar. El check 26 lo mantiene vivo. */
+/* ============================================================================
+   RONDA 3 · EL EJE — ¿dónde ocurre la edición?
+
+   I · INLINE     el control reemplaza al bloque, en su lugar
+   H · EN HOJA    tocar el bloque abre una hoja con el control (d33)
+
+   POR QUÉ ES UN EJE Y NO ESTÁ YA DECIDIDO: d33 dice *"cada valor es una fila
+   que abre una hoja"* y seis sketches se construyeron sobre eso — pero d33
+   habla de FILAS, y E3 no tiene filas en la cabecera: el título es un `<h1>`,
+   la descripción un párrafo clampeado, la tapa una imagen, el nivel un pill.
+   Y en la otra dirección, la 078 ronda 4 ya decidió un formulario clásico con
+   campos INLINE (`.fld`, `.seg`, `.sw`, `.stepper`) — adentro de una hoja. O
+   sea que el proyecto ya tiene las dos mitades y ninguna cubre este caso.
+
+   Los controles son los MISMOS en los dos modos, copiados de la 078: sólo
+   cambia dónde se montan. Si cada modo tuviera su propio control, cualquier
+   hallazgo sobre el modo sería en realidad sobre el control (check 35). */
+.pg .inl { margin-top: 6px; }
+.pg .inl .fld { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px;
+  background: var(--color-bg); font-size: 16px; font-family: var(--font-sans); color: var(--color-text); outline: none; }
+.pg .inl textarea.fld { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.45; resize: none; }
+.pg .inl .fld:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+/* el control del nivel, copiado de 078:823-828. Tres opciones apiladas CON descriptor: es el control
+   que la 078 decidió, y su altura es el hallazgo del check 36, así que no se recorta para que entre. */
+.pg .seg { display: flex; flex-direction: column; gap: 6px; }
+.pg .seg button { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 10px 12px;
+  border: 1px solid var(--color-border); border-radius: 10px; background: none; cursor: pointer; font-family: var(--font-sans); }
+.pg .seg button .rd { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--stroke); flex-shrink: 0;
+  margin-top: 2px; display: grid; place-items: center; }
+.pg .seg button[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-accent-bg); }
+.pg .seg button[aria-pressed="true"] .rd { border-color: var(--color-primary); }
+.pg .seg button[aria-pressed="true"] .rd::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--color-primary); }
+.pg .seg .sn { display: block; font-size: 15px; font-weight: 500; }
+.pg .seg .ss { display: block; font-size: 13px; color: var(--color-text-muted); line-height: 1.35; margin-top: 2px; }
+.pg .stepper { display: flex; align-items: center; gap: 2px; padding: 4px 0; }
+.pg .stepper button { width: 44px; height: 44px; border: 1px solid var(--stroke); background: none; border-radius: 10px; display: grid; place-items: center; cursor: pointer; }
+.pg .stepper button svg { width: 18px; height: 18px; }
+.pg .stepper .n { min-width: 48px; text-align: center; font-size: 17px; font-weight: 600; }
+.pg .swrow { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+.pg .sw { width: 52px; height: 32px; border-radius: 16px; border: 0; background: var(--color-surface-2); position: relative; cursor: pointer; flex-shrink: 0; }
+.pg .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--color-bg); box-shadow: var(--shadow-sm); transition: transform 160ms var(--ease-out-soft); }
+.pg .sw[aria-checked="true"] { background: var(--color-primary); }
+.pg .sw[aria-checked="true"]::after { transform: translateX(20px); }
+/* el bloque en edición inline esconde su versión de lectura — y lleva su companion [hidden], que es
+   la trampa que la 078 pisó cinco veces en un solo archivo. */
+.pg .ed[hidden], .pg .inl[hidden] { display: none; }
+.pg .inl .done { margin-top: 8px; min-height: 40px; padding: 0 16px; border-radius: 9px; border: 1px solid var(--stroke);
+  background: none; color: var(--color-accent-text); font-size: 14px; font-weight: 600; font-family: var(--font-sans); cursor: pointer; }
 
 /* los bloques inertes del negativo del check 26 */
 .pg.flat .ed { cursor: default; }
@@ -1102,10 +1167,9 @@
 
 <div id="vnav">
   <b>079 · r2</b>
-  <span style="opacity:.55">¿qué dice que se puede editar?</span>
-  <button data-var="A1" class="on">A1 · el tinte de d37</button>
-  <button data-var="A2">A2 · el lápiz</button>
-  <button data-var="A3">A3 · nada</button>
+  <span style="opacity:.55">¿dónde ocurre la edición?</span>
+  <button data-var="I" class="on">I · inline, en el bloque</button>
+  <button data-var="H">H · en una hoja (d33)</button>
 </div>
 
 <div class="stage"><div class="device" id="device">
@@ -1138,7 +1202,9 @@ const P = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
   kebab: '<circle cx="12" cy="5" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.7" fill="currentColor" stroke="none"/>',
   box: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
-  up: '<path d="M12 19V6M6 12l6-6 6 6"/>'
+  up: '<path d="M12 19V6M6 12l6-6 6 6"/>',
+  minus: '<path d="M5 12h14"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>'
 };
 const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
 const $ = s => document.querySelector(s);
@@ -1154,10 +1220,13 @@ const device = $('#device');
    `section_names` es virtual, y para Scythe da UNA: "Ingenio estratega", que es su propia banda.
    O sea que EL NIVEL APARECE DOS VECES en la ficha pública — como pill arriba de la tapa y como chip
    de sección debajo del título. No es un error del fixture; es cómo se ve. Check 28. */
+/* los descriptores son los de `vocabulary.ex:24-40`, textuales — la 078 ronda 3 encontró que su
+   fixture había inventado cuatro bandas que no existen, y ésta es la tercera deriva de fixture de
+   ese linaje. Se copian del archivo. */
 const BANDS = [
-  { v: 'descubre_el_hobby', n: 'Descubre el hobby', lvl: 1 },
-  { v: 'ingenio_estratega', n: 'Ingenio estratega', lvl: 2 },
-  { v: 'nivel_experto', n: 'Nivel experto', lvl: 3 }
+  { v: 'descubre_el_hobby', n: 'Descubre el hobby', lvl: 1, d: 'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.' },
+  { v: 'ingenio_estratega', n: 'Ingenio estratega', lvl: 2, d: 'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.' },
+  { v: 'nivel_experto', n: 'Nivel experto', lvl: 3, d: 'Reglas largas y decisiones profundas. Para mesas con experiencia.' }
 ];
 const G = {
   id: 43, name: 'Scythe', year: 2016, bgg_id: 169786, status: 'published',
@@ -1175,7 +1244,8 @@ const G = {
   bgg_rating: 8.1, bgg_weight: 3.5, bgg_rank: 26
 };
 const CYC = { published: { n: 'Publicado', k: 'ok' }, retired: { n: 'Retirado', k: 'off' } };
-let VAR = 'A1';
+let VAR = 'I';   /* el MODO de edición: I inline · H en hoja */
+let EDITING = null;   /* qué campo está abierto, en cualquiera de los dos modos */
 
 /* ---------- las transiciones: UN SOLO VERBO (decisión del desarrollador) ---------- */
 function actions(status) {
@@ -1196,9 +1266,22 @@ function actions(status) {
 const bandOf = () => BANDS.find(b => b.v === G.weight_band);
 const playersText = () => G.min_players === G.max_players ? `${G.max_players}` : `${G.min_players}-${G.max_players}`;
 
-/* el lápiz de A2. Devuelve vacío en A1 y A3, así que el DOM de los tres difiere SÓLO en esto y en la
-   clase de la página — cualquier diff entre variantes es atribuible al affordance y a nada más. */
-const pen = () => VAR === 'A2' ? `<span class="pen">${ic('pen', 1.9)}</span>` : '';
+/* el lápiz: ahora SIEMPRE, porque la síntesis está decidida. `VAR` pasó a ser el modo de edición. */
+const pen = () => `<span class="pen">${ic('pen', 1.9)}</span>`;
+
+/* ---------- los controles, UNA sola definición para los dos modos ----------
+   Si cada modo tuviera el suyo, un hallazgo sobre el modo sería en realidad sobre el control.
+   Son los de la 078, copiados: `.fld` 48px, textarea 96 mínimo, `.seg` de tres con descriptor,
+   `.stepper` de 44, `.sw` de 52x32. */
+const FIELD = {
+  name:        { label: 'Nombre',            ctl: () => `<input class="fld" id="f-name" value="${esc(G.name)}" autocomplete="off">` },
+  description: { label: 'Descripción',       ctl: () => `<textarea class="fld" id="f-desc" rows="4">${esc(G.description)}</textarea>` },
+  band:        { label: 'Nivel',             ctl: () => `<div class="seg" role="group">${BANDS.map(b => `<button data-pick-band="${b.v}" aria-pressed="${G.weight_band === b.v}"><span class="rd"></span><span><span class="sn">${esc(b.n)}</span><span class="ss">${esc(b.d)}</span></span></button>`).join('')}</div>` },
+  units:       { label: 'Copias',            ctl: () => `<div class="stepper"><button data-units="-1" aria-label="Menos una copia">${ic('minus', 2)}</button><span class="n">${G.units}</span><button data-units="1" aria-label="Una copia más">${ic('plus', 2)}</button></div>` },
+  shelf:       { label: 'Estante',           ctl: () => `<div class="seg" role="group">${[{ v: '', n: 'Sin estante' }, { v: 'L0', n: 'L0' }].map(o => `<button data-pick-shelf="${o.v}" aria-pressed="${(G.shelf || '') === o.v}"><span class="rd"></span><span><span class="sn">${esc(o.n)}</span></span></button>`).join('')}</div>` },
+  exp:         { label: 'Es una expansión',  ctl: () => `<div class="swrow"><button class="sw" role="switch" aria-checked="${G.is_expansion}" data-toggle-exp></button><span style="font-size:15px">${G.is_expansion ? 'Sí' : 'No'}</span></div>` },
+  cover:       { label: 'Tapa',              ctl: () => `<p style="font-size:13px;color:var(--color-text-muted);line-height:1.4;margin:0">La tapa la trajo BoardGameGeek. Elegir otra es revertir 01.3.1/D-07, que vació <code>gallery_urls</code> a propósito — no está dibujado.</p>` }
+};
 
 function renderPage() {
   const b = bandOf();
@@ -1217,7 +1300,7 @@ function renderPage() {
         <span class="pill neutral">${ic('clock', 1.9)}${G.playtime} min</span>
         <button class="pill neutral act ed" data-edit="band">${dots(b ? b.lvl : 0)}${esc(b ? b.n : 'Sin nivel')}${pen()}</button>
       </div>
-      <button class="cardposter ed" data-edit="cover">${cover}</button>
+      <button class="cardposter ed" data-edit="cover">${cover}${pen()}</button>
     </div>
 
     <div class="textcol">
@@ -1271,6 +1354,23 @@ function renderPage() {
   $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
   $('#main').className = 'pg ' + VAR + (FLAT ? ' flat' : '');
 
+  /* ---------- I · inline: el control REEMPLAZA al bloque, en su lugar ----------
+     Se inserta como hermano y se esconde el bloque de lectura. El `[hidden]` funciona porque las dos
+     clases llevan su companion en la hoja de estilos — la trampa que la 078 pisó cinco veces.
+     El control se monta DESPUÉS de pintar, no dentro del template, para que el DOM de lectura sea
+     idéntico en los dos modos y el check 35 pueda compararlos. */
+  if (VAR === 'I' && EDITING && FIELD[EDITING]) {
+    const host = $(`#main [data-edit="${EDITING}"]`);
+    if (host) {
+      const box = document.createElement('div');
+      box.className = 'inl'; box.dataset.inl = EDITING;
+      box.innerHTML = FIELD[EDITING].ctl() + `<button class="done" data-act="done">Listo</button>`;
+      host.insertAdjacentElement('afterend', box);
+      host.hidden = true;
+      setTimeout(() => { const f = box.querySelector('.fld'); f ? f.focus() : box.querySelector('button')?.focus(); }, 40);
+    }
+  }
+
   /* la barra: `‹ · título · ⋮`. El ⋮ es el ÚNICO control — `Guardar` bajó al pie. */
   $('#tbar').innerHTML = `<button class="tb-back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
     <span class="tb-t">${esc(G.name)}</span>
@@ -1278,6 +1378,21 @@ function renderPage() {
 }
 
 let DESC_OPEN = false, FLAT = false;
+
+/* ---------- H · en hoja: el MISMO control, montado en una hoja (d33) ---------- */
+function openFieldSheet(k) {
+  const f = FIELD[k]; if (!f) return;
+  const sh = $('#sheet');
+  sh.className = 'sheet form';
+  sh.innerHTML = `<div class="sh-head"><div class="sh-hr"><h2>${esc(f.label)}</h2>
+    <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>
+    <div class="sh-body"><div class="inl" data-inl="${k}">${f.ctl()}</div></div>`;
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  /* el teclado sólo se simula para los campos de texto — un `.seg` no lo levanta, y simularlo
+     igual haría que el check del pliegue midiera un teclado que no existiría. */
+  device.classList.toggle('kbd', k === 'name' || k === 'description');
+  setTimeout(() => { const fl = sh.querySelector('.fld'); fl ? fl.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
+}
 
 /* ---------- la hoja de ciclo, que abre el ⋮ ---------- */
 function openCycleSheet() {
@@ -1299,6 +1414,8 @@ function openCycleSheet() {
 function closeSheet() {
   const sh = $('#sheet');
   sh.classList.remove('open'); $('#backdrop').classList.remove('open');
+  device.classList.remove('kbd');
+  EDITING = null;
   $('#kebab')?.setAttribute('aria-expanded', 'false');
   /* esconder no es vaciar — el defecto que encontró el check 5b de la ronda 1 */
   setTimeout(() => { if (!sh.classList.contains('open')) sh.innerHTML = ''; }, 260);
@@ -1337,12 +1454,13 @@ function render() {
   $$('#tools [data-cov]').forEach(b => b.classList.toggle('on', (b.dataset.cov === '1') === G.hasCover));
   $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === VAR));
   const n = actions(G.status).length;
-  $('#now').textContent = `${CYC[G.status].n} — ${n} transición · ${$$('#main .ed').length} bloques editables`;
+  $('#now').textContent = `${VAR === 'I' ? 'inline' : 'en hoja'} · ${CYC[G.status].n} · ${$$('#main .ed').length} bloques`
+    + (EDITING ? ` · editando ${EDITING}` : '');
 }
 
 document.addEventListener('click', e => {
   const v = e.target.closest('#vnav [data-var]');
-  if (v) { VAR = v.dataset.var; closeSheet(); render(); return; }
+  if (v) { VAR = v.dataset.var; EDITING = null; closeSheet(); render(); return; }
   const cy = e.target.closest('#tools [data-cy]');
   if (cy) { G.status = cy.dataset.cy; closeSheet(); render(); return; }
   const cv = e.target.closest('#tools [data-cov]');
@@ -1363,8 +1481,28 @@ document.addEventListener('click', e => {
   if (e.target.closest('[data-act="desctog"]')) { DESC_OPEN = !DESC_OPEN; render(); return; }
   if (e.target.closest('[data-act="save"]')) return snack('Cambios guardados');
 
+  /* los controles de dentro del editor, antes de que el click caiga al bloque */
+  const pb = e.target.closest('[data-pick-band]');
+  if (pb) { G.weight_band = pb.dataset.pickBand; closeSheet(); EDITING = null; render(); return; }
+  const ps = e.target.closest('[data-pick-shelf]');
+  if (ps) { G.shelf = ps.dataset.pickShelf || null; closeSheet(); EDITING = null; render(); return; }
+  const st = e.target.closest('[data-units]');
+  if (st) { G.units = Math.max(1, G.units + (+st.dataset.units)); render(); return; }
+  if (e.target.closest('[data-toggle-exp]')) { G.is_expansion = !G.is_expansion; render(); return; }
+  if (e.target.closest('[data-act="done"]')) {
+    const inp = $('#f-name'), ta = $('#f-desc');
+    if (inp) G.name = inp.value.trim() || G.name;
+    if (ta) G.description = ta.value.trim() || G.description;
+    EDITING = null; render(); return;
+  }
+
   const ed = e.target.closest('[data-edit]');
-  if (ed) return snack(`Editar: ${ed.dataset.edit}`);
+  if (ed) {
+    const k = ed.dataset.edit;
+    EDITING = k;
+    if (VAR === 'H') { openFieldSheet(k); return; }
+    render(); return;
+  }
 });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
