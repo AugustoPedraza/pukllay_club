@@ -635,6 +635,8 @@
   .gh-st { margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
   .gh-st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .gh-st .dot.ok { background: var(--color-success); }
+
+.dot.ok { background: var(--color-success); }
   .gh-st .dot.warn { background: var(--warn); }
   .gh-st .dot.off { background: var(--color-text-muted); }
   .gh-sep { color: var(--color-text-muted); }
@@ -894,6 +896,7 @@
    a esos 16 y el texto queda a 30px — que es exactamente lo que midieron los checks 21 y 22 en rojo,
    y que se leía como "es fiel a la web, la web tiene dos bordes". No: eran los 16 del admin abajo de
    todo. Un borde heredado que se parece al hallazgo que uno espera es la peor clase de falso verde. */
+:root, .device { --gut: 14px; }   /* la quilla de la web, disponible también fuera de `.pg` (la franja) */
 .pg { --gut: 14px; padding-left: 0; padding-right: 0; padding-bottom: 0; }
 .pg .wrap { padding-left: var(--gut); padding-right: var(--gut); }
 
@@ -1107,6 +1110,10 @@
   border: 1px solid var(--color-border); border-radius: 10px; background: none; cursor: pointer; font-family: var(--font-sans); }
 .pg .seg button .rd { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--stroke); flex-shrink: 0;
   margin-top: 2px; display: grid; place-items: center; }
+/* el anillo de foco del UA salía NEGRO sobre la primera opción al autoenfocar — un color que no está
+   en la paleta, encima del control decidido. La convención del proyecto es el mismo anillo que usan
+   `.opt`, `.frow` y `.sh-x`: 2px del primario, hacia adentro. */
+.pg .seg button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 .pg .seg button[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-accent-bg); }
 .pg .seg button[aria-pressed="true"] .rd { border-color: var(--color-primary); }
 .pg .seg button[aria-pressed="true"] .rd::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--color-primary); }
@@ -1160,7 +1167,70 @@
 .kebab::before { content: ""; position: absolute; inset: -4px; }
 .kebab:active, .kebab[aria-expanded="true"] { background: var(--color-surface-2); }
 
+/* ============================================================================
+   RONDA 4 — EL ESTADO, EXPLÍCITO EN LA PÁGINA
+   *"for 'state', that should be explicit, not something to figure out on the
+   bottom sheet open from the 3 menu dots at top."*
+
+   MEDIDO ANTES DE DIBUJAR, y es peor de lo que la ronda 2 había contado: un
+   juego publicado y uno retirado renderizaban una página BYTE-IDÉNTICA. Mismo
+   texto, mismo PNG, 92.885 bytes los dos. El estado sólo existía adentro de la
+   hoja del ⋮.
+
+   Y la causa es la misma que la ronda 2 ya había nombrado: la ficha pública no
+   muestra el estado, así que espejarla lo borró. `status` es el CUARTO campo
+   huérfano, después de `units`, `shelf` e `is_expansion` — y es el peor de los
+   cuatro, porque no es un dato más: CALIFICA LA PREMISA ENTERA DE LA PÁGINA.
+   Para un retirado, "así se ve en la web" es falso: no se ve en ninguna parte.
+
+   Por eso no va como una fila más entre las otras. Va como una franja bajo la
+   barra, que es lo único que puede hablar de la página entera — y dice lo que
+   el estado SIGNIFICA, no sólo su nombre. La frase se reusa textual de 075:941,
+   donde ya existía para el diagnóstico de BGG. */
+/* `align-items: center` sobre un texto que envuelve a dos renglones centra el punto verticalmente
+   contra el bloque entero y lo saca de la línea de la palabra que califica. Y el punto NO SE VEÍA:
+   `.dot` no declara `flex-shrink`, así que en un flex apretado se encogía a 0 de ancho — la tercera
+   vez en este linaje que un punto de estado desaparece sin que ningún check lo note, después del
+   transparente de la 078 y del naranja de hace diez minutos.
+   El punto se alinea a la primera línea, no se encoge, y la franja usa la quilla de 14 de la página
+   en vez de un padding propio. */
+.stbar { flex-shrink: 0; display: flex; align-items: baseline; gap: 8px; padding: 10px var(--gut, 14px); font-size: 13px;
+  line-height: 1.35; background: var(--color-surface); border-bottom: 1px solid var(--color-border); color: var(--color-text); }
+.stbar .dot { flex-shrink: 0; align-self: center; }
+.stbar .t { min-width: 0; }
+.stbar[hidden] { display: none; }
+.stbar .n { font-weight: 600; }
+.stbar .w { color: var(--color-text-muted); }
+/* un retirado NO se dibuja igual que un publicado: la franja es el único lugar donde la página puede
+   decir que lo que muestra abajo no está en ningún lado. D-19h manda (punto + texto, nunca un pill),
+   así que el peso extra va en el fondo de la franja, no en una cápsula alrededor del estado. */
+.stbar.off { background: color-mix(in srgb, var(--warn) 14%, var(--color-bg)); border-bottom-color: color-mix(in srgb, var(--warn) 38%, var(--color-bg)); }
+.stbar.off .w { color: var(--color-text); }
+
+/* ---------- EL PUNTO SALÍA NARANJA Y DESPUÉS DESAPARECIÓ ----------
+   `.dot` trae `background: #D9892B` de base (078:246) y sus modificadores estaban escritos SÓLO bajo
+   `.gh-st` (078:627-629). Al espejar la ficha ese contenedor desapareció, así que `Publicado` dibujaba
+   un punto NARANJA — un color de advertencia sobre un estado sano. Se definen acá sin depender de él.
+   Y `.dot` tampoco declara `display`, así que un `<span>` vacío en un flex se queda en `inline` y el
+   alto y el ancho no aplican: 0px de ancho, invisible. TERCERA VEZ en este linaje que un punto de
+   estado desaparece sin que ningún check lo note — transparente en la 078, naranja y después de ancho
+   cero acá. Por eso el check 40 lee el rect Y el color resuelto, nunca la existencia del nodo. */
+.dot { display: inline-block; }
+.dot.ok { background: var(--color-success); }
+.dot.warn { background: var(--warn); }
+.dot.off { background: var(--color-text-muted); }
+
 .cysheet .opt.dan .on2 { color: var(--color-danger); }
+
+/* ---------- EL PUNTO SALÍA NARANJA, Y ES LA MISMA FAMILIA QUE EL PUNTO INVISIBLE DE LA 078 ----------
+   `.dot` tiene un `background: #D9892B` de base (078:246) y sus modificadores estaban escritos SÓLO
+   bajo `.gh-st .dot.ok` (078:627-629). Al espejar la ficha desapareció `.gh-st`, así que `Publicado`
+   dibujaba un punto NARANJA — un color de advertencia sobre un estado sano — y ningún check lo miró
+   porque los checks contaban nodos. La 078 perdió una ronda con la versión invisible de esto mismo.
+   Los modificadores se definen acá, sin depender del contenedor. */
+.dot.ok { background: var(--color-success); }
+.dot.warn { background: var(--warn); }
+.dot.off { background: var(--color-text-muted); }
 </style>
 </head>
 <body>
@@ -1174,6 +1244,7 @@
 
 <div class="stage"><div class="device" id="device">
   <div class="tbar" id="tbar"></div>
+  <div class="stbar" id="stbar"></div>
   <div class="scroller" id="scroller"><main id="main" class="pg"></main></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
   <div class="backdrop" id="backdrop"></div>
@@ -1285,6 +1356,9 @@ const FIELD = {
 
 function renderPage() {
   const b = bandOf();
+  /* el estado del ciclo. La ronda 2 lo había perdido al espejar la ficha — la ficha pública no lo
+     muestra — y con él se perdió la única diferencia visible entre un publicado y un retirado. */
+  const st = CYC[G.status];
   const dots = n => `<span class="dots">${[1,2,3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
   const cover = G.hasCover
     ? `<img src="${esc(G.cover)}" alt="">`
@@ -1371,6 +1445,13 @@ function renderPage() {
     }
   }
 
+  /* la franja de estado. `Así se ve en la web` es textual de 075:941, donde ya decía exactamente esto
+     sobre otro problema — no es una frase nueva. */
+  const stb = $('#stbar');
+  stb.className = 'stbar' + (G.status === 'published' ? '' : ' off');
+  stb.innerHTML = `<span class="dot ${st.k}"></span><span class="t"><span class="n">${esc(st.n)}</span> `
+    + `<span class="w">${G.status === 'published' ? 'Así se ve en la web.' : 'No se ve en la web ni está en el estante.'}</span></span>`;
+
   /* la barra: `‹ · título · ⋮`. El ⋮ es el ÚNICO control — `Guardar` bajó al pie. */
   $('#tbar').innerHTML = `<button class="tb-back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
     <span class="tb-t">${esc(G.name)}</span>
@@ -1379,14 +1460,28 @@ function renderPage() {
 
 let DESC_OPEN = false, FLAT = false;
 
+/* ---------- EL CHROME DE LA HOJA, COPIADO DE LA 078 EN VEZ DE ESCRITO A MANO ----------
+   La primera versión armó su propio marcado: un `<h2>` suelto y un `.sh-hr` que no existe en la hoja
+   de estilos. Resultado, visible apenas se abrió una hoja: el título con los estilos del UA (enorme),
+   el `✕` en su propia línea debajo en vez de a la derecha en la misma fila, sin agarradera y sin el
+   divisor que separa la cabecera del cuerpo. Todo estaba definido — `.sh-top`, `.grab`, `.sh-head`,
+   `.sh-txt`, `.sh-title`, `.sh-sub`, `.sh-x` — y yo no lo usé.
+
+   Es la forma que este linaje ya nombró dos veces: leer la prosa de una decisión en vez de su
+   artefacto. Acá ni siquiera había que leer nada: había una función. Ésta es esa función, textual. */
+function sheetChrome(head, body) {
+  return `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}
+      <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
+}
+
 /* ---------- H · en hoja: el MISMO control, montado en una hoja (d33) ---------- */
 function openFieldSheet(k) {
   const f = FIELD[k]; if (!f) return;
   const sh = $('#sheet');
   sh.className = 'sheet form';
-  sh.innerHTML = `<div class="sh-head"><div class="sh-hr"><h2>${esc(f.label)}</h2>
-    <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>
-    <div class="sh-body"><div class="inl" data-inl="${k}">${f.ctl()}</div></div>`;
+  sh.innerHTML = sheetChrome(
+    `<div class="sh-txt"><div class="sh-title">${esc(f.label)}</div></div>`,
+    `<div class="sh-body"><div class="inl" data-inl="${k}">${f.ctl()}</div></div>`);
   sh.classList.add('open'); $('#backdrop').classList.add('open');
   /* el teclado sólo se simula para los campos de texto — un `.seg` no lo levanta, y simularlo
      igual haría que el check del pliegue midiera un teclado que no existiría. */
@@ -1398,15 +1493,16 @@ function openFieldSheet(k) {
 function openCycleSheet() {
   const acts = actions(G.status);
   const st = CYC[G.status];
+  /* el estado NO se repite en el cuerpo: lo dice el subtítulo de la cabecera, y desde la ronda 4 lo
+     dice la página. Tenerlo tres veces es la forma que la 077 contó cuando la fila y la hoja decían
+     lo mismo a 310px una de otra. */
   const body = `<div class="sh-body">
-    <div style="padding:2px 0 10px;font-size:13px;display:flex;align-items:center;gap:6px">
-      <span class="dot ${st.k}"></span>${esc(st.n)}</div>
     ${acts.map(a => `<button class="opt${a.dan ? ' dan' : ''}" data-cyc="${a.id}">
       <span class="ot"><span class="on2">${esc(a.label)}</span><span class="os">${esc(a.sub)}</span></span></button>`).join('')}</div>`;
   const sh = $('#sheet');
   sh.className = 'sheet cysheet';
-  sh.innerHTML = `<div class="sh-head"><div class="sh-hr"><h2>Ciclo del juego</h2>
-    <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
+  sh.innerHTML = sheetChrome(
+    `<div class="sh-txt"><div class="sh-title">Ciclo del juego</div><div class="sh-sub">${esc(st.n)}</div></div>`, body);
   sh.classList.add('open'); $('#backdrop').classList.add('open');
   $('#kebab').setAttribute('aria-expanded', 'true');
   setTimeout(() => sh.querySelector('.opt')?.focus(), 60);

@@ -1,11 +1,11 @@
 ---
 sketch: 079
 name: admin-lifecycle
-question: "r1 · ¿dónde vive la transición? · r2 · ¿qué dice que un bloque se edita? · r3 · ¿inline o en hoja?"
+question: "r1 · ¿dónde vive la transición? · r2 · ¿qué dice que un bloque se edita? · r3 · ¿inline o en hoja? · r4 · el estado, explícito"
 winner: "r1 · el ⋮ · r2 · tinte + lápiz sutil (síntesis A1+A2) · r3 abierta, la medición recomienda LA HOJA"
 tags: [admin, juegos, lifecycle, retire, menu, kebab, ficha, rhythm, d37, d42, d44, d47, D-19i, D-19j, 064, slice-4]
-rounds: 3
-status: PENDING REVIEW — r3 I/H, 31/31 (dos checks son COSTOS MEDIDOS: verde = el costo existe)
+rounds: 4
+status: PENDING REVIEW — r3 I/H sin decidir; r4 arregló la hoja y el estado. 38/38.
 ---
 
 # Sketch 079: dónde vive la transición de ciclo
@@ -23,7 +23,7 @@ El alcance que trajo el desarrollador al intake:
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/079-admin-lifecycle/index.html
-node .planning/sketches/079-admin-lifecycle/verify.js     # 31/31
+node .planning/sketches/079-admin-lifecycle/verify.js     # 38/38
 ```
 
 **La página que abre es la RONDA 3** (I / H: inline o en hoja). Los toggles de las rondas 1 y 2 están
@@ -663,3 +663,122 @@ y es lo único de ese color **sin lápiz**.
   D-19i gobierna el chevron, no el lápiz, así que no lo prohíbe — pero hay que escribirlo como decisión.
 - **D-19j y la quilla siguen pisadas** (ronda 2) y siguen sin escribirse como decisión.
 - Todo lo abierto en las rondas 1 y 2 y en la 078 sigue abierto.
+
+
+---
+
+# Ronda 4 — la hoja rota, y el estado que el espejo había borrado
+
+> *"Be sure the bottom sheet looks correct, since now looks broken (not following same design that the
+> rest). and for 'state', that should be explicit, not something to figure out on the bottom sheet open
+> from the 3 menu dots at top."*
+
+Las dos cosas son defectos míos, no preguntas abiertas. Las dos se arreglaron y quedaron con guarda.
+
+## La hoja: no usé la función que ya existía
+
+La 078 tiene `sheetChrome(head, body)`, y yo armé el marcado a mano: un `<h2>` suelto y un `.sh-hr` que
+**no existe en la hoja de estilos**. Lo que se veía:
+
+```
+el título       con los estilos del UA, enorme, en vez de .sh-title 18/600
+el ✕            en su propia línea DEBAJO, en vez de a la derecha en la misma fila
+la agarradera   ausente
+el divisor      ausente
+```
+
+Todo estaba definido — `.sh-top`, `.grab`, `.sh-head`, `.sh-txt`, `.sh-title`, `.sh-sub`, `.sh-x` — y no
+lo usé. **Es la forma que este linaje ya nombró dos veces: leer la prosa de una decisión en vez de su
+artefacto.** Acá ni siquiera había que leer: había una función. Ahora es esa función, textual, y el
+check 44 asserta la estructura *y* la geometría que la rotura producía (`✕` en la misma fila y a la
+derecha, cero `<h2>` sueltos, título 18px/600).
+
+De paso: el anillo de foco de la primera opción salía **negro**, del UA, encima del control decidido.
+Ahora es el mismo anillo que usan `.opt`, `.frow` y `.sh-x`.
+
+## El estado: `status` es el CUARTO campo huérfano, y el peor
+
+Medido antes de dibujar:
+
+```
+un juego publicado y uno retirado renderizaban una página BYTE-IDÉNTICA
+mismo texto · mismo PNG · 92.885 bytes los dos
+```
+
+La causa es exactamente la que la ronda 2 ya había nombrado y yo no llevé hasta el final: **la ficha
+pública no muestra el estado, así que espejarla lo borró.** La ronda 2 contó tres huérfanos —`units`,
+`shelf`, `is_expansion`—; `status` es el cuarto.
+
+**Y es el peor de los cuatro, porque no es un dato más: califica la premisa entera de la página.** Para un
+retirado, *"así se ve en la web"* es falso — no se ve en ninguna parte. Por eso no va como una fila entre
+las otras: va como una franja bajo la barra, que es lo único que puede hablar de la página entera.
+
+```
+41   la franja está en y=56, 39px de alto, sin scrollear y sin nada encima
+42   y dice la CONSECUENCIA, no el nombre:
+     "Publicado · Así se ve en la web."
+     "Retirado · No se ve en la web ni está en el estante."
+```
+
+La frase es **textual de 075:941**, donde ya existía para el diagnóstico de BGG. No es una frase nueva.
+
+### El check que de verdad prueba algo es el negativo
+
+```
+40a  publicado vs retirado   diffPx 1.096.548 de 1.110.000 (99%)   ← mide el REFLOW, no la franja
+40b  sin la franja           diffPx 0                              ← esto sí
+```
+
+**El 99% no mide la franja: mide que la franja empuja todo lo de abajo.** Un número enorme sobre un
+reflow, y habría pasado igual con una franja en blanco. El 40b saca la franja y los dos estados vuelven a
+ser idénticos — que es a la vez la prueba de que la franja es lo único que lleva el estado, y la
+reproducción exacta del defecto que la ronda vino a arreglar.
+
+### Y el estado se dice una vez, no tres
+
+```
+43   una vez en la página, una en la cabecera de la hoja. El cuerpo de la hoja ya no lo repite.
+```
+
+Es la forma que la 077 contó cuando la fila y la hoja decían *"Trayendo datos de BGG"* a 310px una de otra.
+
+## El punto de estado desapareció TRES veces, de tres maneras distintas
+
+Vale escribirlo junto porque es el mismo defecto con tres causas, y **las tres veces los checks de conteo
+de nodos pasaron**:
+
+```
+078      transparente   `--color-accent` no existe en el tema (se renombró a --color-accent-bg)
+079 r4   naranja        los modificadores vivían bajo `.gh-st`, y el espejo borró ese contenedor,
+                        así que quedaba el `background: #D9892B` de base — advertencia sobre un estado sano
+079 r4   ancho cero     `.dot` no declara `display`, así que un `<span>` vacío se queda `inline`
+                        y el alto y el ancho no aplican
+```
+
+El check 40c ahora lee **el rect y el color resuelto**, nunca la existencia del nodo, y exige que los dos
+estados den colores distintos.
+
+## Y un defecto de mi propio parche, que encontró el navegador
+
+Al insertar la CSS de esta ronda, el `replace` matcheó `.dot.ok { … }` **como subcadena de
+`.gh-st .dot.ok { … }`**, así que todo el bloque quedó anidado bajo un selector huérfano: el navegador
+parseó `.gh-st .stbar`, la franja no tomaba ni el padding ni el `display: flex`, y el punto se quedaba
+`inline` con 0px de ancho. Se vio primero en la captura (el texto pegado al borde) y se confirmó
+enumerando `document.styleSheets`. **Un `replace` sobre un selector que es prefijo de otro es un editor
+de texto pretendiendo entender CSS.**
+
+## Open (ronda 4)
+
+- **La ronda 3 sigue abierta: I / H sin decidir** (la medición recomienda la hoja).
+- **La franja es la única respuesta dibujada.** Las otras dos no se construyeron y valen nombrarse: el
+  estado en la cabecera de la ficha (donde 075/078 lo habían decidido, pero ahí rompe el espejo) y una
+  fila en `DEL CLUB` sin lápiz (consistente con los otros tres huérfanos, pero a ~1000px de scroll — que
+  es justamente "algo que hay que ir a averiguar").
+- **La franja gasta 39px de chrome permanente en 434 de 435 casos.** Publicado es lo normal; la franja lo
+  anuncia igual. Si molesta, la alternativa es que sólo aparezca cuando el estado NO es publicado — pero
+  entonces su ausencia pasa a significar algo, y eso es más difícil de aprender que su presencia.
+- **El fondo de la franja para `retirado` usa `--warn`**, que sigue siendo un token local: `TODO(palette)`
+  #2, el mismo que 075 dejó abierto.
+- **El `Retirado` no tiene sección en la lista** (ronda 1) — la franja dice el estado en el editor, pero la
+  lista decidida sigue mandándolo a "Juegos del club" sin marca.
+- Todo lo abierto en las rondas 1, 2 y 3 y en la 078 sigue abierto.

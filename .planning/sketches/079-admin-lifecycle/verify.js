@@ -600,6 +600,116 @@ process.on('unhandledRejection', dump);
     + `y el teclado arranca en 448, así que ${kbd.I && kbd.I.tapado ? 'LO TAPA' : 'no lo tapa'}. Inline hereda la posición del bloque, `
     + `y el bloque está donde la ficha lo puso, no donde un campo de texto necesita estar.`);
 
+  /* ============================================================================
+     40-42 · RONDA 4 — EL ESTADO, EXPLÍCITO
+     Antes de la franja, un publicado y un retirado renderizaban una página
+     BYTE-IDÉNTICA: mismo texto, mismo PNG. El estado sólo vivía adentro de la
+     hoja del ⋮. La causa es la de la ronda 2: la ficha pública no muestra el
+     estado, así que espejarla lo borró.
+     ============================================================================ */
+  await setVar(page, 'H');
+  await hideTools(page);
+  const stShot = async st => { await setState(page, st); return page.screenshot({ clip: await deviceClip(page) }); };
+  const sPub = await stShot('published'), sRet = await stShot('retired');
+  fs.writeFileSync(path.join(OUT, 'r4-publicado.png'), sPub);
+  fs.writeFileSync(path.join(OUT, 'r4-retirado.png'), sRet);
+  const dSt = diffPNG(sPub, sRet);
+  ok(dSt.diffPx > 0,
+    `40a · publicado y retirado ya NO son la misma página: diffPx ${dSt.diffPx} de ${dSt.total} (${Math.round(dSt.diffPx / dSt.total * 100)}%) · `
+    + `maxDelta ${dSt.maxDelta}. OJO: ese porcentaje NO mide la franja — mide que la franja empuja todo lo de abajo. `
+    + `Un número enorme sobre un reflow. Lo que de verdad prueba el punto es el 40b.`);
+
+  /* 40b · EL CHECK QUE DE VERDAD IMPORTA: sacando la franja, los dos estados vuelven a ser
+     IDÉNTICOS. Eso prueba que la franja es lo ÚNICO que carga el estado — y, al mismo tiempo,
+     reproduce el defecto que esta ronda vino a arreglar. Un check que sólo dijera "las páginas
+     difieren" habría pasado igual con una franja en blanco. */
+  const bare = async st => { await setState(page, st);
+    await page.evaluate(() => { document.querySelector('#stbar').style.display = 'none'; });
+    const png = await page.screenshot({ clip: await deviceClip(page) });
+    await page.evaluate(() => { document.querySelector('#stbar').style.display = ''; });
+    return png; };
+  const dBare = diffPNG(await bare('published'), await bare('retired'));
+  ok(dBare.diffPx === 0,
+    `40b · NEGATIVO — sin la franja, publicado y retirado vuelven a ser IDÉNTICOS: diffPx ${dBare.diffPx} de ${dBare.total}. `
+    + `Ése es exactamente el defecto que esta ronda arregla, y es la prueba de que la franja es lo único que lleva el estado: `
+    + `la ficha espejada no lo dice en ninguna parte, porque la ficha pública tampoco.`);
+
+  /* 40b · y el punto se LEE: rect y color resuelto, nunca la existencia del nodo.
+     Tercera vez en este linaje que un punto de estado desaparece — transparente en la 078
+     (`--color-accent` no existía), naranja acá (los modificadores vivían bajo `.gh-st`, que el espejo
+     borró) y después de ANCHO CERO (`.dot` no declara `display`, así que un `<span>` vacío en un flex
+     se queda `inline` y el alto y el ancho no aplican). Las tres veces los checks de nodos pasaron. */
+  const dots = {};
+  for (const st of ['published', 'retired']) {
+    await setState(page, st);
+    dots[st] = await page.evaluate(() => {
+      const d = document.querySelector('#stbar .dot');
+      const r = d.getBoundingClientRect(), c = getComputedStyle(d);
+      return { w: Math.round(r.width), h: Math.round(r.height), bg: c.backgroundColor, display: c.display,
+        texto: document.querySelector('#stbar').textContent.replace(/\s+/g, ' ').trim() };
+    });
+  }
+  const vivo = d => d.w === 8 && d.h === 8 && !/rgba\(0, 0, 0, 0\)|transparent/.test(d.bg);
+  ok(vivo(dots.published) && vivo(dots.retired) && dots.published.bg !== dots.retired.bg,
+    `40c · el punto mide 8×8 y tiene color resuelto en los dos estados, y son DISTINTOS — `
+    + `publicado ${dots.published.bg} · retirado ${dots.retired.bg}`);
+
+  /* 41 · la franja está SOBRE el pliegue y sin scrollear: eso es lo que "explícito" quiere decir. */
+  const vis = await page.evaluate(() => {
+    const d = document.querySelector('#device').getBoundingClientRect();
+    const sb = document.querySelector('#stbar').getBoundingClientRect();
+    const hit = document.elementFromPoint(sb.left + sb.width / 2, sb.top + sb.height / 2);
+    return { top: Math.round(sb.top - d.top), alto: Math.round(sb.height), enPantalla: sb.bottom <= d.bottom,
+      tapada: !!(hit && !hit.closest('#stbar')), lineas: Math.round(sb.height / 18) };
+  });
+  await showTools(page);
+  ok(vis.enPantalla && !vis.tapada && vis.top < 100,
+    `41 · la franja está en y=${vis.top}, ${vis.alto}px de alto, sin scrollear y sin nada encima — `
+    + `no hay que abrir nada para saber el estado, que era el pedido`);
+
+  /* 42 · y NO dice sólo el nombre del estado: dice qué significa para ESTA página.
+     La frase es textual de 075:941, donde ya existía para el diagnóstico de BGG. */
+  ok(/Así se ve en la web/.test(dots.published.texto) && /No se ve en la web/.test(dots.retired.texto),
+    `42 · la franja dice la consecuencia, no el nombre — "${dots.published.texto}" / "${dots.retired.texto}". `
+    + `Para un retirado, la premisa de E3 ("así se ve en la web") es FALSA, y la franja es lo único que puede decirlo.`);
+
+  /* 43 · la hoja ya no repite el estado en su cuerpo: lo dice su subtítulo y lo dice la página.
+     Tenerlo tres veces es la forma que la 077 contó cuando la fila y la hoja decían lo mismo. */
+  await setState(page, 'published');
+  const veces = await page.evaluate(() => {
+    document.querySelector('#kebab').click();
+    const sheet = document.querySelector('#sheet').textContent;
+    const page_ = document.querySelector('#stbar').textContent;
+    document.querySelector('[data-act="close"]').click();
+    return { enHoja: (sheet.match(/Publicado/g) || []).length, enPagina: (page_.match(/Publicado/g) || []).length };
+  });
+  await atRest(page);
+  ok(veces.enHoja === 1 && veces.enPagina === 1,
+    `43 · el estado se dice una vez en la página y una en la cabecera de la hoja (${veces.enPagina} + ${veces.enHoja}), no tres`);
+
+  /* ---------- 44 · el chrome de la hoja es el de la 078, no uno escrito a mano ----------
+     Se rompió exactamente así: un `<h2>` suelto con los estilos del UA y un `.sh-hr` inexistente, o
+     sea título enorme y `✕` en su propia línea debajo. Se asserta la ESTRUCTURA, que es lo que
+     `sheetChrome` garantiza, más la geometría que la rotura producía. */
+  const chrome = await page.evaluate(() => {
+    document.querySelector('#main [data-edit="band"]').click();
+    const sh = document.querySelector('#sheet');
+    const t = sh.querySelector('.sh-title'), x = sh.querySelector('.sh-x'), g = sh.querySelector('.grab');
+    const tr = t.getBoundingClientRect(), xr = x.getBoundingClientRect();
+    return {
+      tieneTop: !!sh.querySelector('.sh-top'), tieneGrab: !!g, tieneTitulo: !!t,
+      h2sSueltos: sh.querySelectorAll('.sh-head h2').length,
+      tamaño: getComputedStyle(t).fontSize + '/' + getComputedStyle(t).fontWeight,
+      mismaFila: Math.abs((tr.top + tr.height / 2) - (xr.top + xr.height / 2)) < 22,
+      xADerecha: xr.left > tr.right
+    };
+  });
+  await page.evaluate(() => document.querySelector('[data-act="close"]')?.click());
+  await atRest(page);
+  ok(chrome.tieneTop && chrome.tieneGrab && chrome.h2sSueltos === 0 && chrome.tamaño === '18px/600' && chrome.mismaFila && chrome.xADerecha,
+    `44 · la hoja usa el chrome de la 078: agarradera ${chrome.tieneGrab}, título ${chrome.tamaño}, `
+    + `el ✕ en la MISMA fila (${chrome.mismaFila}) y a la derecha (${chrome.xADerecha}), cero <h2> sueltos`);
+
   /* ---------- 32 · sin errores de consola ---------- */
   ok(errs.length === 0, `32 · consola limpia${errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''}`);
 
