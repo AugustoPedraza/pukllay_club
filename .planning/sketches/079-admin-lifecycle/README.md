@@ -5,7 +5,7 @@ question: "r1 · ¿dónde vive la transición? · r2 · ¿qué dice que un bloqu
 winner: "el ⋮ arriba · tinte + lápiz sutil · la edición en una hoja (d33) · el estado explícito en una franja"
 tags: [admin, juegos, lifecycle, retire, menu, kebab, ficha, rhythm, d37, d42, d44, d47, D-19i, D-19j, 064, slice-4]
 rounds: 4 + decisión
-status: DECIDIDO 2026-09-22 — sin variantes en la página, 36/36 (no confirmado en dispositivo)
+status: DECIDIDO 2026-09-22 — sin variantes en la página, 36/36. NO confirmado en dispositivo, y con un hueco abierto: el `Guardar` del pie no escribe (ver Open)
 ---
 
 # Sketch 079: dónde vive la transición de ciclo
@@ -877,6 +877,24 @@ el CTA          Guardar, 52px, al pie del formulario
 
 ## Open
 
+- **EL `Guardar` DEL EDITOR NO ESCRIBE — hueco encontrado DESPUÉS de marcar el sketch como decidido, y
+  registrado acá en vez de dejarlo pasar (d47).** Cada hoja de campo commitea al cerrarse (`setField`
+  escribe en `G` y renderiza), y el CTA del pie sólo hace `snack('Cambios guardados')` (índex:1621). **Dos
+  puntos de commit y uno solo escribe.**
+
+  La 078 ronda 2 midió exactamente este eje — *la hoja guarda* (A) contra *la hoja prepara* (B) — y la
+  ronda 4 lo retiró… **pero lo retiró para la HOJA DEL BORRADOR, que tiene un solo CTA.** El editor se
+  quedó con los dos, y nadie decidió cuál manda. Las dos salidas son reales y excluyentes:
+
+  ```
+  la hoja escribe      el CTA del pie sobra y hay que borrarlo (y con él se va el
+                       patrón de `Publicar` que el desarrollador pidió)
+  la hoja prepara      vuelve el estado sucio, vuelve el confirmar-al-salir de 074,
+                       y el CTA nace muerto — la octava excepción a la 064
+  ```
+
+  **Hasta que se decida, el editor promete algo que no hace.** No se arregló acá porque elegir entre esas
+  dos es una ronda, no un parche.
 - **No confirmado en dispositivo.** En este linaje el dispositivo encontró ocho veces lo que el arnés no,
   y este sketch agregó cinco más que encontró la captura y no el número.
 - **`TODO(palette)`:** el tinte no se puede desambiguar sin tocar la paleta (`--color-primary` y
