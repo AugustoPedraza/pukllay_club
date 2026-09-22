@@ -46,11 +46,13 @@ GAP = 20
 WORDMARK_TEXT = "Pukllay Club"
 TAGLINE_TEXT = "Tu club de juegos de mesa modernos — Jujuy"
 
-# Hardcoded expectations. The parse below MUST agree with these, or the
-# generator refuses to run — this pair is what the ExUnit gates (Task 2)
-# read as ground truth for "did the generator's constant track app.css".
-EXPECTED_BACKGROUND_HEX = "#4A187F"
-EXPECTED_TAGLINE_HEX = "#DED4F3"
+# Hardcoded expected values, reviewed at generator-authoring time. These are
+# the pair Task 2's ExUnit gates read literally off this file's source (by
+# regex, not by importing/running Python) as ground truth for "did the
+# generator's constant track app.css". The live CSS parse below MUST agree
+# with these or the generator refuses to run.
+BACKGROUND_HEX = "#4A187F"
+TAGLINE_HEX = "#DED4F3"
 
 # Retired colours this re-bake must eliminate.
 RETIRED_BACKGROUND_HEX = "#551670"
@@ -89,31 +91,34 @@ def parse_css_var(css_text: str, var_name: str, within_light_theme: bool = False
     return match.group(1).upper()
 
 
-def load_colours():
+def verify_colours_match_css():
+    """Parse `--pk-ramp-800` and light `--color-base-300` out of app.css at
+    run time and fail loudly if either disagrees with the hardcoded
+    BACKGROUND_HEX/TAGLINE_HEX constants above. This is what makes the two
+    constants trustworthy for Task 2's ExUnit gate to read as a literal —
+    the generator itself refuses to bake a stale value."""
     css_text = APP_CSS_PATH.read_text(encoding="utf-8")
 
-    background_hex = parse_css_var(css_text, "pk-ramp-800", within_light_theme=False)
-    tagline_hex = parse_css_var(css_text, "color-base-300", within_light_theme=True)
+    parsed_background_hex = parse_css_var(css_text, "pk-ramp-800", within_light_theme=False)
+    parsed_tagline_hex = parse_css_var(css_text, "color-base-300", within_light_theme=True)
 
-    if background_hex != EXPECTED_BACKGROUND_HEX:
+    if parsed_background_hex != BACKGROUND_HEX:
         raise ValueError(
-            f"--pk-ramp-800 parsed as {background_hex}, expected {EXPECTED_BACKGROUND_HEX}. "
-            "app.css has drifted since this generator's constants were last reviewed -- "
-            "update EXPECTED_BACKGROUND_HEX (and the ExUnit gate reading it) deliberately, "
-            "do not silently accept a new value."
+            f"--pk-ramp-800 parsed as {parsed_background_hex}, but this generator's "
+            f"BACKGROUND_HEX constant says {BACKGROUND_HEX}. app.css has drifted since this "
+            "generator's constants were last reviewed -- update BACKGROUND_HEX (and the "
+            "ExUnit gate reading it) deliberately, do not silently accept a new value."
         )
-    if tagline_hex != EXPECTED_TAGLINE_HEX:
+    if parsed_tagline_hex != TAGLINE_HEX:
         raise ValueError(
-            f"light --color-base-300 parsed as {tagline_hex}, expected {EXPECTED_TAGLINE_HEX}. "
-            "app.css has drifted since this generator's constants were last reviewed -- "
-            "update EXPECTED_TAGLINE_HEX (and the ExUnit gate reading it) deliberately, "
-            "do not silently accept a new value."
+            f"light --color-base-300 parsed as {parsed_tagline_hex}, but this generator's "
+            f"TAGLINE_HEX constant says {TAGLINE_HEX}. app.css has drifted since this "
+            "generator's constants were last reviewed -- update TAGLINE_HEX (and the "
+            "ExUnit gate reading it) deliberately, do not silently accept a new value."
         )
 
-    return background_hex, tagline_hex
 
-
-BACKGROUND_HEX, TAGLINE_HEX = load_colours()
+verify_colours_match_css()
 
 
 def hex_to_rgb(hex_str: str) -> tuple[int, int, int]:

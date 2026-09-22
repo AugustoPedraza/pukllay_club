@@ -36,14 +36,22 @@ background.")
 also at realistic platform preview sizes (a ~300px WhatsApp bubble at `300/1200` scale, a ~340px
 X/Twitter card) directly below it. A bare 1200×630 image judged in isolation is misleading.
 
-**⚠ The shipped asset's background is now off-hue.** `og-fallback.webp` was baked on 2026-09-12
-at `#551670` — `--pk-ramp-800` *as it stood then*, at the old H313.1 ramp hue. Sketch 058 rotated
-the ramp to H300 later the same day, moving `--pk-ramp-800` to **`#4A187F`**. Verified: the
-shipped file's corner pixel is `#551670` and it has not been rebuilt (`git log` shows one commit,
-`6331f9a`). The per-game pipeline *was* updated for the rotation (`@og_card_background` is
-`"#7B2DCE"`, ramp-600 post-058). Regenerating this asset at `#4A187F` is an open follow-up. The
-tagline colour `#E3D3F0` is stale for the same reason — it was light theme's `--color-base-300`,
-now `#DED4F3`.
+**Re-baked 2026-09-22 (quick task 260922-pni) at the current ramp.** `og-fallback.webp` was
+originally baked on 2026-09-12 at `#551670` — `--pk-ramp-800` *as it stood then*, at the old
+H313.1 ramp hue — and went stale the same day when sketch 058 rotated the ramp to H300, moving
+`--pk-ramp-800` to `#4A187F` and light theme's `--color-base-300` from `#E3D3F0` to `#DED4F3`.
+The per-game pipeline was updated for that rotation at the time; this static asset was not, and
+the drift sat invisible for ten days until this task re-baked it. Both hexes now match
+`app.css` exactly, and two ExUnit gates (below) fail loudly if either drifts again.
+
+**The encoding also changed: lossless WebP (VP8L), not the original's lossy VP8.** The two
+retired colours differed from their replacements by as little as 1/255 per channel
+(`#E3D3F0` vs `#DED4F3`) — through lossy compression of antialiased text that difference is
+indistinguishable from compression noise, so a lossy asset's tagline colour cannot be verified
+by an exact-pixel gate. Lossless makes every baked colour exactly readable and makes re-runs
+byte-deterministic. Cost: the file grew from 14,330 bytes to roughly 10 KB when rendered fresh
+by the Pillow generator (smaller than the lossy original, since it carries no lossy-codec
+compression artifacts) — immaterial at OG-image scale either way.
 
 **Found while grounding the sketch (flagged, not fixed):** phase 01.8's D-07 calls the per-game
 letterbox background "the site's existing primary brand colour (`--color-primary` /
@@ -61,7 +69,7 @@ Every value below is the export's:
 ```css
 .og-card {
   width: 1200px; height: 630px;
-  background: #551670;                      /* --pk-ramp-800 at bake time; today's is #4A187F */
+  background: #4A187F;                      /* --pk-ramp-800, re-baked 2026-09-22 */
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 20px;
@@ -79,7 +87,7 @@ Every value below is the export's:
 }
 .og-card .tagline {
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-  color: #E3D3F0;                           /* light --color-base-300 at bake time */
+  color: #DED4F3;                           /* light --color-base-300, re-baked 2026-09-22 */
   font-size: 27px; font-weight: 400;
   letter-spacing: 0.01em; line-height: 1.3;
   text-align: center;
@@ -110,10 +118,23 @@ The wordmark is written in title case in the markup and uppercased by CSS
 (`text-transform: uppercase`), matching the header's own treatment.
 
 **Production pipeline:** the HTML above is a *design source*, not a runtime template. The shipped
-asset was composited pixel-for-pixel with Pillow (same `isologo-dark.png`, same self-hosted
-Bebas Neue / Inter, same 190px mark / 68px wordmark / 27px tagline / 20px gaps), exported as
-WebP, and its decoded dimensions verified at exactly 1200×630 through the app's own `image`/vix
-library before landing at `priv/static/images/og-fallback.webp`.
+asset is baked by a committed, re-runnable generator —
+`tools/og-fallback/generate_og_fallback.py` — which parses `--pk-ramp-800` and light
+`--color-base-300` straight out of `assets/css/app.css` at run time (never hardcodes them as its
+only source of truth), alpha-composites `isologo-dark.png`, draws the tracked Bebas Neue
+wordmark and Inter tagline the same 190px/68px/27px/20px geometry as always, saves losslessly,
+and self-verifies its own output (dimensions, exact background/tagline pixel census, absence of
+retired colours, ≥98.5% ink-mask agreement with the previously-shipped file) before exiting.
+Re-baking is one command:
+
+```
+python3 tools/og-fallback/generate_og_fallback.py
+```
+
+Its decoded dimensions are separately verified at exactly 1200×630 through the app's own
+`image`/vix library in `test/pukllay_club_web/structured_data_test.exs`
+(`describe "OG fallback asset (SHARE-04)"`), which also carries the two recurrence guards
+described below.
 
 ## What to Avoid
 
@@ -130,9 +151,15 @@ library before landing at `priv/static/images/og-fallback.webp`.
 - Don't assume `--color-primary` and `--pk-ramp-600` are the same thing when hardcoding a literal
   into an image pipeline. They are equal in dark theme only; light's primary is `--pk-ramp-900`.
   A static social image can't be theme-aware, so name the *ramp stop* you mean, not the role.
-- Don't change the ramp's hue without re-baking every static image built from it. This asset is
-  already stale for exactly that reason and the staleness is invisible until someone diffs a
-  pixel against the live CSS.
+- Don't change the ramp's hue without re-baking every static image built from it. This asset went
+  stale for exactly that reason once already (058's H300 rotation, 2026-09-12→2026-09-22), and
+  the staleness was invisible until someone diffed a pixel against the live CSS. **Operational
+  form of this lesson, as of the 2026-09-22 re-bake:** run
+  `python3 tools/og-fallback/generate_og_fallback.py` after any ramp change that touches
+  `--pk-ramp-800` or light `--color-base-300`. You no longer have to remember this by discipline
+  alone — `test/pukllay_club_web/structured_data_test.exs`'s SHARE-04 describe block now fails
+  `mix test` loudly if the shipped asset's background pixel drifts from `--pk-ramp-800`, or if the
+  generator's own `TAGLINE_HEX` constant drifts from light `--color-base-300`.
 
 ## Origin
 Synthesized from sketch: 057 (2 layout variants sharing a ramp-600/700/800/900 background
