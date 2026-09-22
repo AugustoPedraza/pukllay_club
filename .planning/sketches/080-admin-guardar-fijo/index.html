@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- sketch 080 -->
 <title>Sketch 079 — dónde vive la transición de ciclo</title>
 <!-- empty data: icon, same reason 078 gives: a favicon 404 is fetched by the browser, not the document,
      so it is invisible to page.on('response') and would only be removable by weakening the error check. -->
@@ -863,28 +862,24 @@
   .cta:active { filter: brightness(.92); }
   .cta[disabled] { background: var(--color-surface); color: var(--color-text-muted); cursor: default; box-shadow: inset 0 0 0 1px var(--color-border); }
 
-  /* ================= 080 · `Guardar` sube y se apila =================
-     La 079 dejó DOS puntos de commit y sólo uno escribía: cada hoja de campo commiteaba al cerrarse
-     (`setField`) y el `Guardar` del pie sólo hacía `snack()`. Medido antes de tocar nada: ese CTA
-     estaba en y=1453 de un cuerpo de 1434px — a 880px de scroll del reposo, la misma forma que el
-     hallazgo de la 075 ("no está demotado, está INALCANZABLE").
-     El desarrollador eligió `la hoja prepara, el pie escribe`, y lo movió arriba: una banda apilada
-     con `Guardar` habilitado o no según haya cambios. Esto reintroduce el estado sucio que d47 había
-     eliminado — a propósito, y escrito acá para que no se lea como un descuido. */
-  .sbar { flex-shrink: 0; padding: 12px var(--gut, 14px); background: var(--color-bg);
-    border-bottom: 1px solid var(--color-border); }
-  .sbar[hidden] { display: none; }
-  /* la lección de la 079: TODA clase que fija `display` lleva su compañero `[hidden]`. */
-  .sbar .cta, .stbar.merged .cta { margin-top: 0; }
-  /* B · una sola banda: la línea de estado arriba, el CTA apilado abajo, un solo borde y un solo fondo. */
-  .stbar.merged { display: block; padding-bottom: 12px; }
-  .stbar.merged .sline { display: flex; align-items: baseline; gap: 8px; }
-  .stbar.merged .sline .dot { align-self: center; }
-  .stbar.merged .cta { margin-top: 10px; }
-  /* mientras hay cambios sin guardar la franja NO puede seguir diciendo "Así se ve en la web":
-     sería falso justo cuando importa. El tinte es el mismo `--warn` de `.off`, más suave. */
-  .stbar.pend { background: color-mix(in srgb, var(--warn) 9%, var(--color-bg));
-    border-bottom-color: color-mix(in srgb, var(--warn) 30%, var(--color-bg)); }
+  /* ================= 080 · el `Guardar` del pie, FIJO =================
+     Medido antes de tocar nada, a 375×667: el CTA de la 079 estaba en y=1453 de un cuerpo de 1434px,
+     o sea **a 880px de scroll del reposo**. La misma forma que el hallazgo de la 075 — no está
+     demotado, está inalcanzable. Y la 079 ya lo había anotado sin resolverlo (README 5g, 23b).
+
+     NO es un patrón nuevo: la ficha pública lo resuelve así desde la fase 01.2 —
+     `.pk-mobile-cta-bar` (`app.css:5375`): `position: fixed`, `padding: .75rem 0`, `border-top`, y
+     `body.pk-has-cta-bar` reservando el alto abajo para que el último bloque no quede tapado.
+     E3 dice que el editor SE VE como la ficha, así que acá se reusa esa forma en vez de inventar una.
+     Los 148px que la web reserva son de SU barra (dos filas); acá la barra es una sola. */
+  .ctabar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 18;
+    padding: 12px var(--gut, 14px) calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-bg); border-top: 1px solid var(--color-border); }
+  .ctabar[hidden] { display: none; }   /* la regla de la 079: toda clase que fija layout lleva su `[hidden]` */
+  .ctabar .cta { margin-top: 0; }
+  /* el hueco que el cuerpo le reserva a la barra, para que el último bloque se pueda leer entero.
+     Se mide, no se estima: es el alto real de `.ctabar` + los 24px de aire que el cuerpo ya tenía. */
+  .pg.hasbar { padding-bottom: var(--barh, 88px); }
 
 </style>
 <style>
@@ -1169,21 +1164,12 @@
 #vnav button { font: inherit; padding: 6px 11px; border-radius: 7px; border: 1px solid #ffffff2e; background: none; color: #fff; cursor: pointer; }
 #vnav button.on { background: #fff; color: #1b1b1f; border-color: #fff; }
 .stage { padding-top: 58px; }
-/* ---------- `#vnav` TAPABA LA BARRA QUE ESTA RONDA ESTÁ DECIDIENDO ----------
-   Dos defectos encadenados, y ninguno de los 23 checks los vio; los encontró la captura y después
-   el hit-test.
-   (a) `#vnav` es `fixed` y con los tres botones mide 76,78 — más que los 46px que la 079 reservaba,
-       así que pisaba los primeros 2,8px de `.tbar`.
-   (b) Peor: al reservarlos con padding, `.stage` + un `.device` de `100vh` suman más que la ventana,
-       así que la PÁGINA quedó desplazable — y al aparecer la banda de `Guardar` el anclaje de scroll
-       de Chrome la movía 80px sola. Medido: `scrollY` 0 en HOY y **80 en A y B**, con la barra
-       quedando justo debajo del `#vnav`. O sea, el defecto aparecía SÓLO en las variantes nuevas,
-       que es la forma más fácil de leerlo como un costo de la variante en vez de un error del marco.
-   El device se achica lo que mide el `#vnav`, así que la página no se desplaza nunca y el hit-test
-   de `.tb-back` y `#kebab` da esos botones en los tres modos. */
+/* `#vnav` con botones mide más que los 46px que reservaba la 079 y pisaba `.tbar`; y `.stage` más un
+   `.device` de `100vh` pasaban de la ventana, dejando la PÁGINA desplazable bajo un `#vnav` fijo.
+   Se reserva su alto (42,4 medido) y el device se achica lo mismo, así que la página no se desplaza nunca. */
 @media (max-width: 430px) {
-  .stage { padding-top: 80px; }
-  .device { height: calc(100vh - 80px); }
+  .stage { padding-top: 44px; }
+  .device { height: calc(100vh - 44px); }
 }
 
 #tools { position: fixed; right: 10px; bottom: 10px; z-index: 9999; max-width: 340px;
@@ -1245,6 +1231,9 @@
    así que el peso extra va en el fondo de la franja, no en una cápsula alrededor del estado. */
 .stbar.off { background: color-mix(in srgb, var(--warn) 14%, var(--color-bg)); border-bottom-color: color-mix(in srgb, var(--warn) 38%, var(--color-bg)); }
 .stbar.off .w { color: var(--color-text); }
+/* mientras hay cambios sin guardar la franja no puede seguir afirmando lo que la web muestra. */
+.stbar.pend { background: color-mix(in srgb, var(--warn) 9%, var(--color-bg));
+  border-bottom-color: color-mix(in srgb, var(--warn) 30%, var(--color-bg)); }
 
 /* ---------- EL PUNTO SALÍA NARANJA Y DESPUÉS DESAPARECIÓ ----------
    `.dot` trae `background: #D9892B` de base (078:246) y sus modificadores estaban escritos SÓLO bajo
@@ -1276,16 +1265,15 @@
 
 <div id="vnav">
   <b>080 · r1</b>
-  <button data-var="HOY">HOY (079)</button>
-  <button data-var="A" class="on">A · dos bandas</button>
-  <button data-var="B">B · una banda</button>
+  <button data-var="HOY">HOY · en el flujo (079)</button>
+  <button data-var="FIJA" class="on">FIJA · al pie</button>
 </div>
 
 <div class="stage"><div class="device" id="device">
   <div class="tbar" id="tbar"></div>
   <div class="stbar" id="stbar"></div>
-  <div class="sbar" id="sbar" hidden></div>
   <div class="scroller" id="scroller"><main id="main" class="pg"></main></div>
+  <div class="ctabar" id="ctabar" hidden></div>
   <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
   <!-- el teclado simulado, de la 078. Sin él, `device.kbd` sube la hoja 292px y abajo queda un hueco
        vacío: la captura mostraba la hoja flotando y no se entendía por qué. El check 39 medía bien
@@ -1513,30 +1501,34 @@ function renderPage() {
   </div>`;
 
   $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
-  $('#main').className = 'pg' + (FLAT ? ' flat' : '');
+  $('#main').className = 'pg' + (FLAT ? ' flat' : '') + (MODE === 'FIJA' ? ' hasbar' : '');
+
+  /* la barra fija. `disabled` cuando no hay nada que guardar — que es lo que el desarrollador pidió
+     y, de paso, el conflicto con 064 (`sin botones deshabilitados`) asumido por elección explícita. */
+  const bar = $('#ctabar'), d = dirty();
+  bar.hidden = MODE !== 'FIJA';
+  bar.innerHTML = MODE === 'FIJA'
+    ? `<button class="cta" data-act="save"${d ? '' : ' disabled'}>Guardar</button>` : '';
+  /* el hueco se MIDE, no se estima: si se estima, el último bloque queda tapado por unos pocos
+     píxeles y ningún check lo nota. */
+  if (MODE === 'FIJA') document.documentElement.style.setProperty('--barh',
+    (bar.getBoundingClientRect().height + 24) + 'px');
 
   /* la franja de estado. `Así se ve en la web` es textual de 075:941, donde ya decía exactamente esto
      sobre otro problema — no es una frase nueva. */
-  const stb = $('#stbar'), sb = $('#sbar'), d = dirty();
-
-  /* LO QUE LA FRANJA NO PODÍA DECIR ANTES, y ahora tiene que decir.
-     `Así se ve en la web.` describe lo GUARDADO. Con el estado sucio de vuelta, mientras hay cambios
-     sin guardar esa frase es literalmente falsa: la web sigue sirviendo `SAVED` y la pantalla muestra
-     `G`. Es la misma forma que la 075 midió al revés — una frase que se queda quieta mientras abajo
-     cambió todo. La franja de la 079 se escribió para una página SIN estado sucio; devolverle el
-     estado sucio le debe una oración. */
-  const sentence = d
+  const stb = $('#stbar');
+  stb.className = 'stbar' + (G.status === 'published' ? '' : ' off');
+  /* LO QUE LA FRANJA NO PODÍA DECIR ANTES. `Así se ve en la web.` describe lo GUARDADO; con el
+     estado sucio de vuelta esa frase es falsa justo cuando importa — la web sirve `SAVED` y la
+     pantalla muestra `G`. La franja de la 079 se escribió para una página SIN estado sucio.
+     (Esto lo agregué yo, no salió de una decisión: queda marcado como tal en el README.) */
+  const pend = dirty();
+  const frase = pend
     ? (G.status === 'published' ? 'Tus cambios todavía no están en la web.' : 'Tus cambios todavía no están guardados.')
     : (G.status === 'published' ? 'Así se ve en la web.' : 'No se ve en la web ni está en el estante.');
-  const line = `<span class="dot ${st.k}"></span><span class="t"><span class="n">${esc(st.n)}</span> `
-    + `<span class="w">${sentence}</span></span>`;
-  const cta = `<button class="cta" data-act="save"${d ? '' : ' disabled'}>Guardar</button>`;
-
-  stb.className = 'stbar' + (G.status === 'published' ? '' : ' off') + (d ? ' pend' : '')
-    + (MODE === 'B' ? ' merged' : '');
-  stb.innerHTML = MODE === 'B' ? `<div class="sline">${line}</div>${cta}` : line;
-  sb.hidden = MODE !== 'A';
-  sb.innerHTML = MODE === 'A' ? cta : '';
+  stb.classList.toggle('pend', pend);
+  stb.innerHTML = `<span class="dot ${st.k}"></span><span class="t"><span class="n">${esc(st.n)}</span> `
+    + `<span class="w">${frase}</span></span>`;
 
   /* la barra: `‹ · título · ⋮`. El ⋮ es el ÚNICO control — `Guardar` bajó al pie. */
   $('#tbar').innerHTML = `<button class="tb-back" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
@@ -1547,23 +1539,23 @@ function renderPage() {
 let DESC_OPEN = false, FLAT = false;
 
 /* ================= 080 · el borrador y lo guardado =================
-   `G` pasa a ser EL BORRADOR: es lo que la página muestra y lo que las hojas escriben. `SAVED` es
-   lo último commiteado — lo que la web está sirviendo ahora. `Guardar` copia uno sobre el otro.
+   El desarrollador eligió `la hoja prepara, el pie escribe`. `G` pasa a ser EL BORRADOR (lo que la
+   página muestra y lo que las hojas escriben) y `SAVED` es lo último commiteado — lo que la web
+   sirve ahora. `Guardar` copia uno sobre el otro.
    No hay un segundo objeto para el cuerpo: la 079 ya renderiza `G` entero, y duplicarlo era la vía
-   más corta a que la franja y la ficha leyeran valores distintos (el defecto que `setField` existe
-   para evitar, 079:1623).
-   Los campos son los SIETE editables del editor. `status` no está: lo cambia el ⋮ y commitea solo —
-   despublicar no es un borrador, es una acción de página. */
+   más corta a que la franja y la ficha leyeran valores distintos — el defecto que `setField` existe
+   para evitar (079:1623).
+   `status` no está entre los campos: lo cambia el ⋮ y commitea solo. Despublicar no es un borrador,
+   es una acción de página. */
 const DRAFT_KEYS = ['name', 'description', 'weight_band', 'shelf', 'units', 'is_expansion', 'hasCover'];
 const snap = () => JSON.stringify(DRAFT_KEYS.map(k => G[k]));
-let SAVED = null;                       /* se siembra en el arranque, después de construir G */
+let SAVED = null, BASE = null;
 const dirty = () => SAVED !== null && snap() !== SAVED;
 const commit = () => { SAVED = snap(); };
-let MODE = 'A';                         /* HOY | A | B — sólo cambia el CHROME, no el modelo */
-/* `G` es `const` en la 079, así que descartar no puede reasignar el objeto: restaura los siete
-   campos sobre el mismo `G`, que es además lo que hará el server (un changeset, no un reemplazo). */
-let BASE = null;
+/* `G` es `const` en la 079, así que descartar no reasigna el objeto: restaura los siete campos sobre
+   el mismo `G` — que es además lo que hará el server (un changeset, no un reemplazo). */
 const restore = () => { const b = JSON.parse(BASE); DRAFT_KEYS.forEach((k, i) => { G[k] = b[i]; }); };
+let MODE = 'FIJA';                      /* HOY | FIJA — sólo cambia DÓNDE vive el CTA */
 
 /* ---------- EL CHROME DE LA HOJA, COPIADO DE LA 078 EN VEZ DE ESCRITO A MANO ----------
    La primera versión armó su propio marcado: un `<h2>` suelto y un `.sh-hr` que no existe en la hoja
@@ -1589,9 +1581,7 @@ function setField(k, raw) {
   else if (k === 'name') G.name = ($('#f-name').value || '').trim() || G.name;
   else if (k === 'description') G.description = ($('#f-desc').value || '').trim() || G.description;
   EDITING = null;
-  /* HOY es la 079 textual: la hoja ESCRIBE y no hay nada sucio que guardar. En A y B la hoja sólo
-     prepara — el borrador queda distinto de lo guardado y `Guardar` se habilita. */
-  if (MODE === 'HOY') commit();
+  if (MODE === 'HOY') commit();   /* HOY es la 079 textual: la hoja escribe y nunca hay nada sucio */
   closeSheet(); render();
 }
 
@@ -1671,9 +1661,9 @@ function runAction(id) {
 
 function render() {
   renderPage();
-  $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === MODE));
   $$('#tools [data-cy]').forEach(b => b.classList.toggle('on', b.dataset.cy === G.status));
   $$('#tools [data-cov]').forEach(b => b.classList.toggle('on', (b.dataset.cov === '1') === G.hasCover));
+  $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === MODE));
   const n = actions(G.status).length;
   $('#now').textContent = `${CYC[G.status].n} · ${$$('#main .ed').length} bloques editables`
     + (EDITING ? ` · hoja: ${EDITING}` : '');
@@ -1701,13 +1691,12 @@ document.addEventListener('click', e => {
      si cayera al `[data-edit]` abriría el editor de la descripción en vez de expandirla. */
   if (e.target.closest('[data-act="desctog"]')) { DESC_OPEN = !DESC_OPEN; render(); return; }
   if (e.target.closest('[data-act="save"]')) {
-    if (MODE !== 'HOY' && !dirty()) return;      /* deshabilitado: no hay nada que guardar */
+    if (MODE !== 'HOY' && !dirty()) return;
     commit(); render(); return snack('Cambios guardados');
   }
 
-  /* EL CONFIRMAR-AL-SALIR VUELVE, y es el precio escrito de esta ronda.
-     d47 lo había eliminado junto con el estado sucio; `la hoja prepara` lo trae de vuelta porque
-     ahora salir puede perder trabajo. Usa el diálogo de D-19f, que es donde toda pérdida se confirma
+  /* EL CONFIRMAR-AL-SALIR VUELVE, y es el precio escrito de elegir `la hoja prepara`: d47 lo había
+     eliminado junto con el estado sucio. Usa el diálogo de D-19f, donde toda pérdida se confirma
      desde la decisión 42 de la 069. En HOY no existe: ahí nunca hay nada sin guardar. */
   if (e.target.closest('.tb-back')) {
     if (!dirty()) return snack('Volver a Juegos');
@@ -1736,8 +1725,7 @@ $('#scroller').addEventListener('scroll', () => {
   $('#tbar').classList.toggle('titled', $('#scroller').scrollTop > 46);
 });
 
-/* se siembran DESPUÉS de construir `G`, no antes: `snap()` lo lee. */
-BASE = snap(); commit();
+BASE = snap(); commit();   /* después de construir `G`: `snap()` lo lee */
 render();
 </script>
 </body>
