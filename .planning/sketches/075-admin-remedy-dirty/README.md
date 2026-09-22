@@ -1,11 +1,11 @@
 ---
 sketch: 075
 name: admin-remedy-dirty
-question: "Where does the remedy live while the editor is dirty and the CTA slot is taken?"
+question: "r1-r3 — where does the remedy live while the editor is dirty and the CTA slot is taken? · r4 — the slot is gone: where does it live AT ALL?"
 winner: null
-tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, d29, d40, dirty-state, palette]
-rounds: 3
-status: PENDING REVIEW
+tags: [admin, editor, remedy, bgg, d42, d38, d33, d44, d47, d64, d29, d40, dirty-state, palette, 079, 080, premise-change]
+rounds: 4
+status: PENDING REVIEW — round 4 rebuilt on 079+080's decided chrome, 26/26. A · el cuerpo and B · el pie on the page; the r1-r3 premise is gone (see round 4)
 ---
 
 # Sketch 075: the remedy while dirty
@@ -15,20 +15,23 @@ The slice decision 42 deferred on purpose:
 > **Deferred, deliberately not varied:** what happens to the remedy **while dirty** (all variants hide it —
 > mid-edit the thing to do is finish the edit). Its own round.
 
+> **Read round 4 first.** The page was rebuilt on the chrome 079 and 080 decided, and rounds 1–3's
+> premise — one CTA slot, taken by `Guardar` while dirty — no longer exists. The variants V1–V4
+> described below are **not on the page any more**; their measurements stand as the record of how the
+> question got here, and their numbers are what round 4's two homes had to beat.
+
 ## How to view
 
 ```
 python3 -m http.server 8765          # from the repo root
 open http://127.0.0.1:8765/.planning/sketches/075-admin-remedy-dirty/index.html
-node .planning/sketches/075-admin-remedy-dirty/verify.js     # 48/48
+node .planning/sketches/075-admin-remedy-dirty/verify.js     # 26/26
 ```
 
-Variants on screen: **V1 Nada** (opens — the incumbent), **V2 En el diagnóstico**, **V3 Fila BGG**,
-**V4 El diagnóstico ES el remedio** (round 2), and **HOY** (073's three-piece chrome, the baseline every negative test is written against). To reach the
-state the round is about: pick a broken state, then tap **Es una expansión** and change it.
-
-074's `W1`/`W2` weight tabs are gone — d46 settled the weight and what is on screen is the decision, not a
-menu of them.
+On screen: **HOY · 079+080** (the shipping chrome — the baseline every negative test is written
+against, and the state where the remedy is reachable from nowhere), **A · el cuerpo**, **B · el pie**.
+The `Forma (A)` toggle in the tools panel switches A between `banda` and `botón`. To reach the state
+rounds 1–3 were about: pick a broken game, then tap **Es una expansión** and change it.
 
 ---
 
@@ -384,3 +387,198 @@ they cannot be set separately by mistake.
 - **064's `no disabled buttons` gets worse, not better** — 1 dead slot becomes 4. That conflict was
   already open after 074 and this widens it.
 - Everything in rounds 1 and 2's Open lists still stands, including `Borrar el ID`.
+
+---
+
+## Round 4 — the question dissolved, and what replaced it
+
+Opened by *"continue with 075"*, and the first thing the round did was check whether 075 still had a
+question. It does not — not as written.
+
+Rounds 1–3 asked **where the remedy lives while dirty and the one CTA slot is taken by `Guardar`**.
+That question needs a swapping slot. Two sketches landed after this one and removed it:
+
+| | 075 r1–r3 assumed (074's chrome) | decided since |
+|---|---|---|
+| header bar | one CTA slot swapping `Guardar` / `Publicar` / `Vincular` (d44) | `‹ · título · ⋮` — the ⋮ is the **only** control (079) |
+| `Guardar` | took the slot while dirty, displacing the remedy | **fixed footer bar**, natural width, right, disabled when clean (080) |
+| the remedy | displaced by `Guardar` | **never displaced — it has no home in the chrome at all** |
+
+Asserted rather than asserted about: the top bar carries **2** controls, `tb-back` and `kebab`, and
+neither is a remedy (check 1); `Guardar` sits at the foot and is *off* while clean, so it never takes
+a slot from anything (check 2).
+
+### The number the round opens with
+
+The remedy is not unreachable *while dirty*. Under the shipping chrome it is unreachable **full
+stop** — counted at both scroll extremes, on both broken states, clean and dirty:
+
+```
+no_bgg_id/limpio  0+0     bgg_missing/limpio  0+0
+no_bgg_id/sucio   0+0     bgg_missing/sucio   0+0      = 0 of 8
+```
+
+And the accusation is still there, word for word, in all four (check 4):
+
+> *"Este juego no está vinculado a BoardGameGeek. Por eso no tiene tapa, ni descripción, ni datos.
+> **Se está viendo así en la web.**"*
+
+**This is the configuration round 3's own check 27 declared must not ship** — `page` with no body
+home, the remedy reachable from nowhere. Round 3 wrote that guard against a hypothetical. It now
+fires against the decided chrome. That is the round's first result and it is not a preference.
+
+`failed` is not drawn: it has **0 rows**, so `Reintentar` reaches nobody today. Four situations, not
+six.
+
+### So the axis changed: not *while dirty*, but *where at all*
+
+Two homes, drawn on the decided chrome. The form question rounds 1–2 spent themselves on (a separate
+control vs the block itself) is a **toggle inside A**, not a third tab — the round's axis is *place*,
+and making form a tab would have crossed two axes in one list.
+
+| | **HOY** (shipping) | **A · el cuerpo** | **B · el pie** |
+|---|---|---|---|
+| reachable, 4 situations | **0 / 4** | 4 / 4 | 4 / 4 |
+| …at full scroll | 0 / 4 | — | **4 / 4** (fixed chrome) |
+| above the fold at rest | — | ✓ | ✓ (it *is* the fold) |
+| travel when the edit starts | — | **18px** — see below | **0** |
+| reachable twice while clean | — | **no** | **no** |
+| tap target | — | 319×59.5 = **18,990px²** | 5,078px² |
+
+### The charge rounds 2 and 3 fought over is gone, and not by anyone's decision
+
+Round 2 charged V4 with being reachable **twice** while clean; round 3 removed that with the `page`
+toggle and paid for it by reopening d42's rejected 4-of-8. Neither is needed: the bar has no CTA to
+duplicate into, so the count is **1, everywhere, in both variants, clean and dirty** (check 16). It
+is 0 by construction, not by argument — which also means round 3's `page`-vs-`swap` axis has nothing
+left to decide.
+
+### A's 18px of travel is the note's, not the remedy's
+
+A moves 18px down when the edit starts, and the round nearly charged it for that. Measured instead of
+eyeballed: 080's note grows from **39.5 → 57.1px** when it flips to *"Sin guardar · Tus cambios
+todavía no están en la web."* — one line to two. **18px, exactly** (check 6). The whole ficha moves;
+A is simply inside it. B does not move because the foot is chrome (check 13b), and that is the one
+measurable advantage B has over A.
+
+Charging A for it would have ranked the round on an effect of the drawing rather than on its own
+question — the trap this lineage has hit before.
+
+### B's cost is the inversion, back in a new container
+
+080 left the footer's left half free and named its owner (the `.ebar.inline` status line, 065) without
+building it. B puts the remedy there, and the picture is blunter than the number:
+
+```
+Guardar   261px² of outline   DISABLED     ← the primary
+Vincular  287px² of outline   live         ← the understudy
+```
+
+Both are 064's A1 outline, side by side, and while clean **the primary is the one you cannot press**
+(check 14). This is round 1's 0px²-vs-319px² inversion in a different container — and it collides
+head-on with 080's still-open *"dónde vive el pendiente"*, because that half already has an owner.
+B does not fill empty space; it takes occupied space.
+
+`Guardar` keeps the 14px keel 080 fixed (check 15).
+
+---
+
+## What building it found
+
+### The two shipped decisions say the same sentence, 16px apart, meaning opposite things
+
+Not A's fault and not B's — it is what the port surfaces. On a broken published game:
+
+```
+la nota (080)        « Publicado · Así se ve en la web. »
+el diagnóstico (075) « …ni datos. Se está viendo así en la web. »      16px below
+```
+
+One is reassurance, the other is the accusation the whole block exists to make, and they are the same
+words. Both blocks are decided; neither round could have seen it, because neither had the other on
+screen. Check 18 holds it so it cannot be forgotten.
+
+### `Nivel` disappeared, and no check could have noticed
+
+The first port hid the whole `.poster` panel on a broken game, on the reasoning that d38 drops the BGG
+block. But `Nivel` lives inside that panel and **is a club field** — one of d33's six, editable on a
+game with no data exactly like `Copias`. It was gone from the page, and every check passed: they
+counted the BGG block, not the six club rows. **The screenshot is what caught it** — the row simply
+was not there. Check 17 now reads it on all three broken states. Eighth time in this lineage.
+
+On the 49 it reads **`Sin nivel`**, which is the real state rather than an invented value.
+
+### The pixel diff was about to report my own CSS as an affordance — the same defect, third time
+
+`.st.tap` carried `padding: 6px 0`, so the block measured **71.5px** against the `<p>`'s **59.5**. The
+12px pushed the entire ficha down, and the diff-without-the-band came back at **7,057px** instead of 0
+— which reads as *"the variant paints something"* when all it does is sit lower.
+
+This is round 2's `font: inherit` / `line-height` defect exactly, and 079 hit a third version of it.
+Round 2 wrote the rule that fixes it and this round finally obeys it: **geometry is asserted before a
+single pixel is read** (check 8a — block 59.5 = 59.5, ficha y 247.1 = 247.1). With that in place the
+result round 2 found survives the new chrome unchanged:
+
+```
+with the band      85,574px different from doing nothing
+without the band        0px   — identical
+```
+
+The band is still the only thing that makes the diagnosis look like a control.
+
+### `ic('link')` drew the word `undefined`, and 080 had already written the warning
+
+080's icon map has no `link` — its own comment, two lines above, documents this exact trap with
+`tick`: a node present, sized, classed, and painting nothing. A check counting `.rmd svg` would have
+passed. The browser console caught it, not the harness. Check 11 reads the `<path>` inside.
+
+### The harness fabricated a failure by carrying scroll between cases
+
+A's first clean case measured **not tappable** while its dirty case measured tappable — on the same
+variant. Cause: the previous block ended with `scrollTop = scrollHeight`, and `go()` did not reset it,
+so the diagnosis was measured off-screen. A cost invented by state dragged between cases. `go()` now
+resets the scroll, and the reason is written where it happens.
+
+### Two smaller ones
+
+- **The tools panel grew into the variant nav** and ate the clicks: `#tools` inherits `top: 12px` from
+  an earlier rule and the later one only sets `bottom`, so with two new rows it stretched the full
+  height of the screen. Same family as the defect 080 found when it added its third button. Fixed with
+  `top: auto`, a 42vh ceiling, and `z-index` below the nav.
+- **A backtick inside an HTML comment inside a template literal** ended the literal and took the page
+  down with a `SyntaxError`. 080 left that warning twelve lines below where I hit it; I read it after.
+
+---
+
+## What to look for
+
+- Open **HOY** on `Sin ID · 41`. The page says the game is broken and *"se está viendo así en la web"*,
+  and there is nothing anywhere — top, body or foot — that acts on it. That is what ships today.
+- Read the top two blocks out loud. They say the same sentence 16px apart, one calmly and one not.
+- Switch to **A**. The diagnosis is now the control. Look at whether the sand band reads as *tappable*
+  or just as *coloured* — the harness can only tell you it is not identical to doing nothing.
+- Flip the **Forma** toggle to `botón` and back. Same place, 3.7× less target.
+- Switch to **B**. Look at the footer while clean: two outlined buttons, and the dead one is the
+  primary.
+- Change **Es una expansión** in A and watch the whole page drop 18px as the note grows.
+
+## Open (round 4)
+
+- **A and B are both one home; nothing in the measurements separates them on reachability.** What
+  separates them is B's 0px travel against A's 18px, versus B's inversion and its collision with
+  080's pendiente. That is a judgement, not a number.
+- **080's *"dónde vive el pendiente"* has to be answered before B can be chosen.** The footer's left
+  half cannot hold both the status line the system assigns it and the remedy.
+- **The duplicated sentence needs one of the two blocks to change.** Not this round's axis, and it is
+  a copy decision that belongs to whoever owns 080's note.
+- **`Nivel` now renders as a full white panel holding one pill** on a broken game — 130px of surface
+  for one chip, because the ficha's poster panel survives without its poster. Identical in all three
+  variants so it does not bias the comparison, but it is not right.
+- **Three stacked surfaces before the title in A** (note, band, Nivel panel). B has two.
+- **`Reintentar` is still undrawn** because `failed` has 0 rows. Unchanged from round 3.
+- **`Borrar el ID` is still not drawn.** Unchanged from round 2, and still a data decision.
+- **`TODO(palette)` #1 and #2 still stand.** `--val` and `--warn` are local tokens, inherited through
+  073/075/079/080 and owed upstream.
+- **064's `no disabled buttons` gets its most concrete case yet**: B puts a dead primary next to a live
+  secondary in one bar, 261px² against 287px². Still governed by no rule.
+- Not confirmed on a real device.
