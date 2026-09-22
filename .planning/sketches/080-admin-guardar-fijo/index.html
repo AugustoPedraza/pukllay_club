@@ -887,8 +887,8 @@
      Contra lo que esta barra traía, que es el `.cta` de la 078: **52px · radio 12 · 16/600**.
      Ese `.cta` de la 078 NO es una barra de página: vive adentro de una HOJA. Así que para este
      contenedor el único precedente real es el de la web. */
-  .ctabar.web { background: var(--color-surface); }
-  .ctabar.web .cta { min-height: 44px; border-radius: 4px; font-size: 14px; }
+  .ctabar.web { background: var(--color-bg); }
+  .ctabar.web .cta { min-height: 44px; font-size: 14px; }
 
   /* ---------- r3 · ¿tiene que ocupar todo el ancho? ----------
      `064` ya lo había contestado para este contenedor, y la barra traía otra cosa. Su tabla
@@ -929,34 +929,25 @@
        nada    el botón solo, fijo abajo a la derecha; el cuerpo pasa por debajo
        vela    sin borde ni relleno macizo: un desvanecido corto desde el fondo de la página, que
                despeja el texto sin dibujar un contenedor */
-  /* r5 · el divisor. Desarrollador: *"could be banda a lo ancho but not different color. Use a same
-     color that the background so this looks more like a «divisor»"*.
-     La banda sigue existiendo y sigue siendo opaca — que es lo que despeja el texto — pero deja de
-     ser una SUPERFICIE: toma el fondo de la página, así que lo único que se dibuja es la línea de
-     1px. Un divisor con un botón debajo, no una caja con un botón adentro.
-     Es la misma regla que la 069 usó para el carril del segmentado: *un tono, no un borde* — acá
-     llevada al extremo, ni siquiera un tono. */
-  .ctabar.divisor { background: var(--color-bg); border-top: 1px solid var(--color-border); }
-  .ctabar.bare { background: none; border-top: 0; pointer-events: none; }
-  .ctabar.bare .cta { pointer-events: auto; }
-  .ctabar.veil { background: linear-gradient(to top, var(--color-bg) 62%, transparent);
-    border-top: 0; pointer-events: none; }
-  .ctabar.veil .cta { pointer-events: auto; }
+  /* ---------- la barra: un DIVISOR a lo ancho, no una superficie ----------
+     Decidido en la r5. La banda es a lo ancho y **opaca** — que es lo que impide que el cuerpo se
+     cuele por detrás del botón — pero toma el fondo de la página, así que lo único que se dibuja es
+     su línea de 1px: un divisor con un botón debajo, no una caja con un botón adentro.
+     Medido antes de decidir, tinta del cuerpo dentro de la franja del botón con el cuerpo a scroll
+     700:  **divisor 0px · banda tonal 0px · vela 255 · sin banda 1456**. O sea que el divisor compra
+     exactamente lo mismo que la banda tonal sin agregar una superficie. Las otras tres se borraron.
+     Es la regla que la 069 usó para el carril del segmentado —*un tono, no un borde*— un paso más
+     allá: ni siquiera un tono. */
 
-  .ctabar.nat { display: flex; justify-content: flex-end; }
-  .ctabar.web .cta.nat { width: auto; padding: 0 16px; }
+  .ctabar { display: flex; justify-content: flex-end; }
+  .ctabar.web .cta { width: auto; padding: 0 16px; }
   /* contorno = A1 tal cual (`.obtn.pri` de la 069): el radio pasa a 8 porque es el de A1, no una
      elección aparte — el 4 era de daisyUI, que sólo aplica al relleno de la web. */
-  .ctabar.web .cta.out { background: var(--color-bg); border: 1px solid var(--color-primary);
+  .ctabar.web .cta { background: var(--color-bg); border: 1px solid var(--color-primary);
     color: var(--color-accent-text); border-radius: 8px; box-shadow: none; }
-  :root[data-theme="dark"] .ctabar.web .cta.out { border-color: var(--color-accent-text); color: var(--color-accent-text); }
-  .ctabar.web .cta.out[disabled] { border-color: var(--color-border); color: var(--color-text-muted); background: var(--color-bg); }
-  /* DEFECTO QUE TRAE ADOPTAR EL FONDO TONAL, medido: `.cta[disabled]` también es `--color-surface`,
-     así que dentro de esta barra el botón apagado queda a **1:1** — invisible salvo por su anillo de
-     1px. La barra real de la web nunca lo pisó porque su botón NUNCA se deshabilita ("Reservar para
-     el sábado" siempre está vivo); el nuestro sí, porque el desarrollador pidió habilitado/apagado.
-     El apagado toma el fondo de la página, que es lo único que contrasta contra la barra tonal. */
-  .ctabar.web .cta[disabled] { background: var(--color-bg); }
+  :root[data-theme="dark"] .ctabar.web .cta { border-color: var(--color-accent-text); color: var(--color-accent-text); }
+  .ctabar.web .cta[disabled] { border-color: var(--color-border); color: var(--color-text-muted); background: var(--color-bg); }
+
   /* el hueco que el cuerpo le reserva a la barra, para que el último bloque se pueda leer entero.
      Se mide, no se estima: es el alto real de `.ctabar` + los 24px de aire que el cuerpo ya tenía. */
   .pg.hasbar { padding-bottom: var(--barh, 88px); }
@@ -1333,9 +1324,9 @@
 <body>
 
 <div id="vnav">
-  <b>080 · r1</b>
+  <b>080 · DECIDIDO</b>
   <button data-var="HOY">HOY · en el flujo (079)</button>
-  <button data-var="FIJA" class="on">FIJA · al pie (44, r2)</button>
+  <button data-var="FIJA" class="on">Fijo al pie ★</button>
 </div>
 
 <div class="stage"><div class="device" id="device">
@@ -1355,9 +1346,6 @@
 </div></div>
 
 <div id="tools">
-  <div>Ancho: <button data-w="full">A lo ancho</button> <button data-w="nat" class="on">Natural, a la derecha</button></div>
-  <div>Tratamiento: <button data-t="fill">Relleno (078)</button> <button data-t="out" class="on">Contorno A1 (064)</button></div>
-  <div>Abajo: <button data-c="divisor" class="on">Divisor</button> <button data-c="band">Banda tonal</button> <button data-c="bare">Sin banda</button> <button data-c="veil">Vela</button></div>
   <div>Estado: <button data-cy="published" class="on">Publicado</button> <button data-cy="retired">Retirado</button></div>
   <div>Tapa: <button data-cov="1" class="on">Tiene</button> <button data-cov="0">Ninguna (los 49)</button></div>
   <div class="now" id="now"></div>
@@ -1590,10 +1578,9 @@ function renderPage() {
      y, de paso, el conflicto con 064 (`sin botones deshabilitados`) asumido por elección explícita. */
   const bar = $('#ctabar'), d = dirty();
   bar.hidden = MODE === 'HOY';
-  bar.className = 'ctabar' + (MODE === 'HOY' ? '' : ' web') + (WIDTH === 'nat' ? ' nat' : '')
-    + (CHROME === 'band' ? '' : ' ' + CHROME);
+  bar.className = 'ctabar' + (MODE === 'HOY' ? '' : ' web');
   bar.innerHTML = MODE !== 'HOY'
-    ? `<button class="cta${WIDTH === 'nat' ? ' nat' : ''}${TREAT === 'out' ? ' out' : ''}" data-act="save"${d ? '' : ' disabled'}>Guardar</button>` : '';
+    ? `<button class="cta" data-act="save"${d ? '' : ' disabled'}>Guardar</button>` : '';
   /* el hueco se MIDE, no se estima: si se estima, el último bloque queda tapado por unos pocos
      píxeles y ningún check lo nota. */
   if (MODE !== 'HOY') document.documentElement.style.setProperty('--barh',
@@ -1625,11 +1612,6 @@ const commit = () => { SAVED = snap(); };
    el mismo `G` — que es además lo que hará el server (un changeset, no un reemplazo). */
 const restore = () => { const b = JSON.parse(BASE); DRAFT_KEYS.forEach((k, i) => { G[k] = b[i]; }); };
 let MODE = 'FIJA';                      /* HOY | FIJA — sólo cambia DÓNDE vive el CTA */
-/* r3 · dos ejes independientes, no una lista de alternativas (si se dibujaran como pestañas se
-   perdería cuál de los dos está haciendo el trabajo). */
-let WIDTH = 'nat';                      /* full | nat   — a lo ancho, o su ancho natural a la derecha */
-let TREAT = 'out';                      /* fill | out   — relleno (078, hoja) o contorno A1 (064) */
-let CHROME = 'divisor';                 /* divisor | band | bare | veil — cuánto contenedor lleva */
 
 /* ---------- EL CHROME DE LA HOJA, COPIADO DE LA 078 EN VEZ DE ESCRITO A MANO ----------
    La primera versión armó su propio marcado: un `<h2>` suelto y un `.sh-hr` que no existe en la hoja
@@ -1738,9 +1720,6 @@ function render() {
   $$('#tools [data-cy]').forEach(b => b.classList.toggle('on', b.dataset.cy === G.status));
   $$('#tools [data-cov]').forEach(b => b.classList.toggle('on', (b.dataset.cov === '1') === G.hasCover));
   $$('#vnav [data-var]').forEach(b => b.classList.toggle('on', b.dataset.var === MODE));
-  $$('#tools [data-w]').forEach(b => b.classList.toggle('on', b.dataset.w === WIDTH));
-  $$('#tools [data-t]').forEach(b => b.classList.toggle('on', b.dataset.t === TREAT));
-  $$('#tools [data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === CHROME));
   const n = actions(G.status).length;
   $('#now').textContent = `${CYC[G.status].n} · ${$$('#main .ed').length} bloques editables`
     + (EDITING ? ` · hoja: ${EDITING}` : '');
@@ -1749,12 +1728,6 @@ function render() {
 document.addEventListener('click', e => {
   const md = e.target.closest('#vnav [data-var]');
   if (md) { MODE = md.dataset.var; if (MODE === 'HOY') commit(); closeSheet(); render(); return; }
-  const wd = e.target.closest('#tools [data-w]');
-  if (wd) { WIDTH = wd.dataset.w; render(); return; }
-  const tr = e.target.closest('#tools [data-t]');
-  if (tr) { TREAT = tr.dataset.t; render(); return; }
-  const ch = e.target.closest('#tools [data-c]');
-  if (ch) { CHROME = ch.dataset.c; render(); return; }
   const cy = e.target.closest('#tools [data-cy]');
   if (cy) { G.status = cy.dataset.cy; closeSheet(); render(); return; }
   const cv = e.target.closest('#tools [data-cov]');

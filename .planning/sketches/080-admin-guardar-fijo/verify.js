@@ -206,103 +206,71 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   ok(saved.snack !== null && saved.bar !== null && gap >= 0,
      `16 el snackbar queda por encima de la barra, con ${gap}px de aire (snack ${saved.snack && saved.snack.t}–${saved.snack && saved.snack.b} · barra desde ${saved.bar && saved.bar.t})`);
 
-  /* ---- r2 (DECIDIDA): la barra toma el tamaño de la barra fija REAL de la web, medida EN VIVO
-         contra `localhost:4000/juegos/10` a 375 — la misma ficha que E3 dice que el editor espeja:
-         barra 69px tonal · botón 44 · 14/600 · quilla 14 · reserva 148px en el body. ---- */
-  const WEBREF = { barH: 69, btnH: 44, font: '14px/600', gut: 14, barBg: 'rgb(241, 236, 253)' };
-  const B = M.FIJA.clean.barStyle;
-  /* el TAMAÑO es independiente del chrome, así que se asierta sobre el modo por defecto... */
-  ok(B.btnH === WEBREF.btnH && B.font === WEBREF.font && B.gut === WEBREF.gut,
-     `20 el botón toma el tamaño del de la web: ${B.btnH}px · ${B.font} · quilla ${B.gut}`);
-  /* ...y el fondo tonal sólo existe en `band`, así que se mide AHÍ y no en el modo por defecto,
-     que desde la r4 es `veil` y no tiene fondo. Medir el default habría reportado un contraste
-     contra `rgba(0,0,0,0)`, que no es un contraste contra nada. */
-  await go('FIJA');
-  await page.evaluate(() => { CHROME = 'band'; render(); }); await page.waitForTimeout(90);
-  const bandS = (await page.evaluate(probe)).barStyle;
-  ok(bandS.barH === WEBREF.barH && bandS.barBg === WEBREF.barBg && ratio(bandS.disBg, bandS.barBg) > 1.1,
-     `21 en \`banda\` reproduce la de la web (${bandS.barH}px · ${bandS.barBg}) y el apagado se distingue (${ratio(bandS.disBg, bandS.barBg)}:1; con el relleno de la web daba 1:1)`);
+  /* ================= la barra decidida (r2-r5) =================
+     Las variantes se borraron al elegirse, que es lo que este linaje hace. Los números que las
+     descartaron viven en el README; acá quedan las aserciones sobre lo que SÍ se eligió, más los
+     negativos que impiden que vuelva sola cualquiera de las tres formas descartadas.
 
-  /* ================= r3 · ¿tiene que ocupar todo el ancho? =================
-     DOS ejes independientes, barridos como 2×2 y no como cuatro pestañas: si fueran pestañas no se
-     podría ver cuál de los dos está haciendo el trabajo. */
-  const sweep = async (w, t, d) => { await go('FIJA'); if (d) await dirty();
-    await page.evaluate(([w, t]) => { WIDTH = w; TREAT = t; render(); }, [w, t]);
-    await page.waitForTimeout(90);
-    return page.evaluate(() => { const bar = document.querySelector('#ctabar'), btn = bar.querySelector('.cta');
-      const bt = btn.getBoundingClientRect(), rg = document.createRange(); rg.selectNodeContents(btn);
-      const cs = getComputedStyle(btn), bs = getComputedStyle(bar);
-      return { w: +bt.width.toFixed(1), h: +bt.height.toFixed(1), ink: +rg.getBoundingClientRect().width.toFixed(1),
-        radius: cs.borderRadius, bw: cs.borderTopWidth, bc: cs.borderTopColor, bg: cs.backgroundColor,
-        fg: cs.color, padL: cs.paddingLeft, font: cs.fontSize + '/' + cs.fontWeight,
-        right: +(375 - bt.right).toFixed(1), barBg: bs.backgroundColor, dis: btn.disabled }; }); };
+     Las referencias NO son de este sketch: se midieron EN VIVO contra la app corriendo
+     (`localhost:4000/juegos/10` a 375), sobre `.pk-mobile-cta-bar` — la barra fija de la misma ficha
+     que E3 dice que el editor espeja. Y la anatomía A1 sale de la tabla contexto × rol de `064`,
+     que para `save bar .eactions` dice Principal = **A1, last**. */
+  const bs = M.FIJA.clean.barStyle;
+  ok(bs.btnH === 44 && bs.font === '14px/600' && bs.gut === 14,
+     `20 el botón toma el tamaño del de la web: ${bs.btnH}px · ${bs.font} · quilla ${bs.gut}`);
 
-  const FF = await sweep('full', 'fill', false), NO = await sweep('nat', 'out', false);
-  const NOd = await sweep('nat', 'out', true), FFd = await sweep('full', 'fill', true);
-  const pct = x => +(x.ink / x.w * 100).toFixed(1);
+  const btn = await page.evaluate(() => { const b = document.querySelector('#ctabar .cta'),
+      bar = document.querySelector('#ctabar');
+    const cs = getComputedStyle(b), bc = getComputedStyle(bar), dev = getComputedStyle(document.querySelector('.device'));
+    const r = b.getBoundingClientRect(), br = bar.getBoundingClientRect();
+    const rg = document.createRange(); rg.selectNodeContents(b);
+    return { w: +r.width.toFixed(1), h: +r.height.toFixed(1), ink: +rg.getBoundingClientRect().width.toFixed(1),
+      padL: cs.paddingLeft, bw: cs.borderTopWidth, radius: cs.borderRadius, font: cs.fontSize + '/' + cs.fontWeight,
+      fill: cs.backgroundColor, right: +(br.right - r.right).toFixed(1),
+      barBg: bc.backgroundColor, pageBg: dev.backgroundColor, barBt: bc.borderTopWidth, barH: +br.height.toFixed(1) }; });
 
-  /* EL NÚMERO DE LA RONDA. La barra de la web da 47,1% de tinta porque su etiqueta es «Reservar para
-     el sábado» (163,5 de 347). La nuestra dice «Guardar»: 54,7. Copiar el ANCHO copió una caja
-     dimensionada para 23 caracteres sobre una de 7. */
-  ok(pct(FF) < 20 && pct(NO) > 55,
-     `22 tinta: a lo ancho ${pct(FF)}% · natural ${pct(NO)}% (la web real, con su etiqueta larga, da 47,1%)`);
+  /* A1 de 064, al píxel — y el negativo de «relleno»: su fondo es el de la página, no un macizo. */
+  ok(btn.h === 44 && btn.padL === '16px' && btn.bw === '1px' && btn.radius === '8px' && btn.font === '14px/600',
+     `21 el botón es A1 de 064: ${btn.h}px · padding ${btn.padL} · trazo ${btn.bw} · radio ${btn.radius} · ${btn.font}`);
+  ok(btn.fill === btn.pageBg, `22 no volvió el relleno de la 078: el botón es contorno sobre el fondo (${btn.fill})`);
 
-  /* `064` ya contesta este contenedor: save bar `.eactions` → Principal = **A1, last**; y en su tabla
-     un Principal a lo ancho es **never**. A1 = outlined 44 · 16px de padding · 1px · radio 8 · 14/600. */
-  ok(NO.h === 44 && NO.padL === '16px' && NO.bw === '1px' && NO.radius === '8px' && NO.font === '14px/600',
-     `23 natural+contorno reproduce A1 de 064: ${NO.h}px · padding ${NO.padL} · trazo ${NO.bw} · radio ${NO.radius} · ${NO.font}`);
-  ok(NO.right === 14 && NO.w >= 44,
-     `24 termina en la quilla (${NO.right}) y sigue por encima del piso de 44px (${NO.w}×${NO.h})`);
-  ok(NO.bc !== NOd.bc && ratio(NOd.fg, NOd.bg) > 4.5,
-     `25 contorno: el trazo cambia al habilitarse (${NO.bc} → ${NOd.bc}) y el texto da ${ratio(NOd.fg, NOd.bg)}:1`);
-  ok(ratio(FFd.fg, FFd.bg) > 4.5, `26 relleno habilitado: texto ${ratio(FFd.fg, FFd.bg)}:1`);
+  /* el negativo de «a lo ancho»: la tinta tiene que seguir llenando el botón. A lo ancho daba 15,8%
+     porque la caja era de 347 para una palabra de 54,7 — una forma dimensionada para la etiqueta de
+     la web («Reservar para el sábado», 47,1%), no para «Guardar». */
+  const pct = +(btn.ink / btn.w * 100).toFixed(1);
+  ok(pct > 55 && btn.w < 160, `23 el botón va a su ancho natural: ${btn.w}px, tinta ${pct}% (a lo ancho daba 15,8%)`);
+  ok(btn.right === 14, `24 termina en la quilla de 14 (${btn.right})`);
 
+  /* el negativo de «banda tonal» y de «sin banda»: la barra es opaca Y del color de la página. */
+  ok(btn.barBg === btn.pageBg && btn.barBt === '1px',
+     `25 la barra es un DIVISOR: toma el fondo de la página (${btn.barBg}) y sólo dibuja su línea (${btn.barBt})`);
 
-  /* ================= r4 · la nota, y cuánto contenedor lleva el botón =================
-     Desarrollador: *"the «status» label shouldn't be full width and fixed. Just a top «note» about
-     the status and that is all, following the same colors that the rest of the app"* y *"that bottom
-     bar for save feels balance breaker"*. */
+  /* y que sea opaca se prueba midiendo: 0 píxeles del cuerpo dentro de la franja del botón, con el
+     cuerpo scrolleado. Sin banda dejaba 1456px; la vela, 255. */
+  await go('FIJA'); await dirty();
+  await page.evaluate(() => { document.querySelector('#scroller').scrollTop = 700; });
+  await page.waitForTimeout(160);
+  const box = await page.evaluate(() => { const dev = document.querySelector('.device').getBoundingClientRect();
+    const bar = document.querySelector('#ctabar').getBoundingClientRect(), b = document.querySelector('#ctabar .cta').getBoundingClientRect();
+    return { x: Math.round(dev.x), y: Math.round(bar.y), w: Math.round(dev.width), h: Math.round(bar.height),
+      bx: Math.round(b.x - dev.x), bw: Math.round(b.width) }; });
+  const png = await page.screenshot({ clip: { x: box.x, y: box.y + 2, width: box.w, height: box.h - 2 } });
+  const img = decodePNG(png); let ink = 0;
+  /* el arnés corre a `deviceScaleFactor: 2`: la imagen viene al DOBLE de los px CSS con los que se
+     midió la caja del botón. Sin escalar, la ventana de exclusión cae mal y el propio botón se
+     cuenta como tinta del cuerpo — reportaba 3569 contra los ~1456 reales. La escala se deriva. */
+  const k = img.w / box.w;
+  for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) {
+    if (x >= (box.bx - 6) * k && x <= (box.bx + box.bw + 6) * k) continue;
+    const i = y * img.w * img.bpp + x * img.bpp;
+    if (Math.max(Math.abs(img.data[i] - 255), Math.abs(img.data[i + 1] - 255), Math.abs(img.data[i + 2] - 255)) > 28) ink++; }
+  ok(ink === 0, `26 el divisor es opaco: ${ink}px del cuerpo dentro de la franja del botón (sin banda dejaba 1456, la vela 255)`);
+
+  /* ---- la nota (r4): dentro del cuerpo, sin sangre, y sin colores inventados ---- */
   const N = M.FIJA.clean;
   ok(N.noteFixed === false, '30 la nota vive dentro del scroller: se va con el cuerpo, no es chrome fijo');
-  ok(N.noteBleed < 375 - 20, `31 la nota no va a sangre: mide ${N.noteBleed} en un device de 375 (respeta la quilla)`);
-  ok(N.warnOnScreen === 0, `32 nada en pantalla usa el \`--warn\` inventado: la nota sale sólo de la paleta (${N.warnOnScreen})`);
-
-  /* la medición que contesta lo de la banda: tinta REAL del cuerpo dentro de la franja que ocupa el
-     botón, fuera de su caja, con el cuerpo scrolleado a 700 (decodificando el PNG, no contando nodos
-     — contar nodos daba 66 para «sin banda» Y para «vela», que es justo lo que la vela arregla). */
-  const stripInk = async (chrome) => { await go('FIJA'); await dirty();
-    await page.evaluate(([c, y]) => { CHROME = c; render(); document.querySelector('#scroller').scrollTop = y; }, [chrome, 700]);
-    await page.waitForTimeout(160);
-    const box = await page.evaluate(() => { const dev = document.querySelector('.device').getBoundingClientRect();
-      const bar = document.querySelector('#ctabar').getBoundingClientRect(), btn = document.querySelector('#ctabar .cta').getBoundingClientRect();
-      return { x: Math.round(dev.x), y: Math.round(bar.y), w: Math.round(dev.width), h: Math.round(bar.height),
-        bx: Math.round(btn.x - dev.x), bw: Math.round(btn.width), opaque: getComputedStyle(document.querySelector('#ctabar')).backgroundImage !== 'none' || getComputedStyle(document.querySelector('#ctabar')).backgroundColor !== 'rgba(0, 0, 0, 0)' }; });
-    const png = await page.screenshot({ clip: { x: box.x, y: box.y + 2, width: box.w, height: box.h - 2 } });
-    const img = decodePNG(png); let ink = 0;
-    /* el arnés corre a `deviceScaleFactor: 2`, así que la imagen viene al DOBLE de los px CSS con los
-       que se midió la caja del botón. Sin escalar, la ventana de exclusión cae en el lugar
-       equivocado y el propio botón se cuenta como tinta del cuerpo: daba 3569 contra los 537 reales.
-       La escala se deriva de la imagen, no se asume. */
-    const k = img.w / box.w;
-    for (let y = 0; y < img.h; y++) for (let x = 0; x < img.w; x++) {
-      if (x >= (box.bx - 6) * k && x <= (box.bx + box.bw + 6) * k) continue;
-      const i = y * img.w * img.bpp + x * img.bpp;
-      if (Math.max(Math.abs(img.data[i] - 255), Math.abs(img.data[i + 1] - 255), Math.abs(img.data[i + 2] - 255)) > 28) ink++; }
-    return ink; };
-  const inkBare = await stripInk('bare'), inkVeil = await stripInk('veil'), inkDiv = await stripInk('divisor');
-  ok(inkBare > 300, `33 sin banda: ${inkBare}px de texto del cuerpo quedan dentro de la franja del botón`);
-  ok(inkVeil < inkBare / 4, `34 la vela borra ${(100 - inkVeil / inkBare * 100).toFixed(0)}% de eso (${inkBare} → ${inkVeil}px)`);
-  /* r5 · el divisor es OPACO, así que no deja pasar nada: es la banda sin ser una superficie. */
-  ok(inkDiv === 0, `35 el divisor no deja pasar nada del cuerpo (${inkDiv}px, midiendo bajo su línea de 1px)`);
-
-  /* y lo que lo distingue de la banda tonal: NO dibuja una superficie, sólo la línea. */
-  await go('FIJA'); await page.evaluate(() => { CHROME = 'divisor'; render(); }); await page.waitForTimeout(90);
-  const dv = await page.evaluate(() => { const bar = document.querySelector('#ctabar');
-    const cs = getComputedStyle(bar), body = getComputedStyle(document.querySelector('.device'));
-    return { bg: cs.backgroundColor, pageBg: body.backgroundColor, bt: cs.borderTopWidth + ' ' + cs.borderTopColor,
-      h: +bar.getBoundingClientRect().height.toFixed(1) }; });
-  ok(dv.bg === dv.pageBg && dv.bt.startsWith('1px'),
-     `36 el divisor toma el fondo de la página (${dv.bg}) y lo único dibujado es su línea (${dv.bt})`);
+  ok(N.noteBleed < 375 - 20, `31 la nota no va a sangre: mide ${N.noteBleed} en un device de 375`);
+  ok(N.warnOnScreen === 0, `32 nada en pantalla usa el \`--warn\` inventado: la paleta no tiene parada de advertencia (${N.warnOnScreen})`);
 
   /* ---- 17-18 · los otros anchos ---- */
   for (const [w, h] of [[360, 640], [375, 800]]) {

@@ -2,10 +2,10 @@
 sketch: 080
 name: admin-guardar-fijo
 question: "r1 · ¿alcanza con fijar al pie el `Guardar`? · r2 · ¿ese botón no es demasiado grande? · r3 · ¿tiene que ocupar todo el ancho? · r4 · la nota, y cuánto contenedor lleva el botón · r5 · la banda como divisor"
-winner: null
+winner: "el `Guardar` fijo al pie · un DIVISOR a lo ancho del color del fondo · el botón a su ancho natural a la derecha, A1 de 064 · la nota de estado dentro del cuerpo"
 tags: [admin, editor, guardar, dirty-state, cta, pie-fijo, franja, d47, 064, D-19f, D-19h, phase-01.8.2]
-rounds: 5
-status: PENDING REVIEW — 33/33, no confirmado en dispositivo
+rounds: 5 + decisión
+status: DECIDIDO 2026-09-22 — 29/29, sin variantes en la página (borradas al elegirse). NO confirmado en dispositivo
 ---
 
 # Sketch 080: el `Guardar` del pie, fijo
@@ -24,13 +24,16 @@ estado tampoco, y no aparece ningún control nuevo arriba.
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html
-node .planning/sketches/080-admin-guardar-fijo/verify.js     # 33/33
+node .planning/sketches/080-admin-guardar-fijo/verify.js     # 29/29
 ```
 
-Arriba: **HOY · en el flujo (079)** es el antes, no una variante; **FIJA · al pie** es la ronda.
-El tamaño quedó decidido en la r2 (el de la web). Los **dos ejes de la r3 son interruptores en las
-herramientas**, no pestañas: `Ancho` (a lo ancho / natural a la derecha) × `Tratamiento` (relleno 078
-/ contorno A1 064).
+**No quedan variantes en la página**: cada eje se borró al elegirse, que es el acuerdo de trabajo de
+este linaje. Arriba sólo queda **HOY · en el flujo (079)**, que no es una variante sino la línea base
+contra la que están escritos los checks negativos (1, 8).
+
+Los números que descartaron cada forma siguen abajo, en las rondas, y **sobreviven como checks
+negativos**: que no vuelva el relleno (22), que no vuelva el ancho completo (23), que no vuelva ni la
+banda tonal ni el «sin banda» (25, 26).
 Para llegar al estado del que habla la ronda: tocá **Es una expansión** y cambiala.
 
 ---
@@ -310,6 +313,16 @@ La ronda 1 encontró (con la captura) que `#vnav` es `fixed` y pisaba `.tbar`, d
 **76,8 medido a 360 y a 375** — y el defecto volvió entero: el check 12 pasó a dar `no-boton:DIV` en
 los dos controles de la barra. El alto se mide ahora cada vez que cambia la cantidad de variantes,
 en vez de quedar fijo en un número que valía para dos botones.
+
+## Lo decidido
+
+```
+la barra    un DIVISOR a lo ancho, del color del fondo: lo único dibujado es su línea de 1px
+el botón    A1 de 064 — contorno, 44px, 16px de padding, radio 8, 14/600, a su ancho natural,
+            a la derecha, terminando en la quilla de 14; habilitado sólo si hay cambios
+la nota     dentro del cuerpo, caja blanda del admin, punto + texto, sólo tokens de la paleta
+el modelo   la hoja PREPARA, el pie escribe; volver con cambios confirma en el diálogo de D-19f
+```
 
 ## Qué mirar
 
