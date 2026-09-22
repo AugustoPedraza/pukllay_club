@@ -877,6 +877,24 @@
     background: var(--color-bg); border-top: 1px solid var(--color-border); }
   .ctabar[hidden] { display: none; }   /* la regla de la 079: toda clase que fija layout lleva su `[hidden]` */
   .ctabar .cta { margin-top: 0; }
+
+  /* ---------- r2 · ¿ese `Guardar` es demasiado grande? ----------
+     Medida EN VIVO contra la app corriendo (`localhost:4000/juegos/10`, 375 de ancho), que es la
+     misma ficha que E3 dice que este editor espeja:
+       `.pk-mobile-cta-bar`  barra 69px · padding 12/12 · fondo `--color-surface` · borde 1px
+       su botón            **44px · radio 4 · 14/600** · ancho 347 (quilla 14/14)
+       reserva del body    148px (`body.pk-has-cta-bar`, 9.25rem)
+     Contra lo que esta barra traía, que es el `.cta` de la 078: **52px · radio 12 · 16/600**.
+     Ese `.cta` de la 078 NO es una barra de página: vive adentro de una HOJA. Así que para este
+     contenedor el único precedente real es el de la web. */
+  .ctabar.web { background: var(--color-surface); }
+  .ctabar.web .cta { min-height: 44px; border-radius: 4px; font-size: 14px; }
+  /* DEFECTO QUE TRAE ADOPTAR EL FONDO TONAL, medido: `.cta[disabled]` también es `--color-surface`,
+     así que dentro de esta barra el botón apagado queda a **1:1** — invisible salvo por su anillo de
+     1px. La barra real de la web nunca lo pisó porque su botón NUNCA se deshabilita ("Reservar para
+     el sábado" siempre está vivo); el nuestro sí, porque el desarrollador pidió habilitado/apagado.
+     El apagado toma el fondo de la página, que es lo único que contrasta contra la barra tonal. */
+  .ctabar.web .cta[disabled] { background: var(--color-bg); }
   /* el hueco que el cuerpo le reserva a la barra, para que el último bloque se pueda leer entero.
      Se mide, no se estima: es el alto real de `.ctabar` + los 24px de aire que el cuerpo ya tenía. */
   .pg.hasbar { padding-bottom: var(--barh, 88px); }
@@ -1167,9 +1185,13 @@
 /* `#vnav` con botones mide más que los 46px que reservaba la 079 y pisaba `.tbar`; y `.stage` más un
    `.device` de `100vh` pasaban de la ventana, dejando la PÁGINA desplazable bajo un `#vnav` fijo.
    Se reserva su alto (42,4 medido) y el device se achica lo mismo, así que la página no se desplaza nunca. */
+/* 80px, no 44: con TRES botones el `#vnav` envuelve a dos renglones y mide 76,8 (medido a 360 y a
+   375). Reservar de menos lo devuelve encima de `.tbar` y, peor, deja la PÁGINA desplazable bajo un
+   `#vnav` fijo — que fue el defecto que la ronda 1 encontró con la captura y que volvió solo al
+   agregar el tercer botón. El número se mide cada vez que cambia la cantidad de variantes. */
 @media (max-width: 430px) {
-  .stage { padding-top: 44px; }
-  .device { height: calc(100vh - 44px); }
+  .stage { padding-top: 80px; }
+  .device { height: calc(100vh - 80px); }
 }
 
 #tools { position: fixed; right: 10px; bottom: 10px; z-index: 9999; max-width: 340px;
@@ -1266,7 +1288,8 @@
 <div id="vnav">
   <b>080 · r1</b>
   <button data-var="HOY">HOY · en el flujo (079)</button>
-  <button data-var="FIJA" class="on">FIJA · al pie</button>
+  <button data-var="FIJA" class="on">A · 52 (078)</button>
+  <button data-var="WEB">B · 44 (como la web)</button>
 </div>
 
 <div class="stage"><div class="device" id="device">
@@ -1501,17 +1524,18 @@ function renderPage() {
   </div>`;
 
   $('#main').innerHTML = `<div class="wrap">${masthead}<div style="height:24px"></div></div>`;
-  $('#main').className = 'pg' + (FLAT ? ' flat' : '') + (MODE === 'FIJA' ? ' hasbar' : '');
+  $('#main').className = 'pg' + (FLAT ? ' flat' : '') + (MODE !== 'HOY' ? ' hasbar' : '');
 
   /* la barra fija. `disabled` cuando no hay nada que guardar — que es lo que el desarrollador pidió
      y, de paso, el conflicto con 064 (`sin botones deshabilitados`) asumido por elección explícita. */
   const bar = $('#ctabar'), d = dirty();
-  bar.hidden = MODE !== 'FIJA';
-  bar.innerHTML = MODE === 'FIJA'
+  bar.hidden = MODE === 'HOY';
+  bar.className = 'ctabar' + (MODE === 'WEB' ? ' web' : '');
+  bar.innerHTML = MODE !== 'HOY'
     ? `<button class="cta" data-act="save"${d ? '' : ' disabled'}>Guardar</button>` : '';
   /* el hueco se MIDE, no se estima: si se estima, el último bloque queda tapado por unos pocos
      píxeles y ningún check lo nota. */
-  if (MODE === 'FIJA') document.documentElement.style.setProperty('--barh',
+  if (MODE !== 'HOY') document.documentElement.style.setProperty('--barh',
     (bar.getBoundingClientRect().height + 24) + 'px');
 
   /* la franja de estado. `Así se ve en la web` es textual de 075:941, donde ya decía exactamente esto

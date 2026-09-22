@@ -1,11 +1,11 @@
 ---
 sketch: 080
 name: admin-guardar-fijo
-question: "El `Guardar` del editor no escribía y estaba a 880px de scroll. Si la hoja PREPARA y el pie escribe, ¿alcanza con fijar al pie el `Guardar` que ya está ahí?"
+question: "r1 · ¿alcanza con fijar al pie el `Guardar` que ya está ahí? · r2 · ¿ese botón no es demasiado grande? ¿qué dice la barra fija que la web YA tiene?"
 winner: null
 tags: [admin, editor, guardar, dirty-state, cta, pie-fijo, franja, d47, 064, D-19f, D-19h, phase-01.8.2]
-rounds: 1
-status: PENDING REVIEW — 19/19, no confirmado en dispositivo
+rounds: 2
+status: PENDING REVIEW — 24/24, no confirmado en dispositivo
 ---
 
 # Sketch 080: el `Guardar` del pie, fijo
@@ -24,11 +24,11 @@ estado tampoco, y no aparece ningún control nuevo arriba.
 ```
 python3 -m http.server 8765          # desde la raíz del repo
 open http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html
-node .planning/sketches/080-admin-guardar-fijo/verify.js     # 19/19
+node .planning/sketches/080-admin-guardar-fijo/verify.js     # 24/24
 ```
 
-Arriba, dos modos para sentir la diferencia — no son variantes a elegir, son **antes y después**:
-**HOY · en el flujo (079)** y **FIJA · al pie**.
+Arriba: **HOY · en el flujo (079)** es el antes, no una variante. Las dos que sí se comparan son
+**A · 52 (078)** y **B · 44 (como la web)**.
 Para llegar al estado del que habla la ronda: tocá **Es una expansión** y cambiala.
 
 ---
@@ -74,7 +74,43 @@ ficha**, así que acá se reusa esa forma en vez de inventar una. Los 148px que 
 
 ---
 
-## Hallazgos
+## Ronda 2 — ¿el botón no es demasiado grande?
+
+> *"wondering if that «save» at bottom isn't too big. Check the balance with another pages that use
+> that to make it consistent and well balanced."*
+
+**Medido en vivo contra la app corriendo** (`localhost:4000/juegos/10`, 375 de ancho) — no deducido
+del CSS, y sobre la **misma ficha de juego** que E3 dice que este editor espeja:
+
+| | `.pk-mobile-cta-bar` (la web, real) | A · el `.cta` de la 078 (lo que traía) |
+|---|---|---|
+| barra | **69px**, fondo `--color-surface`, borde 1px | 77px, fondo de la página |
+| botón | **44px · radio 4 · 14/600** | 52px · radio 12 · 16/600 |
+| quilla | 14 / 14 | 14 / 14 |
+| reserva del body | 148px (`9.25rem`) | 88px (medido del alto real) |
+
+**Sí era más grande: 8px de botón, 8px de barra, 2px de radio y 2px de tipo.**
+
+### El dato que decide el eje
+
+El `.cta` de 52px viene de la 078 — pero **ahí no es una barra de página: vive adentro de una hoja**.
+Así que no son dos precedentes compitiendo por el mismo contenedor. Para una **barra fija al pie de
+una página**, el único precedente que existe en este producto es el de la web, y E3 ya dice que este
+editor se ve como esa ficha.
+
+B lo reproduce al píxel (check 21) y recupera 8px de alto (check 22).
+
+### El defecto que trae adoptar el fondo tonal
+
+`.cta[disabled]` también es `--color-surface`, así que dentro de la barra tonal el `Guardar` apagado
+daba **1:1 de contraste** — invisible salvo por su anillo de 1px. **La barra real de la web nunca lo
+pisó porque su botón no se deshabilita nunca** (*"Reservar para el sábado"* siempre está vivo); el
+nuestro sí, porque pediste habilitado/apagado. El apagado toma ahora el fondo de la página: **1,16:1**,
+el mismo "un tono, no un borde" que la 069 usó para el carril del control segmentado (checks 23, 24).
+
+---
+
+## Hallazgos de la ronda 1
 
 ### 1. La franja le debe una oración al estado sucio
 
@@ -106,8 +142,9 @@ son una coincidencia, no un margen. Si la barra crece un renglón, el snack qued
 
 `#vnav` es `fixed` y pisaba los primeros píxeles de `.tbar`. Y al reservarle el alto con padding,
 `.stage` más un `.device` de `100vh` pasaban de la ventana, dejando la **página** desplazable bajo un
-`#vnav` fijo. El device se achica ahora lo que mide el `#vnav` (42,4 medido), así que la página no se
-desplaza nunca y los dos controles de la barra se hit-testean (check 12).
+`#vnav` fijo. El device se achica ahora lo que mide el `#vnav`, así que la página no se desplaza
+nunca y los dos controles de la barra se hit-testean (check 12). **El número se re-mide cada vez que
+cambia la cantidad de variantes** — ver el hallazgo 4.
 
 Y el propio arnés tenía dos trampas: `elementFromPoint` sobre un `<svg>` devuelve un
 `SVGAnimatedString` por `className`, que serializa a `{}` y se lee como *"no hay nada ahí"*; y el
@@ -128,6 +165,14 @@ No es un efecto secundario: es lo que se compra al elegir *la hoja prepara*.
    (*¿dónde vive el remedio mientras el editor está sucio?*) sigue en pie tal como se planteó.
 4. **La barra se lleva 77px del alto, siempre.** Contra los 880px de scroll que reemplaza.
 
+### 4. El `#vnav` volvió a romperlo solo, al agregar el tercer botón
+
+La ronda 1 encontró (con la captura) que `#vnav` es `fixed` y pisaba `.tbar`, dejando además la
+**página** desplazable. Al sumar el tercer botón el `#vnav` volvió a envolver a dos renglones —
+**76,8 medido a 360 y a 375** — y el defecto volvió entero: el check 12 pasó a dar `no-boton:DIV` en
+los dos controles de la barra. El alto se mide ahora cada vez que cambia la cantidad de variantes,
+en vez de quedar fijo en un número que valía para dos botones.
+
 ## Qué mirar
 
 - Cambiá **Es una expansión** y mirá el momento en que `Guardar` se enciende.
@@ -135,6 +180,9 @@ No es un efecto secundario: es lo que se compra al elegir *la hoja prepara*.
 - Guardá y mirá dónde cae el snackbar: pasa 2px por encima de la barra.
 - Leé la franja limpia y con cambios. ¿La segunda oración es tuya o te sobra?
 - Pasá a **HOY** y buscá el `Guardar`. Está a 880px.
+- Alterná **A · 52** y **B · 44** con el pulgar donde lo tendrías de verdad. ¿B se siente chico o se
+  siente en su lugar?
+- Con `Guardar` apagado en B: ¿lo ves contra la barra tonal?
 
 ## Abierto
 

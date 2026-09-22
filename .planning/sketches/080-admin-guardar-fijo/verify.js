@@ -14,9 +14,15 @@ const { chromium } = loadPlaywright();
 const URL = process.env.SKETCH_URL || 'http://127.0.0.1:8765/.planning/sketches/080-admin-guardar-fijo/index.html';
 const OUT = process.env.SHOTS_DIR || path.join(os.tmpdir(), 'sketch-080-shots'); fs.mkdirSync(OUT, { recursive: true });
 const log = []; const ok = (c, m) => log.push((c ? 'PASS ' : 'FAIL ') + m);
-/* el `#vnav` del sketch ocupa 44px de flujo y el device es `100vh - 44`: la ventana se pide 44px más
+/* el `#vnav` del sketch ocupa 80px de flujo (tres botones, envuelve) y el device es `100vh - 80`: la ventana se pide 80px más
    alta para que «375×667» sea un device de 667 REALES, no de 623. */
-const VN = 44;
+const VN = 80;
+
+const lum = c => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number)
+  .map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b);
+  return +(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05))).toFixed(2); };
 
 const probe = () => {
   const devEl = document.querySelector('.device'), dev = devEl.getBoundingClientRect();
@@ -46,6 +52,13 @@ const probe = () => {
     scMax: +(sc.scrollHeight - sc.clientHeight).toFixed(0),
     devH: +dev.height.toFixed(1),
     tbar: g('.tbar'), stbar: g('.stbar'), bar: g('#ctabar'),
+    barStyle: (() => { const bar = document.querySelector('#ctabar'); if (!bar || bar.hidden) return null;
+      const cs = getComputedStyle(bar), bs = barCta ? getComputedStyle(barCta) : null;
+      return { barH: +bar.getBoundingClientRect().height.toFixed(1), barBg: cs.backgroundColor,
+        btnH: barCta ? +barCta.getBoundingClientRect().height.toFixed(1) : null,
+        radius: bs && bs.borderRadius, font: bs && (bs.fontSize + '/' + bs.fontWeight),
+        gut: barCta ? +barCta.getBoundingClientRect().left.toFixed(1) : null,
+        disBg: bs && bs.backgroundColor }; })(),
     barCta: bc ? { txt: barCta.textContent.trim(), dis: barCta.disabled, h: +bc.height.toFixed(1),
       relT: +(bc.top - dev.top).toFixed(1), inView: bc.top >= dev.top && bc.bottom <= dev.bottom + 0.5,
       centre: at(bc.left + bc.width / 2, bc.top + bc.height / 2) } : null,
@@ -78,7 +91,7 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   const dirty = async () => { await page.evaluate(soil); await page.waitForTimeout(160);
     await page.evaluate(pickOther); await page.waitForTimeout(220); };
   const M = {};
-  for (const m of ['HOY', 'FIJA']) {
+  for (const m of ['HOY', 'FIJA', 'WEB']) {
     await go(m); M[m] = { clean: await page.evaluate(probe) };
     await dirty(); M[m].d = await page.evaluate(probe);
     await page.screenshot({ path: path.join(OUT, `${m}-sucio.png`) });
@@ -146,11 +159,32 @@ const pickOther = () => { const o = [...document.querySelectorAll('.sheet .opt')
   ok(saved.snack !== null && saved.bar !== null && gap >= 0,
      `16 el snackbar queda por encima de la barra, con ${gap}px de aire (snack ${saved.snack && saved.snack.t}–${saved.snack && saved.snack.b} · barra desde ${saved.bar && saved.bar.t})`);
 
+  /* ================= r2 · ¿el botón es demasiado grande? =================
+     Los números de referencia NO son de este sketch: se midieron EN VIVO contra la app corriendo
+     (`localhost:4000/juegos/10` a 375 de ancho), sobre `.pk-mobile-cta-bar` — la barra fija de la
+     MISMA ficha que E3 dice que este editor espeja. */
+  const WEBREF = { barH: 69, btnH: 44, radius: '4px', font: '14px/600', gut: 14, barBg: 'rgb(241, 236, 253)' };
+  const A = M.FIJA.clean.barStyle, B = M.WEB.clean.barStyle;
+
+  ok(A.btnH === 52 && A.radius === '12px' && A.font === '16px/600',
+     `20 A es el \`.cta\` de la 078: ${A.btnH}px · radio ${A.radius} · ${A.font}`);
+  ok(B.btnH === WEBREF.btnH && B.radius === WEBREF.radius && B.font === WEBREF.font
+     && B.barH === WEBREF.barH && B.gut === WEBREF.gut && B.barBg === WEBREF.barBg,
+     `21 B reproduce la barra real de la web al píxel: barra ${B.barH} · botón ${B.btnH} · radio ${B.radius} · ${B.font} · quilla ${B.gut} · fondo ${B.barBg}`);
+  ok(A.barH - B.barH === 8, `22 la barra de la web recupera ${A.barH - B.barH}px de alto (${A.barH} → ${B.barH})`);
+
+  /* EL DEFECTO QUE TRAE EL FONDO TONAL, y por qué la web nunca lo pisó: su botón no se deshabilita
+     jamás. El nuestro sí. Sin el parche, apagado y barra dan 1:1 — invisible salvo por el anillo. */
+  ok(ratio(B.disBg, B.barBg) > 1.1,
+     `23 el \`Guardar\` apagado se distingue de la barra tonal (${ratio(B.disBg, B.barBg)}:1; sin el parche daba 1:1)`);
+  ok(ratio(A.disBg, A.barBg) > 1.1,
+     `24 lo mismo en A (${ratio(A.disBg, A.barBg)}:1)`);
+
   /* ---- 17-18 · los otros anchos ---- */
   for (const [w, h] of [[360, 640], [375, 800]]) {
     const p2 = await browser.newPage({ viewport: { width: w, height: h + VN }, deviceScaleFactor: 1 });
     await p2.goto(URL, { waitUntil: 'networkidle' });
-    await p2.evaluate(setMode, 'FIJA'); await p2.evaluate(hideTools);
+    await p2.evaluate(setMode, 'WEB'); await p2.evaluate(hideTools);
     await p2.evaluate(() => { const s = document.querySelector('#scroller'); s.scrollTop = s.scrollHeight; });
     await p2.waitForTimeout(150);
     const r = await p2.evaluate(probe);
