@@ -1,106 +1,166 @@
 defmodule PukllayClubWeb.Admin.GameLive.Form do
   @moduledoc """
-  Edit screen for a single game's club-owned fields, at
-  `/admin/juegos/:id/editar` (D-07, UI-SPEC E3), plus the D-04/D-08
-  status transitions (Publicar / Retirar / Restaurar).
+  The game editor, at `/admin/juegos/:id/editar` — D-27's one 56px top app
+  bar, D-29's consequence franja, D-28's fixed foot save bar, and D-26's
+  ficha-mirroring body (plan 01.8.2-17).
 
   `mount/3` loads via `Catalog.get_game!/1` — the unfiltered ADMIN read —
   so a `:draft` or `:retired` game opens here exactly as readily as a
-  `:published` one, even though its public `/juegos/:id` 404s (D-04,
-  D-08). Only `Catalog.change_game_admin/2`/`update_game_admin/2` ever
-  touch this form's data, and those route through
-  `Game.admin_changeset/2`'s cast allowlist (D-31: four club-owned
-  fields plus `:shelf_id`, the old count field dropped outright) — a BGG-derived
-  fact submitted in the form params (`bgg_weight`, `mechanics`, ...) is
-  silently dropped, never persisted (T-01.8.1-21).
+  `:published` one (D-30's normal flow only ever routes a published game
+  here via the Juegos list's row chevron; a direct URL still resolves for
+  any status, matching every other admin fetch in this app).
 
-  Every BGG-derived fact is rendered read-only via `CoreComponents.list/1`
-  below the form — values only, no inputs, no changeset field for any of
-  them.
+  **The write model — «la hoja PREPARA, el pie escribe» (080)**: the page
+  holds a draft (`@draft`, a plain map of `Game.admin_changeset/2`'s five
+  cast fields) and a `@saved` snapshot of the same shape — the values last
+  persisted. `dirty?/2` compares the two. `Guardar` (the foot `save_bar/1`)
+  copies the draft onto `SAVED` through `Catalog.update_game_admin/2`,
+  which routes through `Game.admin_changeset/2`'s unchanged five-field cast
+  allowlist (`[:name, :weight_band, :is_expansion, :description,
+  :shelf_id]`, T-01.8.2-75/T-01.8.1-21) — never widened here, and the
+  Copias write path is deliberately NOT routed through it (D-31, plan
+  01.8.2-21 owns that write). `status` sits OUTSIDE the draft entirely: the
+  ⋮ menu's lifecycle actions (`Catalog.retire_game/1`/`restore_game/1`)
+  commit on their own, never through `Guardar`.
 
-  A failed draft (D-03 — `enrichment_status == "failed"`, from an
-  exhausted BGG retry, a missing BGG item, or missing credentials) shows
-  the `Error al traer datos de BGG.` alert at the top with a `Reintentar`
-  button that calls `Catalog.retry_enrichment/1`, putting the game back
-  into `"pending"` and re-enqueuing its `EnrichGameWorker` job.
-
-  Status actions (D-04, D-08): a draft's primary action is `Publicar`,
-  which is a second `type="submit"` button on the SAME form carrying
-  `name="_action" value="publish"` — the browser includes the activated
-  submitter's name/value pair in the serialized form data, so
-  `handle_event("save", ...)` sees `_action` alongside the normal `game`
-  params and saves-then-publishes in one round trip, exactly as the
-  plan's action text specifies ("saves pending form changes, then
-  `Catalog.publish_game/1`"). Retirar opens a server-rendered confirmation
-  (`@confirm_retire`, a daisyUI `modal`) rather than retiring immediately
-  — no undo toast, per `ux-patterns` B11 ("warn before the action
-  commits"). Restaurar has no confirmation (reversible, routine — UI-SPEC
-  Color contract).
-
-  A `Secciones` fieldset (D-07) lists every hand-picked (`:manual`)
-  section as a checkbox — the featured section included, since it is
-  still `:manual`. Section membership isn't a `Game` schema field, so it
-  travels as a plain `game[section_ids][]` checkbox list outside
-  `Game.admin_changeset/2`'s cast allowlist, and is applied via
-  `Sections.set_game_sections/2` right after the game itself saves. A
-  `{:error, :featured_full}` from that call surfaces as a flash error —
-  the game's own field changes are already saved by that point, so this
-  never blocks or reverts them.
+  The `"draft-change"` event is this plan's own generic write-into-the-
+  draft entry point — plan 01.8.2-19's field sheets are the first real
+  callers; this plan wires the plumbing (and exercises it directly in its
+  own tests) but ships no sheet UI of its own. Every editable block's own
+  `"edit-field"` click currently does nothing beyond naming which field was
+  tapped — the sheet bodies are plan 01.8.2-19's scope, named at each call
+  site.
   """
   use PukllayClubWeb, :live_view
 
+  alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog
-  alias PukllayClub.Catalog.Sections
   alias PukllayClub.Catalog.Shelves
   alias PukllayClub.Catalog.Vocabulary
+  alias PukllayClubWeb.AdminComponents
+
+  # D-31/D-27: the five-field cast ceiling `Game.admin_changeset/2` pins —
+  # restated here (not re-derived) so the draft/saved maps this module
+  # builds can never silently drift from what the changeset actually
+  # accepts. Widening this list without ALSO widening the changeset (or
+  # vice versa) is caught immediately: a field present here but absent from
+  # the changeset is simply dropped on save (Ecto's own `cast/3` contract),
+  # never persisted and never an error.
+  @draft_fields [:name, :weight_band, :is_expansion, :description, :shelf_id]
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    game = Catalog.get_game!(id)
+    game = id |> Catalog.get_game!() |> Catalog.put_section_names()
+    draft = draft_from_game(game)
 
     {:ok,
      socket
      |> assign(:page_title, game.name)
      |> assign(:game, game)
-     |> assign(:confirm_retire, false)
+     |> assign(:draft, draft)
+     |> assign(:saved, draft)
      |> assign(:shelves, Shelves.list_shelves())
-     |> assign(:manual_sections, manual_sections())
-     |> assign(:selected_section_ids, MapSet.new(Sections.member_section_ids(game.id)))
-     |> assign(:form, to_form(Catalog.change_game_admin(game)))}
+     |> assign(:copies_count, Shelves.count_for_game(game.id))
+     |> assign(:menu_open, false)
+     |> assign(:confirm_retire, false)
+     |> assign(:confirm_discard, false)}
   end
 
-  defp manual_sections, do: Enum.filter(Sections.list_sections(), &(&1.kind == :manual))
+  defp draft_from_game(game), do: Map.take(game, @draft_fields)
+
+  defp dirty?(draft, saved), do: draft != saved
+
+  # ============================================================
+  # The write model — Guardar (D-28) and the generic draft-write seam
+  # plan 01.8.2-19's field sheets will call.
+  # ============================================================
 
   @impl true
-  def handle_event("validate", %{"game" => params}, socket) do
-    changeset =
-      socket.assigns.game
-      |> Catalog.change_game_admin(params)
-      |> Map.put(:action, :validate)
-
-    {:noreply, assign(socket, :form, to_form(changeset))}
-  end
-
-  @impl true
-  def handle_event("save", %{"game" => params} = full_params, socket) do
-    case Catalog.update_game_admin(socket.assigns.game, params) do
+  def handle_event("save", _params, socket) do
+    case Catalog.update_game_admin(socket.assigns.game, socket.assigns.draft) do
       {:ok, game} ->
+        game = Catalog.put_section_names(game)
+        saved = draft_from_game(game)
+
         {:noreply,
          socket
          |> assign(:game, game)
          |> assign(:page_title, game.name)
-         |> assign(:form, to_form(Catalog.change_game_admin(game)))
-         |> after_save(Map.get(full_params, "_action"))
-         |> apply_section_ids(game, params)}
+         |> assign(:draft, saved)
+         |> assign(:saved, saved)
+         |> assign(:copies_count, Shelves.count_for_game(game.id))
+         |> put_flash(:info, "Cambios guardados.")}
 
-      {:error, changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset))}
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "No se pudo guardar. Revisá los datos.")}
+    end
+  end
+
+  # Plan 01.8.2-19's field sheets write into the draft through this one
+  # event — this plan builds the seam and exercises it directly (no sheet
+  # UI calls it yet). `field` arrives as a string naming one of
+  # `@draft_fields`; an unrecognised field is a no-op rather than a crash,
+  # since a stale/forged event name must never corrupt the draft.
+  @impl true
+  def handle_event("draft-change", %{"field" => field, "value" => value}, socket) do
+    case Enum.find(@draft_fields, &(Atom.to_string(&1) == field)) do
+      nil -> {:noreply, socket}
+      key -> {:noreply, assign(socket, :draft, Map.put(socket.assigns.draft, key, cast_draft_value(key, value)))}
+    end
+  end
+
+  # Every editable block's open event, for plan 01.8.2-19 to replace with
+  # real sheet-opening logic — see this module's own moduledoc. The
+  # cover's pencil (`edit-field` field="cover") is deliberately NOT wired
+  # to this or any handler: `admin-game-editor.md`'s own "What to Avoid"
+  # section records that redrawing the cover reverts 01.3.1/D-07 on
+  # purpose, the badge exists because the pencil needs a target, not
+  # because the cover is genuinely editable.
+  @impl true
+  def handle_event("edit-field", %{"field" => _field}, socket) do
+    {:noreply, socket}
+  end
+
+  # ============================================================
+  # D-27's back control + D-19f's discard-confirm dialog
+  # ============================================================
+
+  @impl true
+  def handle_event("back-clicked", _params, socket) do
+    if dirty?(socket.assigns.draft, socket.assigns.saved) do
+      {:noreply, assign(socket, :confirm_discard, true)}
+    else
+      {:noreply, push_navigate(socket, to: ~p"/admin/juegos")}
     end
   end
 
   @impl true
+  def handle_event("cancel-discard", _params, socket) do
+    {:noreply, assign(socket, :confirm_discard, false)}
+  end
+
+  @impl true
+  def handle_event("confirm-discard", _params, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/admin/juegos")}
+  end
+
+  # ============================================================
+  # D-27's ⋮ lifecycle sheet + the D-19f retire-confirm dialog
+  # ============================================================
+
+  @impl true
+  def handle_event("open-menu", _params, socket) do
+    {:noreply, assign(socket, :menu_open, true)}
+  end
+
+  @impl true
+  def handle_event("close-menu", _params, socket) do
+    {:noreply, assign(socket, :menu_open, false)}
+  end
+
+  @impl true
   def handle_event("retire", _params, socket) do
-    {:noreply, assign(socket, :confirm_retire, true)}
+    {:noreply, socket |> assign(:menu_open, false) |> assign(:confirm_retire, true)}
   end
 
   @impl true
@@ -130,10 +190,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
         {:noreply,
          socket
          |> assign(:game, game)
+         |> assign(:menu_open, false)
          |> put_flash(:info, "Juego restaurado.")}
 
       {:error, _reason} ->
-        {:noreply, socket}
+        {:noreply, assign(socket, :menu_open, false)}
     end
   end
 
@@ -146,10 +207,13 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
       {int_id, ""} ->
         case int_id |> Catalog.get_game!() |> Catalog.retry_enrichment() do
           {:ok, updated} ->
+            updated = Catalog.put_section_names(updated)
+
             {:noreply,
              socket
              |> assign(:game, updated)
-             |> assign(:form, to_form(Catalog.change_game_admin(updated)))}
+             |> assign(:draft, draft_from_game(updated))
+             |> assign(:saved, draft_from_game(updated))}
 
           {:error, :not_failed} ->
             {:noreply, socket}
@@ -160,88 +224,65 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     end
   end
 
-  # "publish" is the "_action" value the Publicar submitter carries;
-  # anything else (the plain "Guardar cambios" submit, or no submitter
-  # name at all) is the ordinary save flash.
-  defp after_save(socket, "publish") do
-    case Catalog.publish_game(socket.assigns.game) do
-      {:ok, game} ->
-        socket
-        |> assign(:game, game)
-        |> put_flash(:info, "Juego publicado.")
+  # ============================================================
+  # Render-only helpers
+  # ============================================================
 
-      {:error, _changeset} ->
-        put_flash(socket, :info, "Cambios guardados.")
-    end
-  end
+  defp cast_draft_value(:is_expansion, value) when is_boolean(value), do: value
+  defp cast_draft_value(:is_expansion, "true"), do: true
+  defp cast_draft_value(:is_expansion, _falsy), do: false
 
-  defp after_save(socket, _action), do: put_flash(socket, :info, "Cambios guardados.")
+  defp cast_draft_value(:shelf_id, value) when value in [nil, ""], do: nil
 
-  # D-07: `section_ids` isn't a `Game` schema field (never cast by
-  # `Game.admin_changeset/2`), so it's applied separately, after the game
-  # itself is already saved — `set_game_sections/2` owns its own
-  # transaction and the featured cap check (D-26).
-  defp apply_section_ids(socket, game, params) do
-    section_ids = params |> Map.get("section_ids", []) |> Enum.flat_map(&parse_id/1)
-
-    case Sections.set_game_sections(game.id, section_ids) do
-      {:ok, _section_ids} ->
-        assign(socket, :selected_section_ids, MapSet.new(section_ids))
-
-      {:error, :featured_full} ->
-        socket
-        |> put_flash(:error, "La sección destacada ya tiene 20 juegos.")
-        |> assign(:selected_section_ids, MapSet.new(Sections.member_section_ids(game.id)))
-    end
-  end
-
-  defp parse_id(value) do
+  defp cast_draft_value(:shelf_id, value) when is_binary(value) do
     case Integer.parse(value) do
-      {int_id, ""} -> [int_id]
-      _not_an_integer -> []
+      {int_id, ""} -> int_id
+      _not_an_integer -> nil
     end
   end
 
-  defp weight_band_options do
-    Enum.map(Vocabulary.weight_bands(), &{&1.label, &1.value})
-  end
-
-  defp shelf_options(shelves) do
-    Enum.map(shelves, &{&1.name, &1.id})
-  end
-
-  defp status_badge_class(:draft), do: "badge badge-warning"
-  defp status_badge_class(:published), do: "badge badge-success"
-  defp status_badge_class(:retired), do: "badge badge-neutral"
-
-  defp status_badge_label(:draft), do: "Borrador"
-  defp status_badge_label(:published), do: "Publicado"
-  defp status_badge_label(:retired), do: "Retirado"
+  defp cast_draft_value(:shelf_id, value) when is_integer(value), do: value
+  defp cast_draft_value(:weight_band, value) when value in [nil, ""], do: nil
+  defp cast_draft_value(_field, value), do: value
 
   defp failed?(game), do: game.enrichment_status == "failed"
 
-  defp players_text(%{min_players: nil, max_players: nil}), do: "—"
-  defp players_text(%{min_players: min, max_players: max}) when min == max, do: to_string(min || max)
-  defp players_text(%{min_players: min, max_players: max}), do: "#{min || "?"}–#{max || "?"}"
+  # D-29: the consequence, not the name — a draft renders NEITHER string
+  # (the prohibition `01.8.2-UI-SPEC.md`'s copywriting contract names as
+  # "the single easiest thing for a build to get wrong here").
+  defp franja_text(:published), do: "Publicado · Así se ve en la web."
+  defp franja_text(:retired), do: "Retirado · No se ve en la web ni está en el estante."
+  defp franja_text(:draft), do: nil
 
-  defp playtime_text(%{playing_time: t}) when is_integer(t), do: "#{t} min"
+  defp weight_band_label(nil), do: "Sin nivel"
 
-  defp playtime_text(%{min_playtime: nil, max_playtime: nil}), do: "—"
+  defp weight_band_label(value) do
+    case Enum.find(Vocabulary.weight_bands(), &(&1.value == value)) do
+      nil -> "Sin nivel"
+      band -> band.label
+    end
+  end
 
-  defp playtime_text(%{min_playtime: min, max_playtime: max}) when min == max, do: "#{min || max} min"
+  defp shelf_name(nil, _shelves), do: "Sin ubicar"
 
-  defp playtime_text(%{min_playtime: min, max_playtime: max}), do: "#{min || "?"}–#{max || "?"} min"
+  defp shelf_name(shelf_id, shelves) do
+    case Enum.find(shelves, &(&1.id == shelf_id)) do
+      nil -> "Sin ubicar"
+      shelf -> shelf.name
+    end
+  end
 
   defp mechanics_text(%{mechanics: mechanics}), do: join_or_dash(Vocabulary.covered_mechanics(mechanics))
   defp themes_text(%{themes: themes}), do: join_or_dash(Vocabulary.covered_themes(themes))
-
   defp join_names(names), do: join_or_dash(names)
-
   defp join_or_dash([]), do: "—"
   defp join_or_dash(values), do: Enum.join(values, ", ")
-
   defp value_or_dash(nil), do: "—"
-  defp value_or_dash(value), do: value
+  defp value_or_dash(value), do: to_string(value)
+
+  defp lifecycle_action(:published), do: {"Retirar", "Deja de verse en la web y sale del estante.", "retire"}
+  defp lifecycle_action(:retired), do: {"Restaurar", "Vuelve a la ludoteca y a la web.", "restore"}
+  defp lifecycle_action(:draft), do: nil
 
   @impl true
   def render(assigns) do
@@ -249,124 +290,207 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     <Layouts.app
       flash={@flash}
       current_scope={@current_scope}
-      bottom_collapse
       admin_chrome
-      active_tab={:juegos}
+      fullbleed
+      bottom_collapse
+      suppress_tab_bar
     >
-      <div class="mx-auto w-full max-w-3xl space-y-6">
-        <.header>
-          {@game.name}
-          <:subtitle>
-            <span class={status_badge_class(@game.status)}>{status_badge_label(@game.status)}</span>
-          </:subtitle>
-          <:actions>
-            <.link navigate={~p"/admin/juegos"} class="text-sm text-neutral">
-              ← Volver
-            </.link>
-          </:actions>
-        </.header>
-
-        <div :if={failed?(@game)} class="alert alert-error">
-          <span>Error al traer datos de BGG.</span>
-          <.button variant="secondary" phx-click="retry-enrichment" phx-value-game-id={@game.id}>
-            Reintentar
-          </.button>
+      <div id="game-editor" class="pk-game-editor">
+        <div id="editor-topbar" class="pk-editor-topbar" phx-hook="EditorShell">
+          <button
+            type="button"
+            class="pk-editor-topbar__back"
+            aria-label="Volver a Juegos"
+            data-pk-pressable="true"
+            phx-click="back-clicked"
+          >
+            <.icon name="hero-chevron-left-mini" class="size-5" />
+          </button>
+          <span class="pk-editor-topbar__title">{@game.name}</span>
+          <button
+            type="button"
+            class="pk-editor-topbar__menu"
+            aria-label="Más acciones"
+            aria-haspopup="dialog"
+            aria-expanded={to_string(@menu_open)}
+            data-pk-pressable="true"
+            phx-click="open-menu"
+          >
+            <.icon name="hero-ellipsis-vertical" class="size-5" />
+          </button>
         </div>
 
-        <.form for={@form} id="game-form" phx-change="validate" phx-submit="save" class="space-y-2">
-          <.input field={@form[:name]} type="text" label="Nombre" />
-          <.input
-            field={@form[:weight_band]}
-            type="select"
-            label="Nivel"
-            prompt="Sin nivel"
-            options={weight_band_options()}
-          />
-          <.input field={@form[:is_expansion]} type="checkbox" label="Es expansión" />
-          <.input
-            field={@form[:shelf_id]}
-            type="select"
-            label="Estante"
-            prompt="Sin ubicar"
-            options={shelf_options(@shelves)}
-          />
-          <.input field={@form[:description]} type="textarea" label="Descripción en español" />
+        <div
+          :if={franja_text(@game.status)}
+          class="pk-editor-franja"
+          data-pk-editor-franja={@game.status}
+        >
+          <span
+            class={["pk-editor-franja__dot", "pk-editor-franja__dot--#{@game.status}"]}
+            aria-hidden="true"
+          ></span>
+          <span class="pk-editor-franja__text">{franja_text(@game.status)}</span>
+        </div>
 
-          <fieldset :if={@manual_sections != []} class="fieldset mb-2">
-            <legend class="label mb-1">Secciones</legend>
-            <label :for={section <- @manual_sections} class="flex items-center gap-2 min-h-11">
-              <input
-                type="checkbox"
-                name="game[section_ids][]"
-                value={section.id}
-                checked={section.id in @selected_section_ids}
-                class="checkbox checkbox-sm"
-              />
-              {section.name}
-            </label>
-          </fieldset>
-
-          <div class="flex flex-wrap gap-2 pt-2">
-            <%!-- D-04/D-08: exactly one primary action per lifecycle state.
-            Draft: Publicar (name="_action" value="publish" — the browser
-            includes the activated submitter in the form's own submit
-            payload, see moduledoc) is primary, Guardar cambios demotes to
-            secondary. Published/Retired: Guardar cambios is primary, the
-            lifecycle transition (Retirar/Restaurar) is a secondary,
-            type="button" action outside this form's own submit. --%>
-            <.button :if={@game.status == :draft} name="_action" value="publish" variant="primary">
-              Publicar
-            </.button>
-            <.button
-              variant={if @game.status == :draft, do: "secondary", else: "primary"}
-              name="_action"
-              value="save"
+        <div class="pk-editor-body pk-admin-has-save-bar">
+          <div :if={failed?(@game)} class="pk-editor-error">
+            <span>Error al traer datos de BGG.</span>
+            <AdminComponents.action
+              anatomy="a2"
+              role="terciaria"
+              phx-click="retry-enrichment"
+              phx-value-game-id={@game.id}
             >
-              Guardar cambios
-            </.button>
+              Reintentar
+            </AdminComponents.action>
           </div>
-        </.form>
 
-        <div :if={@game.status == :published} class="flex">
-          <.button phx-click="retire" variant="secondary">Retirar</.button>
-        </div>
+          <%!-- pills: today, only the nivel chip (D-26's other public-ficha
+          pills — players/playtime/min_age — are BGG-derived and add no
+          editable signal here; nivel is the one club-owned fact this row
+          exists to surface). --%>
+          <div class="pk-editor-pills">
+            <button
+              type="button"
+              class="pk-editor-pill pk-editor-pill--editable"
+              data-pk-pressable="true"
+              phx-click="edit-field"
+              phx-value-field="weight_band"
+            >
+              {weight_band_label(@draft.weight_band)}
+              <span class="pk-editor-pencil" aria-hidden="true">
+                <.icon name="hero-pencil" class="size-3" />
+              </span>
+            </button>
+          </div>
 
-        <div :if={@game.status == :retired} class="flex">
-          <.button phx-click="restore" variant="secondary">Restaurar</.button>
-        </div>
+          <%!-- tapa: pencil corner badge only, no phx-click — see this
+          module's own moduledoc on `edit-field` field="cover". --%>
+          <div class="pk-editor-cover">
+            <img :if={@game.cover_url} src={@game.cover_url} alt="" class="pk-editor-cover__img" />
+            <span class="pk-editor-cover__pencil" aria-hidden="true">
+              <.icon name="hero-pencil" class="size-3" />
+            </span>
+          </div>
 
-        <div class="bg-base-200 rounded-box p-4">
-          <.list>
-            <:item title="Jugadores">{players_text(@game)}</:item>
-            <:item title="Duración">{playtime_text(@game)}</:item>
-            <:item title="Edad mínima">{value_or_dash(@game.min_age)}</:item>
-            <:item title="Mecánicas">{mechanics_text(@game)}</:item>
-            <:item title="Temáticas">{themes_text(@game)}</:item>
-            <:item title="Diseñadores">{join_names(@game.designers)}</:item>
-            <:item title="Ilustradores">{join_names(@game.artists)}</:item>
-            <:item title="Editorial">{join_names(@game.publishers)}</:item>
-            <:item title="Valoración BGG">{value_or_dash(@game.bgg_rating)}</:item>
-            <:item title="Ranking BGG">{value_or_dash(@game.bgg_rank)}</:item>
-            <:item title="Peso BGG">{value_or_dash(@game.bgg_weight)}</:item>
-          </.list>
+          <button
+            type="button"
+            class="pk-editor-title"
+            data-pk-pressable="true"
+            phx-click="edit-field"
+            phx-value-field="name"
+          >
+            {@draft.name}
+            <span class="pk-editor-pencil" aria-hidden="true">
+              <.icon name="hero-pencil" class="size-3" />
+            </span>
+          </button>
+
+          <span :if={@game.section_names != []} class="pk-editor-section-chip">
+            {hd(@game.section_names)}
+          </span>
+
+          <button
+            :if={@draft.description}
+            type="button"
+            class="pk-editor-desc"
+            data-pk-pressable="true"
+            phx-click="edit-field"
+            phx-value-field="description"
+          >
+            <span class="pk-editor-desc__text">{@draft.description}</span>
+            <span class="pk-editor-pencil" aria-hidden="true">
+              <.icon name="hero-pencil" class="size-3" />
+            </span>
+          </button>
+
+          <dl class="pk-editor-facts">
+            <div>
+              <dt>Año</dt>
+              <dd>{value_or_dash(@game.year_published)}</dd>
+            </div>
+            <div>
+              <dt>Diseñadores</dt>
+              <dd>{join_names(@game.designers)}</dd>
+            </div>
+            <div>
+              <dt>Ilustradores</dt>
+              <dd>{join_names(@game.artists)}</dd>
+            </div>
+            <div>
+              <dt>Mecánicas</dt>
+              <dd>{mechanics_text(@game)}</dd>
+            </div>
+            <div>
+              <dt>Temáticas</dt>
+              <dd>{themes_text(@game)}</dd>
+            </div>
+          </dl>
+
+          <div class="pk-editor-divider"></div>
+
+          <AdminComponents.editable_row
+            label="Copias"
+            value={to_string(@copies_count)}
+            phx-click="edit-field"
+            phx-value-field="copias"
+          />
+          <AdminComponents.editable_row
+            label="Estante"
+            value={shelf_name(@draft.shelf_id, @shelves)}
+            phx-click="edit-field"
+            phx-value-field="shelf_id"
+          />
+          <AdminComponents.editable_row
+            label="Es una expansión"
+            value={if @draft.is_expansion, do: "Sí", else: "No"}
+            phx-click="edit-field"
+            phx-value-field="is_expansion"
+          />
         </div>
       </div>
 
-      <%!-- D-08, ux-patterns B11: a server-rendered confirm modal, never a
-      toast — the destructive action must be warned-about BEFORE it
-      commits, not undone after. --%>
-      <div :if={@confirm_retire} class="modal modal-open" role="dialog" aria-modal="true">
-        <div class="modal-box">
-          <h3 class="font-display text-xl">¿Retirar {@game.name}?</h3>
-          <p class="py-4 text-neutral text-sm">
-            Vas a poder restaurarlo después. No va a aparecer más en la ludoteca pública.
-          </p>
-          <div class="modal-action">
-            <.button phx-click="cancel-retire" variant="secondary">Cancelar</.button>
-            <button type="button" phx-click="confirm-retire" class="btn btn-error">Retirar</button>
-          </div>
-        </div>
-      </div>
+      <AdminComponents.sheet
+        :if={lifecycle_action(@game.status)}
+        id="editor-lifecycle-sheet"
+        title="Ciclo del juego"
+        subtitle={elem(lifecycle_action(@game.status), 1)}
+        open={@menu_open}
+        on_close={JS.push("close-menu")}
+      >
+        <AdminComponents.action
+          anatomy="a4"
+          role={if @game.status == :published, do: "peligro", else: "terciaria"}
+          phx-click={elem(lifecycle_action(@game.status), 2)}
+        >
+          {elem(lifecycle_action(@game.status), 0)}
+        </AdminComponents.action>
+      </AdminComponents.sheet>
+
+      <AdminComponents.dialog
+        id="editor-discard-dialog"
+        question="¿Salir sin guardar?"
+        consequence="Los cambios que hiciste se pierden."
+        verb="Salir"
+        open={@confirm_discard}
+        on_confirm={JS.push("confirm-discard")}
+        on_cancel={JS.push("cancel-discard")}
+      />
+
+      <AdminComponents.dialog
+        id="editor-retire-dialog"
+        question={"¿Retirar #{@game.name}?"}
+        consequence="El club ya no lo tiene. No va a aparecer más en la ludoteca pública ni en los estantes. Vas a poder restaurarlo después."
+        verb="Retirar"
+        open={@confirm_retire}
+        on_confirm={JS.push("confirm-retire")}
+        on_cancel={JS.push("cancel-retire")}
+      />
+
+      <AdminComponents.save_bar
+        dirty={dirty?(@draft, @saved)}
+        on_save={JS.push("save")}
+      />
     </Layouts.app>
     """
   end

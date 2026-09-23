@@ -43,12 +43,16 @@ import AdminRail from "./hooks/admin_rail"
 // same non-colocated, mount-once-on-the-page's-own-wrapper convention as
 // AdminSheet/AdminRail above.
 import AdminList from "./hooks/admin_list"
+// EditorShell (plan 01.8.2-17, D-27/D-19n): the game editor's scroll-
+// driven top-bar title fade-in — same non-colocated, mount-once convention
+// as AdminSheet/AdminRail/AdminList above.
+import EditorShell from "./hooks/editor_shell"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AdminSheet, AdminRail, AdminList},
+  hooks: {...colocatedHooks, AdminSheet, AdminRail, AdminList, EditorShell},
 })
 
 // Show progress bar on live navigation and form submits, and on any
