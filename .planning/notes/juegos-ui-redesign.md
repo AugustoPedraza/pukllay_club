@@ -1,5 +1,26 @@
 # Admin "Juegos" tab — UI redesign
 
+> ## ⚠ PARTIALLY SUPERSEDED — read this before using anything below
+>
+> **Confirmed by the developer 2026-09-23, during phase 01.8.2 execution.**
+>
+> **Decisions 1–9 are live.** They were carried into `01.8.2-CONTEXT.md` — the dev-data
+> facts that killed sketch 061's premise still hold and still govern.
+>
+> **The search-first page shape is NOT being built.** Decisions ~10–24 and sketches
+> 071/076/077 describe a Juegos page with no resting title, a pinned search field, and a
+> `+` header icon opening a sheet. That lineage predates **D-25** (`01.8.2-CONTEXT.md`),
+> which replaced D-19g-bis's group list and is the decision that actually shipped.
+>
+> **What shipped instead** (plan `01.8.2-14`, commits `5e9a6e6`, `2868cf3`, `d7c49a8`):
+> the existing add-game-form / search-box page shape, with status grouping layered on —
+> Borradores · Juegos del club · Retirados, one section anatomy, Borradores/Retirados
+> collapsed at rest, and D-19n's pinned scrolled context.
+>
+> No plan in phase 01.8.2 builds the search-first shape. If you want it, it needs its own
+> plan — and it is materially cheaper before plans 01.8.2-19/20/21 layer the draft flow and
+> Copias stepper onto the current shape than after.
+
 **Started:** 2026-09-17 (handoff: `.planning/notes/admin-juegos-redesign-handoff.md`)
 **Scope:** the admin Juegos tab — the catalog itself. Today:
 `lib/pukllay_club_web/live/admin/game_live/index.ex` (`/admin/juegos`) + `form.ex` (`/admin/juegos/:id/editar`);
