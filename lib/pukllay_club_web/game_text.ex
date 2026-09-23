@@ -29,9 +29,23 @@ defmodule PukllayClubWeb.GameText do
   punctuation.
 
   Multiple publishers are joined with `", "` (e.g.
-  `"editado por Devir, Asmodee"`) — this catalog's own publisher lists are
-  short, so a plain comma join reads naturally without needing a
-  `"y"`-conjunction special case for the final entry.
+  `"editado por Devir, Asmodee"`), no `"y"`-conjunction special case for the
+  final entry.
+
+  `BggClient.parse_items/1` used to carry an xpath-scoping bug (quick task
+  260922-tum) that folded every version item's own publisher links into a
+  game's `publishers`, producing lists up to 178 entries — many of them
+  the same publisher repeated once per version. That bug is fixed at the
+  extraction layer and the dev catalog re-enriched: post-fix, a
+  correctly-scoped list contains only the item's own, deduplicated
+  publisher links (confirmed catalog-wide: zero rows carry a duplicate
+  entry), typically single digits, though a handful of globally-licensed
+  games legitimately list a few dozen distinct real-world publishers
+  (worst observed post-fix: 45, "6 Nimmt!"/bgg_id 432, cross-checked
+  against BGG's own response). The plain comma join was chosen assuming
+  short lists; it still reads correctly for a long one, just verbosely —
+  a "y"-conjunction wouldn't meaningfully improve that case, so no special
+  handling was added for it here.
   """
   @spec cover_alt(Game.t()) :: String.t()
   def cover_alt(%Game{name: name} = game) do

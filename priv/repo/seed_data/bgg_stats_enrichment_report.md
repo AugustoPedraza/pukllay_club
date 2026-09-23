@@ -1,12 +1,12 @@
 # BGG Stats Enrichment Report
 
-Run at: 2026-08-30T23:12:06.881328Z
+Run at: 2026-09-23T00:53:28.897213Z
 
-- Candidates: 393
-- Fetched: 385
-- Updated: 385
-- Missing from BGG: 8
-- Unranked: 14
+- Candidates: 394
+- Fetched: 388
+- Updated: 388
+- Missing from BGG: 6
+- Unranked: 16
 - Failed batches: 0
 
 ## Missing from BGG
@@ -17,8 +17,6 @@ Run at: 2026-08-30T23:12:06.881328Z
 - 255848
 - 297177
 - 345511
-- 269112
-- 252981
 
 ## Unranked
 
@@ -34,8 +32,10 @@ Run at: 2026-08-30T23:12:06.881328Z
 - 260678
 - 298278
 - 382315
+- 269112
 - 329954
 - 331265
+- 252981
 
 ## Failed batches
 

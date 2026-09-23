@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "batch_id": "260912-pnu",
+  "created_at": "2026-09-12T21:28:36.282Z",
+  "options": {},
+  "base_revision": "b74bdbe873ecd8ca4eb6010bcaf2a58ce31e35c2",
+  "items": [
+    {
+      "quick_id": "260912-pnv",
+      "client_id": null,
+      "description": "Fix WINDOWS.md entry #15: BggClient.fetch_batch/2 (lib/pukllay_club/catalog/seed/bgg_client.ex ~line 33) raises ArgumentError when called with an empty bgg_ids list; return {:ok, []} early without an HTTP request, add a regression test in test/pukllay_club/catalog/seed/bgg_client_test.exs, then mark ledger entry 15 fixed via the windows fixed CLI verb (it is currently waived).",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "lib/pukllay_club/catalog/seed/bgg_client.ex",
+        "test/pukllay_club/catalog/seed/bgg_client_test.exs",
+        ".planning/WINDOWS.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 0,
+      "commit": "048f607",
+      "failure_reason": null
+    },
+    {
+      "quick_id": "260912-pnw",
+      "client_id": null,
+      "description": "Resolve WINDOWS.md entry #1: sobelow low-confidence Traversal.FileModule findings in lib/pukllay_club/catalog/seed/csv_import.ex and seed/report.ex. Review each finding; if the path is operator-supplied seed tooling input (not user/web input), add a reviewed, commented exception to .sobelow-conf in the existing style (or a targeted inline skip comment if sobelow supports it more narrowly); also confirm the other parts of entry #1 (config/runtime.exs formatting, credo suggestion in core_components.ex) are clean. Mark ledger entry 1 fixed only once mix sobelow --config and mix quality pass.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "lib/pukllay_club/catalog/seed/csv_import.ex",
+        "lib/pukllay_club/catalog/seed/report.ex",
+        ".sobelow-conf",
+        ".planning/WINDOWS.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 1,
+      "commit": "def1307",
+      "failure_reason": null
+    },
+    {
+      "quick_id": "260912-pnx",
+      "client_id": null,
+      "description": "Fix debug session G-01-7-double-focus-ring (.planning/debug/G-01-7-double-focus-ring.md, still diagnosed): the raw <input> in lib/pukllay_club_web/components/filter_modal.ex (~line 478) bypasses CoreComponents.input/1 and still shows the daisyUI double focus ring; apply the same suppression the project already uses for inputs, add/adjust a test if one pins input classes, then fill fix/verification/files_changed, set status resolved and git mv the session into .planning/debug/resolved/.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        "lib/pukllay_club_web/components/filter_modal.ex",
+        "test/pukllay_club_web/components/filter_modal_test.exs",
+        ".planning/debug/G-01-7-double-focus-ring.md",
+        ".planning/debug/resolved/G-01-7-double-focus-ring.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 0,
+      "commit": "a395d6a",
+      "failure_reason": null
+    },
+    {
+      "quick_id": "260912-pny",
+      "client_id": null,
+      "description": "Capture a pending todo in .planning/todos/pending/ for a single human browser verification session covering WINDOWS.md waived entries 3, 4, 5, 7, 13, 18, 24 (mobile drawer behaviour+layout at 390px/1440px, About sticky CTA bar + footer at 390px, About photo rail interaction, filter chip row weight vs Resultados heading, tappable creator pills on game detail, Cierre band at 768px), written as a concrete checklist with the exact route, width and pass criterion per item, and noting that each pass should be recorded with windows fixed <id>. Planning-only, no code changes.",
+      "status": "complete",
+      "depends_on": [],
+      "planned_files": [
+        ".planning/todos/pending/2026-09-12-browser-verification-session-for-waived-windows-ui-entries.md"
+      ],
+      "directory": null,
+      "worktree": null,
+      "dispatched_worktree": null,
+      "dispatched_branch": null,
+      "dispatched_base": null,
+      "wave": 0,
+      "commit": "19a59f6",
+      "failure_reason": null
+    }
+  ]
+}

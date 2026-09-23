@@ -61,6 +61,89 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricherTest do
       assert reloaded.csv_row == game.csv_row
     end
 
+    test "repairs a contaminated publishers column, leaving image/description/name untouched", %{
+      credentials: credentials
+    } do
+      two_publishers_xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+      <item type="boardgame" id="500001">
+      <name type="primary" sortindex="1" value="Two Publishers Game" />
+      <link type="boardgamepublisher" id="1" value="Devir" />
+      <link type="boardgamepublisher" id="2" value="Asmodee" />
+      </item>
+      </items>
+      """
+
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, two_publishers_xml)
+      end)
+
+      game =
+        game_fixture(%{
+          bgg_id: 500_001,
+          bgg_weight: nil,
+          publishers: Enum.map(1..178, &"Contaminated Publisher #{&1}"),
+          cover_url: "https://images.test.invalid/games/500001/cover-large.webp",
+          thumbnail_url: "https://images.test.invalid/games/500001/cover-thumb.webp",
+          gallery_urls: ["https://images.test.invalid/games/500001/gallery-1.webp"],
+          description: "Descripción original sin tocar.",
+          name: "Two Publishers Game",
+          csv_row: 998
+        })
+
+      summary = StatsEnricher.enrich_from_bgg(credentials, delay_ms: 0)
+
+      assert summary.updated == 1
+
+      reloaded = Repo.get!(Game, game.id)
+
+      # Test 1: the repaired, exact publisher list from the stub response.
+      assert reloaded.publishers == ["Devir", "Asmodee"]
+
+      # Test 2: the widened allowlist must not widen past one column.
+      assert reloaded.cover_url == game.cover_url
+      assert reloaded.thumbnail_url == game.thumbnail_url
+      assert reloaded.gallery_urls == game.gallery_urls
+      assert reloaded.description == game.description
+      assert reloaded.name == game.name
+    end
+
+    test "with dry_run: true leaves the contaminated publishers column untouched", %{
+      credentials: credentials
+    } do
+      two_publishers_xml = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+      <item type="boardgame" id="500002">
+      <name type="primary" sortindex="1" value="Dry Run Game" />
+      <link type="boardgamepublisher" id="1" value="Devir" />
+      </item>
+      </items>
+      """
+
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, two_publishers_xml)
+      end)
+
+      game =
+        game_fixture(%{
+          bgg_id: 500_002,
+          bgg_weight: nil,
+          publishers: ["Contaminated Publisher"]
+        })
+
+      # Test 3: --dry-run writes nothing, including no publisher change.
+      StatsEnricher.enrich_from_bgg(credentials, dry_run: true, delay_ms: 0)
+
+      reloaded = Repo.get!(Game, game.id)
+      assert reloaded.publishers == ["Contaminated Publisher"]
+    end
+
     test "skips games whose bgg_id is nil — never included in a request, columns untouched", %{
       credentials: credentials
     } do

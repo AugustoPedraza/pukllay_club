@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?><items termsofuse="https://boardgamegeek.com/xmlapi/termsofuse"><item type="boardgame" id="198454">
+      <thumbnail>https://cf.geekdo-images.com/E7bmvTXE2dWskxFaMwXYrA__small/img/aR_FTYkNL8LoAijfVLmlblrUs5w=/fit-in/200x150/filters:strip_icc()/pic3747128.png</thumbnail>
+      <image>https://cf.geekdo-images.com/E7bmvTXE2dWskxFaMwXYrA__original/img/B4tgeOFmRTASb8G5Ak2KCKwsTk0=/0x0/filters:format(png)/pic3747128.png</image>
+      <name type="primary" sortindex="1" value="When I Dream" />
+      <description>The night has fallen and your mind is floating in the magical world of dreams. But the Dream Spirits want to have some fun tonight!</description>
+      <yearpublished value="2016" />
+      <minplayers value="4" />
+      <maxplayers value="10" />
+      <playingtime value="40" />
+      <minplaytime value="20" />
+      <maxplaytime value="40" />
+      <minage value="8" />
+      <link type="boardgamecategory" id="1039" value="Deduction" />
+      <link type="boardgamecategory" id="1030" value="Party Game" />
+      <link type="boardgamemechanic" id="2893" value="Communication Limits" />
+      <link type="boardgamemechanic" id="2891" value="Hidden Roles" />
+      <link type="boardgamefamily" id="62889" value="Components: Blindfolds / Blackout Glasses" />
+      <link type="boardgamedesigner" id="90787" value="Chris Darsaklis" />
+      <link type="boardgameartist" id="102639" value="Jonathan Aucomte" />
+      <link type="boardgameartist" id="12130" value="Vincent Dutrait" />
+      <link type="boardgamepublisher" id="27171" value="Drawlab Entertainment" />
+      <link type="boardgamepublisher" id="4384" value="Repos Production" />
+      <versions>
+      <item type="boardgameversion" id="414331">
+         <thumbnail>https://cf.geekdo-images.com/kfp8EJrlTcDnhZU9q8GW7Q__small/img/oNuIBjP0MyOOzf37dmgHgeBcFVs=/fit-in/200x150/filters:strip_icc()/pic4229314.jpg</thumbnail>
+         <image>https://cf.geekdo-images.com/kfp8EJrlTcDnhZU9q8GW7Q__original/img/mI9SB4_RKtfmVVlw-hq15MnBWCg=/0x0/filters:format(jpeg)/pic4229314.jpg</image>
+         <link type="boardgameversion" id="198454" value="When I Dream" inbound="true"/>
+         <name type="primary" sortindex="1" value="Chinese edition" />
+         <link type="boardgamepublisher" id="28415" value="GoKids 玩樂小子" />
+         <link type="boardgameartist" id="76496" value="Régis Torres" />
+         <yearpublished value="2017" />
+         <link type="language" id="2181" value="Chinese" />
+      </item>
+      <item type="boardgameversion" id="408977">
+         <link type="boardgameversion" id="198454" value="When I Dream" inbound="true"/>
+         <name type="primary" sortindex="1" value="Czech edition" />
+         <link type="boardgamepublisher" id="23043" value="ADC Blackfire Entertainment" />
+         <yearpublished value="2017" />
+         <link type="language" id="2180" value="Czech" />
+      </item>
+      </versions>
+      <statistics page="1">
+      <ratings>
+      <average value="6.92122" />
+      <ranks>
+      <rank type="subtype" id="1" name="boardgame" friendlyname="Board Game Rank" value="1363" bayesaverage="6.49356" />
+      </ranks>
+      <averageweight value="1.1915" />
+      </ratings>
+      </statistics>
+</item>
+</items>

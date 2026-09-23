@@ -1,0 +1,2212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 078 — la puerta de Publicar</title>
+<!-- an empty data: icon, so the browser does not request /favicon.ico from the sketch server. Without it
+     every run logs a console 404 that has nothing to do with the page — and it is invisible to
+     page.on('response'), because the favicon is fetched by the browser rather than by the document. The
+     alternative was to filter "Failed to load resource" out of the error check, which would have made that
+     check unable to fail: the shape 075 named "a guard that passed the thing it was written to reject". -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 078 — slice 3 of the create scenario (the 2026-09-20 handoff). Built on 077's page rather than
+     redrawn: the walk picks up exactly where 077 put it down — the game is created, the data has arrived,
+     and the sheet's `Ver` has taken you into the editor.
+
+     THE ROUND'S ONE QUESTION: the draft is incomplete and you reach for `Publicar`. WHO STOPS YOU, AND HOW?
+       G1 bloquea    `Publicar` is dead until the draft is complete; a line says what is missing
+       G2 avisa      `Publicar` is live; tapping it opens a confirm that names what is missing and lets you
+                     publish anyway
+       G3 la ficha   no gate at all — the rows show their own holes and `Publicar` just works.
+                     THE DO-NOTHING BASELINE: this is what the code does today, and what makes G1/G2
+                     falsifiable.
+     Nothing else differs. `missing()` is computed once and all three read the same array (check 4).
+
+     ---------------------------------------------------------------------------------------------------
+     WHAT THE GATE REQUIRES IS *MEASURED*, NOT A VARIANT AXIS — and the measurement is the round's finding.
+
+     The obvious gate ("all six club rows filled") is impossible: the live catalogue does not meet it.
+     Counted against pukllay_club_dev on 2026-09-21, 434 published + 1 draft:
+
+         campo          lo tienen                                     ¿puerta?
+         estante        1 de 435   (y existe 1 SOLO estante)          NO — 433 publicados no pasarían
+         copias         434 de 434, TODAS = 1, ninguna varía          NO — es un default que falta
+         nivel          408/408 base · 0/26 expansiones               SÍ, condicional a is_expansion
+         nombre         434/434                                       SÍ, pero sólo el marcador es detectable
+
+     `units` has no DB default (create_games.exs:20), `enrichment_changeset` never casts it
+     (game.ex:182-210), and `admin_changeset` lets a blank through unvalidated (game.ex:236-239) — so every
+     game the NEW flow creates has `copias = nil` forever. The 434 ones came from the CSV seed. That makes
+     copias a MISSING DEFAULT, not a gate: the editor pre-fills 1 and the gate says nothing about it.
+
+     SO THE GATE HAS EXACTLY ONE CONDITION for a normally-enriched base game: el nivel. That is not a thin
+     round, it is the round's answer — and it is the strongest argument in play about which variant is
+     proportionate, because G1 kills the page's primary action over one unset select.
+     AND FOR AN EXPANSION THE GATE HAS ZERO CONDITIONS. The `Tipo` toggle in the tool panel makes that
+     falsifiable: flip to `expansión` and the gate must vanish in all three variants (check 9).
+
+     ---------------------------------------------------------------------------------------------------
+     WHAT IS *NOT* BEING DESIGNED AROUND, and why it is a toggle rather than a requirement.
+
+     The one real draft in the database (id 873) is `enriched` and its name is:
+
+         "HellasDutch/English/French/German editionEnglish/Korean edition"
+
+     That is not a placeholder and no name rule would catch it. It is a ONE-CHARACTER PRODUCTION BUG, proven
+     byte-identically against the real row while measuring for this round:
+
+         bgg_client.ex:130   name: ~x".//name[@type='primary']/@value"so
+                                     ^^^ descends into <versions> (added with versions=1), and SweetXml's
+                                         `s` modifier CONCATENATES every match
+         reproducción        ".//"  -> "HellasDutch/English/French/German editionEnglish/Korean edition"
+                             "./"   -> "Hellas"                      (=== la fila 873, MATCH true)
+
+     The comment at bgg_client.ex:118-122 shows this exact hazard was already found and fixed for `//item`
+     -> `/items/item` when `versions=1` landed. `name` was missed — AND SO WERE `publishers` AND `artists`,
+     which use `.//link[...]` and absorb every localized edition's publisher:
+
+         Codenames  172 editoriales (37 únicas)   ·   Similo Myths 178   ·   Takenoko 161
+         GameText.editorial_text/1 joins them all -> 3.304 caracteres de "editado por …" EN VIVO en la web
+
+     A GATE THAT REJECTED THAT NAME WOULD BE PAPERING OVER A ONE-CHARACTER BUG. So the fixture's name is
+     `Hellas` — what BGG supplies once the xpath is `./` — and the broken string is a TOOL-PANEL TOGGLE, not
+     a gate requirement. Its job is to make a claim falsifiable rather than to be designed against:
+     *the gate cannot tell a bad name from a good one* (check 8 asserts the gate's items are IDENTICAL under
+     both names). Filed separately; it is not this round's question.
+
+     ---------------------------------------------------------------------------------------------------
+     WHAT WAS ALREADY DRAWN, read before anything was proposed (and it was narrower than the prose):
+
+       075:798   if (CY === 'draft') return { label: 'Publicar', id: 'publish', dis: !hasData() };
+       075:751   const hasData = () => ST === 'enriched';
+       073:46    "THE PUBLISH RULE: the app must avoid publishing uncompleted games"
+                 ...a rule the sketch obeys, not a variant axis.
+
+     So "uncompleted" had been operationalised as BGG ANSWERED and nothing else — `nivel`, `copias` and
+     `estante` were never in it. THAT IS THE HOLE d42 NAMES ("draft+complete -> Publicar") and it is what
+     this slice fills. The `hasData()` half is KEPT VERBATIM and is not a variant: a game with no BGG data
+     cannot be published in any of the three (check 10). What the three differ about is the CLUB half.
+
+     AND THE DRAWN GATE IS GREEN ON THE ONLY GAME IT WOULD EVER HAVE BEEN ASKED ABOUT: id 873 is
+     `enrichment_status: "enriched"`, so `dis: false` — Publicar is live on a draft with a garbage name, no
+     nivel, no copias and no estante.
+
+     075's LIFECYCLE DRAWING IS REUSED, NOT REDESIGNED. `Ciclo: Publicado / Borrador / Retirado` is a dot +
+     text in the editor's head (075:886, CYC), which is also the app-wide status rule. It is a READ-OUT
+     there, never a control, and it stays one here. Despublicar is slice 079's question, not this round's —
+     the tool panel's `Ciclo` buttons are a FIXTURE switch, exactly as they were in 075.
+
+     THE WALK IS STEPPABLE AND STATE IS CARRIED, as in 076/077: the game the walk publishes is the game the
+     walk created. 075's lesson — the only route to a new state must not be a fixture reload, or the harness
+     measures the tool panel instead of the page. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); --warn: #B26B00; }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); --warn: #E0A33E; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); --warn: #E0A33E; } }
+  /* ---------- FOUND IN A SCREENSHOT, AGAINST THREE GREEN CHECKS ----------
+     The first draft of this file painted the `Borrador` dot and G3's `falta` dot with the accent variable.
+     THAT NAME DOES NOT EXIST IN THIS THEME — themes/default.css:22 records the rename to
+     `--color-accent-bg` — so the declaration resolved to nothing and BOTH DOTS RENDERED AS 8x8 TRANSPARENT
+     SQUARES. Checks 13a and 6 counted the nodes, found them, and passed.
+     That is the twelfth time in this lineage a green number described something other than the page, and it
+     is why checks 6b and 13c now assert a RESOLVED, NON-TRANSPARENT colour instead of a node count.
+     075 had already hit the same gap and defined its own `--warn`; that definition is reused verbatim. */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* chrome — context only */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr img { height: 26px; }
+  .hdr .img-dark { display: none; }
+  :root[data-theme="dark"] .hdr .img-light { display: none; } :root[data-theme="dark"] .hdr .img-dark { display: block; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+  /* the pinned tier's height: a 44px title bar, or the 60px sticky search on Juegos */
+  .device { --bar: 44px; }
+  .device[data-bar="search"] { --bar: 60px; }
+
+  main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+
+  /* ---- decision 22 — a search-first tab root has no resting title ----
+     Measured, the chrome was a FIXED 265px: on a 360x640 that is 51% of usable height and exactly three games.
+     The handoff's "43%" was the 375x740 figure — the roomiest phone — so the real number is worse the smaller
+     the phone gets.
+     The <h1> is dropped and the + moves beside the field. This is decision 7's own argument applied to the
+     resting page: that decision already deleted the scrolled title BAR because it "repeats the word the pinned
+     heading already says", and the bottom tab bar says Juegos and highlights it, persistently. The h1 survives
+     as .sr for the accessibility tree, so the document still has a heading.
+     SCOPE, checked rather than assumed: Estantes' search is `position: relative` and Web has none, so Juegos is
+     the only search-first tab root and the only page with a .pbar. Estantes and Web keep their .ptitle — this
+     is not an app-wide sweep, it is a rule for the one page whose pinned tier is its search. */
+  .srow-wrap { display: flex; align-items: center; gap: 8px; }
+  .srow-wrap .sfield { flex: 1; min-width: 0; }
+  .srow-wrap .ibtn { margin-right: -12px; }   /* same pull as .hacts, so + keeps the header icon's edge */
+  /* decision 22 removed the resting title row from this page; .phead/.ptitle/.hacts went with it, the way
+     decision 17 removed .wblock with the thing that needed it. Estantes and Web still define their own. */
+  .back { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -10px; padding: 0 10px 0 4px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; align-self: flex-start; }
+  .back svg { width: 18px; height: 18px; }
+  .tbtn { height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; white-space: nowrap; }
+  .tbtn.pull-r { margin-right: -12px; }
+  .tbtn:hover { background: color-mix(in srgb, var(--ter) 8%, transparent); }
+  .tbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .ibtn { width: 44px; height: 44px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; flex-shrink: 0; position: relative; }
+  .ibtn svg { width: 20px; height: 20px; }
+  .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
+  .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .obtn { height: 44px; padding: 0 16px; border: 1px solid var(--stroke); background: var(--color-bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
+  :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
+  .obtn.wide { width: 100%; }
+  /* ROUND 3 — the first disabled `.obtn` in the project, and 064 banned disabled buttons outright, so this
+     is drawn deliberately rather than by default.
+     WHY IT IS NOT THE CASE d46 ARGUED AGAINST. d46 chose text paint for the top app bar because in the one
+     dead situation the slot had NOTHING to offer — a container there is "the whole silhouette of a live
+     primary" with nothing behind it. Here the button is not dead, it is WAITING: the input that makes it
+     live is 44px above it and one tap away, and the container is what says where typing leads. A control
+     that is about to be enabled by the field above it is a different thing from a control that has nothing
+     to do, and the paint follows that difference rather than the rule's letter.
+     d47 also settles the weight: 064's four roles stand for CONTENT BLOCKS, and a form sheet is one — so
+     this keeps Principal's outline and drops both strokes to the muted stops. */
+  .obtn[disabled] { border-color: var(--color-border); color: var(--color-text-muted); cursor: default; }
+  :root[data-theme="dark"] .obtn.pri[disabled] { border-color: var(--color-border); }
+
+  /* D-19g — pending work behind a header icon with a count badge (primary fill, top-right) */
+  .ibtn .badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--color-primary); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: grid; place-items: center; }
+  :root[data-theme="dark"] .ibtn .badge { background: var(--color-accent-text); color: #1b1024; }
+
+  /* ---- search (069): magnifier on the RIGHT, → ✕ once a name is kept ---- */
+  /* decision 3 — the field is the page's main control and the list is a new group under it:
+     title row → field 16 · field → "Juegos del club" 32 (24 of container + the heading's own 8) */
+  /* decision 7 — on Juegos the pinned tier IS the search: the page's one job follows you down all 435 rows,
+     instead of a title bar repeating the word the pinned heading already says.
+     It is the SAME input pinning, not a copy in a bar — so there is never a second search to keep in sync
+     (the back link needed `inert` for exactly that reason). Padding is compensated in the margins so the
+     resting rhythm is untouched: field top 129, heading text top 209. */
+  /* decision 22 — with the title gone the field leads the page, so its own 12px top margin drops to 4:
+     16 (main) + 4 + 4 (padding) = 24px of air under the app header. */
+  .search { position: sticky; top: 0; z-index: 12; margin: 4px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
+  .search.stuck { border-bottom: 1px solid var(--color-border); }
+  /* decision 17 — ONE LIST: sections butt together with no gap, so there is no pitch to read as a stripe and
+     no block to separate. Decision 11's 24 / 0 / 32 / 0 gap system and the .wblock it grouped are gone with it. */
+  .search + .lgroup { margin-top: 12px; }
+  .device[data-bar="search"] .pbar { display: none; }
+  .sfield { position: relative; }
+  .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield .sico { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text-muted); border-radius: 8px; }
+  .sfield .sico svg { width: 20px; height: 20px; }
+  button.sico { cursor: pointer; }
+
+  /* suggestions drop down OVER the list below (069 decision 12) */
+  /* anchored 4px under the FIELD, not under the padded sticky block — decision 7's 8px of bottom padding
+     pushed it 5px under the 292px keyboard (453 vs 448), the same trap 069 decision 61 hit */
+  /* decision 22 — the + now sits beside the field, so the field no longer spans the block. The dropdown moves
+     INSIDE .sfield (already position:relative) and anchors left:0/right:0 to the field itself, which keeps it
+     aligned at any width with no magic offset to drift. top:100%+4 reproduces the previous y exactly. */
+  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; scrollbar-width: none; }
+  .sugg::-webkit-scrollbar { display: none; }
+  .sugg[hidden] { display: none; }
+  .sglabel { font-size: 13px; color: var(--color-text-muted); padding: 8px 12px 4px; }
+  .srow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .srow:hover, .srow.hl { background: var(--color-surface); }
+  .srow .ttl { font-size: 15px; line-height: 1.3; }
+  .srow .ttl mark { background: none; color: inherit; font-weight: 600; }
+  /* decision 4 — the search creates: "Crear «texto»" on no match, "Agregar desde BGG" on a pasted id/link */
+  .srow.create .cov { display: grid; place-items: center; background: var(--color-surface); color: var(--color-accent-text); }
+  .srow.create .cov svg { width: 22px; height: 22px; }
+  .srow.create .ttl { color: var(--color-accent-text); font-weight: 600; }
+  .snone { padding: 14px 16px; font-size: 14px; color: var(--color-text-muted); }
+
+  /* covers */
+  .cov { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; object-fit: cover; background: var(--color-surface); display: grid; place-items: center; font-weight: 600; font-size: 16px; }
+  .cov.l { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  :root[data-theme="dark"] .cov.l { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  /* a game with no data at all: a quiet placeholder, not a coloured letter tile */
+  .cov.none { background: var(--color-surface); color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+  .cov.none svg { width: 18px; height: 18px; }
+  .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  /* D-19h — a status is a DOT + TEXT, never a pill */
+  /* D-19h — a status is a DOT + TEXT, never a pill and never an alert box. These rules have sat here unused
+     since decision 1 removed the per-row status that only repeated its section. Enrichment is the state that
+     actually earns them: it is TRANSIENT and per-row, not a restatement of the heading. */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
+  .dot.err { background: var(--color-danger); }
+  /* pending has no cover yet — the shipped admin draws a skeleton here, and that part of it is right */
+  .cov.skel { background: linear-gradient(100deg, var(--color-surface) 30%, #efeaf6 50%, var(--color-surface) 70%);
+    background-size: 220% 100%; animation: sweep 1.4s linear infinite; border: 0; }
+  :root[data-theme="dark"] .cov.skel { background-image: linear-gradient(100deg, var(--color-surface) 30%, #2a1f3a 50%, var(--color-surface) 70%); }
+  @keyframes sweep { to { background-position: -120% 0; } }
+  @media (prefers-reduced-motion: reduce) { .cov.skel { animation: none; } }
+  /* variant C — the failure count on a CLOSED section caption */
+  .lhead .warn { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; font-weight: 400; color: var(--color-text-muted); }
+
+  /* ---- decision 6 (D-19n) — a long list keeps its context while you scroll ----
+     Two tiers pinned inside the scroller, the iOS pairing: a compact page bar (back + title) once the title row
+     scrolls off, and the section heading under it. The "stacked" push comes free from position:sticky — each
+     heading is confined to its own .lgroup, so an arriving section pushes the previous heading out.
+     The bar is an ABSOLUTE overlay on .device, not a sticky child: at rest it must cost zero layout. */
+  .pbar { position: absolute; top: 53px; left: 0; right: 0; z-index: 15; height: 44px; display: flex; align-items: center; gap: 2px;
+    padding: 0 6px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; transform: translateY(-8px); pointer-events: none;
+    transition: opacity 160ms var(--ease-out-soft), transform 160ms var(--ease-out-soft); }
+  .device.scrolled .pbar { opacity: 1; transform: none; pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) { .pbar { transition: opacity 160ms linear; transform: none; } }
+  .pbar .pbt { font-size: 17px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pbar .back { height: 44px; margin: 0; align-self: center; }
+  .pbar .back + .pbt { margin-left: 2px; }
+  .device.kbd .pbar { display: none; }
+
+  /* ---- the list (decision 3) ---- */
+  .lgroup { margin-top: 0; }   /* decision 17 — sections butt together; the list is continuous */
+  /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
+  /* decision 8 — the heading is now a collapsible group's control, so it is a real 44px target.
+     The caret is a TRAILING chevron-DOWN that rotates 180°, never a chevron-right: under D-19i a "›" means
+     "this row opens another page", which a group header must not claim. Heading text stays at 16px like
+     everything else on the page (a leading caret would have pushed it to 40). */
+  /* decision 17 — ONE header anatomy. A section header is a CAPTION: a span, never a control, so it needs no
+     caret, no 44px target and no tonal band to stop it reading as a row. Decision 16's rank (13/600 muted on the
+     16 container keyline) applies to every section. It stays sticky and gains its fill only when it PINS, which
+     is the one moment it must terminate itself over rows sliding under it — the iOS plain-table behaviour. */
+  .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 0 -16px; background: var(--color-bg); }
+  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; border: 0;
+    background: transparent; text-align: left; font-size: 15px; font-weight: 600; line-height: 1.3;
+    color: var(--color-text); }
+  .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
+  /* ---- decision 29 — the fill is a BAND DRAWN AROUND THE INK, never the caption's own background ----
+     Decision 27 fixed the pinned band by halving the padding, which was right for that state and wrong as a
+     method: it patched the ONE state that had been reported. Hovering a caption showed the identical defect
+     (14px of colour above the text, 1.2 below) because `.lhead.tap:hover` painted the same asymmetric box.
+     Decision 27 wrote the general rule — an element that draws nothing at rest but something in another state
+     has TWO geometries — and then applied it to a single state. The fix has to be structural.
+     A ::before anchored to the CONTENT box (which is where the ink is) and grown by --band each way is centred
+     BY CONSTRUCTION, in every state, present and future. It also moves no text: the caption's own padding — and
+     with it decision 21's 3:1 resting ratio — is untouched, so hovering cannot make the label jump.
+     Pinned keeps a full-height bar (it is a bar under the search, not a highlight), and decision 27's padding
+     halving is what centres the ink inside it. Two band shapes, one invariant: the ink is centred in whatever
+     is actually drawn — and the harness now asserts that for every state that draws. */
+  /* --cap: the band centres on the CAP BLOCK, because for versalita the line box is not the ink. At 14/600 the
+     line box is 17px inside an 18.2px content box, and the capitals are 11px measured glyph-independently (an
+     "H" probe — a J's descending tail must not drag the optical centre). Centring the LINE box left the cap
+     block 0.6px high in BOTH states, so both take the same 0.6px downward nudge. Measured, --cap 0 gives -1.2
+     in each; --cap 0.6 gives 0.0.
+     The nudge changes neither band height nor the caption's own padding, so the breathing room and decision 21's
+     resting rhythm are untouched. The harness asserts cap-block centring, so this constant is CHECKED, not
+     trusted — change the font or the size and the guard fires. */
+  /* --band: the breath around the cap block. Measured at 5 / 6 / 7 the band is 28.2 / 30.2 / 32.2 and its edge
+     lands 24.6 / 23.6 / 22.6 from the NEXT label's capitals, against 33.2 of ink-to-ink between labels — so none
+     of the three crowds the rhythm and the choice is 2px of heft. 6 gives 9.6px of breath around an 11px cap:
+     a band 2.7x the cap, comfortably smaller than a row's own 64px hover. */
+  .lhead { position: relative; --band: 6px; --bandp: 12.9px; --cap: 0.6px; }
+  .lhead::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0;
+    /* NOTE the signs: this state moves the BAND while the pinned state below moves the INK (via padding), and
+       raising the band is the same as lowering the ink inside it. Same --cap, opposite-looking expressions. */
+    top: calc(var(--pt) - var(--band) - var(--cap)); bottom: calc(var(--cap) - var(--band));
+    background: transparent; transition: background 120ms var(--ease-out-soft); }
+  @media (prefers-reduced-motion: reduce) { .lhead::before { transition: none; } }
+  /* decision 31 — the pinned bar is CHROME, so its height is uniform and owes nothing to the resting rhythm.
+     It used to be the caption's own box, which meant it inherited decision 21's deliberate first-section
+     exception (--pt 14 vs 26) and the bar under SIN DATOS measured 32.2 against JUEGOS DEL CLUB's 44.2. That
+     exception is correct at rest — the 48px search already separates the first section — and meaningless once
+     the label is a bar pinned under that same search.
+     Because the band is a pseudo-element its thickness is independent of the box, so --bandp fixes the bar at
+     44px (matching .pbar and the touch floor) for every section, with no flow change and no jump. This also
+     retires decision 27's padding halving: one mechanism now serves both states, differing only in thickness. */
+  .lhw.pinned .lhead::before { top: calc(var(--pt) - var(--bandp) - var(--cap)); bottom: calc(var(--cap) - var(--bandp));
+    background: var(--color-surface); }
+
+  /* decision 21 — air ABOVE a section label, none below it. Measured TEXT-TO-TEXT (the headers are transparent,
+     so box edges are invisible and lie — box gaps reported the variants as identical), the list read 15px above a
+     label against 17px below: INVERTED PROXIMITY. Each label clung to the label ABOVE it rather than to the rows
+     it heads, which is why three 15/600 labels read as one block instead of three sections. Now 27 against 9, a
+     3.0:1 ratio.
+     Rejected: air above alone (1.7:1, and 8px more chrome — it keeps the loose 17px below); a hairline above each
+     section (1.2:1 — the rule would do the work instead of proximity, and it draws a line this list otherwise
+     does not have); and welding the label to its rows alone, which FAILED at 1.2:1 because a header's bottom
+     padding feeds the gap to the NEXT header too, so welding tightened both ends at once. Proximity is a RATIO —
+     the two ends have to move in opposite directions. */
+  .lhead { --pt: 26px; padding-top: var(--pt); padding-bottom: 0; }
+  .lgroup:first-of-type .lhead { --pt: 14px; }
+
+  /* decision 27 — the leading air is REDISTRIBUTED when the header pins, because a pinned header has a second
+     geometry the resting one never shows. At rest the caption draws nothing, so its 26px of padding-top is pure
+     air; the moment it pins it gains --color-surface and that same padding becomes 26px of EMPTY TINT above the
+     text, with the text jammed against the band's bottom edge (measured: 26.0 above, 0.5 below).
+     Halving --pt onto both sides centres the ink in the band and keeps the box height byte-identical, so the
+     sticky element's flow slot does not change and nothing jumps at the moment it pins.
+     The lesson this adds to "measure ink, not boxes": an element that draws NOTHING at rest but something in
+     another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
+  /* decision 31 retires decision 27's padding halving: the bar's geometry is the band's now, not the box's, so
+     the caption's padding never changes between states and no text can move as it pins. */
+
+  /* ---- decision 28 — a section label is VERSALITA: 14/600 uppercase, tracked ----
+     From the device: "I need the look and feel of those header looks more different of the rest of the content."
+     Until now a caption differed from a row name by WEIGHT alone (600 vs 400), plus keyline, cover and chevron —
+     decision 20 put them at the same size and colour deliberately, following D-19j. Four differentiators that
+     are all position and weight still read as "a row without a picture", because the TEXT is the same kind.
+     Case changes the kind, so a label can never be mistaken for a game's name at any size.
+
+     Why 14, measured as CAP HEIGHT rather than font-size — the only comparison that means anything for caps:
+
+       fila 15/400        mayúscula 11px · minúscula 8px
+       versalita 12/600   mayúscula  9px (82% de la may. de fila, 113% de su minúscula)
+       versalita 13/600   mayúscula  9px  <- idéntica a 12: la fuente las aparea a este tamaño
+       versalita 14/600   mayúscula 11px (100% / 138%)
+       versalita 15/600   mayúscula 11px  <- idéntica a 14, y 4px más de chrome
+
+     The scale collapses to two real options (9px or 11px of cap), so within each pair the cheaper one wins.
+     14 matches a row name's own capitals exactly while reading 138% of the lowercase body the eye actually
+     scans — full presence, different category — and it is CHEAPER than what it replaces: chrome 213 -> 209.
+
+     Rejected: a permanent tinted band (built and measured — it does stay 3 separate masses rather than decision
+     14's stripe, but it costs 24px and a whole row, and reopens decision 17's "nothing is tinted at rest", which
+     is what ended seven rounds of band negotiation); and 17/600 lower-case, which restores a ladder step but is
+     still the SAME kind of text, only bigger — the least answer to what was asked. */
+  .lhead .ln { letter-spacing: .07em; text-transform: uppercase; }
+  .lhead { font-size: 14px; }
+
+  /* decision 20 — the section label returns to D-19j's rank, 15/600 at full strength. Audited, the ladder was
+     INVERTED: the label organising 385 rows was 2px smaller and 2.8x lower contrast than a single row inside it
+     (13/600 @6.17 vs 15/400 @17.16), and byte-identical to a row's SECOND line (the year, 13 @6.17) — so a
+     section name carried the weight of row metadata. Cause: decision 16 demoted it to separate it from the
+     banded 15/600 CONTROLS, decision 17 deleted those controls, and the demotion outlived its reason. It also
+     mis-cited the BENCHMARK's "Label (group) 13/600", which was measured from a FORM section label in 065, not
+     a list section header — D-19j puts a list section at 15/600, above row names.
+     Against a row this still differs by weight (600 vs 400), keyline (16 vs 68) and the absent 40px cover, so
+     decision 10's header-vs-row confusion cannot return: that was a 44px CONTROL with a trailing icon in the
+     row-chevron slot, and no such thing exists any more.
+     Rejected: 15/600 muted (fixes size, keeps the label 2.8x fainter than its own rows — the inversion partly
+     survives) and 12/600 all-caps tracked (earns presence from case rather than size and costs less height, but
+     it is a harder, more systemy voice than the sentence-case Spanish this admin uses everywhere else). */
+  /* decision 18 — a collapsible section carries an INLINE caret after its count. Inline, not leading, so the
+     caption keeps the 16 keyline and the x=16 column has no hole; and not trailing at x=339, which D-19i
+     reserves for "opens a page". The visual row stays at the caption's height while the HIT BOX is stretched to
+     the 44px touch floor by a pseudo-element, so reaching the floor costs no rhythm. */
+  .lhead.tap { cursor: pointer; position: relative; }
+  .lhead.tap::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .lhead.tap:hover::before { background: var(--color-surface); }
+  .lhw.pinned .lhead.tap:hover::before { background: var(--color-surface-2); }
+  /* the focus ring rides the same band, so it cannot frame the empty half of the box either */
+  .lhead.tap:focus-visible { outline: none; }
+  .lhead.tap:focus-visible::before { background: var(--color-surface); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .lhead .caret { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform 160ms var(--ease-out-soft); }
+  /* decision 25 — the caret is a chevron-DOWN that flips to chevron-UP. Decision 18 had used chevR, the glyph
+     D-19i reserves for "opens a page", and separated the two by POSITION alone (x=126 vs x=339) — measured, it
+     was byte-identical to the row chevron (`M9 5l7 7-7 7`). Decision 10 had already written the rule the right
+     way round ("a disclosure triangle, never a trailing ›") and decision 18 kept the position fix while losing
+     the glyph rule. Down means expand, up means collapse; neither ever points the way a row chevron does, so the
+     collision is resolved by GLYPH, not by placement. */
+  .lhead[aria-expanded="true"] .caret { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
+
+
+  /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
+     it still looked like a peer: measured, byte-identical type to the two controls above it (15/600,
+     rgb(35,19,57)), so it read as a group header that had lost its band and caret rather than a different kind
+     of thing. It was also the only element on the page with an empty leading slot — the x=16 column ran
+     caret · caret · EMPTY · cover · cover. Both causes were separated by variant and both are fixed here:
+     13/600 muted is the system's existing "Label (group)" rank (BENCHMARK; iOS 13pt section header, M3
+     subheader), and 16 puts its text back in the leading column. Contrast 6.17 on the page background.
+     Rejected: the quieter rank alone at 68 (the hole stayed) and the move alone (type stayed identical).
+     The caption no longer aligns with the rows it heads — it sits on the container keyline, which is exactly
+     what a Material list subheader does, and decision 13 is untouched because the page still measures 16 / 68. */
+
+  /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
+     brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
+     a row — so it gained 0 rows at 375×667 and still cost a tap. */
+  .device[data-bar="search"] .search { transition: transform 200ms var(--ease-out-soft); }
+  .device[data-bar="search"].hidesearch .search { transform: translateY(calc(-100% - 1px)); }
+  .device[data-bar="search"].hidesearch { --bar: 0px; }
+  @media (prefers-reduced-motion: reduce) { .device[data-bar="search"] .search { transition: none; } }
+
+  /* decision 19 — the per-section hint returns, as its own line inside an OPENED section only. Decision 17 had
+     dropped it because a paragraph under every header was a second anatomy in a list whose whole point is one;
+     decision 18 changed that premise, since a hint can now only appear where the reader has already asked for
+     the section. Measured: zero cost at rest (the resting list is byte-identical — 30.9px captions, catalog at
+     206), and 26px spent only in the moment the hint is relevant.
+     Rejected: folding it into the caption line — measured, that wrapped the header to 2.78 lines EVEN WHILE
+     COLLAPSED and pushed the catalog 206 -> 223, paying at rest on every visit for text that only matters once
+     the section is open. */
+  .hint { margin: 2px 0 6px; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.4; }
+  .rows { margin: -4px -16px 0; }   /* decision 21 — the label is welded to the rows it heads */
+  .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
+  .row:hover { background: var(--color-surface); }
+  .row .name { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+  /* D-19i — a chevron means THIS ROW OPENS ANOTHER PAGE. A game row opens its editor (decision 2), so it has one. */
+  .chev { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
+  .more { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; }
+  .more .cap { font-size: 12px; color: var(--color-text-muted); }
+
+  /* ---- sheets (D-19e) ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  .sheet.full { top: 24px; max-height: none; }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sheet.full .sh-top { margin-bottom: 0; }
+  .sh-head { display: flex; gap: 16px; align-items: center; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-head .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .sh-head .tile { width: 56px; height: 60px; border-radius: 6px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .sh-head .tile svg { width: 28px; height: 28px; }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .ctx { margin: 0 0 4px; font-size: 13px; line-height: 1.3; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .dlink { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border: 0; background: none; font-size: 16px; text-align: left; cursor: pointer; }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink svg { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .dsub { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .dlink:has(.dsub) { min-height: 64px; padding-block: 8px; }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+  /* form sheet (restart 67) — the Agregar juego sheet */
+  .fbody { padding: 8px 16px 16px; }
+  .flab { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+  .tfield { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .fbody .hint { margin: 6px 0 0; }
+  .ferr { margin: 6px 0 0; font-size: 13px; color: var(--color-danger); }
+  .ferr[hidden] { display: none; }
+  .fbody .obtn.wide { margin-top: 16px; }
+
+  /* 077 — the pending sheet's BODY. Deliberately not a new sheet chrome: `.sh-top` / `.sh-head` / `.sh-x`
+     are reused exactly as every other sheet uses them (D-19e), and only what sits below the rule is new.
+     There is no `.tile` in the head — every other sheet's tile names an ACTION (`+`), and a status has no
+     action to name; a coloured tick/cross would also be a second status idiom beside d40's dot + text. */
+  .pbody { padding: 16px 16px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .pwait { display: flex; gap: 14px; align-items: flex-start; }
+  .pwait p, .pline { margin: 0; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  .spin { width: 26px; height: 26px; flex-shrink: 0; margin-top: 1px; border-radius: 50%;
+    border: 3px solid var(--color-surface-2); border-top-color: var(--color-primary); animation: sp 900ms linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spin { animation: sp-pulse 1.6s var(--ease-out-soft) infinite; }
+    @keyframes sp-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+  }
+  /* 076 round 4 checked the `+` sheet's rhythm after deleting a block from the middle of a stack, on the
+     grounds that nothing else notices an orphan gap. Same check here, and it failed: the ARRIVED body has no
+     prose at all, so the button's own margin left 36px of nothing under the rule. The margin belongs between
+     a line and the button, not above a button that is the whole body. */
+  .pbody .obtn.wide { margin-top: 16px; }
+  .pbody .obtn.wide:first-child { margin-top: 0; }
+  .fsep { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 13px; color: var(--color-text-muted); }
+  .fsep::before, .fsep::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+  /* the edition prompt (D-03): a banner inside the sheet, games listed as compact rows */
+  .edp { margin-top: 16px; padding: 12px; border: 1px solid var(--stroke); border-radius: 8px; }
+  .edp p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
+  .edp .srow { min-height: 48px; padding: 4px 0; }
+  .edp .eacts { display: flex; justify-content: flex-end; gap: 8px; margin: 8px -12px -4px 0; }
+  .device.kbd .sheet.full, .device.kbd .sheet.form { bottom: 292px; padding-bottom: 0; }
+
+  /* ---- editor stand-in (the real screen is sketch 063) ---- */
+  .ehead { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+  .ehead .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .ehead h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .enote { margin-top: 24px; padding: 16px; border: 1px dashed var(--stroke); border-radius: 8px; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  /* stand-in blocks: only to give the page 063's real length, which is what justifies the pinned bar */
+  .estub { height: 180px; margin: 8px -16px 0; background: repeating-linear-gradient(135deg, var(--color-surface) 0 10px, transparent 10px 20px); border-radius: 8px; }
+
+  /* ---- dialog (D-19f) ---- */
+  .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
+  .dscrim.open { opacity: 1; pointer-events: auto; }
+  .dialog { width: 100%; max-width: 312px; background: var(--color-bg); border-radius: 16px; padding: 24px 24px 12px; box-shadow: var(--shadow-lg); transform: scale(.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .dscrim.open .dialog { transform: none; }
+  .dialog h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .dialog p { margin: 0 0 16px; font-size: 14px; line-height: 1.45; color: var(--color-text-muted); }
+  .dacts { display: flex; justify-content: flex-end; gap: 8px; margin-right: -12px; }
+  .tbtn.dan { color: var(--color-danger); }
+
+  /* ---- snackbar (D-19b/c) ---- */
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 4px 4px 16px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft); }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .snack .x { width: 44px; height: 44px; border: 0; background: none; color: var(--color-bg); display: grid; place-items: center; cursor: pointer; }
+  .snack .x svg { width: 18px; height: 18px; }
+  .snack [hidden] { display: none; }
+
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 25; background: #d2d4da; display: none; padding: 10px 4px; }
+  :root[data-theme="dark"] .kbd-sim { background: #2b2b30; }
+  .device.kbd .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; }
+  .kbd-sim .krow { display: flex; gap: 5px; justify-content: center; }
+  .kbd-sim .k { flex: 0 0 31px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); display: grid; place-items: center; font: 17px system-ui; color: #111; }
+  :root[data-theme="dark"] .kbd-sim .k { background: #6b6b70; color: #fff; }
+  .kbd-sim .k.wide { flex-basis: 180px; font-size: 12px; }
+
+  /* ---- 076: the fresh row's own treatment ----
+     V2 and V3 both need to say "this is the one you just made". It is the SAME anatomy in both (d17's one
+     list, d19h's dot + text) so the axis stays "where", never "what it looks like": a row-width tonal wash
+     plus the `sub` line the row already had. No new left edge, no badge, no pill. */
+  .row.fresh { background: var(--color-accent-bg); }
+  .row.fresh .name { font-weight: 600; }
+  /* V3's pinned block: the new game rendered above every section. It reuses .lgroup/.lhw/.lhead verbatim so
+     it cannot accidentally become a fourth kind of header — the only new thing is that it exists at all. */
+  .sgnone { margin: 0; padding: 14px 16px; color: var(--color-text-muted); font-size: 14px; }
+  #tools { position: fixed; right: 12px; top: 12px; z-index: 99; font: 12px system-ui; background: rgba(0,0,0,.72); color: #fff; padding: 6px 10px; border-radius: 8px; }
+  #tools .vt { background: none; }
+  #tools .vt.on { background: #fff; color: #000; }
+  #tools .stp { border-color: rgba(255,255,255,.65); }
+  #tools .stp[disabled] { opacity: .35; cursor: default; }
+  #tools .now { opacity: .72; font-size: 11px; }
+  #tools > div + div { margin-top: 4px; }
+  #tools button.on { background: #fff; color: #000; }
+  #tools button { font: inherit; color: #fff; background: none; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+
+  /* ---------- decision 32: the press state ----------
+     Measured before building: the page had 8 `:hover` rules, 6 `:focus-visible` and **ZERO `:active`**, so a
+     press painted byte-identical to a hover. On a pointer that is harmless — the hover already painted. On
+     TOUCH there is no hover at all, so the only feedback a tap got was the platform's own highlight, and
+     `-webkit-tap-highlight-color` was authored NOWHERE: every tappable surface sat at the platform default
+     (rgba(51,181,229,0.4), Android's Holo cyan, under touch emulation). That cyan appears nowhere in this palette.
+
+     The property INHERITS, so suppressing it at the root covers every surface at once — including ones added
+     later, which is why it is not enumerated per selector. */
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  /* ONE press token, --color-surface-2, on every pressable surface. Rejected: press = the hover fill (lightest
+     of the options — #F1ECFD on white, which a ~100ms tap on a phone in daylight can miss), and press = one
+     step PAST hover everywhere (reads three ranks on a pointer, but needs a fabricated rgb(188,177,210) on the
+     pinned caption, a value that exists nowhere else in the system).
+     The accepted cost: a POINTER pressing a PINNED collapsible caption reads press == hover, because that
+     caption's hover is already surface-2. It is the narrowest case on the page and touch never reaches it —
+     touch, which is what this state exists for, has no hover to collide with. */
+  .row:active,
+  .ibtn:active,
+  .dlink:active,
+  .sh-x:active,
+  .srow:active,
+  .tbtn:active { background: var(--color-surface-2); }
+  /* the caption paints through its band pseudo-element, never its own box (decisions 27/29/31).
+     transition-duration 0s on the way IN: the band fades over 120ms, longer than a quick tap, so a
+     transitioned press fill would show only partly faded — or, on a fast tap, not at all. */
+  .lhead.tap:active::before,
+  .lhw.pinned .lhead.tap:active::before { background: var(--color-surface-2); transition-duration: 0s; }
+  @media (prefers-reduced-motion: reduce) { .lhead.tap:active::before { transition: none; } }
+
+
+  /* ---------- 078: the editor, ported from 073/075 rather than redrawn ----------
+     d33's spine rule, unchanged: every club value is a ROW that opens a sheet. The rows are the same
+     anatomy 075 drew; what is new below them is the gate. */
+  .ghead { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 18px; }
+  .ghead .cov { width: 64px; height: 68px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--color-surface); display: grid; place-items: center; }
+  .ghead .cov.l { font-size: 26px; }
+  .ghead .cov.none svg { width: 26px; height: 26px; }
+  .gh-t { flex: 1; min-width: 0; }
+  .gh-name { font-size: 22px; font-weight: 600; line-height: 1.22; overflow-wrap: anywhere; }
+  .gh-meta { color: var(--color-text-muted); }
+  /* 075:886 verbatim — the lifecycle is a dot + text, and it is a READ-OUT, never a control. */
+  .gh-st { margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
+  .gh-st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .gh-st .dot.ok { background: var(--color-success); }
+  .gh-st .dot.warn { background: var(--warn); }
+  .gh-st .dot.off { background: var(--color-text-muted); }
+  .gh-sep { color: var(--color-text-muted); }
+
+  .glabel { font-size: 13px; font-weight: 600; color: var(--color-text-muted); letter-spacing: .01em; padding: 22px 0 8px; }
+  .frows { margin: 0 -16px; }
+  .frow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
+    border: 0; background: none; text-align: left; position: relative; cursor: pointer; }
+  .frow + .frow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--color-border); }
+  .frow:hover { background: var(--color-surface); }
+  .frow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .fr-t { flex: 1; min-width: 0; }
+  .fr-k { display: block; font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
+  /* ---------- CORRECTED FROM THE DEVICE, AND IT WAS MY DRIFT, NOT THE DESIGN'S ----------
+     The first version of this file gave every club row a trailing `›` and painted the value muted. BOTH
+     were already settled, and against me:
+       · D-19i is explicit — *"a chevron means THIS ROW OPENS ANOTHER PAGE. Rows that act in place (show an
+         answer, open a sheet) have none."* 072 round 1 removed the chevron for exactly this reason (d34),
+         and 072 round 2 then removed the `⌄` that replaced it too, landing on NO GLYPH AT ALL.
+       · What says "editable" instead is d37's anatomy: LABEL PROMINENT, VALUE SUBORDINATE, and the value
+         carries `--val` — a tint that marks the datum you are about to change. 075 renders exactly that.
+     So this file added six chevrons ONE SKETCH AFTER 077 used D-19i to take one away, and dropped the tint
+     that was doing the work the chevron was wrongly hired for. Recorded rather than quietly fixed: reading
+     a decision's prose instead of its artefact is the failure mode 072 named by name, and this is it again.
+     `--val` is inherited from 073/075 verbatim, TODO(palette) and all. */
+  :root { --val: var(--color-accent-text); }
+  :root[data-theme="dark"] { --val: #9F7AEA; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
+  .fr-v { display: block; font-size: 14px; line-height: 1.32; margin-top: 2px; color: var(--val); overflow-wrap: anywhere; }
+  .fr-v.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fr-v.empty { font-style: italic; }
+  /* ---------- G3's ONLY paint: the missing value is marked on its own row ----------
+     G1 and G2 speak in a container of their own; G3 has none, so the row is where it speaks. It is the
+     SAME dot the status line uses (D-19h), not a new anatomy and not a badge. Check 6 asserts it appears in
+     G3 alone, and only on rows the gate actually names. */
+  .frow .miss { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex-shrink: 0; }
+
+  /* ---------- the action bar (d42), copied from 073/075 ---------- */
+  .savebar { position: absolute; left: 0; right: 0; bottom: 67px; z-index: 19; display: flex; gap: 10px; align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border); }
+  .device.kbd .savebar { bottom: 0; }
+  .savebar .why { flex: 1; font-size: 13px; line-height: 1.35; color: var(--color-text-muted); }
+  .savebar .why:empty { display: none; }
+  .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 0; font-size: 15px; font-weight: 600;
+    background: var(--color-primary); color: var(--color-primary-content);
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; cursor: pointer; }
+  :root[data-theme="dark"] .btn { background: var(--color-accent-text); color: #1b1024; }
+  .btn:active { filter: brightness(.92); }
+  .btn.ghost { background: none; color: var(--color-accent-text); padding: 0 12px; }
+  .savebar .btn:not(.ghost) { margin-left: auto; }
+  /* d42: the primary always ends at the same edge. 075 used opacity .42 for the dead state; G1 keeps it
+     rather than inventing a sixth treatment, and the README records that this is the SIXTH disabled control
+     against 064's outright ban — counted, not waved through. */
+  .btn[disabled] { opacity: .42; cursor: default; }
+
+  /* ---------- G1's line: what is missing, in the bar, beside the dead button ---------- */
+  .savebar .why .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-right: 6px; vertical-align: 1px; }
+
+  /* ---------- the field sheets (075) ---------- */
+  .sh-body { padding: 0 16px 8px; }
+  .opt { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px; margin: 0 -16px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .opt:hover { background: var(--color-surface); }
+  .opt:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .opt .ot { flex: 1; min-width: 0; }
+  .opt .on2 { font-size: 16px; }
+  .opt .os { display: block; font-size: 13px; color: var(--color-text-muted); margin-top: 2px; line-height: 1.35; }
+  .opt .tick { width: 22px; height: 22px; color: var(--color-primary); flex-shrink: 0; }
+  :root[data-theme="dark"] .opt .tick { color: var(--color-accent-text); }
+  .stepper { display: flex; align-items: center; gap: 2px; justify-content: center; padding: 8px 0 4px; }
+  .stepper button { width: 44px; height: 44px; border: 1px solid var(--stroke); background: none; border-radius: 10px; display: grid; place-items: center; cursor: pointer; }
+  .stepper button svg { width: 18px; height: 18px; }
+  .stepper .n { min-width: 48px; text-align: center; font-size: 17px; font-weight: 600; }
+  .fld { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .fld:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  textarea.fld { height: auto; min-height: 96px; padding: 12px 14px; line-height: 1.45; resize: none; }
+
+
+  /* ---------- RONDA 2: 074's top app bar, ported verbatim (d43/d44, N1 + W3 texto) ----------
+     078's round 1 built the editor on 073's HOY chrome — wordmark header + .pbar + an in-page `‹ Juegos`
+     — which is the 97px-of-chrome baseline 074 MEASURED AND REPLACED with one 56px bar, and which the
+     developer confirmed on the device: *"I have the 'back' chevron for leave this page. So not need of main
+     menu."* That was drift, exactly like the chevron above. This is the decided chrome.
+
+     AND THE EDITOR IS A FULL-SCREEN DESTINATION (developer, round 2): the bottom tab bar goes too —
+     *"this is a destination page where I need the user to leave because saved/published or go back with
+     the ‹"*. Two exits, and nothing else. */
+  .tbar { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+    padding: 0 16px 0 2px; border-bottom: 1px solid var(--color-border); background: var(--color-bg); }
+  /* THE COMPANION RULE IS LOAD-BEARING, and 074 lost a whole round to its absence: `display` set on a CLASS
+     out-specifies the UA stylesheet's `[hidden] { display: none }`, so `el.hidden = true` hides NOTHING.
+     074 was rendering this bar on top of its own wordmark header — 109px of chrome, worse than the 97 it
+     replaced — while the check reported success because it trusted the attribute instead of the screen.
+     Every class here that sets `display` gets the companion, and check 20 counts what is actually laid out
+     via offsetParent rather than reading attributes. */
+  .tbar[hidden] { display: none; }
+  .hdr[hidden] { display: none; }
+  .tabs[hidden] { display: none; }
+  /* the THIRD instance of the same trap in this file's history: `.pbar` also sets `display: flex` on the
+     class, so `hidden = true` left it laid out and check 20 caught it. Every class that sets `display`
+     needs the companion — there is no exception, and this comment is the reminder. */
+  .pbar[hidden] { display: none; }
+  /* ---- AND THE FOURTH AND FIFTH, FOUND IN A SCREENSHOT OF MODE A ----
+     `.savebar` and `.stack` also set `display: flex` on the class, so `hidden = true` left BOTH laid out at
+     the foot of A — two empty strips, each drawing its own `border-top`, visible as two stray rules under
+     a form that is supposed to have nothing below it. And it made check 23 lie: it computed A's floor as
+     `stack.hidden ? 740 : ...`, reading the ATTRIBUTE, while the real floor was ~715.
+     Five instances of one trap in one file. The rule is now stated once and for all: IN THIS PAGE, ANY
+     CLASS THAT SETS `display` MUST CARRY ITS OWN `[hidden]` COMPANION — and any check that asks whether
+     something is on screen must use `offsetParent`, never `.hidden`. */
+  .savebar[hidden] { display: none; }
+  .stack[hidden] { display: none; }
+  .tbar .tb-back { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); cursor: pointer; }
+  .tbar .tb-back svg { width: 22px; height: 22px; }
+  .tbar .tb-back:active { background: var(--color-surface-2); border-radius: 50%; }
+  /* 074 round 2: the title is ABSENT AT REST and fades in once the head clears the bar. `flex: 1` is kept
+     while invisible on purpose — a title that collapsed would let the CTA slide left at rest and jump right
+     on scroll, which is the "the thing to tap is moving" defect d42 exists to prevent. */
+  .tbar .tb-t { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity 140ms var(--ease-out-soft); }
+  .tbar.titled .tb-t { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .tbar .tb-t { transition: none; } }
+  /* W3 texto (d44): the ink lands on R359 with every other right edge while the 44px tap margin reaches
+     R373 invisibly — the visible box and the hit box are separate boxes, kept verbatim with its reason. */
+  .tbar .btn { min-height: 36px; padding: 0 14px 0 14px; font-size: 14px; border-radius: 9px; position: relative;
+    background: none; color: var(--color-accent-text); box-shadow: none; padding-right: 0; }
+  .tbar .btn::before { content: ""; position: absolute; left: 0; right: -14px; top: 50%; height: 44px; transform: translateY(-50%); }
+  .tbar .btn:active { background: var(--color-surface-2); filter: none; }
+  .tbar .btn[disabled] { color: var(--color-text-muted); opacity: 1; }
+
+  /* ---------- RONDA 2 · B: el par apilado al pie ----------
+     The developer's "full screen form with the CTA stacked at bottom, with the correct balance". Publicar
+     is the primary and keeps the filled treatment; Guardar is the secondary and is an outline, NOT a ghost
+     — a ghost at full width under a filled button reads as a caption, not a control. */
+  .stack { position: absolute; left: 0; right: 0; bottom: 0; z-index: 19; display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border); }
+  .stack .why { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); text-align: center; }
+  .stack .why:empty { display: none; }
+  .stack .btn { width: 100%; justify-content: center; min-height: 48px; }
+  .stack .btn.sec { background: none; color: var(--color-accent-text); border: 1px solid var(--stroke); }
+  :root[data-theme="dark"] .stack .btn.sec { color: var(--color-accent-text); }
+
+  /* R1's marker. NOT an asterisk: an asterisk needs a legend somewhere to decode it, and on a form with
+     exactly one required field a legend costs more than the words do. It is also not a pill — the project's
+     status convention is a dot + text and pills were retired (d36) — so it is small muted text, the same
+     rank the `.fr-v` value line carries. */
+  .fr-k .req { font-size: 12px; font-weight: 500; color: var(--warn); letter-spacing: .01em; }
+  .fr-v.req { color: var(--warn); font-style: normal; }
+
+
+  /* ================= RONDA 4 · la hoja del borrador =================
+     El desarrollador, cortando el alcance: *"the main goal of a borrador is to ASK the user to fill the
+     missing data and publish. Only publish. Maybe they can cancel that with the chevron. (...) what if we
+     show that as part of a bottom sheet from the list, asking to verify the correct weight assignment and
+     some basic information like name, image, description and if or isn't an expansion."*
+
+     ESTO RETIRA LA RONDA 2. B existía para sostener un `Guardar` que acaba de ser eliminado: sin segundo
+     botón no hay par apilado, no hay estado sucio y no hay confirmar-al-salir. Escrito, no derivado (d47).
+     LO QUE *NO* SE RETIRA: la página del editor (072-075) sigue viva para corregir un juego YA PUBLICADO,
+     con su barra de 074 y su spine de filas->hojas (d33). Son dos superficies con dos trabajos distintos.
+
+     Y LA HOJA ES UN FORMULARIO CLÁSICO, no el spine de d33: acá no mirás valores guardados, los completás
+     de una sentada. d37 ya delimitó su propio alcance — *"los campos dentro de una hoja no son este patrón:
+     una vez abierta la hoja ya estás editando"*. Así que no hay conflicto que enmendar. */
+  .fsheet .fbody { padding: 4px 16px 16px; }
+  .ffield { margin-top: 16px; }
+  .ffield:first-child { margin-top: 4px; }
+  .flabel { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .flabel .req { font-weight: 500; color: var(--warn); }
+  .fhint { font-size: 12px; line-height: 1.4; color: var(--color-text-muted); margin: 6px 0 0; }
+  .ferr { font-size: 12px; line-height: 1.4; color: var(--color-danger); margin: 6px 0 0; display: flex; gap: 6px; }
+  .ferr[hidden] { display: none; }
+  .fld[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+
+  /* la tapa: se muestra para VERIFICAR, no para editar. `gallery_urls` está vacío en los 435 juegos por
+     decisión deliberada (01.3.1 / D-07: GalleryBackfill la LIMPIA), así que un selector de imagen no
+     tendría de dónde elegir — sería la puerta sin construir que 076 borró. */
+  .fcover { display: flex; gap: 12px; align-items: center; }
+  .fcover img, .fcover .ph { width: 56px; height: 60px; border-radius: 7px; object-fit: cover; background: var(--color-surface); flex-shrink: 0; display: grid; place-items: center; color: var(--color-text-muted); }
+  .fcover .cap { font-size: 12px; line-height: 1.4; color: var(--color-text-muted); }
+
+  /* el segmentado de nivel: tres bandas reales, elegidas en el formulario mismo y no en otra hoja —
+     una hoja sobre una hoja es exactamente lo que el "formulario clásico" viene a evitar. */
+  .seg { display: flex; flex-direction: column; gap: 6px; }
+  .seg button { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; padding: 10px 12px;
+    min-height: 44px; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg); cursor: pointer; }
+  .seg button .rd { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--stroke); flex-shrink: 0; margin-top: 2px; display: grid; place-items: center; }
+  .seg button[aria-pressed="true"] { border-color: var(--color-primary); background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] { border-color: var(--color-accent-text); background: color-mix(in srgb, var(--color-accent-text) 16%, transparent); }
+  .seg button[aria-pressed="true"] .rd { border-color: var(--color-primary); }
+  .seg button[aria-pressed="true"] .rd::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--color-primary); }
+  :root[data-theme="dark"] .seg button[aria-pressed="true"] .rd::after { background: var(--color-accent-text); }
+  .seg .sn { font-size: 15px; font-weight: 500; display: block; }
+  .seg .ss { font-size: 12px; line-height: 1.35; color: var(--color-text-muted); display: block; margin-top: 2px; }
+  .seg[data-invalid="true"] button { border-color: var(--color-danger); }
+
+  /* el switch de expansión, y la razón por la que apaga el nivel entero */
+  .fswitch { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .fswitch .sw { width: 46px; height: 28px; border-radius: 14px; background: color-mix(in srgb, var(--color-text) 26%, var(--color-bg)); position: relative; flex-shrink: 0; transition: background .15s; border: 0; cursor: pointer; }
+  .fswitch .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--color-bg); transition: transform .15s; box-shadow: var(--shadow-sm); }
+  .fswitch .sw[aria-checked="true"] { background: var(--color-primary); }
+  :root[data-theme="dark"] .fswitch .sw[aria-checked="true"] { background: var(--color-accent-text); }
+  .fswitch .sw[aria-checked="true"]::after { transform: translateX(18px); }
+  .fswitch .lb { flex: 1; font-size: 15px; }
+
+  /* d36/041: informativo = pill con borde, relleno transparente. `Expansión` es una CLASIFICACIÓN, no un
+     estado — así que no choca con la regla de punto-+-texto que gobierna Publicado/Borrador/Retirado. */
+  .pill-outline { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border: 1px solid var(--stroke);
+    border-radius: 11px; font-size: 12px; font-weight: 500; line-height: 1; color: var(--color-text); }
+  .row .pill-outline { margin-left: 6px; }
+
+  /* ---------- EL CTA DE LA HOJA, PEDIDO MÁS FUERTE ----------
+     Era un `.obtn` con borde; ahora es relleno, 52px y ancho completo. Es la única acción de la pantalla y
+     el único motivo por el que la hoja existe, así que no compite con nada.
+
+     ES UN BOTÓN DESHABILITADO POR DECISIÓN (P2), no por descuido, y 064 los prohibió de entrada — así que
+     el estado muerto se dibuja con los stops mudos y un borde interior, NO con `opacity`. 076 ronda 3 ya
+     argumentó esto para el primer `.obtn` muerto del proyecto: la opacidad apaga también el TEXTO, y acá
+     el texto es lo único que dice qué va a pasar cuando reviva.
+     LA EXPLICACIÓN NO VIVE ACÁ: vive en la etiqueta del nivel, porque P2 no da mensaje de error. */
+  .cta { width: 100%; min-height: 52px; margin-top: 20px; border: 0; border-radius: 12px; cursor: pointer;
+    background: var(--color-primary); color: var(--color-primary-content); font-size: 16px; font-weight: 600; }
+  :root[data-theme="dark"] .cta { background: var(--color-accent-text); color: #1b1024; }
+  .cta:active { filter: brightness(.92); }
+  .cta[disabled] { background: var(--color-surface); color: var(--color-text-muted); cursor: default; box-shadow: inset 0 0 0 1px var(--color-border); }
+
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <header class="hdr" id="hdr">
+    <button class="burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
+    <span class="word">PUKLLAY CLUB</span>
+  </header>
+  <div class="tbar" id="tbar" hidden></div>
+  <div class="pbar" id="pbar" inert></div>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" id="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti" id="t-admin"></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti" id="t-juegos"></span>Juegos</span>
+    <span class="tab"><span class="ti" id="t-web"></span>Web</span><span class="tab"><span class="ti" id="t-est"></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="savebar" id="savebar" hidden></div>
+  <div class="stack" id="stack" hidden></div>
+  <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="dscrim" id="dscrim"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <h2 id="dlg-t"></h2><p id="dlg-d"></p>
+    <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
+</div></div>
+<div id="tools">
+
+  <div>El paseo: <button class="stp" data-walk="create">1 · Agregar 207330</button>
+    <button class="stp" data-walk="enriched" disabled>2 · llegan los datos</button>
+    <button class="stp" data-walk="draft" disabled>3 · tocar el borrador</button>
+    <button class="stp" data-walk="band" disabled>4 · elegir nivel</button>
+    <button class="stp" data-walk="pub" disabled>5 · Publicar</button>
+    <button class="stp" data-walk="exp" disabled>· marcarlo expansión</button>
+    <button class="stp" data-walk="reset">↺</button></div>
+  <div style="opacity:.62">El editor, una vez publicado: <button class="stp" data-walk="edit" disabled>abrirlo</button></div>
+  <div class="now" id="walkNow">Paso 0 — nada creado todavía</div>
+  <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+/* ---------- icons ---------- */
+const P = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  chevD: '<path d="M5 9l7 7 7-7"/>',
+  inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13l2.5 8v5a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-5z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+  shelf: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  file: '<path d="M14 3v5h5"/><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/>',
+  down: '<path d="M12 5v13M6 13l6 6 6-6"/>',
+  tick: '<path d="M4 12.5l5.5 5.5L20 7"/>',
+  minus: '<path d="M5 12h14"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+
+/* ---------- data: the 434 published games + 1 draft, exactly as the dev DB has them ----------
+   The fixture's 49 thumb-less games ARE the 49 incomplete ones (no cover, no description, no year) — verified
+   against pukllay_club_dev. They were bulk-imported 2026-08-10, so newest-first puts them at the bottom. */
+let G = GAMES067.map((x, i) => ({
+  id: i + 1, name: x.n, thumb: x.t, hue: hue(x.n),
+  year: x.t ? x.y : null,               /* the 49 have no year either */
+  gap: !x.t,                            /* "sin datos": no cover, no description */
+  status: 'published',
+  added: x.t ? 2000 + i : 0             /* the 49 all share the oldest timestamp */
+}));
+/* 077 — the standing draft is NOT Ark Nova any more. 342942 really is Ark Nova's BGG id, so when the walk's
+   game finished enriching, the sheet said "Ark Nova agregado" directly above TWO identical `Ark Nova · 2021`
+   rows and nothing on screen could say which one the sheet was about. A fixture that makes the round's own
+   subject ambiguous is a fixture bug, not a finding — d3's edition prompt only ever fires for ids 1 and 2. */
+G.push({ id: 900, name: 'Beyond the Sun', thumb: null, hue: hue('Beyond the Sun'), year: 2020, gap: false, status: 'draft', added: 999999, enr: 'enriched' });
+
+/* ---------- 076: the walk's own state, and it is REAL state, not a fixture switch ----------
+   071 had an `ENR` toggle that painted `pending`/`failed` onto the existing Ark Nova draft, because the dev DB
+   has zero rows in either state. That is gone. This round CREATES a game and then advances it, so every
+   measurement below is about the row the walk actually made — 075's lesson, where the first version of a
+   data-loss check failed while the fix was correct because it was measuring the tool panel.
+
+   That machinery is kept verbatim; 077 walks one step further along the same scenario. */
+/* ---------- 076 IS DECIDED, SO ITS AXIS IS GONE FROM THE PAGE ----------
+   076 chose V2 Se abre + the completion toast (d55). Per 072's convention — *"every variant toggle is
+   removed once its question is answered, so what is on screen is the decision, not a menu of them"* — the
+   three body-homes and the toast on/off switch are NOT carried forward as toggles. What they settled is now
+   simply how the page behaves:
+     · creating a draft OPENS `Borradores` and scrolls the new row into view      (V2, d55; d18 amended)
+     · the new row is washed `.fresh`                                             (V2/V3's shared paint)
+     · the completion announces itself                                            (the toast, d54)
+   076 is still on disk and navigable if any of that needs re-feeling.
+
+   NEW is the id `addGame` minted. It survives every render and is cleared only by ↺. */
+let NEW = null;
+
+/* ---------- 077's AXIS: when the sheet is open and the data lands, WHO SPEAKS? ----------
+   From the developer, and it settles the sheet's content by fiat rather than by variant:
+     *"Since I want to do it simple, until the data is retrieved if I tap that row, can I get a bottom sheet
+       with a simple 'working' status?"*  and then
+     *"When the data arrives this should says 'Game name agregado' and allow me to edit(ver)."*
+
+   BOTH HALVES WERE CHECKED BEFORE ANYTHING WAS DRAWN, and they had different status:
+
+     · a bottom sheet — the idiom EXISTS and is cheap. `openSheet` is already here, D-19e governs it (44px ✕,
+       no Cancelar row), and — the part that decides it — THE LIST SCREEN ALREADY HAS THE LIVE SIGNAL:
+       index.ex:41-43 subscribes to "admin:games" and index.ex:195-198 handles {:game_enriched, game_id}.
+       `form.ex` has NO subscribe and NO handle_info at all. So a sheet on the list is strictly cheaper to
+       build than the editor route, and it SIDESTEPS the name-clobber defect rather than repairing it: you
+       never open the form, so there is no stale `name` for `admin_changeset` to write back over BGG's.
+
+     · a "working" status — ALREADY SAID, by the row you just tapped. d24 put `● Trayendo datos de BGG…` on
+       the row's second line (sub(), below); the shipped app says `Juego #<bgg_id> (cargando…)`
+       (index.ex:241). A sheet that only repeats it costs a tap and adds nothing. The SAME SHAPE as 076
+       round 5, where "a syncing status on that row" turned out to be built already.
+
+   SO THE SHEET HAS TO EARN ITS TAP ON THE ARRIVAL, NOT ON THE WAIT — it is the one container that is on
+   screen at the exact moment the state changes. And that is what creates this round's question, because the
+   transformed sheet and d55's toast are now THE SAME ANNOUNCEMENT: both name the game, both offer `Ver`.
+   The toast's suppression rule only ever covered the editor (`S.screen === 'editor'`, 076:1114), so on the
+   list NOTHING stops them firing together.
+
+   ---- DECIDED 2026-09-21: AV1 sólo la hoja (decision 56) ----
+   AV2 and AV3 stay on the page and navigable; the winner is marked, not the only option.
+
+     AV1 sólo la hoja ★ the sheet transforms; the toast is suppressed for the game whose sheet is open.
+                        Check 25's rule — "the announcement never lands on top of its own subject" —
+                        reaching one more container rather than a new rule.
+     AV2 los dos        both fire. THE DO-NOTHING BASELINE: this is what you get if nobody writes the
+                        suppression, and it is what the code would do today. Every guard below is
+                        negative-tested against it.
+     AV3 se retira      the sheet CLOSES on arrival and the toast is the announcement — the reading where
+                        the sheet is only ever a waiting room.
+
+   One axis: who announces the arrival while the sheet is open. The sheet's CONTENT is identical in all
+   three (check 11), so nothing found here can be blamed on treatment.
+
+   WHY AV1. AV2 loses under BOTH readings of its own defect — as built the toast is emitted behind the sheet
+   and burns its 10000ms unseen (checks 19b/19c: .snack z-index 30 under .backdrop 40 and .sheet 41), and
+   with the z-order raised it becomes two announcements about one game stacked on each other, which is what
+   check 25's rule exists to prevent.
+
+   AV1 DOMINATES AV3 rather than merely beating it, and the reason is structural: `render()` runs before the
+   sheet repaints, so the row behind the sheet is ALREADY the finished row. AV1 therefore gives you AV3's
+   result PLUS an announcement that persists — measured at t+10.4s, AV1 still says "Ark Nova agregado" while
+   AV3's page says nothing at all (checks 32-33), which is 076 round 1's question returning intact. AV3's
+   only advantage is that the scrim is gone and the list is bright again.
+
+   AND AV1 DEGRADES CORRECTLY: the suppression is conditioned on `S.sheetFor`, which `closeSheet` clears, so
+   closing the sheet before the data lands puts the toast back. The toast is silenced only while you are
+   actually looking at the thing it would announce — which is check 25's rule, not a new one. */
+let AV = 'AV1';   /* 077 is DECIDED (d56, AV1 sólo la hoja) — kept so the arrival still behaves, not a toggle */
+
+/* ---------- 078's AXIS: the draft is incomplete and you reach for Publicar. WHO STOPS YOU, AND HOW? ----
+   G1 bloquea · G2 avisa · G3 la ficha (the do-nothing baseline). See the head comment for what the gate
+   REQUIRES, which is measured rather than varied. */
+let GATE = 'G1';
+
+/* ---------- RONDA 2's AXIS: ¿CUÁNDO SE VUELVE REAL UNA EDICIÓN? ----------
+   Posed this way rather than as "how many buttons" because the buttons are a CONSEQUENCE, and the first
+   framing of this round got that backwards. MEASURED BEFORE ASKING:
+
+     form.ex:269   <.form phx-change="validate" phx-submit="save">   validate does NOT persist
+     075:750       dirty() = CLUB_KEYS.some(k => G[k] !== START[k])  the sheets STAGE, the bar COMMITS
+
+   So `Guardar` is not a convenience in either the app or the prior sketch — it is THE ONLY THING THAT
+   WRITES, and it cannot simply be deleted. What can change is when the write happens.
+
+     A · la hoja guarda   picking an option writes that column and closes. No dirty state, no Descartar,
+                          no confirm-on-back. ONE CTA (Publicar) in 074's slot; d43 is untouched.
+     B · la hoja prepara  today's model. Two actions, stacked at the foot — the developer's own shape —
+                          and therefore the variant that BREAKS d43 and would need an explicit amendment.
+
+   WHAT MAKES A PLAUSIBLE AT ALL is d33's spine rule, which is already decided: every value is a row that
+   opens a sheet, and a sheet's pick is a DISCRETE, COMPLETE choice with a tick. That is already a commit
+   gesture; A is the change that lets it commit. It is not a new interaction, it is the same one meaning
+   what it looks like.
+
+   HELD FIXED SO THE ROUNDS DO NOT CONTAMINATE EACH OTHER: round 1's GATE is still open, so it stays on the
+   page as a toggle — but check 23 asserts the A-vs-B deltas are IDENTICAL under all three gates, so nothing
+   this round finds can be attributed to a gate that has not been chosen yet. */
+let MODE = 'B';   /* DECIDIDO (ronda 2): la hoja prepara, Guardar confirma. A sigue navegable. */
+
+/* ---------- RONDA 3: ¿DÓNDE SE MARCA QUE UN CAMPO ES REQUERIDO? ----------
+   The developer: *"the rest of 'data', it must mark fields as required."*
+
+   MEASURED FIRST, and it is what makes this round small and sharp: exactly ONE of the six club rows is
+   required, and for an expansion none is. So "marking required" means marking ONE row — a different
+   problem from a form where half are mandatory, and the usual asterisk convention (mark required when few
+   are) points the same way.
+
+   AND THE REQUIREMENT CAN NOW STATE A CONSEQUENCE INSTEAD OF A RULE, which is new this round:
+   `sections.rule_value` maps each `weight_band` section 1:1 onto a band value, so the nivel is what PLACES
+   the game in one of the three rows that organise the public catalogue. Without it the game is published
+   into none of them. That is a fact about the site, not a policy — and it is sayable.
+
+   THE TENSION THIS ROUND EXISTS TO MEASURE: B's foot ALREADY says "Falta el nivel para publicarlo" under
+   G1, and G3 already puts a dot on the row. A third marker risks saying one thing in three places, which is
+   the defect 077 counted when the row and the sheet both said "Trayendo datos de BGG" 310px apart. Check 26
+   counts the places rather than trusting that it reads well.
+
+     R1 · en la etiqueta    `Nivel` carries a small "para publicar" marker
+     R2 · en el valor       the empty value stops saying "Sin nivel" and says what is missing and why
+     R3 · sólo en el pie    the do-nothing baseline — what B already does, and what makes R1/R2 falsifiable
+
+   REQUIRED HERE MEANS REQUIRED TO PUBLISH, NEVER TO SAVE, and in B that distinction is real: you can save
+   a draft without a nivel and come back. A marker reading "obligatorio" would be a lie about what the page
+   will let you do. Every variant's wording is scoped to publishing; check 27 asserts it. */
+let REQ = 'R3';
+
+/* B's staging pair. `START` is the persisted row, `G`'s club columns are the screen. In A they are never
+   allowed to diverge — `setField` writes both — which is what makes `dirty()` structurally false rather
+   than merely unused (check 21 negative-tests exactly that). */
+let START = null;
+const CLUB_KEYS = ['name', 'weight_band', 'units', 'shelf_id', 'is_expansion', 'description'];
+const dirty = () => MODE === 'B' && !!START && CLUB_KEYS.some(k => (byId(S.editing) || {})[k] !== START[k]);
+const snapshot = g => { START = {}; CLUB_KEYS.forEach(k => START[k] = g[k]); };
+
+/* ---------- the tool panel's two falsifiability levers, neither of them a variant ----------
+   NAME_BROKEN  paints the real id-873 string over the fixture's name. It exists to make ONE claim
+                falsifiable — *the gate cannot tell a bad name from a good one* — and check 8 asserts the
+                gate's items are byte-identical under both. It is a PRODUCTION BUG (bgg_client.ex:130's
+                `.//` + SweetXml `s`), filed separately, and the gate is deliberately NOT designed around it.
+   IS_EXP       flips the walk's game to an expansion. 0 of 26 published expansions carry a nivel and
+                408 of 408 base games do, so the gate's one condition must VANISH for an expansion in all
+                three variants (check 9). Without this lever "the gate requires nivel" is unfalsifiable. */
+let NAME_BROKEN = false, IS_EXP = false;
+const BROKEN_NAME = 'HellasDutch/English/French/German editionEnglish/Korean edition';
+
+/* d42's three club values, and which of them the gate is allowed to name.
+   MEASURED, NOT CHOSEN — see the head comment's table. `copias` is absent on purpose: 434 of 434 published
+   games have exactly 1, so it is a MISSING DEFAULT (units has no DB default, enrichment never casts it,
+   admin_changeset lets a blank through) and the editor pre-fills it rather than the gate blocking on it.
+   `estante` is absent because 433 of 434 published games would fail a gate that named it. */
+const UNITS_DEFAULT = 1;
+function missing(g) {
+  if (!g || g.status !== 'draft') return [];
+  const out = [];
+  /* the marcador is the ONLY name failure any rule can detect. The id-873 string is not one — that is the
+     point of NAME_BROKEN, and check 8 is where it is asserted rather than asserted away. */
+  if (g.name === `Juego #${g.bgg_id}`) out.push({ k: 'name', n: 'el nombre' });
+  /* 408/408 base games carry a nivel · 0/26 expansions do. The condition is the club's own rule, read off
+     its own catalogue, not a preference. */
+  if (!g.is_expansion && !g.weight_band) out.push({ k: 'weight_band', n: 'el nivel' });
+  return out;
+}
+/* 073:46's rule, KEPT VERBATIM and not a variant: a game with no BGG data cannot be published in any of the
+   three (check 10). 075's `hasData()` was the whole of the drawn gate; this slice adds the club half to it
+   rather than replacing it. */
+const hasData = g => enrOf(g) === 'enriched';
+const gateOpen = g => hasData(g) && missing(g).length === 0;
+
+const enrOf = g => g.enr || 'enriched';
+const byId = id => G.find(g => g.id === id);
+const TOTAL = () => G.length;
+const GAPS = () => G.filter(g => g.gap);
+const DRAFTS = () => G.filter(g => g.status === 'draft');
+let PEND_MODE = 50;
+const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MODE;
+/* newest first (decision 3) */
+const byNew = () => [...G].sort((a, b) => b.added - a.added);
+
+const PAGE = 50;
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: { gap: false, draft: false }, sheetFor: null };
+let KBD_SIM = true, opener = null;
+
+const main = $('#main'), device = $('#device');
+/* 076, found in a screenshot of the `falló` step and sent back as a fix rather than drawn around:
+   a FAILED game was getting the decorative letter tile. 071's fall-through is thumb -> `.none` (the grey image
+   glyph, for `gap` games) -> a coloured initial. The new game is not `gap` — that flag means "imported without
+   data", which this game is not — so a row whose enrichment had just DIED rendered a cheerful green "J" beside
+   the words "Error al traer datos de BGG". In the shipped app that game has no cover at all, exactly like the
+   49, so the honest tile is `.none`.
+   Stated as a rule rather than a special case: a cover exists only once enrichment has succeeded. */
+/* a function DECLARATION, not a const arrow, so the harness can swap it for 071's predicate and prove the
+   guard fails without it. A top-level `const` is a lexical binding the page's own closures capture directly —
+   it is not on `window` and cannot be overridden from outside, which silently made the first negative test
+   pass while changing nothing. */
+function noCover(g) { return !g.thumb && enrOf(g) !== 'enriched'; }
+const cover = (g, cls = 'cov') => enrOf(g) === 'pending'
+  ? `<span class="${cls} skel" aria-hidden="true"></span>`
+  : g.thumb
+  ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">`
+  : (g.gap || window.noCover(g)) ? `<span class="${cls} none" aria-hidden="true">${ic('img')}</span>`
+    : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
+const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
+
+/* decision 8 — the three groups PARTITION the catalog (49 + 1 + 385 = 435); a game is never in two of them */
+/* decision 18 — the two EXCEPTION sections close at rest, so the catalog is not 50 rows down. `shut` marks a
+   section as collapsible AND collapsed by default; the body section has no `shut`, so it never collapses and the
+   empty-page state decision 15 found stays unreachable. */
+const GROUPS = [
+  { key: 'gap', name: 'Sin datos', shut: true, hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
+  { key: 'draft', name: 'Borradores', one: 'borrador', shut: true, hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
+  { key: 'rest', name: 'Juegos del club', hint: null, has: g => g.status !== 'draft' && !g.gap }
+];
+const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
+
+/* a row's second line: the year. The GROUP names the state, so a row never repeats it — inside "Sin datos"
+   all 49 rows saying "● Sin datos" under a heading that already says it was pure noise. */
+/* decision 24 — enrichment is the row's SECOND LINE, the slot the year already occupies, as a dot + text
+   (D-19h). No new anatomy, no new left edge. It does NOT repeat the section's state — a draft is a draft whether
+   or not BGG answered — which is what decision 1 actually objected to.
+   The row keeps its chevron and nothing else: D-19i reserves the trailing slot for "opens a page" and decision 2
+   says picking a game opens its editor, so Reintentar belongs in the editor, not in the row. */
+function sub(g) {
+  const e = enrOf(g);
+  if (e === 'pending') return '<span class="dot"></span>Trayendo datos de BGG…';
+  if (e === 'failed') return '<span class="dot err"></span>Error al traer datos de BGG';
+  return g.year ? esc(String(g.year)) : '';
+}
+/* pending arrives BEFORE the name does: draft_changeset writes the placeholder "Juego #<bgg_id>"
+   (game.ex:159-166). 071 hardcoded that string; here the created row carries its own, so the walk's name is
+   the one the app would really have written. */
+const rowName = g => esc(g.name);
+/* `fresh` is the ONLY thing V2 and V3 add to a row, and both add exactly the same thing — so a finding about
+   WHERE the row is cannot be blamed on how it is painted. In V1 it is never applied (check 3 asserts it). */
+/* ---------- 077: a pending row opens a SHEET, so D-19i takes its chevron away ----------
+   D-19i is explicit, and it is the rule that decides this rather than taste: *"a chevron means THIS ROW
+   OPENS ANOTHER PAGE. Rows that act in place (show an answer, open a sheet) have none."* 076's comment on
+   this very line invoked the other half of it — *"a game row opens its editor (decision 2), so it has one"*
+   — which stops being true for a pending row the moment the sheet exists.
+
+   THE COST IS REAL AND IS COUNTED, NOT WAVED THROUGH (check 8): the pending row becomes the ONLY game row
+   in a 435-row list without a trailing chevron. Either it honestly signals that this row goes nowhere, or
+   the list's rhythm wobbles on exactly one row. The measurement is which of those it looks like. */
+/* a function DECLARATION called through `window`, never a top-level const — 076 documented the trap twice:
+   a top-level `const`/`let` is a LEXICAL BINDING, not a property of `window`, so the page's own closures
+   capture it directly and a harness assignment changes nothing while appearing to. Both of 076's first
+   negative tests passed against an unmodified page for exactly that reason. Check 4 restores the chevron
+   through this hook and asserts check 3 goes red. */
+/* RONDA 4 — una fila de borrador LISTA también abre una hoja, no el editor. D-19i por lo tanto le saca el
+   chevron igual que a la pendiente (077): la fila actúa en el lugar. La fila de un juego PUBLICADO sigue
+   abriendo su página de editor, con su chevron, porque esa superficie no se retira. */
+function opensSheet(g) { return enrOf(g) === 'pending' || (g.status === 'draft' && enrOf(g) === 'enriched'); }
+/* el pill de expansión (d36/041: informativo = borde, relleno transparente). Es una CLASIFICACIÓN, no un
+   estado, así que no choca con la regla de punto-+-texto de Publicado/Borrador/Retirado. El desarrollador:
+   *"when an expansion is used as id to sync a game, this should be listed as extension (that is a pill) and
+   of course takes a real place on the ludoteca"* — de ahí que esté en la FILA de la ludoteca y no en una
+   sección aparte. */
+const gameRow = g => {
+  const p = window.opensSheet(g);
+  const act = enrOf(g) === 'pending' ? 'pending' : (g.status === 'draft' ? 'draft' : 'open');
+  const pill = g.is_expansion ? `<span class="pill-outline">Expansión</span>` : '';
+  return `<button class="row${g.id === NEW ? ' fresh' : ''}" data-act="${act}" data-id="${g.id}" aria-label="${esc(g.name)}">
+  ${cover(g)}<span class="txt"><span class="name">${rowName(g)}${pill}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
+  ${p ? '' : `<span class="chev" aria-hidden="true">${ic('chevR')}</span>`}</button>`;
+};
+
+/* ---------- screens ---------- */
+/* decision 6 — the compact bar mirrors the page's own back link + title. Exactly ONE of the two back controls is
+   focusable at a time (inert on the other), so the accessibility tree never carries a duplicate "Juegos". */
+const BAR = { juegos: { back: null, title: 'Juegos' } };
+function renderBar() {
+  if (S.screen === 'editor') return;   /* the editor has its own bar now (074) */
+  const b = BAR[S.screen];
+  $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="juegos">${ic('chevL')}${esc(b.back)}</button>` : '')
+    + `<span class="pbt">${esc(b.title)}</span>`;
+}
+function render() {
+  /* the bar belongs to the editor alone. Hidden FIRST, so a render that lands on the list can never leave a
+     bar from the previous screen on top of it — the shape 076 found when ↺ deleted the game the editor was
+     about and the next render ran against a missing id. */
+  const sb = $('#savebar'); if (sb) { sb.hidden = true; sb.innerHTML = ''; }
+  /* ---------- THE EDITOR IS A FULL-SCREEN DESTINATION ----------
+     Two exits and nothing else: Publicar, or the `‹`. So the wordmark header, the .pbar and the bottom tab
+     bar are all hidden here — and they are hidden by the ATTRIBUTE, which only works because every one of
+     those classes carries the `[hidden] { display: none }` companion rule (074's lost round). Check 20
+     counts them with offsetParent rather than believing the attribute. */
+  const ed = S.screen === 'editor';
+  $('#hdr').hidden = ed; $('#tabs').hidden = ed; $('#pbar').hidden = ed;
+  if (!ed) { $('#tbar').hidden = true; $('#stack').hidden = true; $('#stack').innerHTML = ''; }
+  if (S.screen === 'juegos') renderJuegos();
+  else if (S.screen === 'editor') renderEditor();
+  $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
+  $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
+  device.dataset.bar = S.screen === 'juegos' ? 'search' : 'title';
+  renderBar(); updateBar();
+}
+
+let lastY = 0;
+const HIDE_AFTER = 140;   /* past the title row; the search is stuck from ~116 */
+
+/* the pinned tier takes over once the title row has gone behind it.
+   Juegos pins the search itself (decision 7); every other screen pins the back + title bar. */
+const scroller = () => $('#scroller');
+function updateBar() {
+  const search = main.querySelector('.search');
+  if (search) {                                   /* Juegos: the field is the pinned tier */
+    /* sticky top:0 pins to the SCROLLER's top edge, not the viewport's — compare against that, not 0 */
+    const sc = scroller(), y = sc.scrollTop, scTop = sc.getBoundingClientRect().top;
+    search.classList.toggle('stuck', search.getBoundingClientRect().top - scTop <= 0.5);
+    /* decision 9 — hide going down, show going up. Never while the field has focus (its dropdown is open),
+       and never near the top, where the search belongs to the resting layout. */
+    const dy = y - lastY;
+    if (y <= HIDE_AFTER || document.activeElement === $('#q')) device.classList.remove('hidesearch');
+    else if (Math.abs(dy) > 6) device.classList.toggle('hidesearch', dy > 0);
+    lastY = y;
+    /* Franjas A/B need to know when a heading has actually pinned, so it can gain a background only there.
+       Sticky pins to the SCROLLER's top edge offset by --bar, never the viewport's. */
+    const barPx = parseFloat(getComputedStyle(device).getPropertyValue('--bar')) || 0;
+    main.querySelectorAll('.lhw').forEach(w => {
+      const sec = w.closest('.lgroup').getBoundingClientRect();
+      /* held at the bar = its top has reached the bar AND its own section still extends past it. Without the
+         second half, a header that has scrolled entirely out of view still counts as pinned — three at once. */
+      w.classList.toggle('pinned', w.getBoundingClientRect().top - scTop <= barPx + 0.5 && sec.bottom - scTop > barPx + 0.5);
+    });
+    device.classList.remove('scrolled'); $('#pbar').inert = true;
+    return;
+  }
+  /* the element that must scroll away before the bar takes over: the title row, or the editor's game head */
+  /* 074 round 2: the title is absent at rest and fades in once the game's head clears the bar — .pbar's
+     own trigger applied to a bar that is ALREADY there. Nothing appears and nothing moves; one element
+     changes opacity. The head is `.ghead` now, not 071's `.ehead`. */
+  const ph = main.querySelector('.ghead'); if (!ph) return;
+  const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
+  $('#tbar').classList.toggle('titled', on);
+}
+
+/* decision 8 — one list, three collapsible groups. The two work groups sit on top, collapsed by default, so at
+   rest both counts are on screen AND the newest-first catalog starts immediately. No Pendientes page, no badge.
+   The caret is LEADING and rotates (decision 10): a disclosure triangle, never a trailing "›", which under
+   D-19i means "opens a page". */
+/* decision 17 — ONE LIST. The page is a single continuous list whose sections happen to hold different content,
+   not a block of work groups plus a catalog. Every section header is the SAME caption — a span, no caret, no
+   control, 13/600 muted at 16, sticky, gaining its fill only when it pins — so the rhythm is uniform by
+   construction. This is the iOS plain-table / Contacts model the BENCHMARK already records, and it supersedes
+   the whole band negotiation: decisions 10, 11, 13, 14 and 15 existed only because there were TWO kinds of
+   header. There is now one. Decision 16's caption rank survives, generalised to every section. */
+function groupSection(g) {
+  const all = inGroup(g.key), paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
+  const open = !g.shut || !!S.open[g.key];
+  /* ONE anatomy still (decision 17): same tag family, rank, colour, height and 16 keyline. The only difference
+     is a disclosure caret, which is the thing that TELLS you a section collapses — honest signalling, not a
+     second kind of header. It sits INLINE after the count, so there is no leading slot and therefore no hole in
+     the x=16 column (decision 16's defect). The hit box is stretched to 44 by a pseudo-element so the caption's
+     visual rhythm is not loosened to reach the touch floor. */
+  /* decision 24 — a failure inside a CLOSED section is otherwise invisible: measured, the row is not even in
+     the DOM at rest. The caption carries it as the SAME dot + text a row would use (D-19h), never a badge — and
+     only while closed, since an open section shows the rows themselves. Costs the resting page nothing.
+     This is decision 18's move again: an optional affordance on ONE anatomy, not a second kind of header. */
+  const bad = all.filter(x => enrOf(x) === 'failed').length;
+  const warn = (bad && !open) ? `<span class="warn"><span class="dot err"></span>${bad} con error</span>` : '';
+  const head = g.shut
+    ? `<button class="lhead tap" data-act="group" data-g="${g.key}" aria-expanded="${open}">
+        <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>${warn}
+        <span class="caret" aria-hidden="true">${ic('chevD')}</span></button>`
+    : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
+    <h2 class="lhw">${head}</h2>
+    ${open && g.hint ? `<p class="hint">${g.hint}</p>` : ''}
+    ${open ? `<div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
+    ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
+  </section>`;
+}
+
+/* decision 22 — no resting page title: the tab bar names the page, the field leads it, and the + keeps the
+   header icon's right edge beside the field. The h1 stays in the accessibility tree as .sr. */
+function renderJuegos() {
+  main.innerHTML = `
+    <h1 class="sr">Juegos</h1>
+    <div class="search">
+      <div class="srow-wrap">
+        <div class="sfield">
+          <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
+          <span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>
+          <div class="sugg" id="sugg" role="listbox" hidden></div>
+        </div>
+        <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
+      </div>
+    </div>
+    ${GROUPS.map(groupSection).join('')}`;
+}
+
+/* ---------- 078: the editor, drawn for real ----------
+   077's stub said "el editor del juego — sketch 063. No se vuelve a dibujar en este sketch". This slice IS
+   about the editor, so it is drawn: 075's `ghead` + `DATOS DEL CLUB` rows + d42's action bar, with the gate
+   added. Nothing about the rows is new — d33's spine rule (every value is a row that opens a sheet) and the
+   status dot + text are both reused verbatim from 075. */
+
+/* 075:746 verbatim — the lifecycle as a dot + text. A READ-OUT in the head, never a control. */
+const CYC = { published: { n: 'Publicado', k: 'ok' }, draft: { n: 'Borrador', k: 'warn' }, retired: { n: 'Retirado', k: 'off' } };
+
+/* ---------- CORRECTED AGAINST THE DATABASE: THERE ARE THREE BANDS, NOT FOUR ----------
+   Round 1 carried 075's array verbatim — `intro / medio / estratega / experto` with invented labels. None
+   of those four values exists. `Vocabulary.@weight_bands` (vocabulary.ex:24-40) and the live column agree
+   on three, and these are their real labels and descriptors:
+
+       descubre_el_hobby   Descubre el hobby    179 publicados
+       ingenio_estratega   Ingenio estratega    183
+       nivel_experto       Nivel experto         46
+       (nil)                                     26   — las 26 expansiones
+
+   AND THE BAND IS THE SECTION. `sections.rule_value` maps each `weight_band` section 1:1 onto a band value
+   (measured: "Descubre el hobby" -> descubre_el_hobby, and so on), so setting the nivel is what PLACES the
+   game in one of the three rows that organise the public catalogue. That is why `nivel` is the gate's one
+   condition — not a policy preference but a consequence: without it the game is published into none of
+   them. 075 already knew and said it (*"No aparece en ninguna fila por nivel"*); this round can now say
+   WHICH fila, because the mapping was measured rather than assumed. */
+const BANDS = [
+  { v: '', n: 'Sin nivel', s: 'No aparece en ninguna fila por nivel' },
+  { v: 'descubre_el_hobby', n: 'Descubre el hobby', s: 'Reglas cortas que se explican en 5-10 minutos. Ideal si es tu primera vez.' },
+  { v: 'ingenio_estratega', n: 'Ingenio estratega', s: 'Reglas de 15-20 minutos y decisiones pensando un par de jugadas por delante.' },
+  { v: 'nivel_experto', n: 'Nivel experto', s: 'Reglas largas y decisiones profundas. Para mesas con experiencia.' }
+];
+/* the four MANUAL sections, exactly as the dev DB has them — the ones the editor's `Secciones` fieldset
+   already lists today (form.ex:289-294). The automatic ones are NOT here on purpose: nobody picks them. */
+const SECCIONES = [
+  { id: 1, n: 'Destacados del club', featured: true, has: 7, cap: 20 },
+  { id: 2, n: 'Crea conexiones', has: 61 },
+  { id: 3, n: 'Equipo ganador', has: 54 },
+  { id: 4, n: 'Duelos memorables', has: 19 }
+];
+/* THE DATABASE HAS EXACTLY ONE SHELF AND EXACTLY ONE GAME ON IT (measured 2026-09-21). 075 drew three
+   invented ones; the fixture is corrected to the truth here, because the round's central claim about
+   `estante` — that it cannot be a gate — rests on how little it is used. Drawing three shelves would have
+   made the catalogue look furnished. */
+const SHELVES = [
+  { v: '', n: 'Sin ubicar', s: 'Es lo normal: 433 de 434 juegos publicados están así' },
+  { v: 'a', n: 'Estante A', s: 'El único estante cargado' }
+];
+const bandOf = v => BANDS.find(b => b.v === (v || '')) || BANDS[0];
+const shelfOf = v => SHELVES.find(b => b.v === (v || '')) || SHELVES[0];
+
+/* ---------- EL EDITOR ES AHORA SÓLO PARA UN JUEGO YA PUBLICADO ----------
+   Decisión del desarrollador en la ronda 4: la hoja es el camino del borrador y esta página queda para
+   corregir después. Eso borra de acá la puerta entera (un publicado no tiene nada que publicar), el estado
+   sucio de la ronda 2 y las marcas de requerido de la ronda 3 — acá nada bloquea nada.
+   SOBREVIVEN, porque se decidieron y se midieron: las filas de d33 SIN chevron (D-19i), el tinte `--val`
+   de d37, el ciclo como punto + texto (075) y la barra de 074 con UN solo CTA. */
+function renderEditor() {
+  const g = byId(S.editing);
+  const st = CYC[g.status] || CYC.published;
+  const meta = [g.year, g.bgg_id ? 'BGG ' + g.bgg_id : null].filter(Boolean).join(' · ');
+
+  const r = (key, k, v, empty, clamp) => `<button class="frow" data-field="${key}">
+      <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+      </button>`;
+  const units = g.units == null ? UNITS_DEFAULT : g.units;
+
+  main.innerHTML = `
+    <div class="ghead">${cover(g, 'cov')}<div class="gh-t">
+      <div class="gh-name" id="ghname">${esc(g.name)}</div>
+      <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${g.is_expansion ? '<span class="pill-outline">Expansión</span>' : ''}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
+    </div></div>
+    <div class="glabel">DATOS DEL CLUB</div>
+    <div class="frows">
+      ${r('name', 'Nombre', g.name)}
+      ${r('weight_band', 'Nivel', bandOf(g.weight_band).n, !g.weight_band)}
+      ${r('units', 'Copias', String(units))}
+      ${r('shelf_id', 'Estante', shelfOf(g.shelf_id).n, !g.shelf_id)}
+      ${r('is_expansion', 'Es una expansión', g.is_expansion ? 'Sí' : 'No')}
+      ${r('description', 'Descripción en español', g.description || 'Sin descripción', !g.description, true)}
+    </div>
+    <div style="height:24px"></div>`;
+
+  /* la barra de 074 (d43/d44): ‹ · título que aparece al scrollear · UN CTA, peso texto. */
+  const tbar = $('#tbar');
+  tbar.innerHTML = `<button class="tb-back" data-act="juegos" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
+    <span class="tb-t">${esc(g.name)}</span>
+    <button class="btn" data-act="save">Guardar</button>`;
+  tbar.hidden = false;
+  $('#stack').hidden = true; $('#stack').innerHTML = '';
+}
+
+function markMatch(name, q) {
+  const n = norm(q.trim()), i = norm(name).indexOf(n);
+  if (i < 0 || !n) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + n.length)) + '</mark>' + esc(name.slice(i + n.length));
+}
+const sugRow = (g, q) => `<button class="srow" role="option" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${markMatch(g.name, q)}</span><span class="sub">${sub(g)}</span></span></button>`;
+
+function renderSugg() {
+  const box = $('#sugg'), inp = $('#q'); if (!box || !inp) return;
+  const q = inp.value, sico = $('#sico');
+  /* a kept name: the magnifier became a ✕ that goes back (069 decision 60) */
+  if (S.kept) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+  sico.outerHTML = `<span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>`;
+
+  if (!q.trim()) {                                   /* focused + empty → Últimas búsquedas */
+    const rec = S.recent.map(byId).filter(Boolean).slice(0, 3);
+    if (!rec.length) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+    box.innerHTML = `<div class="sglabel">Últimas búsquedas</div>` + rec.map(g => sugRow(g, '')).join('');
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  const id = bggId(q);
+  if (id) {                                          /* a BGG number or link → add, don't search */
+    box.innerHTML = `<button class="srow create" role="option" data-act="addbgg" data-bgg="${esc(id)}">
+      <span class="cov">${ic('plus')}</span>
+      <span class="txt"><span class="ttl">Agregar desde BGG</span><span class="sub">BGG ${esc(id)} · se agrega como borrador</span></span></button>`;
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  /* ROUND 2: the search's "Crear «…»" answer is deleted with `Crear a mano` — same unbuilt path, and leaving
+     one of the two live would keep the door open through a different handle. d4's create-aware search keeps
+     its OTHER answer: paste a BGG number or link and the dropdown still offers `Agregar desde BGG` (above).
+     A name with no match now simply finds nothing, which is the truth. */
+  const hits = G.filter(g => norm(g.name).includes(norm(q.trim()))).slice(0, 6);
+  box.innerHTML = hits.length
+    ? hits.map(g => sugRow(g, q)).join('')
+    : `<p class="sgnone">No hay ningún juego con ese nombre.</p>`;
+  box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+}
+
+/* a new screen always starts at the top — otherwise the bar shows on arrival at a page you never scrolled */
+function go(screen) { S.screen = screen; scroller().scrollTop = 0; lastY = 0; device.classList.remove('hidesearch'); render(); }
+
+function openGame(id, from) {
+  const gm = byId(id); if (gm) snapshot(gm);
+  TAPS.taps = 0; TAPS.writes = 0;
+  S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
+  S.editing = id; S.from = from || S.screen;
+  device.classList.remove('kbd'); go('editor');
+}
+
+/* ---------- sheets ---------- */
+/* 077 — the chrome is a named helper because the pending sheet REPAINTS ITSELF IN PLACE when the data
+   lands. Rebuilding that string at the repaint site is how the two copies drift apart, which is the defect
+   class this project already has several entries for. One source, two callers. */
+function sheetChrome(head, body) {
+  return `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}
+      <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
+}
+function openSheet(head, body, from, opt = {}) {
+  opener = from || null;
+  const sh = $('#sheet');
+  sh.className = 'sheet' + (opt.full ? ' full' : '') + (opt.form ? ' form' : '');
+  sh.innerHTML = sheetChrome(head, body);
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  setTimeout(() => { const f = sh.querySelector('input'); f ? f.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
+}
+function closeSheet() {
+  S.sheetFor = null; device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open');
+  /* see the stepper above: closing a sheet has to repaint the page behind it, or an edit made IN the sheet
+     leaves the foot describing the state before it. */
+  /* THE GAME MUST STILL EXIST. ↺ splices the walk's game out of `G` and only THEN clears `S.editing`, so
+     rendering here on the id alone ran `renderEditor` against a deleted row — the exact hazard 076
+     recorded ("a reset that deletes the thing the current screen is about has to change the screen too"),
+     re-entered through a new door. Guarded on the row, not on the id. */
+  if (S.screen === 'editor' && S.editing && byId(S.editing)) { render(); walkUI(); }
+  opener?.isConnected && opener.focus?.({ preventScroll: true });
+}
+
+/* decision 4 — the "+" sheet. ROUND 2: the manual path and its separator are gone (see the note below the
+   function); what remains is the BGG field, the hint, and `Agregar`.
+
+   ROUND 4 — THE HINT IS DELETED OUTRIGHT, and nothing replaces it. The developer's call, taken with its
+   cost stated rather than smoothed over: the `+` path now says NOTHING about the lifecycle before you
+   commit, while the SEARCH path still does ("BGG 342942 · se agrega como borrador" in its suggestion row).
+   Two doors into one action, one of which warns. That asymmetry is measured by check 16b2 so it stays
+   visible instead of becoming folklore, and the 4000ms snackbar afterwards is the only other place it is
+   said — in V1, followed by a page with no trace of the game at all.
+   What the label and placeholder still carry: `Número o link de BGG` + `342942`, which is the format
+   example, and is all a placeholder can honestly hold. The LINK form still has no example here while the
+   repair sheet's identical field does (075's idSheet builds d38's worked
+   `…/boardgame/155426/…` → `155426`); left as its own slice rather than bolted on.
+
+   SUPERSEDED, kept for the record — rounds 2 and 3 on the hint's TEXT: `Enrichment.attrs_from_bgg_item/1`
+   (enrichment.ex:54-72) returns year, min/max players, min/max playtime, playing_time, min_age, description,
+   bgg_weight, bgg_rating, bgg_rank, mechanics, themes, designers, artists and publishers, plus the cover via
+   `image_attrs/3`. `weight_band` is NOT among them — the only things that ever write the club's `nivel` are
+   `admin_changeset` (staff, by hand) and the band-audit tool. So the sheet was promising the one value a
+   member still has to fill in themselves, on the screen where they are being told what they get for free.
+   "y el nivel" is deleted. Everything else the line claims is true, and "queda como borrador hasta que lo
+   publiques" is exactly what `draft_changeset` does (status :draft, game.ex:159).
+
+   NOTE FOR ANYONE EDITING THIS FUNCTION: do not put an HTML comment inside the template literal below.
+   `<!--` is a legal HTML-like line comment in a classic script, so it swallows the rest of the line and
+   breaks the literal. It happened twice while building this sketch. */
+function addSheet(from, prefill) {
+  openSheet(
+    `<span class="tile" aria-hidden="true">${ic('plus')}</span>
+     <div class="sh-txt"><p class="ctx">${TOTAL()} juegos en el club</p><div class="sh-title">Agregar juego</div></div>`,
+    `<div class="fbody">
+       <label class="flab" for="bg">Número o link de BGG</label>
+       <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
+       <p class="ferr" id="bgerr" hidden></p>
+       <button class="obtn pri wide" data-act="addgo" id="addgo"${(prefill || '').trim() ? '' : ' disabled'}>Agregar</button>
+     </div>`, from, { form: true });
+  if (KBD_SIM) device.classList.add('kbd');
+}
+
+/* ---------- 077: THE PENDING SHEET ----------
+   The developer's design, taken as given rather than offered as variants:
+     *"until the data is retrieved if I tap that row, can I get a bottom sheet with a simple 'working'
+       status?"*  -> the waiting state below
+     *"When the data arrives this should says 'Game name agregado' and allow me to edit(ver)."*
+       -> the arrived state, which REPLACES the waiting one in place, in the same sheet.
+
+   WHAT THE BODY DELIBERATELY DOES NOT SAY, and this is d51/d53 being obeyed rather than rediscovered:
+   the arrived state carries NO list of what came back. d51 had to delete `y el nivel` from exactly such a
+   list once enrichment turned out never to write `weight_band`, and d53 then deleted the enumerating hint
+   outright. A sheet that said "ya tiene tapa, jugadores y duración" would be that same list, rebuilt on a
+   new screen, needing to be kept true forever against a changing `attrs_from_bgg_item/1`. The title says
+   what happened and `Ver` goes and shows you; nothing claims WHICH fields arrived.
+
+   `Ver`, not `Editar`: d55 already chose that word for this exact destination on the toast, and there is no
+   read-only admin view — `Ver` and `Editar` both land on /admin/juegos/:id/editar. Consistency decides it;
+   the honesty argument for `Editar` is recorded in the README as open.
+
+   THE FAILURE BRANCH IS DRAWN MINIMALLY AND IS OUT OF SCOPE. The developer scoped this round *"until the
+   data is retrieved"*, but a sheet that is open when the job dies has to say SOMETHING, so it says the one
+   thing that is load-bearing — the game still exists as a draft — and sends you where `Reintentar` lives
+   (073). Designing the failure is slice 079. */
+function sheetParts(g) {
+  const e = enrOf(g), id = `BGG ${esc(String(g.bgg_id))}`;
+  if (e === 'pending') return {
+    head: `<div class="sh-txt"><p class="ctx">${id}</p><div class="sh-title">Trayendo datos de BGG…</div></div>`,
+    /* true in ALL THREE variants, which is why it can be said at all: AV1 repaints this sheet, AV3 closes it
+       and the toast speaks, AV2 does both. On d39's dedicated pending SCREEN the same promise
+       ("te avisamos cuando lleguen") had no mechanism behind it anywhere in the app — form.ex has no
+       subscribe and no handle_info. Here the list already holds the signal (index.ex:41-43, :195-198). */
+    body: `<div class="pbody"><div class="pwait"><div class="spin"></div>
+      <p>Podés cerrar esto. El juego ya quedó agregado como borrador y te avisamos cuando lleguen los datos.</p></div></div>`
+  };
+  if (e === 'enriched') return {
+    head: `<div class="sh-txt"><p class="ctx">${id}</p><div class="sh-title">${esc(g.name)} agregado</div></div>`,
+    body: `<div class="pbody"><button class="obtn pri wide" data-act="sheetgo" data-id="${g.id}">Ver</button></div>`
+  };
+  return {
+    head: `<div class="sh-txt"><p class="ctx">${id}</p><div class="sh-title">No pudimos traer los datos</div></div>`,
+    body: `<div class="pbody"><p class="pline">${esc(g.name)} quedó agregado igual, como borrador.</p>
+      <button class="obtn pri wide" data-act="sheetgo" data-id="${g.id}">Ver</button></div>`
+  };
+}
+
+function openPendingSheet(g, from) {
+  if (!g) return;
+  S.sheetFor = g.id;
+  const { head, body } = sheetParts(g);
+  openSheet(head, body, from);
+}
+
+/* the arrival, with the sheet already open. Same `sheetParts`, same `sheetChrome` — so the waiting state and
+   the arrived state cannot diverge in chrome, only in content (check 3 asserts the chrome is byte-identical
+   across all three variants). */
+function repaintSheet(g) {
+  const sh = $('#sheet'); if (!sh.classList.contains('open') || S.sheetFor !== g.id) return;
+  const { head, body } = sheetParts(g);
+  sh.innerHTML = sheetChrome(head, body);
+}
+
+/* ---------- `Crear a mano` is GONE, and decision 4 is amended rather than drifted ----------
+   Round 1 left it on screen but disabled, on the reasoning that deleting it would silently reverse d4. The
+   developer's call in round 2 is to delete it, which makes this an explicit amendment instead — the thing
+   d47 was convened to require.
+
+   The case for deleting rather than disabling:
+     · It is UNBUILT, not merely unfinished. `catalog.ex:325` is the ONLY game insert in the app and it goes
+       through `Game.draft_changeset`, which does `validate_required([:bgg_id])` (game.ex:157). There is no
+       by-name context function, no route, and nothing to enable.
+     · It was never used. The 41 `no_bgg_id` games are LEGACY CSV-seed rows (seed/report.ex), so "11% of the
+       catalogue" is a fact about the 2026-08-10 import, not evidence that anyone wants this door.
+     · Disabled, it cost 106px of a 435px sheet — 24% — to say "no".
+
+   d4's OTHER half stands untouched: the 44px `+` rightmost in the header, the BGG number-or-link field, and
+   the edition prompt are all still here. What is withdrawn is only the manual path, in BOTH places that
+   offered it — the sheet and the search's "Crear «…»" suggestion — because leaving one live would keep the
+   unbuilt door open through a different handle. `createManual` and its two actions are deleted with them. */
+
+/* D-03 — a BGG id that already belongs to a game: warn, list the holders, let staff confirm an edition */
+function editionPrompt(id) {
+  const holders = [byId(1), byId(2)];
+  const body = $('#sheet').querySelector('.fbody');
+  if (body.querySelector('.edp')) return;
+  body.insertAdjacentHTML('beforeend', `<div class="edp">
+    <p>Ya tenés ${holders.map(g => esc(g.name)).join(' y ')} con este BGG ID. ¿Es otra edición?</p>
+    ${holders.map(g => `<button class="srow" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${esc(g.name)}</span><span class="sub">${sub(g)}</span></span></button>`).join('')}
+    <div class="eacts"><button class="tbtn" data-act="edcancel">Cancelar</button><button class="obtn" data-act="edok">Sí, agregar edición</button></div></div>`);
+}
+
+/* ---------- 076: the create, exactly as the shipped changeset writes it ----------
+   catalog.ex:325 -> Game.draft_changeset(%Game{}, %{bgg_id: id}) (game.ex:155-167):
+       cast [:bgg_id] · validate_required [:bgg_id] · validate_number greater_than: 0
+       put_change :status,            :draft
+       put_change :enrichment_status, "pending"
+       put_change :name,              "Juego #<bgg_id>"
+   Everything else is nil. 071's version invented `pending: true` and then renamed the row to "Ark Nova" on a
+   1600ms timer — a success path on a stopwatch, with no failure branch and no state the page could be asked
+   about. Both are gone: the outcome is a STEP the walk takes, so `failed` is reachable at all.
+
+   THE ROUND'S BRANCH, and it is the whole variant axis — three lines, nothing else differs. */
+function addGame(bgg) {
+  /* 078 — the club's own columns are carried explicitly, because their NIL-NESS is the round's subject.
+     draft_changeset (game.ex:155-167) writes bgg_id, status, enrichment_status and the placeholder name and
+     NOTHING ELSE; `units` has no DB default (create_games.exs:20) and enrichment_changeset never casts
+     weight_band, units or shelf_id (game.ex:182-210). So all three are genuinely nil here, exactly as they
+     are on the real row 873. `is_expansion` IS cast by enrichment (from the BGG item type), so it arrives
+     with the data rather than starting nil — the IS_EXP lever below sets it at that moment, not at create. */
+  const g = {
+    id: 1000 + G.length, name: `Juego #${bgg}`, bgg_id: bgg, thumb: null, hue: hue(bgg),
+    year: null, gap: false, status: 'draft', enr: 'pending', added: 1e6 + G.length,
+    weight_band: null, units: null, shelf_id: null, is_expansion: false, description: null
+  };
+  G.push(g); NEW = g.id;
+  closeSheet(); S.screen = 'juegos'; S.shown = PAGE;
+
+  /* V1 — 071 verbatim: the list is left exactly as it was. The game is inside a collapsed section and the
+          only evidence is a counter and a snackbar with a 4000ms life. The baseline every check below is
+          negative-tested against.
+     V2 — the section that now holds it opens, and the row is scrolled to. d8's collapsed-by-default is NOT
+          repealed: this opens it once, at the create moment, for the game you just made.
+     V3 — d3 taken literally ("the game added five minutes ago is the first row"): the row is rendered above
+          every section until its status resolves. It does NOT leave Borradores, which is the cost this
+          variant is here to pay and check 13 is here to count. */
+  S.open.draft = true;                 /* d55/d18-amended: the section that holds it opens, and STAYS open */
+  render();
+  scrollNewIntoView();
+
+  snack('Juego agregado como borrador');
+  walkUI();
+}
+
+/* d8 partitions the catalog and the tapped-heading rule (the `group` handler) keeps a heading where the finger
+   left it. Neither applies here — nothing was tapped — so the scroll is to the ROW, and it is measured against
+   `.tabs`'s top rather than the scroller's, because the 67px tab bar overlays the scroller (075's trap: the
+   scroller's own rect reports 740 while the eye stops at 673).
+
+   AND THE CEILING IS TWO THINGS, NOT ONE. Drawn first against `--bar` alone (the pinned search), the row
+   landed at y121-185, visible and above the fold — and `elementFromPoint` at its centre returned
+   `.lhead | BORRADORES 2`. d17 makes every section header STICKY, so `Borradores`' own caption pins directly
+   under the search and sits on top of the row the scroll just delivered. Height, visibility and fold checks
+   all pass straight through that; only a hit test sees it.
+
+   This is charged to the DRAWING, not to V2 — 074 and 075 between them charged three costs that turned out to
+   be artefacts of how I drew them, and this would have been a fourth. The ceiling is now measured from the
+   pinned header's own rect, so it cannot drift if d17's caption changes height. */
+function scrollNewIntoView() {
+  const row = main.querySelector(`.row[data-id="${NEW}"]`); if (!row) return;
+  const sc = scroller(), scTop = sc.getBoundingClientRect().top;
+  const barPx = parseFloat(getComputedStyle(device).getPropertyValue('--bar')) || 0;
+  /* the caption of the section the row is in — it is what pins under the bar, and it is the real ceiling */
+  const cap = row.closest('.lgroup')?.querySelector('.lhw');
+  const capPx = cap ? cap.getBoundingClientRect().height : 0;
+  sc.scrollTop += row.getBoundingClientRect().top - scTop - barPx - capPx - 8;
+  updateBar();
+}
+
+/* ---------- 076: the moment the job ends ----------
+   The three shipped outcomes, and `failed` is reachable on ATTEMPT 1, not only after three retries:
+     missing credentials  enrich_game_worker.ex:65-68  -> mark_failed_and_broadcast -> {:cancel, reason}
+     BGG has no such item enrich_game_worker.ex:78-80  -> the same, immediately
+     anything else        enrich_game_worker.ex:82-87  -> "failed" only once attempt >= max_attempts
+   All three collapse into ONE column value ("failed", :97) and ONE user-facing string
+   ("Error al traer datos de BGG.", index.ex:373 / form.ex:263) — so the page can never say which happened.
+   That is slice 079's question; here it only has to be REACHABLE, which in 071 it was not. */
+function enrichmentArrived(outcome) {
+  const g = byId(NEW); if (!g) return;
+  if (outcome === 'enriched') {
+    /* Enrichment.maybe_put_name/3 replaces the placeholder — and `Hellas` is what BGG really returns for
+       207330 ONCE bgg_client.ex:130's xpath is `./name[...]` instead of `.//name[...]`. The `.//` form
+       concatenates the game's name with every VERSION's name; reproduced byte-identically against the real
+       row in the README. NAME_BROKEN paints that string on instead, as a falsifiability lever. */
+    g.enr = 'enriched'; g.name = NAME_BROKEN ? BROKEN_NAME : 'Hellas'; g.year = 2002;
+    /* la tapa REAL de la fila 873, servida desde R2 — `image_attrs/3` (enrichment.ex:106) la baja de BGG,
+       la sube y escribe esta URL. Sin ella la hoja decía "la tapa la trajo BoardGameGeek" encima de un
+       placeholder vacío, que es justo el paso que la hoja te pide VERIFICAR. */
+    g.thumb = 'https://pub-8f053d9e82db4d8eb43b5666a37546c4.r2.dev/games/207330/cover-large.webp';
+    /* enrichment_changeset DOES cast :is_expansion and :description (game.ex:182-210) — so these arrive
+       WITH the data. weight_band, units and shelf_id do not, and stay nil. That asymmetry is the whole
+       reason the gate has anything to talk about. */
+    g.is_expansion = IS_EXP;
+    g.description = 'Un juego de mayorías en la Grecia antigua: cada ciudad-estado disputa el control de las regiones del mapa.';
+  } else {
+    g.enr = 'failed';                                          /* the name STAYS "Juego #<bgg_id>" — nothing replaces it */
+  }
+  if (S.screen === 'juegos') render();
+
+  /* ROUND 5: the completion speaks, and it NAMES THE GAME.
+     Naming it is not decoration — the create path can be run repeatedly (d3's list is newest-first precisely
+     because staff add in batches), and a bare "listo" would not say WHICH of them finished. On success the
+     name is the one that just arrived from BGG, which is itself the news; on failure the placeholder is all
+     there is, because nothing ever replaces it (076 round 1, check 12).
+
+     FAILURE ALSO COUNTS AS FINISHING, and gets a toast too. The developer said "when the sync finish" and a
+     failure is a finish — arguably the one you most need told about, since the row will otherwise sit in a
+     collapsed section saying "Error al traer datos de BGG" to nobody. Same anatomy, different verb, and the
+     action is the same: go and look at it.
+
+     NOT DRAWN, deliberately: a toast for a game whose editor you are already looking at. `S.screen` is
+     checked so the announcement never lands on top of the thing it is announcing. */
+  /* ---------- 077's AXIS, and it is the only place the three variants differ ----------
+     The sheet and d55's toast have become THE SAME ANNOUNCEMENT — both name the game, both offer `Ver`.
+     The toast's own suppression rule was written for the editor alone (`S.screen === 'editor'`, 076:1114),
+     so on the list nothing stops the two firing together. Which is right is this round's question. */
+  const sheetOpen = S.sheetFor === g.id && $('#sheet').classList.contains('open');
+
+  if (AV === 'AV3' && sheetOpen) closeSheet();   /* se retira: the sheet's job was the WAIT, and the wait is over */
+  else if (sheetOpen) repaintSheet(g);           /* AV1 and AV2: the sheet transforms in place */
+
+  /* check 25's rule, unchanged and still decided: the announcement never lands on top of its own subject.
+     AV1 extends it from the editor to the sheet — the same rule reaching one more container, NOT a new one.
+     AV2 is the do-nothing baseline: it is exactly what the code does if nobody writes that extension, and
+     every guard about the collision is negative-tested against it. */
+  const onItsOwnSubject = (S.screen === 'editor' && S.editing === g.id) || (AV === 'AV1' && sheetOpen);
+  if (!onItsOwnSubject) {
+    const ok = outcome === 'enriched';
+    snack(ok ? `${g.name} ya tiene sus datos` : `No pudimos traer los datos de ${g.name}`,
+      { label: 'Ver', run: () => openGame(g.id, 'juegos') });
+  }
+  walkUI();
+}
+
+/* ---------- d33's spine rule: every club value is a ROW that opens a SHEET ----------
+   Ported from 075 unchanged in shape. The only thing 078 adds is that `units` opens on its DEFAULT rather
+   than on nil — the stepper cannot start from "nothing", and 434 of 434 published games say the number it
+   should start from is 1. */
+const shTop = (t, sub) => `<div class="sh-txt"><div class="sh-title">${esc(t)}</div>${sub ? `<div class="sh-sub">${esc(sub)}</div>` : ''}</div>`;
+
+function openFieldSheet(key, from) {
+  const g = byId(S.editing); if (!g) return;
+  const optRow = (pick, v, n, sub, on) => `<button class="opt" data-pick="${pick}" data-val="${esc(v)}">
+    <span class="ot"><span class="on2">${esc(n)}</span>${sub ? `<span class="os">${esc(sub)}</span>` : ''}</span>
+    ${on ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`;
+
+  if (key === 'weight_band') {
+    return openSheet(shTop('Nivel', 'Cuánto pide el juego a quien lo juega por primera vez.'),
+      `<div class="sh-body">${BANDS.map(b => optRow('weight_band', b.v, b.n, b.s, (g.weight_band || '') === b.v)).join('')}</div>`, from);
+  }
+  if (key === 'shelf_id') {
+    return openSheet(shTop('Estante', 'Dónde está la caja en el club.'),
+      `<div class="sh-body">${SHELVES.map(b => optRow('shelf_id', b.v, b.n, b.s, (g.shelf_id || '') === b.v)).join('')}</div>`, from);
+  }
+  if (key === 'is_expansion') {
+    return openSheet(shTop('Es una expansión', 'Se muestra junto al juego base.'),
+      `<div class="sh-body">${[['No', '0'], ['Sí', '1']].map(([n, v]) => optRow('is_expansion', v, n, '', String(+g.is_expansion) === v)).join('')}</div>`, from);
+  }
+  if (key === 'units') {
+    const n = g.units == null ? UNITS_DEFAULT : g.units;
+    return openSheet(shTop('Copias', 'Cuántas cajas del juego tiene el club.'),
+      `<div class="sh-body"><div class="stepper">
+        <button data-step="-1" aria-label="Una copia menos">${ic('minus')}</button>
+        <span class="n" id="unitsn">${n}</span>
+        <button data-step="1" aria-label="Una copia más">${ic('plus')}</button></div>
+        <p class="hint" style="text-align:center">Casi siempre es 1: los 434 juegos publicados tienen una sola caja.</p></div>`, from);
+  }
+  if (key === 'name') {
+    return openSheet(shTop('Nombre', 'Como lo llama el club.'),
+      `<div class="fbody"><input class="fld" id="fname" value="${esc(g.name)}" aria-label="Nombre">
+       <button class="obtn wide pri" data-pick="name">Guardar</button></div>`, from, { form: true });
+  }
+  if (key === 'description') {
+    return openSheet(shTop('Descripción en español', 'Lo que se lee en la ficha del juego.'),
+      `<div class="fbody"><textarea class="fld" id="fdesc" aria-label="Descripción en español">${esc(g.description || '')}</textarea>
+       <button class="obtn wide pri" data-pick="description">Guardar</button></div>`, from, { form: true });
+  }
+}
+
+/* one writer for every field, so the gate can never read a value the sheet wrote differently. */
+function setField(key, raw) {
+  const g = byId(S.editing); if (!g) return;
+  if (key === 'is_expansion') g.is_expansion = raw === '1';
+  else if (key === 'units') g.units = Math.max(1, +raw);
+  else if (key === 'weight_band' || key === 'shelf_id') g[key] = raw || null;
+  else g[key] = raw.trim() || null;
+  /* ---------- RONDA 2, and this line IS the round ----------
+     A: the pick is the write. START moves with it, so `dirty()` is structurally false rather than merely
+        unused — check 21 negative-tests that by forcing MODE='B' on the same state and watching it go true.
+     B: START stays where it was, so the row is now staged and the foot lights up. */
+  if (MODE === 'A') { snapshot(g); TAPS.writes++; }
+  closeSheet(); render(); walkUI();
+}
+
+/* the tap/write counter. The round's first question is "how many taps does completing a draft cost in
+   each", and the honest answer turned out to be THE SAME for the publish path — so the counter also tracks
+   WRITES, which is where they really differ. Reset by ↺ and by entering the editor. */
+const TAPS = { taps: 0, writes: 0 };
+document.addEventListener('click', e => { if (e.target.closest('#device')) TAPS.taps++; }, true);
+
+/* ================= RONDA 4 · la hoja del borrador =================
+   UNA PREGUNTA, NO UNA PÁGINA: completá esto y publicá. Un solo botón; cancelar es el chevron.
+
+   SE ABRE SÓLO CUANDO TERMINÓ TODO, y esa condición YA EXISTE — medido antes de dibujar, porque la premisa
+   del desarrollador era que depende del trabajo asíncrono de BGG + imagen + traducción:
+
+     enrichment.ex:106   image_attrs(...)             baja la tapa, la sube a R2, genera la OG card
+     enrichment.ex:113   maybe_translate_description  traduce al español con Gemini (InstructorLite)
+     enrich/2                                         las tres cosas en UNA llamada
+     enrichment_status = "enriched"                   la única señal de que las tres terminaron
+     enrich_game_worker:104-106 broadcast             y index.ex:41-43 ya está suscripto
+
+   (La tarea `mix catalog.translate_descriptions` es el backfill de las filas viejas, no el camino vivo —
+   confundirlas me hizo afirmar lo contrario una vez en esta sesión, y chequearlo lo corrigió.)
+
+   LA VALIDACIÓN ESTÁ DECIDIDA: P2 — el botón nace muerto y revive al elegir el nivel, SIN mensaje de
+   error, nunca. P1 queda descartada y su toggle eliminado con ella (convención de 072).
+
+   LA CONSECUENCIA A TENER PRESENTE: sin mensaje de error, la marca de la etiqueta («Nivel · hace falta
+   para publicar») es la ÚNICA explicación de por qué el botón no responde. Era una variante de la ronda 3
+   (R1) y sobrevive por esto, no por inercia. Si alguna vez se borra, P2 queda siendo un botón muerto sin
+   motivo visible — el defecto exacto que 064 prohibió de entrada.
+
+   LAS EXPANSIONES NO PIDEN NIVEL, y ahora hay una razón de código y no sólo de costumbre. El desarrollador:
+   *"an expansion of a game never will be listed on any web section for now."* Medido:
+
+     section_query(:recent)       where: g.is_expansion == false     ← garantizado en código
+     section_query(:weight_band)  where: g.weight_band == ^band      ← NO excluye expansiones
+     manual                       sin filtro                          ← 0 de 26, por costumbre
+
+   Así que la regla se sostiene SÓLO porque las 26 expansiones tienen el nivel vacío. Si este formulario
+   exigiera nivel a una expansión, esa expansión APARECERÍA en una fila de la web y rompería la regla que
+   el desarrollador acaba de enunciar. Por eso el switch apaga el bloque entero (check 33), y por eso el
+   README pide el guard `and g.is_expansion == false` en `section_query(:weight_band)`. */
+let DRAFT = null;   /* lo que la hoja tiene en la mano; nada se escribe hasta Publicar */
+
+function openDraftSheet(g, from) {
+  DRAFT = { name: g.name, description: g.description || '', weight_band: g.weight_band || '', is_expansion: !!g.is_expansion, touched: false };
+  S.sheetFor = g.id;
+  paintDraftSheet(g, from);
+}
+
+function draftValid() { return DRAFT.is_expansion || !!DRAFT.weight_band; }
+
+function paintDraftSheet(g, from) {
+  const d = DRAFT;
+  /* la tapa: VERIFICAR, no editar. Ver el comentario del CSS sobre gallery_urls. */
+  const cover = g.thumb
+    ? `<img src="${esc(g.thumb)}" alt="">`
+    : `<span class="ph">${ic('img')}</span>`;
+
+  const head = `<div class="sh-txt"><div class="sh-title">Publicar ${esc(d.name)}</div>
+    <div class="sh-sub">Revisá que esté bien y publicalo.</div></div>`;
+
+  const body = `<div class="fbody">
+    <div class="ffield fcover">${cover}<span class="cap">La tapa la trajo BoardGameGeek.<br>Si está mal, se corrige desde el juego.</span></div>
+
+    <div class="ffield"><label class="flabel" for="dname">Nombre</label>
+      <input class="fld" id="dname" value="${esc(d.name)}" autocomplete="off"></div>
+
+    <div class="ffield"><label class="flabel" for="ddesc">Descripción</label>
+      <textarea class="fld" id="ddesc" rows="3">${esc(d.description)}</textarea>
+      <p class="fhint">La tradujimos del inglés automáticamente. Conviene leerla.</p></div>
+
+    <div class="ffield fswitch">
+      <span class="lb" id="dexp-l">Es una expansión</span>
+      <button class="sw" id="dexp" role="switch" aria-checked="${d.is_expansion}" aria-labelledby="dexp-l"></button>
+    </div>
+    ${d.is_expansion ? `<p class="fhint">Las expansiones no aparecen en las filas de la web: van en la ludoteca, junto al juego base.</p>` : ''}
+
+    ${d.is_expansion ? '' : `<div class="ffield">
+      <label class="flabel" id="dband-l">Nivel <span class="req">· hace falta para publicar</span></label>
+      <div class="seg" role="group" aria-labelledby="dband-l" data-invalid="false">
+        ${BANDS.filter(b => b.v).map(b => `<button data-band="${b.v}" aria-pressed="${d.weight_band === b.v}">
+          <span class="rd" aria-hidden="true"></span><span><span class="sn">${esc(b.n)}</span><span class="ss">${esc(b.s)}</span></span></button>`).join('')}
+      </div>
+      </div>`}
+
+    <button class="cta" id="dpub" data-act="dopub"${draftValid() ? '' : ' disabled'}>Publicar</button>
+  </div>`;
+
+  const sh = $('#sheet');
+  sh.className = 'sheet form fsheet full';
+  sh.innerHTML = sheetChrome(head, body);
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  if (from) opener = from;
+}
+
+/* publicar: cerrar, volver a la lista, scrollear y resaltar — y el resaltado NO ES NUEVO.
+   076 (d55, d18-enmendada) ya decidió `.row.fresh` + `scrollNewIntoView()` para el momento de CREAR; esto
+   es la misma conducta repetida en el momento de PUBLICAR, no una invención. Medido antes de proponerla. */
+function publishFromSheet() {
+  const g = byId(S.sheetFor); if (!g) return;
+  DRAFT.touched = true;
+  if (!draftValid()) {
+    paintDraftSheet(g);
+    const seg = $('.seg'); seg && seg.scrollIntoView({ block: 'center' });
+    $('.seg button')?.focus();
+    return;
+  }
+  g.name = DRAFT.name.trim() || g.name;
+  g.description = DRAFT.description.trim() || null;
+  g.is_expansion = DRAFT.is_expansion;
+  g.weight_band = DRAFT.is_expansion ? null : DRAFT.weight_band;
+  g.status = 'published';
+  if (g.units == null) g.units = UNITS_DEFAULT;   /* el default que falta (ronda 1, check 7) */
+  closeSheet();
+  S.screen = 'juegos'; S.open.draft = true;
+  render(); scrollNewIntoView();
+  snack(`${g.name} está publicado`);
+  walkUI();
+}
+
+/* ---------- dialog / snackbar ---------- */
+const DLG = { run: null };
+/* ---------- FOUND IN A SCREENSHOT: the confirm was painted as a DELETE ----------
+   The dialog is shared with 077, where its only caller was destructive, so `dlg-yes` carried `.dan` —
+   danger red — unconditionally. G2's confirm inherited it, and "Publicar igual" came out in the same red
+   the app uses for throwing something away. Publishing is the OPPOSITE of destructive: it is the thing the
+   whole flow exists to reach, and the confirm is a courtesy, not a warning about loss.
+   `danger` now defaults to FALSE, so a caller has to ask for red rather than get it by inheritance —
+   and check 18 asserts G2's is not red. */
+function openDialog({ title, text, yes, run, danger = false }) {
+  DLG.run = run; $('#dlg-t').textContent = title; $('#dlg-d').textContent = text;
+  $('[data-act="dlg-yes"]').textContent = yes;
+  $('[data-act="dlg-yes"]').classList.toggle('dan', !!danger);
+  $('#dscrim').classList.add('open');
+  setTimeout(() => $('[data-act="dlg-no"]').focus(), 60);
+}
+function closeDialog() { $('#dscrim').classList.remove('open'); DLG.run = null; }
+let snackT;
+function snack(msg, action) {
+  const s = $('#snack'), [t, b, x] = [s.querySelector('span'), s.querySelector('.tbtn'), s.querySelector('.x')];
+  t.textContent = msg; b.hidden = !action; x.hidden = !action;
+  if (action) { b.textContent = action.label; b.onclick = () => { action.run(); hide(); }; x.innerHTML = ic('x'); x.onclick = hide; }
+  s.classList.add('show'); clearTimeout(snackT); snackT = setTimeout(hide, action ? 10000 : 4000);
+  function hide() { s.classList.remove('show'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  /* 078 — a club row opens its sheet (d33). Handled before [data-act] so a row inside the editor never
+     falls through to the list's `open`. */
+  const fr = e.target.closest('[data-field]');
+  if (fr) return openFieldSheet(fr.dataset.field, fr);
+  const pk = e.target.closest('[data-pick]');
+  if (pk) {
+    const k = pk.dataset.pick;
+    if (k === 'name') return setField('name', $('#fname').value);
+    if (k === 'description') return setField('description', $('#fdesc').value);
+    return setField(k, pk.dataset.val);
+  }
+  /* los controles del formulario de la hoja. Nada escribe en el juego: todo vive en DRAFT hasta Publicar. */
+  const bd = e.target.closest('[data-band]');
+  if (bd) { DRAFT.weight_band = bd.dataset.band; return paintDraftSheet(byId(S.sheetFor)); }
+  if (e.target.closest('#dexp')) {
+    DRAFT.is_expansion = !DRAFT.is_expansion;
+    /* apagar el nivel al marcar expansión NO es cosmético: `section_query(:weight_band)` no excluye
+       expansiones, así que una expansión CON nivel aparecería en una fila de la web — justo lo que la
+       regla del desarrollador prohíbe. El formulario no puede ofrecer ese estado. */
+    if (DRAFT.is_expansion) DRAFT.weight_band = '';
+    return paintDraftSheet(byId(S.sheetFor));
+  }
+  const stp = e.target.closest('[data-step]');
+  if (stp) {
+    /* ---------- FOUND BY CHECK 27save, AND IT WAS A REAL DEFECT IN B ----------
+       The stepper is the one control that edits IN the sheet rather than by picking and closing, so it
+       mutated `units` and returned — and nothing re-rendered the foot. `Guardar` stayed DEAD while there
+       were unsaved changes, and closing the sheet did not wake it either, because `closeSheet` does not
+       render. A staged edit that the commit button cannot see is B's whole model failing silently.
+       Both halves fixed: the stepper renders, and `closeSheet` renders too, so no future in-sheet control
+       can reintroduce it by forgetting. */
+    const n = $('#unitsn'); n.textContent = Math.max(1, +n.textContent + (+stp.dataset.step));
+    const g = byId(S.editing);
+    if (g) { g.units = +n.textContent; if (MODE === 'A') { snapshot(g); TAPS.writes++; } }
+    render(); walkUI();
+    return;
+  }
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a === 'open') return openGame(+t.dataset.id, S.screen);
+  /* 077 — a pending row acts in place (see gameRow and D-19i above) */
+  if (a === 'pending') return openPendingSheet(byId(+t.dataset.id), t);
+  if (a === 'draft') return openDraftSheet(byId(+t.dataset.id), t);
+  if (a === 'dopub') return publishFromSheet();
+  /* the sheet's `Ver`. It must CLOSE before navigating: leaving the sheet open over the editor would put a
+     status about the game on top of the game, which is check 25's rule in yet another place. */
+  if (a === 'sheetgo') { const id = +t.dataset.id; closeSheet(); return openGame(id, 'juegos'); }
+  if (a === 'juegos') return go('juegos');
+  if (a === 'group') {
+    /* decision 8's rule, kept: the tapped heading stays exactly where the finger left it, so opening a section
+       never scrolls the page out from under you. Re-query after the render — reusing the stale node silently
+       mutated the page once and every later measurement was wrong. */
+    const k = t.dataset.g, top = t.getBoundingClientRect().top;
+    S.open[k] = !S.open[k]; render();
+    const now = main.querySelector(`[data-g="${k}"]`);
+    if (now) scroller().scrollTop += now.getBoundingClientRect().top - top;
+    return;
+  }
+  if (a === 'more') { S.shown += PAGE; return render(); }
+  if (a === 'add') return addSheet(t);
+  if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
+  if (a === 'addgo') {
+    const v = $('#bg').value.trim(), id = bggId(v);
+    if (!id) { $('#bg').setAttribute('aria-invalid', 'true'); const er = $('#bgerr'); er.textContent = 'Pegá un número de BGG o el link del juego.'; er.hidden = false; return; }
+    if (id === '13') return editionPrompt(id);
+    return addGame(id);
+  }
+  if (a === 'edcancel') { $('.edp')?.remove(); return; }
+  if (a === 'edok') return addGame('13');
+  if (a === 'close') return closeSheet();
+  /* 078 — the editor's rows, the field sheets, and the bar */
+  if (a === 'save') {
+    const g = byId(S.editing); if (!g || !dirty()) return;
+    snapshot(g); TAPS.writes++; render(); walkUI(); snack('Cambios guardados'); return;
+  }
+  /* ---------- B's third cost, and A does not have it ----------
+     074's own rider from the device: *"confirm on back when there is unsaved data"*. In B leaving with
+     staged edits has to ask, and answering "salir" THROWS THEM AWAY. In A there is nothing to ask about,
+     which is why `back` and `juegos` are two different actions here. */
+  if (a === 'back') {
+    if (!dirty()) return go('juegos');
+    return openDialog({
+      title: 'Salir sin guardar',
+      text: 'Los cambios que hiciste se pierden.',
+      yes: 'Salir igual', danger: true,
+      run: () => { const g = byId(S.editing); CLUB_KEYS.forEach(k => g[k] = START[k]); go('juegos'); }
+    });
+  }
+  if (a === 'publish') return doPublish();
+  if (a === 'dlg-no') return closeDialog();
+  if (a === 'dlg-yes') { const r = DLG.run; closeDialog(); r?.(); return; }
+});
+function closeSuggest() { const b = $('#sugg'); if (b) { b.hidden = true; $('#q')?.setAttribute('aria-expanded', 'false'); } }
+$('#backdrop').addEventListener('click', closeSheet);
+$('#dscrim').addEventListener('click', e => { if (e.target.id === 'dscrim') closeDialog(); });
+document.addEventListener('input', e => {
+  if (e.target.id === 'dname' && DRAFT) DRAFT.name = e.target.value;
+  if (e.target.id === 'ddesc' && DRAFT) DRAFT.description = e.target.value;
+  if (e.target.id === 'q') { S.kept = null; renderSugg(); }
+  if (e.target.id === 'bg') {
+    e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true;
+    /* ROUND 3: `Agregar` is live only once there is something to submit. The empty-field ERROR path is not
+       deleted with it — it still fires for a non-empty value that does not parse ("mi juego favorito"),
+       which is a different failure and still needs saying. */
+    const b = $('#addgo'); if (b) b.disabled = !e.target.value.trim();
+  }
+});
+document.addEventListener('focusin', e => {
+  if (e.target.id === 'q') { if (KBD_SIM) device.classList.add('kbd'); renderSugg(); }
+  if (e.target.id === 'bg' && KBD_SIM) device.classList.add('kbd');
+});
+document.addEventListener('focusout', e => {
+  if (e.target.id === 'q') setTimeout(() => { if (document.activeElement?.id !== 'q' && !$('#sugg')?.contains(document.activeElement)) { device.classList.remove('kbd'); closeSuggest(); } }, 180);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#dscrim').classList.contains('open')) return closeDialog();
+  if ($('#sheet').classList.contains('open')) return closeSheet();
+  if (!$('#sugg')?.hidden) { closeSuggest(); $('#q')?.blur(); }
+});
+
+/* ---------- tools ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
+  /* 077's axis. Switching re-renders from the SAME state — the created game is not rebuilt, so AV1/AV2/AV3
+     are three renderings of one walk rather than three walks. It only changes what happens AT the arrival,
+     so switching it after the data has landed shows nothing; ↺ and walk it again. */
+  const rq = e.target.closest('[data-r-set]');
+  if (rq) { REQ = rq.dataset.rSet; mark('[data-r-set]', rq); render(); return; }
+  const m = e.target.closest('[data-m-set]');
+  /* switching re-renders from the SAME state: the game is not rebuilt, so A and B are two renderings of
+     one walk. Switching INTO B re-snapshots, so B never starts life already dirty from A's writes. */
+  if (m) {
+    MODE = m.dataset.mSet; mark('[data-m-set]', m);
+    const g = S.editing ? byId(S.editing) : null; if (g) snapshot(g);
+    render(); walkUI(); return;
+  }
+  const w = e.target.closest('[data-walk]');
+  if (w) {
+    const k = w.dataset.walk;
+    if (k === 'create') { if (!NEW) addGame('207330'); return; }
+    if (k === 'edit') { closeSheet(); openGame(NEW, 'juegos'); walkUI(); return; }
+    if (k === 'draft') { openDraftSheet(byId(NEW), null); walkUI(); return; }
+    if (k === 'band') { DRAFT.weight_band = 'ingenio_estratega'; paintDraftSheet(byId(S.sheetFor)); walkUI(); return; }
+    if (k === 'exp') { DRAFT.is_expansion = !DRAFT.is_expansion; if (DRAFT.is_expansion) DRAFT.weight_band = ''; paintDraftSheet(byId(S.sheetFor)); walkUI(); return; }
+    if (k === 'pub') { publishFromSheet(); return; }
+    /* THROUGH `setField`, not by assigning the column. Check 21 caught the shortcut: the walk was setting
+       weight_band directly, so A's write never happened and A looked identical to B. A walk step that
+       bypasses the mechanism the round is about measures nothing. */
+    if (k === 'reset') {
+      /* ↺ must also LEAVE THE EDITOR. Found by check 25, which reaches the editor through the toast's «Ver»
+         and then resets: the game was spliced out of `G` while `S.screen` was still 'editor', so the next
+         render called `renderEditor` on an id that no longer existed. A reset that deletes the thing the
+         current screen is about has to change the screen too. */
+      if (NEW) { const i = G.findIndex(x => x.id === NEW); if (i > -1) G.splice(i, 1); }
+      /* 077 — and it must CLOSE THE SHEET too, for the same reason 076 found it must leave the editor:
+         a reset that deletes the game the sheet is about leaves a sheet describing a game that is gone. */
+      closeSheet();
+      NEW = null; S.open = { gap: false, draft: false }; S.shown = PAGE; S.editing = null;
+      S.screen = 'juegos'; scroller().scrollTop = 0; lastY = 0;
+      device.classList.remove('hidesearch'); render(); walkUI(); return;
+    }
+    return enrichmentArrived(k);
+  }
+});
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+
+/* the walk's own read-out — which step you are on, and what the app would have written. Kept in the tool
+   panel, never in `.device`, so nothing it says can be mistaken for part of the design. */
+function walkUI() {
+  const g = NEW ? byId(NEW) : null, e = g ? enrOf(g) : null;
+  const inEditor = S.screen === 'editor' && S.editing === NEW;
+  const miss = g ? missing(g) : [];
+  $('[data-walk="create"]').disabled = !!NEW;
+  $('[data-walk="enriched"]').disabled = !g || e !== 'pending';
+  const inSheet = !!g && S.sheetFor === g.id && !!DRAFT && $('#sheet').classList.contains('open');
+  /* el editor ya no es el camino del borrador: se llega sólo una vez publicado. */
+  $('[data-walk="edit"]').disabled = !g || g.status !== 'published' || inEditor;
+  $('[data-walk="draft"]').disabled = !g || e !== 'enriched' || g.status !== 'draft' || inSheet;
+  $('[data-walk="band"]').disabled = !inSheet || DRAFT.is_expansion;
+  $('[data-walk="exp"]').disabled = !inSheet;
+  $('[data-walk="pub"]').disabled = !inSheet;
+  /* step 5 stays live even when the gate would refuse it — otherwise the walk could only ever reach the
+     variant that lets you through, and the round's own question would be unmeasurable from the panel.
+     What each variant DOES with the tap is the thing being compared. */
+
+  const where = inEditor ? ` · ${MODE} · ${TAPS.taps} toques, ${TAPS.writes} escrituras${dirty() ? ' · SIN GUARDAR' : ''}` : '';
+  const gaps = miss.length ? ` · falta ${miss.map(m => m.n).join(' y ')}` : ' · completo';
+  $('#walkNow').textContent = !g ? 'Paso 0 — nada creado todavía'
+    : e === 'pending' ? `Paso 1 — ${g.name} · draft · pending · el job está encolado`
+    : g.status === 'published' ? `Paso 5 — ${g.name} · PUBLICADO · se ve en la web`
+    : `Paso ${inEditor ? (g.weight_band ? '4' : '3') : '2'} — ${g.name} · draft · enriched${gaps}${where}`;
+}
+
+/* ---------- harness handles, and the reason they are needed at all ----------
+   `const`/`let` at the top level of a classic script are LEXICAL bindings, NOT properties of `window` — so
+   a harness that reads or assigns `window.X` for one of them silently measures nothing. 076 hit this twice
+   and 077 once, each time producing a green check against an unmodified page.
+
+   FUNCTION DECLARATIONS ARE DIFFERENT: they bind on the global object, so `window.missing = ...` really
+   does change what the page's own `missing(g)` call sites resolve to. `missing` and `render` are
+   declarations ON PURPOSE, so verify.js check 12 can falsify checks 3 and 6 rather than merely appear to.
+
+   Everything else the harness needs is exported here EXPLICITLY, as getters — never as a one-time copy,
+   which would capture `NEW` and `S.editing` stale the moment the walk advanced. */
+Object.defineProperties(window, {
+  /* `draftValid` NO va acá: es una DECLARACIÓN de función, así que ya es propiedad de `window` y
+     redefinirla con defineProperty tira "Cannot redefine property". La misma distinción que hace
+     falsificable al check 12, vista desde el otro lado. */
+  DRAFT: { get: () => DRAFT }, G: { get: () => G },
+  REQ: { get: () => REQ }, GATE: { get: () => GATE },
+  byId: { get: () => byId }, enrOf: { get: () => enrOf }, gateOpen: { get: () => gateOpen },
+  S: { get: () => S }, NEW: { get: () => NEW },
+  /* round 2's additions — and the trap bit AGAIN while writing check 21, which is the fourth time in this
+     lineage. `dirty` and `TAPS` are const bindings; without these lines `window.dirty` is undefined. */
+  dirty: { get: () => dirty }, TAPS: { get: () => TAPS }, MODE: { get: () => MODE }
+});
+
+scroller().addEventListener('scroll', updateBar, { passive: true });
+render(); walkUI();
+</script>
+</body>
+</html>

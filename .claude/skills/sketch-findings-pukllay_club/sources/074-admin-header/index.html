@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 074 — el header del editor</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 074 — the editor's header. Round 1 of the developer's own proposal:
+     "we have been using a useless header that is replaced at scrolling. I want to explore a 'current action'
+      header, the chevron to go back, and save at the right, enabled or disabled by whether there is
+      something to save."
+
+     Everything structural (device chrome, sheets, the club spine, the action bar, the fixtures) is COPIED
+     from 073, which copied it from 072 and 071. Nothing settled is redrawn, so what differs on screen is
+     this round's question and not a second opinion about last round's.
+
+     WHAT THE EDITOR SPENDS ON CHROME TODAY, and why the complaint is fair. Three overlapping things:
+
+       .hdr    53px   PUKLLAY CLUB wordmark + hamburger — identical on every screen, carries no information
+                      on a screen you reached by drilling down
+       .pbar   44px   D-19n's scroll-triggered overlay: fades in once the head scrolls past, carries
+                      ‹ back + the game's name
+       .back   44px   an in-page "‹ Juegos" row above the game's head
+
+     So the back affordance exists TWICE, and the wordmark tells you where you already know you are.
+
+     ------------------------------------------------------------------------------------------------
+     THE ROUND'S QUESTION, and the one thing it must not quietly break.
+     ------------------------------------------------------------------------------------------------
+
+     The PREMISE, not varied: the three chrome elements collapse into ONE permanent top app bar. The
+     developer proposed it, and the duplicated back control makes it hard to argue with. Every H variant
+     below has exactly one top bar and exactly one back control.
+
+     The QUESTION, varied: **decision 42 put the primary in the BOTTOM bar**, pinned to a fixed right edge,
+     because that bar holds *the one thing to do now* — which on a broken game is `Vincular`, not `Guardar`.
+     Moving `Guardar` to the top-right splits the action area in two again, which is exactly what round 2 of
+     073 was convened to fix. That is the central tension, and it is measured here rather than asserted:
+
+       H1  the split    top-right `Guardar` · bottom bar keeps `Descartar` and the situational action
+       H2  all top      the whole d42 primary moves up; NO bottom bar at all
+       H3  the control  top bar is pure navigation (‹ + name); the bar stays exactly as d42 left it
+       HOY the baseline .hdr + .pbar + .back, bar per d42 — what 073 ships, so every guard below can be
+                        NEGATIVE-TESTED (five times across 073's rounds the harness was green while the page
+                        was wrong; the baseline is what catches that)
+
+     H3 is the null hypothesis and it earns its tab: it isolates Q1's benefit (the chrome collapses, the
+     duplicate back goes) from Q2's cost (the action area splits). If H3 measures as well as H1, then the
+     header change never needed to touch the bar at all.
+
+     ------------------------------------------------------------------------------------------------
+     HELD CONSTANT ON PURPOSE, so it cannot confound the comparison:
+     ------------------------------------------------------------------------------------------------
+
+     · THE TITLE IS THE GAME'S NAME, not "Editar juego". The developer proposed the action; 072's .pbar
+       already chose the object, and D-19n exists precisely so a long page keeps its context while scrolled
+       — a bar reading "Editar juego" at scroll bottom has thrown that context away. It is its own question
+       (round 2), it is the one axis that would change how much room the trailing action gets, and it is
+       pinned here so a finding cannot be attributed to the wrong axis. The cost of "Editar juego" IS
+       measured below (check 6) so round 2 starts from a number rather than from this argument.
+
+     · THE REMEDY WHILE DIRTY stays hidden in every variant — deferred out of decision 42 deliberately.
+
+     · THE PRIMARY'S RIGHT EDGE IS FIXED wherever the primary lives (d42's own fix: it had been landing at
+       R296 / R359 / R112, three positions for "the bar's action").
+  */
+
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* ---- HOY's chrome, copied from 071/073 verbatim. Present only in the baseline. ---- */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  /* same trap as `.tbar[hidden]`, and it bit in the opposite direction: without this rule the H variants
+     kept the 53px wordmark header ABOVE the new top bar — 109px of chrome, worse than the 97px they were
+     supposed to be replacing — while check 1 reported "41px given back" because it trusted `el.hidden`
+     rather than `offsetParent`. Both the page and the check were wrong, and they agreed with each other,
+     which is why it read as green. */
+  .hdr[hidden] { display: none; }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .pbar { position: absolute; left: 0; right: 0; top: 0; height: 44px; z-index: 18; display: flex; align-items: center; gap: 2px;
+    padding: 0 8px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; pointer-events: none; transition: opacity 140ms var(--ease-out-soft); }
+  .pbar.on { opacity: 1; pointer-events: auto; }
+  .pbar .pb-back { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); }
+  .pbar .pb-back svg { width: 22px; height: 22px; }
+  .pbar .pb-t { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .back { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: -8px; padding: 0 8px 0 4px;
+    border: 0; background: none; color: var(--color-accent-text); font-size: 15px; font-weight: 600; }
+  .back svg { width: 20px; height: 20px; }
+
+  /* ================= 074's own component: the top app bar =================
+     56px, not 53 and not 44. 53 is the wordmark header's height and carries no reasoning; 44 is the .pbar
+     overlay, which could be short because it overlays rather than occupies. A bar that OWNS the space has
+     to seat a 44px touch target with air around it, and 56 is the smallest height that does (44 + 6 + 6).
+     M3's small top app bar is 64; 56 is its dense variant, and the editor is a dense screen.
+
+     Z-INDEX: it is in the flex column, not absolute — unlike .pbar it costs real layout, which is the
+     trade the whole round is about. It is paid for by deleting .hdr AND the in-page .back row.
+
+     The trailing slot is `flex-shrink: 0` and the title is `min-width: 0`, so when the action grows it is
+     the TITLE that gives way. That is deliberate and it is the thing check 5 measures: a bar that cannot
+     hold both at 375 has to decide which one truncates, and an action truncated to "Guard…" is not a
+     control. */
+  /* padding-right is 16px, not M3's 10 — and the harness is why. With 10 the top bar's primary ended at
+     R365 while the bottom bar's ended at R359, so in H1 (the split) "the bar's action" had TWO right edges
+     6px apart depending on which container happened to hold it. That is d42's own defect resurfacing
+     through the split, and 6px of M3 convention is not worth breaking the page's one keyline for: every
+     other right edge in this editor sits at 16. The VERTICAL jump H1 still has (81px vs 641px) is the real
+     and irreducible cost of splitting, and check 4 still measures it. */
+  .tbar { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 4px;
+    padding: 0 16px 0 2px; border-bottom: 1px solid var(--color-border); background: var(--color-bg); }
+  /* `display: flex` on a class out-specifies the UA stylesheet's `[hidden] { display: none }`, so setting
+     `.hidden = true` did NOT hide this bar — HOY was rendering the 074 top app bar on top of its own
+     wordmark header, and check 1 reported `tbarH: 0` because it trusted the attribute instead of the
+     screen. Found by check 2, which counts back controls by `offsetParent` and saw THREE in a baseline
+     that is supposed to have two. Any class that sets `display` needs this companion rule. */
+  .tbar[hidden] { display: none; }
+  .tbar .tb-back { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none; color: var(--color-text); }
+  .tbar .tb-back svg { width: 22px; height: 22px; }
+  .tbar .tb-back:active { background: var(--color-surface-2); border-radius: 50%; }
+  /* ---- ROUND 2: the title is ABSENT AT REST and arrives on scroll ----
+     The developer, looking at round 1: *"not sure that I need to say where you go back or where you are
+     since you can see it"* — and at rest that is exactly right; round 1 put the game's name on screen THREE
+     times inside 600px (this bar, the 22px head, and the `Nombre` row). But it is only right at rest: the
+     harness measured 514px of real scroll on a game with BGG data, and once the head goes past, a bar with
+     no title says nothing about which game is being edited. That is D-19n, which is the whole reason
+     `.pbar` exists.
+
+     So the title is opacity-0 at rest and fades in once the head clears the bar — `.pbar`'s trigger, but
+     applied to a bar that is ALREADY THERE. That is the difference from the header the developer called
+     useless: nothing appears, nothing moves, one element changes opacity.
+
+     `flex: 1` is kept while invisible ON PURPOSE. An absent title that collapsed would let the CTA slide
+     left at rest and jump right on scroll — the exact "the thing to tap is moving" defect d42 fixed. Being
+     laid out but transparent pins the CTA in one place at every scroll offset; check 13 asserts it. */
+  .tbar .tb-t { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity 140ms var(--ease-out-soft); }
+  .tbar.titled .tb-t { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .tbar .tb-t { transition: none; } }
+  /* the trailing cluster. `margin-left: auto` is not needed (the title flexes) but the gap is: two controls
+     touching read as a segmented control rather than as a ghost beside a primary. */
+  .tb-act { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  /* an empty trailing slot must occupy NOTHING — an empty flex child with a gap still spends the gap, and
+     the title's available width would then depend on whether the game happens to be dirty. */
+  .tb-act:empty { display: none; }
+
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+
+  /* 79px clears the 67px tab bar and nothing else; the action bar is absolute and overlays content, so the
+     reserve is added only while the bar is present (d42's second measured defect — the bar covered the last
+     row by 53px at full scroll, invisible at rest because the bar floats over blank space there). */
+  main { padding: 0 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+  .device.hasbar main { padding-bottom: 144px; }
+
+  /* ---- the game's head ---- */
+  .ghead { display: flex; gap: 14px; align-items: flex-start; padding: 2px 0 18px; }
+  .ghead .cov { width: 64px; height: 68px; border-radius: 7px; object-fit: cover; flex-shrink: 0; background: var(--color-surface); }
+  .ghead .tile { width: 64px; height: 68px; border-radius: 7px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .ghead .tile svg { width: 30px; height: 30px; }
+  /* with a permanent top bar the head no longer follows a 44px in-page back row, so it needs its own top
+     air; HOY keeps 2px because .back supplies it. Without this the cover sat flush under the bar's hairline. */
+  .device.chrome-top .ghead { padding-top: 14px; }
+  .gh-t { flex: 1; min-width: 0; }
+  .gh-name { font-size: 22px; font-weight: 600; line-height: 1.22; }
+  .gh-meta { color: var(--color-text-muted); }
+  .gh-st { margin-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
+  .gh-st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .gh-st .dot.ok { background: var(--color-success); }
+  .gh-st .dot.warn { background: var(--color-accent); }
+  .gh-st .dot.off { background: var(--color-text-muted); }
+  .gh-sep { color: var(--color-text-muted); }
+
+  .glabel { font-size: 13px; font-weight: 600; color: var(--color-text-muted); letter-spacing: .01em; padding: 22px 0 8px; }
+
+  /* ---- the club spine (decision 33), unchanged from 073 ---- */
+  .frows { margin: 0 -16px; }
+  .frow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 16px;
+    border: 0; background: none; text-align: left; position: relative; }
+  .frow + .frow::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--color-border); }
+  .frow:hover { background: var(--color-surface); }
+  .frow:active { background: var(--color-surface-2); }
+  .frow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .fr-t { flex: 1; min-width: 0; }
+  .fr-k { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .fr-v { display: block; font-size: 15px; line-height: 1.32; margin-top: 2px; overflow-wrap: anywhere; }
+  .fr-v.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .frow .fr-k { font-size: 15px; font-weight: 500; line-height: 1.3; color: var(--color-text); }
+  .frow .fr-v { font-size: 14px; color: var(--val); margin-top: 2px; }
+  .frow .fr-v.empty { font-style: italic; color: var(--color-text-muted); }
+
+  /* TODO(palette) — inherited from 073 and still owed upstream: `--val`'s dark stop does not exist in the
+     palette, so it is defined locally here too. See 073's note; the fix is in app.css, not in this file. */
+  :root { --val: var(--color-accent-text); }
+  :root[data-theme="dark"] { --val: #9F7AEA; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --val: #9F7AEA; } }
+
+  .inp { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--stroke); border-radius: 10px;
+    background: var(--color-bg); font-size: 16px; }
+  .inp:focus { outline: 2px solid var(--color-primary); outline-offset: -2px; border-color: transparent; }
+  textarea.inp { min-height: 96px; resize: vertical; line-height: 1.45; }
+  .help { font-size: 12px; color: var(--color-text-muted); margin-top: 5px; line-height: 1.4; }
+  .step { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .step button { width: 44px; height: 44px; border: 1px solid var(--stroke); background: none; border-radius: 10px; display: grid; place-items: center; }
+  .step button:active { background: var(--color-surface-2); }
+  .step button svg { width: 18px; height: 18px; }
+  .step .n { min-width: 40px; text-align: center; font-size: 17px; font-weight: 600; }
+
+  /* ---- the read-only BGG block ---- */
+  .bgg { margin: 0 -16px; padding: 0 16px; }
+  .kv { display: flex; gap: 12px; padding: 7px 0; font-size: 14px; line-height: 1.4; border-top: 1px solid var(--color-border); }
+  .kv:first-child { border-top: 0; }
+  .kv dt { flex: 0 0 104px; color: var(--color-text-muted); font-size: 13px; }
+  .kv dd { margin: 0; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lock { font-size: 13px; line-height: 1.45; color: var(--color-text-muted); margin: 0 0 12px; }
+
+  /* ---- the action bar (d42), copied from 073 ---- */
+  .savebar { position: absolute; left: 0; right: 0; bottom: 67px; z-index: 19; display: flex; gap: 10px; align-items: center;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--color-bg); border-top: 1px solid var(--color-border);
+    transform: translateY(130%); transition: transform 220ms var(--ease-out-soft); }
+  .savebar.on { transform: none; }
+  .device.kbd .savebar { bottom: 0; }
+  @media (prefers-reduced-motion: reduce) { .savebar { transition: none; } }
+  .savebar .dirty { flex: 1; font-size: 13px; color: var(--color-text-muted); }
+  .savebar .dirty:empty { display: none; }
+  .btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 0; font-size: 15px; font-weight: 600;
+    background: var(--color-primary); color: var(--color-primary-content);
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .btn:active { filter: brightness(.92); }
+  .btn.ghost { background: none; color: var(--color-accent-text); padding: 0 12px; }
+  .btn.ghost:active { background: var(--color-surface-2); }
+  .btn.ghost svg { display: none; }
+  .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+  /* d42: the primary always ends at the same edge, wherever the primary lives. In the bar that is
+     `margin-left: auto`; in the top bar the trailing cluster is already right-anchored by the flexing title,
+     so the rule is satisfied structurally rather than by a margin. Check 4 asserts it in BOTH places. */
+  .savebar .btn:not(.ghost) { margin-left: auto; }
+  .btn[disabled] { opacity: .42; }
+
+  /* ---- ROUND 2: the top CTA is 36px tall, not 44 ----
+     Round 1 held it byte-identical to the bottom bar's button on purpose, so a finding about POSITION could
+     not be blamed on WEIGHT. That paid off: the developer looked at it and said *"currently that CTA looks
+     huge"* — the same control reads as proportionate in a dedicated action strip and oversized in a top
+     bar, where 44px of button in a 56px bar is 79% of the bar's height.
+
+     36px brings it to 64%. The 44px TOUCH FLOOR is kept by stretching the hit box with a pseudo-element
+     rather than by inflating the control — the technique already in this codebase for the switch track
+     (`.sw::before`) and decision 18's caption caret. Check 8 hit-tests 4px ABOVE and BELOW the visible
+     button to prove the invisible half of the target is really there, and is negative-tested by removing
+     the pseudo-element.
+
+     THIS IS PROVISIONAL. Weight — filled vs tonal vs text — is round 3's question, after the title settles
+     how much room the CTA actually has. What is fixed here is only the proportion. */
+  .tbar .btn { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 9px; position: relative; }
+  .tbar .btn::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .tbar .btn svg { width: 16px; height: 16px; }
+
+  /* ================= ROUND 3: the CTA's WEIGHT =================
+     Round 2 settled the CTA's PROPORTION (36px in a 56px bar) and left its weight open, with one sharp
+     input recorded: *"a disabled filled button reads as lavender-and-live rather than clearly dead — a text
+     button would disable unambiguously."* That is the question, and it now has a number attached to it
+     (check 21) instead of an adjective.
+
+     WHAT THE ROUND FOUND BEFORE DRAWING ANYTHING. Sketch 064 already settled this for the admin —
+     "S3 Contorno, weight-tuned: 1px strokes everywhere … NO DISABLED BUTTONS" — and 071/072/073/074 have
+     drawn a FILLED primary ever since, with round 2 adding a disabled one. Neither departure is recorded
+     anywhere: no decision supersedes 064, and the 071-074 lineage carries no trace of its CSS block. So the
+     incumbent on screen and the system of record disagree, and this round is where that is settled rather
+     than inherited. W2 IS 064's answer, drawn against the other two.
+
+     ONE AXIS: PAINT. Geometry is byte-identical across W1/W2/W3 — same 36px height, same 14px padding, same
+     9px radius, same hit box. The stroke is an INSET BOX-SHADOW, not a border, precisely so W2 does not
+     shift the label by the 1px a border would cost. Round 1 held the CTA byte-identical across positions so
+     a finding about position could not be blamed on weight; this is the same discipline inverted, and
+     check 19 asserts it.
+
+     Tonal is NOT drawn. 064's round 2 removed it with the developer in the room ("S3 looks better"), and
+     re-drawing it would re-litigate a decision that is already made. Three answers, not four. */
+
+  /* W1 · Relleno — what round 2 drew, and what 071-073 ship. Overturns 064 if it wins. */
+  .device.w-fill .tbar .btn { background: var(--color-primary); color: var(--color-primary-content); box-shadow: none; }
+
+  /* W2 · Contorno — 064's settled Principal: a 1px primary stroke with a primary label, no fill. */
+  .device.w-line .tbar .btn { background: none; color: var(--color-accent-text);
+    box-shadow: inset 0 0 0 1px var(--color-accent-text); }
+
+  /* W3 · Texto — the label alone. CHOSEN (round 3, from the device).
+     A text button has NO BOX, and that looked like it broke d42's rule: "the primary always ends at the same
+     edge" was written for a control whose box IS its ink. Drawn first with a negative margin — label on the
+     keyline, box and 44px hit target overhanging to R373, two pixels from the bezel — and that overhang was
+     recorded as W3's irreducible cost.
+
+     IT IS NOT IRREDUCIBLE. The two edges only conflict while the visible box and the hit box are the same
+     box. They are not: this bar already carries a pseudo-element hit box for the 36px height (round 2), and
+     the same element takes the horizontal slack. So `padding-right: 0` puts the visible box AND the ink on
+     R359 together — d42's rule holds literally, with no amendment — while `::before`'s `right: -14px`
+     keeps the tap margin out at R373 where a thumb wants it, invisibly. The cost W3 was charged in round 3
+     was an artefact of how it was drawn, not a property of the weight. */
+  .device.w-text .tbar .btn { background: none; color: var(--color-accent-text); box-shadow: none; padding-right: 0; }
+  .device.w-text .tbar .btn::before { right: -14px; }
+
+  /* ---- the run-on, fixed: 16px between a truncated title and the action ----
+     W3's one measured defect that is about the DESIGN rather than the drawing. The bar's own `gap` is 4px,
+     which is invisible under W1 and W2 because a filled or stroked box puts an edge in it. W3 puts nothing
+     there, so at full scroll a truncated real name and the primary ran together into one line —
+     `Castillos del Rey Loco Lud… Guardar` — in which the action does not read as a control.
+     16px is the spacing scale's step, and it costs the title nothing it was keeping: the title is `flex: 1`
+     and already truncating, so the 12 extra pixels come out of an ellipsis, not out of a word. Scoped to
+     W3 because it is a fix for the weight that has no edge of its own; check 20 asserts the separation and
+     is negative-tested against the 4px the other two still use. */
+  .device.w-text .tbar { gap: 16px; }
+
+  /* W1 gets the fill's own darkening; the two boxless weights need a backdrop to press against, the same
+     one `.btn.ghost` already uses. (Not asserted anywhere — CDP touch does not set `:active`.) */
+  .device.w-line .tbar .btn:active, .device.w-text .tbar .btn:active { background: var(--color-surface-2); filter: none; }
+
+  /* ---- sheets (D-19e) ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  .device.kbd .sheet { bottom: 292px; max-height: calc(100% - 292px - 24px); }
+  @media (prefers-reduced-motion: reduce) { .sheet, .backdrop { transition: none; } }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sh-head { display: flex; gap: 16px; align-items: flex-start; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .sh-sub { margin: 3px 0 0; font-size: 13px; line-height: 1.4; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:active { background: var(--color-surface-2); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .sh-body { padding: 0 16px; }
+  .opt { width: 100%; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 16px; margin: 0 -16px; border: 0; background: none; text-align: left; }
+  .opt:hover { background: var(--color-surface); }
+  .opt:active { background: var(--color-surface-2); }
+  .opt:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .opt .ot { flex: 1; min-width: 0; }
+  .opt .on2 { font-size: 16px; }
+  .opt .os { display: block; font-size: 13px; color: var(--color-text-muted); margin-top: 2px; line-height: 1.35; }
+  .opt .tick { width: 22px; height: 22px; color: var(--color-primary); flex-shrink: 0; }
+
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 45; background: var(--color-surface);
+    border-top: 1px solid var(--color-border); display: none; flex-direction: column; gap: 8px; padding: 10px 6px; }
+  .device.kbd .kbd-sim { display: flex; }
+  .krow { display: flex; gap: 5px; justify-content: center; }
+  .krow span { flex: 1; max-width: 34px; height: 42px; border-radius: 6px; background: var(--color-bg); display: grid; place-items: center; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,.18); }
+  .krow .wide { max-width: 160px; }
+
+  /* ---- ROUND 2: D-19f's centred dialog, drawn here for the first time in this project ----
+     The developer's second rider: *"On going back, this could ask confirmation about you're going to lose
+     unsaved data."* It earns its keep TWICE, because with the bottom bar gone `Descartar` also loses its
+     home — and this dialog IS Descartar. It stops being a permanent control in the chrome and becomes the
+     second option on the way out. One fewer button on every screen.
+
+     D-19f qualifies it: the rule covers "actions that lose state staff would have to rebuild" (D-19k's own
+     test for what still deserves a dialog), and unsaved edits are exactly that.
+
+     Anatomy is the rule's, not invented: 312px, 16px radius, an 18/600 question, one 14px muted line with
+     the consequence, two RIGHT-ALIGNED TEXT actions — Cancelar focused by default, the destructive verb in
+     Peligro red — and scrim tap / Esc cancel.
+
+     THE CANCEL IS "Cancelar", the rule's own word. The first build said "Seguir editando", reasoning that
+     "Cancelar" is ambiguous here (cancel the edit, or cancel the leaving?). The screenshot settled it: at
+     312px minus 40px of padding there are 272px for both actions, and "Seguir editando" + "Salir sin
+     guardar" need more — BOTH wrapped to two lines, which turned two text actions into a two-line block
+     and made the focused one read as an outlined button. The rule's word fits on one line, and the
+     ambiguity it was meant to solve is already answered by the question directly above it. Departing from
+     a settled rule on a judgment call cost a layout defect; `nowrap` below now makes any future departure
+     fail loudly instead of wrapping quietly. */
+  .dscrim { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); z-index: 60;
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
+  .dscrim.open { opacity: 1; pointer-events: auto; }
+  .dlg { position: absolute; left: 50%; top: 50%; width: 312px; z-index: 61; background: var(--color-bg);
+    border-radius: 16px; padding: 22px 20px 12px; box-shadow: var(--shadow-lg);
+    transform: translate(-50%, -50%) scale(.96); opacity: 0; pointer-events: none;
+    transition: opacity 160ms var(--ease-out-soft), transform 160ms var(--ease-out-soft); }
+  .dlg.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+  @media (prefers-reduced-motion: reduce) { .dlg, .dscrim { transition: none; } }
+  .dlg h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .dlg p { margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--color-text-muted); }
+  /* right-aligned TEXT actions, per D-19f — not filled buttons. `flex-end` with a small gap, and each one
+     keeps the 44px floor even though a text action has no visible box. */
+  .dlg .acts { display: flex; justify-content: flex-end; gap: 2px; margin-top: 22px; }
+  .dlg .acts button { min-height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 9px;
+    font-size: 15px; font-weight: 600; color: var(--color-accent-text); white-space: nowrap; }
+  .dlg .acts button:active { background: var(--color-surface-2); }
+  .dlg .acts button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .dlg .acts .danger { color: var(--color-danger); }
+
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 50; display: flex; align-items: center; gap: 10px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 12px; padding: 12px 14px; font-size: 14px;
+    opacity: 0; transform: translateY(12px); pointer-events: none; transition: all 200ms var(--ease-out-soft); }
+  .snack.on { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; }
+
+  /* ---- the state line (d38 / D-19h: a dot + text, never a pill) ---- */
+  .st { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; margin: -2px 0 0; }
+  .st .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5.5px; background: var(--color-text-muted); }
+  .st.warn .dot { background: var(--color-accent); }
+  .st.bad .dot { background: var(--color-danger); }
+  .st.wait .dot { background: var(--color-text-muted); }
+  .st .sx { flex: 1; min-width: 0; color: var(--color-text); }
+  .st .sx b { font-weight: 600; }
+  .st .sc { display: block; color: var(--color-text-muted); margin-top: 3px; }
+
+  .hint { font-size: 13px; line-height: 1.5; color: var(--color-text-muted); margin: 10px 0 0; }
+  .hint a { color: var(--color-accent-text); font-weight: 600; text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--color-accent-text) 40%, transparent); }
+  .ex { display: block; margin-top: 7px; padding: 8px 10px; border-radius: 8px; background: var(--color-surface);
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; line-height: 1.5; color: var(--color-text-muted); word-break: break-word; }
+  .ex b { color: var(--val); font-weight: 700; }
+  .ex .arw { color: var(--color-text-muted); }
+
+  .sk { height: 11px; border-radius: 5px; background: var(--color-surface-2); }
+  .kv .sk { width: 62%; }
+  @keyframes shim { 0% { opacity: .55; } 50% { opacity: 1; } 100% { opacity: .55; } }
+  .sk { animation: shim 1.4s var(--ease-out-soft) infinite; }
+  @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+  .ghead .cov.skel { background: var(--color-surface-2); animation: shim 1.4s var(--ease-out-soft) infinite; }
+
+  .waiting { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 34px 8px 40px; }
+  .waiting .wt { margin: 18px 0 0; font-size: 17px; font-weight: 600; }
+  .waiting .ws { margin: 8px 0 0; max-width: 30ch; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  .waiting .wid { margin: 14px 0 0; font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--color-text-muted); }
+  .spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--color-surface-2); border-top-color: var(--color-primary);
+    animation: sp 900ms linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .spin { animation: sp-pulse 1.6s var(--ease-out-soft) infinite; border-top-color: var(--color-primary); }
+    @keyframes sp-pulse { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+  }
+
+  .kv dd.dash { color: var(--color-text-muted); }
+
+  /* ---- tools ---- */
+  #tools { position: fixed; left: 12px; bottom: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(20,8,32,.88); color: #fff; padding: 9px 11px; border-radius: 10px; opacity: .45; transition: opacity .2s;
+    display: flex; flex-direction: column; gap: 6px; max-width: 92vw; }
+  #tools:hover { opacity: 1; }
+  #tools button { font: inherit; background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 4px 8px; margin-right: 2px; }
+  #tools button.on { background: #fff; color: #1a0a2a; font-weight: 600; }
+
+  .variant { display: none; }
+  .variant.on { display: block; }
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <!-- HOY's chrome. Hidden outright in the H variants — not merely emptied, because an empty 53px box still
+       spends 53px and check 1 measures what the editor gives back. -->
+  <div class="hdr" id="hdr">
+    <button class="burger" aria-label="Menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <span class="word">PUKLLAY CLUB</span>
+  </div>
+  <div class="pbar" id="pbar" inert><button class="pb-back" aria-label="Volver a Juegos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="pb-t" id="pbt"></span></div>
+
+  <!-- 074's top app bar. One back control, one title, one trailing slot. -->
+  <div class="tbar" id="tbar" hidden></div>
+
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg></span>Juegos</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/></svg></span>Web</span>
+    <span class="tab"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/></svg></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="savebar" id="savebar"></div>
+  <div class="snack" id="snack" role="status"><span></span></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>0</span></div><div class="krow"><span>q</span><span>w</span><span>e</span><span>r</span><span>t</span><span>y</span><span>u</span><span>i</span><span>o</span><span>p</span></div><div class="krow"><span>a</span><span>s</span><span>d</span><span>f</span><span>g</span><span>h</span><span>j</span><span>k</span><span>l</span><span>ñ</span></div><div class="krow"><span class="wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="dscrim" id="dscrim"></div>
+  <div class="dlg" id="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgq" aria-describedby="dlgc">
+    <h2 id="dlgq">¿Salir sin guardar?</h2>
+    <p id="dlgc">Los cambios que hiciste en este juego se pierden.</p>
+    <div class="acts">
+      <button id="dlg-stay">Cancelar</button>
+      <button id="dlg-leave" class="danger">Salir sin guardar</button>
+    </div>
+  </div>
+</div></div>
+
+<div id="tools">
+  <!-- Round 1's H1 and H3 are removed along with their comparison checks: their question is answered and
+       their measurements live in the README. 072's rule — what is on screen is the decision, not a menu of
+       them. HOY stays; it is the baseline every negative test is written against. -->
+  <div>Peso del CTA:
+    <button data-var="W1">W1 · Relleno</button>
+    <button data-var="W2">W2 · Contorno</button>
+    <button data-var="W3" class="on">W3 · Texto ★ elegido</button>
+    <button data-var="HOY">Hoy (lo que se ve)</button>
+  </div>
+  <div>Estado:
+    <button data-st="no_bgg_id" class="on">Sin ID · 41</button>
+    <button data-st="bgg_missing">ID inválido · 8</button>
+    <button data-st="failed">Falló · 0</button>
+    <button data-st="pending">Trayendo · 0</button>
+    <button data-st="enriched">Con datos · 386</button>
+  </div>
+  <div>Ciclo: <button data-cy="published" class="on">Publicado</button> <button data-cy="draft">Borrador</button> <button data-cy="retired">Retirado</button></div>
+  <div>Tema: <button data-theme-set="light" class="on">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+const P = {
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  tick: '<path d="M4 12l6 6L20 6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  minus: '<path d="M5 12h14"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  link: '<path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7L12 19"/>',
+  retry: '<path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 4v5h-5"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------- the fixtures, straight out of the dev DB (2026-09-19), carried over from 073 ----------
+   The name matters more in this round than in 073: the top bar has to hold it. "Castillos del Rey Loco
+   Ludwig" is 29 characters and it is a REAL row — many of the 41 are hand-typed expansion names, which is
+   why they never matched a BGG entry in the first place. A short invented name would quietly make the
+   title question disappear. */
+const FIX = {
+  no_bgg_id:   { name: 'Atiwa',                          bgg_id: null,   band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  bgg_missing: { name: 'Castillos del Rey Loco Ludwig',   bgg_id: 255848, band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  failed:      { name: 'Castillos del Rey Loco Ludwig',   bgg_id: 255848, band: 'estratega', units: 1, cover: null, year: null, desc: '' },
+  pending:     { name: 'Juego #255848',                   bgg_id: 255848, band: '',          units: 1, cover: null, year: null, desc: '' },
+  enriched:    { name: 'Brass: Birmingham',               bgg_id: 224517, band: 'experto',   units: 1, cover: null, year: 2018,
+                 desc: 'Secuela de Brass: Lancashire. Construís canales, vías y fábricas en Birmingham durante la revolución industrial.' }
+};
+const SRC = (typeof GAMES067 !== 'undefined' ? GAMES067 : []).find(g => g.n === 'Brass: Birmingham');
+if (SRC && SRC.t) FIX.enriched.cover = SRC.t;
+
+const FACT_KEYS = ['Jugadores', 'Duración', 'Edad mínima', 'Mecánicas', 'Temáticas', 'Diseñadores', 'Ilustradores', 'Editorial', 'Valoración BGG', 'Ranking BGG', 'Peso BGG'];
+const FACTS_OK = {
+  'Jugadores': '2 – 4', 'Duración': '60 – 120 min', 'Edad mínima': '14+',
+  'Mecánicas': 'Colocación de losetas, Gestión de mano, Red/ruta',
+  'Temáticas': 'Económico, Industria, Transporte',
+  'Diseñadores': 'Gavan Brown, Matt Tolman, Martin Wallace',
+  'Ilustradores': 'Lina Cossette, David Forest',
+  'Editorial': 'Roxley', 'Valoración BGG': '8,6', 'Ranking BGG': '#1', 'Peso BGG': '3,91 / 5'
+};
+
+const BANDS = [
+  { v: '', n: 'Sin nivel', s: 'No aparece en ninguna fila por nivel' },
+  { v: 'intro', n: 'Para arrancar', s: 'Se explica en 5 minutos' },
+  { v: 'medio', n: 'Intermedio', s: 'Una tarde tranquila' },
+  { v: 'estratega', n: 'Ingenio estratega', s: 'Pide pensar varias jugadas' },
+  { v: 'experto', n: 'Experto', s: 'Para quien ya tiene rodaje' }
+];
+const SHELVES = [
+  { v: '', n: 'Sin ubicar', s: 'Nadie sabe dónde está' },
+  { v: 'a', n: 'Estante A', s: 'Entrando, a la izquierda' },
+  { v: 'b', n: 'Estante B', s: 'Junto a la ventana' },
+  { v: 'c', n: 'Estante C', s: 'El de arriba de todo' }
+];
+
+/* ROUND 3: N1 becomes three weights. W1 is N1 byte-for-byte except for the CTA's paint, so every round-1
+   and round-2 guard still has an incumbent to run against; W2 and W3 differ from it in paint ONLY. */
+let VAR = 'W3', ST = 'no_bgg_id', KBD_SIM = true, CY = 'published';
+const WEIGHT = { W1: 'w-fill', W2: 'w-line', W3: 'w-text' };
+let G, START;
+
+function loadState() {
+  const f = FIX[ST];
+  START = { name: f.name, units: f.units, weight_band: f.band, is_expansion: false, shelf_id: '', description: f.desc, bgg_id: f.bgg_id };
+  G = { ...START };
+}
+loadState();
+
+const CYC = { published: { n: 'Publicado', k: 'ok' }, draft: { n: 'Borrador', k: 'warn' }, retired: { n: 'Retirado', k: 'off' } };
+const bandOf = v => BANDS.find(b => b.v === v) || BANDS[0];
+const shelfOf = v => SHELVES.find(b => b.v === v) || SHELVES[0];
+const CLUB_KEYS = ['name', 'units', 'weight_band', 'is_expansion', 'shelf_id', 'description'];
+const dirty = () => CLUB_KEYS.some(k => G[k] !== START[k]);
+const hasData = () => ST === 'enriched';
+const broken = () => ST === 'no_bgg_id' || ST === 'bgg_missing' || ST === 'failed';
+/* the H variants all use the top app bar; HOY uses the old three-piece chrome */
+const topChrome = () => VAR !== 'HOY';
+
+/* ---------- d42's primary, verbatim — the logic is NOT a variant axis ----------
+   What varies is only WHERE the thing it returns is rendered. Copying the function rather than
+   reimplementing it per variant is the point: if H1 and H2 disagreed about what the primary IS, the round
+   would be comparing two different decisions instead of two positions for one. */
+function remedy() {
+  if (!broken()) return null;
+  return ST === 'bgg_missing' ? { verb: 'Corregir el ID de BGG', short: 'Corregir ID', act: 'open-link', icon: 'link' }
+    : ST === 'failed' ? { verb: 'Reintentar', short: 'Reintentar', act: 'retry', icon: 'retry' }
+    : { verb: 'Vincular con BoardGameGeek', short: 'Vincular', act: 'open-link', icon: 'link' };
+}
+function primary() {
+  if (dirty()) return { label: 'Guardar', id: 'save', dis: false };
+  const r = remedy();
+  if (r) return { label: r.verb, short: r.short, act: r.act, icon: r.icon, dis: false, situational: true };
+  if (CY === 'draft') return { label: 'Publicar', id: 'publish', dis: !hasData() };
+  return null;
+}
+
+/* ---------- the top app bar ----------
+   `slot` is what the trailing cluster holds, and it is the ONLY thing the three H variants disagree about:
+
+     H1  Guardar, and only Guardar — the developer's literal proposal. Everything situational stays below.
+     H2  the whole d42 primary, whatever it is, plus Descartar while dirty. No bottom bar exists.
+     H3  nothing. Pure navigation. The control.
+
+   The LABEL in the top bar is the situational action's SHORT form ("Vincular", not "Vincular con
+   BoardGameGeek"). That is not a free choice: measured at 375 the long verb plus a 44px chevron leaves the
+   title 0px. Check 5 records the number, because "the top bar forces the short verb" is a real cost of H2
+   that the bottom bar does not pay — the bar has a whole row and 073 shows the long verb there. */
+/* ---- ROUND 2: the slot swaps, and it is dead in exactly one situation ----
+   The developer's first rider: *"For 'cambios sin guardar' isn't better to have enable the CTA? If I open
+   the form and don't change nothing, the button is disable. If there is change to do, then I have it
+   enable."* The instinct is right — with no bottom bar, the words "Cambios sin guardar" have nowhere to
+   live, and an enabled/disabled control says the same thing without a sentence.
+
+   But taken literally it re-opens what d42 REJECTED: a fixed `Guardar` put a dead control in the strongest
+   slot in 4 of 8 situations and demoted the real next step to a ghost. On the 49 real broken games that
+   would mean a dead `Guardar` top-right while `Vincular` — the actual thing to do — has nowhere to go,
+   and now there is no bottom bar to put it in.
+
+   So the slot SWAPS (d42 intact) and falls back to a disabled `Guardar` only where `primary()` genuinely
+   has nothing to offer:
+
+     dirty (any)                  -> Guardar            enabled
+     clean · sin ID / ID malo     -> Vincular / Corregir enabled
+     clean · borrador completo    -> Publicar           enabled
+     clean · publicado · sano     -> Guardar            DISABLED   <- 1 of 8, and nothing is pending
+     pending / retirado           -> Guardar            DISABLED
+
+   1 of 8 dead instead of 4 of 8, and in that one there is nothing to do — so it never inverts the
+   hierarchy, which is precisely what d42's rejection was about. Check 12 asserts the count and names the
+   situation, so this cannot quietly drift back to 4. */
+function topSlot() {
+  const p = primary();
+  if (p) return p;
+  return { label: 'Guardar', id: 'save', dis: true };
+}
+function topbarHTML() {
+  const p = topSlot();
+  /* the SHORT verb: measured in round 1, the long form ("Vincular con BoardGameGeek") leaves the title 0px
+     at 375. The bar has one line; the bottom bar had a whole row, which is why 073 could afford the long
+     one. A cost of the top position, recorded rather than smoothed over. */
+  const slot = p.situational
+    ? `<button class="btn" data-act="${p.act}">${ic(p.icon, 1.9)}<span>${esc(p.short)}</span></button>`
+    : `<button class="btn" id="${p.id}"${p.dis ? ' disabled' : ''}>${esc(p.label)}</button>`;
+  return `<button class="tb-back" id="tbback" aria-label="Volver a Juegos">${ic('chevL', 1.9)}</button>
+    <span class="tb-t" id="tbt">${esc(G.name)}</span>
+    <span class="tb-act">${slot}</span>`;
+}
+
+/* ---------- the bottom action bar ----------
+   N1 has NONE. Round 1's measurements are why: H1 kept one and the action area split in 3 of 8 situations,
+   and — found in a screenshot, not by a number — `Descartar` was pushed into R359, the exact right edge
+   `Guardar` held in the other five. The editor would spend five situations teaching "the bottom-right
+   button is the safe one" and then put the undo-everything button there.
+   With the bar gone, `Descartar` is not relocated — it is DELETED, and becomes the destructive option in
+   the D-19f dialog on the way out. HOY keeps the bar; it is the baseline. */
+function barWanted() {
+  if (VAR !== 'HOY') return false;
+  return dirty() || !!primary();
+}
+function barHTML() {
+  if (!barWanted()) return '';
+  const p = primary();
+  const note = `<span class="dirty" id="dirty">${dirty() ? 'Cambios sin guardar' : ''}</span>`;
+  /* HOY: d42 as it stands. */
+  if (!p) return '';
+  const discard = dirty() ? `<button class="btn ghost" id="discard">Descartar</button>` : '';
+  const strong = p.situational
+    ? `<button class="btn" data-act="${p.act}">${ic(p.icon, 1.9)}<span>${esc(p.label)}</span></button>`
+    : `<button class="btn" id="${p.id}"${p.dis ? ' disabled' : ''}>${esc(p.label)}</button>`;
+  return `${note}${discard}${strong}`;
+}
+
+/* ---------- the page body, copied from 073 ---------- */
+function headHTML() {
+  const f = FIX[ST];
+  const cov = ST === 'pending'
+    ? `<div class="cov skel" style="width:64px;height:68px;border-radius:7px"></div>`
+    : f.cover ? `<img class="cov" src="${f.cover}" alt="" loading="lazy">`
+    : `<div class="tile">${ic('img')}</div>`;
+  const meta = [f.year, G.bgg_id ? 'BGG ' + G.bgg_id : null].filter(Boolean).join(' · ');
+  const st = CYC[CY];
+  /* the in-page back row exists ONLY in HOY. In the H variants the top bar's chevron is the one back
+     control, which is half the reason the round exists — check 2 counts them and negative-tests against
+     HOY's two. */
+  const backRow = topChrome() ? '' : `<button class="back" id="back">${ic('chevL', 1.9)}Juegos</button>`;
+  return `${backRow}
+    <div class="ghead">${cov}<div class="gh-t"><div class="gh-name" id="ghname">${esc(G.name)}</div>
+      <div class="gh-st"><span class="dot ${st.k}"></span>${esc(st.n)}${meta ? `<span class="gh-sep">·</span><span class="gh-meta">${esc(meta)}</span>` : ''}</div>
+      </div></div>`;
+}
+
+function rowsHTML() {
+  const r = (key, k, v, empty, clamp) => `<button class="frow" data-edit="${key}">
+    <span class="fr-t"><span class="fr-k">${esc(k)}</span><span class="fr-v${empty ? ' empty' : ''}${clamp ? ' clamp' : ''}">${esc(v)}</span></span>
+    </button>`;
+  return `<div class="glabel">DATOS DEL CLUB</div>
+    <div class="frows">
+      ${r('name', 'Nombre', G.name)}
+      ${r('weight_band', 'Nivel', bandOf(G.weight_band).n, !G.weight_band)}
+      ${r('units', 'Copias', String(G.units))}
+      ${r('shelf_id', 'Estante', shelfOf(G.shelf_id).n, !G.shelf_id)}
+      ${r('is_expansion', 'Es una expansión', G.is_expansion ? 'Sí' : 'No')}
+      ${r('description', 'Descripción en español', G.description || 'Sin descripción', !G.description, true)}
+    </div>`;
+}
+
+const STATE_COPY = {
+  no_bgg_id: { k: 'warn', t: 'Este juego no está vinculado a BoardGameGeek.', c: 'Por eso no tiene tapa, ni descripción, ni datos.' },
+  bgg_missing: { k: 'bad', t: 'El ID guardado no existe en BoardGameGeek.', c: 'Volver a intentar no lo va a arreglar: hay que corregir el ID.' },
+  failed: { k: 'bad', t: 'No se pudieron traer los datos.', c: 'El ID es correcto. Puede ser un problema pasajero de BGG.' },
+  pending: { k: 'wait', t: 'Trayendo datos de BoardGameGeek…', c: 'Suele tardar menos de un minuto.' },
+  enriched: null
+};
+function stateHTML() {
+  const s = STATE_COPY[ST]; if (!s) return '';
+  const live = broken() ? `<span class="sc">${esc(s.c)} <b>Se está viendo así en la web.</b></span>` : `<span class="sc">${esc(s.c)}</span>`;
+  return `<p class="st ${s.k}"><span class="dot"></span><span class="sx">${esc(s.t)}${live}</span></p>`;
+}
+function hintHTML() {
+  return `<p class="hint">Buscá el juego en <a href="https://boardgamegeek.com" target="_blank" rel="noopener">boardgamegeek.com</a>
+    y copiá el número que aparece en la dirección.
+    <span class="ex">boardgamegeek.com/boardgame/<b>155426</b>/castles-of-mad-king-ludwig<br>
+    <span class="arw">→ el ID es</span> <b>155426</b></span></p>`;
+}
+function factsHTML(mode) {
+  return `<dl class="bgg">${FACT_KEYS.map(k => {
+    const dd = mode === 'ok' ? esc(FACTS_OK[k]) : mode === 'skel' ? '<span class="sk"></span>' : '<span class="dash">—</span>';
+    return `<div class="kv"><dt>${esc(k)}</dt><dd${mode === 'dash' ? ' class="dash"' : ''}>${dd}</dd></div>`;
+  }).join('')}</dl>`;
+}
+function bggHTML() {
+  const L = `<div class="glabel">DATOS DE BGG</div>`;
+  const lock = `<p class="lock">Vienen de BoardGameGeek y se actualizan solos. No se editan acá.</p>`;
+  if (ST === 'enriched') return L + lock + factsHTML('ok');
+  if (ST === 'pending') return L + stateHTML() + `<div style="height:12px"></div>` + factsHTML('skel');
+  if (VAR === 'HOY') {
+    const alert = ST === 'failed'
+      ? `<div style="display:flex;gap:10px;align-items:center;background:color-mix(in srgb, var(--color-danger) 16%, var(--color-bg));border-radius:10px;padding:12px 14px;margin-bottom:12px">
+           <span style="flex:1;font-size:14px">Error al traer datos de BGG.</span>
+           <button class="btn" style="background:var(--color-surface-2);color:var(--color-text)">Reintentar</button></div>`
+      : '';
+    return L + alert + lock + factsHTML('dash');
+  }
+  return '';
+}
+function waitHTML() {
+  return `<div class="waiting">
+    <div class="spin" aria-hidden="true"></div>
+    <p class="wt">Trayendo datos de BoardGameGeek…</p>
+    <p class="ws">Puede tardar un rato si hay varios juegos en la cola. Sigue funcionando aunque salgas de
+      esta pantalla — te avisamos cuando lleguen.</p>
+    <p class="wid">${G.bgg_id ? 'ID ' + esc(String(G.bgg_id)) : ''}</p>
+  </div>`;
+}
+function topHTML() {
+  if (VAR === 'HOY' || !broken()) return '';
+  return stateHTML();
+}
+
+function render() {
+  const dev = $('#device');
+  dev.classList.toggle('chrome-top', topChrome());
+  /* ROUND 3: exactly one weight class, and none at all in HOY. Toggling rather than assigning means a
+     variant switch cannot leave the previous weight's paint behind — which would make check 18's "the three
+     weights really do differ" pass while showing the wrong one. */
+  Object.values(WEIGHT).forEach(c => dev.classList.toggle(c, WEIGHT[VAR] === c));
+  /* HOY's three pieces are hidden, not emptied — an empty .hdr still spends its 53px. */
+  $('#hdr').hidden = topChrome();
+  $('#pbar').style.display = topChrome() ? 'none' : '';
+  $('#tbar').hidden = !topChrome();
+  if (topChrome()) $('#tbar').innerHTML = topbarHTML();
+
+  if (ST === 'pending') {
+    $('#main').innerHTML = `<div class="variant on">${headHTML()}${waitHTML()}</div>`;
+    $('#pbt').textContent = G.name;
+    $('#savebar').innerHTML = '';
+    $('#savebar').classList.remove('on');
+    dev.classList.remove('hasbar');
+    updateBar();
+    return;
+  }
+  const bgg = (broken() && VAR !== 'HOY') ? '' : bggHTML();
+  $('#main').innerHTML = `<div class="variant on">${headHTML()}${topHTML()}${rowsHTML()}${bgg}</div>`;
+  $('#pbt').textContent = G.name;
+  $('#savebar').innerHTML = barHTML();
+  const on = barWanted() && barHTML() !== '';
+  $('#savebar').classList.toggle('on', on);
+  dev.classList.toggle('hasbar', on);
+  updateBar();
+}
+
+/* ---------- sheets (D-19e), copied from 073 ---------- */
+function openSheet(html) { $('#sheet').innerHTML = html; $('#sheet').classList.add('open'); $('#backdrop').classList.add('open'); }
+function closeSheet() { $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); $('#device').classList.remove('kbd'); }
+const shTop = (title, sub) => `<div class="sh-top"><div class="grab"></div>
+  <div class="sh-head"><div class="sh-txt"><div class="sh-title">${esc(title)}</div>${sub ? `<p class="sh-sub">${esc(sub)}</p>` : ''}</div>
+  <button class="sh-x" data-close aria-label="Cerrar">${ic('x', 1.9)}</button></div></div>`;
+
+function idSheet() {
+  const sub = ST === 'bgg_missing'
+    ? 'El ID guardado no existe en BoardGameGeek. Corregilo y los datos se traen solos.'
+    : 'Con esto el club trae la tapa, la descripción y los datos del juego.';
+  openSheet(shTop('ID de BGG', sub) +
+    `<div class="sh-body">
+       <input class="inp" id="s-bgg" inputmode="numeric" pattern="[0-9]*" placeholder="Pegá el ID acá" value="${G.bgg_id ? esc(String(G.bgg_id)) : ''}">
+       ${hintHTML()}
+       <div style="height:14px"></div>
+       <button class="btn" data-commit="bgg_id" style="width:100%;justify-content:center">Traer datos</button>
+     </div>`);
+  if (KBD_SIM) $('#device').classList.add('kbd');
+  setTimeout(() => { const i = $('#s-bgg'); i && (i.focus(), i.select()); }, 80);
+}
+
+/* decision 41: no commit button on the six club sheets — the value binds live and D-19e's four closes are
+   the only exit. Carried over unchanged. */
+function editField(key) {
+  if (key === 'bgg_id') return idSheet();
+  if (key === 'name') {
+    openSheet(shTop('Nombre', 'Así aparece en la ludoteca.') +
+      `<div class="sh-body"><input class="inp" id="s-name" data-live="name" value="${esc(G.name)}"></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => { const i = $('#s-name'); i && (i.focus(), i.select()); }, 80);
+  } else if (key === 'description') {
+    openSheet(shTop('Descripción en español', 'La leen los socios en la ficha del juego.') +
+      `<div class="sh-body"><textarea class="inp" id="s-desc" data-live="description">${esc(G.description)}</textarea></div>`);
+    if (KBD_SIM) $('#device').classList.add('kbd');
+    setTimeout(() => $('#s-desc')?.focus(), 80);
+  } else if (key === 'units') {
+    openSheet(shTop('Copias', 'Cuántas cajas del juego tiene el club.') +
+      `<div class="sh-body" style="display:flex;justify-content:center;padding-top:8px">
+        <span class="step"><button data-step="-1" aria-label="Una copia menos">${ic('minus')}</button><span class="n" id="unitsn">${G.units}</span><button data-step="1" aria-label="Una copia más">${ic('plus')}</button></span>
+       </div>`);
+  } else if (key === 'is_expansion') {
+    openSheet(shTop('Es una expansión', 'Se muestra junto al juego base.') +
+      `<div class="sh-body">${[['No', false], ['Sí', true]].map(([n, v]) =>
+        `<button class="opt" data-pick="is_expansion" data-val="${v}"><span class="ot"><span class="on2">${n}</span></span>${G.is_expansion === v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'weight_band') {
+    openSheet(shTop('Nivel', 'Cuánto pide el juego a quien lo juega por primera vez.') +
+      `<div class="sh-body">${BANDS.map(b =>
+        `<button class="opt" data-pick="weight_band" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.weight_band === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  } else if (key === 'shelf_id') {
+    openSheet(shTop('Estante', 'Dónde está la caja en el club.') +
+      `<div class="sh-body">${SHELVES.map(b =>
+        `<button class="opt" data-pick="shelf_id" data-val="${b.v}"><span class="ot"><span class="on2">${esc(b.n)}</span><span class="os">${esc(b.s)}</span></span>${G.shelf_id === b.v ? `<span class="tick">${ic('tick', 2.2)}</span>` : ''}</button>`).join('')}</div>`);
+  }
+}
+
+function snack(msg) {
+  const s = $('#snack'); s.querySelector('span').textContent = msg; s.classList.add('on');
+  clearTimeout(snack._t); snack._t = setTimeout(() => s.classList.remove('on'), 2200);
+}
+
+function commitId(raw) {
+  const id = String(raw || '').replace(/\D/g, '');
+  if (!id) return;
+  G.bgg_id = +id; START.bgg_id = +id;
+  closeSheet();
+  ST = 'pending'; FIX.pending.bgg_id = +id; FIX.pending.name = G.name;
+  loadState(); G.bgg_id = +id; START.bgg_id = +id;
+  mark('[data-st]', $(`[data-st="${ST}"]`));
+  render();
+  snack('Buscando el juego en BGG…');
+}
+
+/* ---------- D-19n's page bar ----------
+   HOY only. In the H variants the top app bar IS always on screen, so D-19n's requirement ("a long list
+   keeps its context while scrolled") is satisfied structurally rather than by a scroll trigger — which is
+   precisely the amendment the handoff asks this round to make explicit rather than to drop silently. The
+   CATALOGUE LIST is a separate screen and is NOT decided here; .pbar stays alive for it. Check 6 measures
+   whether the H bar really does keep the context at full scroll. */
+function updateBar() {
+  if (topChrome()) {
+    $('#pbar').classList.remove('on'); $('#pbar').setAttribute('inert', '');
+    /* ROUND 2: the same trigger `.pbar` used, applied to a bar that is already there. The threshold is the
+       bar's own 56px, not 44 — the title should arrive as the head's last line clears the bar's underside,
+       not 12px before it. Nothing appears and nothing moves; one element changes opacity. */
+    const head = $('.ghead');
+    const on = head ? $('#scroller').scrollTop > head.offsetTop + head.offsetHeight - 56 : false;
+    $('#tbar').classList.toggle('titled', on);
+    return;
+  }
+  const head = $('.ghead'); if (!head) return;
+  const y = $('#scroller').scrollTop;
+  const on = y > head.offsetTop + head.offsetHeight - 44;
+  const bar = $('#pbar');
+  bar.classList.toggle('on', on);
+  if (on) { bar.removeAttribute('inert'); $('#back')?.setAttribute('inert', ''); }
+  else { bar.setAttribute('inert', ''); $('#back')?.removeAttribute('inert'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); return; }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) $('#device').classList.remove('kbd'); mark('[data-kbd-set]', k); return; }
+  const v = e.target.closest('[data-var]'); if (v) { VAR = v.dataset.var; mark('[data-var]', v); closeSheet(); $('#scroller').scrollTop = 0; render(); return; }
+  const s = e.target.closest('[data-st]'); if (s) { ST = s.dataset.st; mark('[data-st]', s); closeSheet(); loadState(); render(); return; }
+  const cy = e.target.closest('[data-cy]'); if (cy) { CY = cy.dataset.cy; mark('[data-cy]', cy); closeSheet(); render(); return; }
+
+  const act = e.target.closest('[data-act]');
+  if (act) {
+    const a = act.dataset.act;
+    if (a === 'open-link') return idSheet();
+    if (a === 'retry') { ST = 'pending'; loadState(); mark('[data-st]', $('[data-st="pending"]')); render(); snack('Volviendo a intentar…'); return; }
+  }
+
+  const ed = e.target.closest('[data-edit]'); if (ed) return editField(ed.dataset.edit);
+  /* closing must RE-RENDER, not just hide — 073's stale-row defect, fixed there and carried, on all three
+     close paths (✕ / backdrop / Esc) */
+  if (e.target.closest('[data-close]') || e.target.id === 'backdrop') { closeSheet(); render(); return; }
+
+  const pick = e.target.closest('[data-pick]');
+  if (pick) { const f = pick.dataset.pick; G[f] = f === 'is_expansion' ? pick.dataset.val === 'true' : pick.dataset.val; closeSheet(); render(); return; }
+
+  const st = e.target.closest('[data-step]');
+  if (st) { G.units = Math.max(1, G.units + (+st.dataset.step)); const n = $('#unitsn'); if (n) n.textContent = G.units;
+    if (!$('#sheet').classList.contains('open')) render(); else refreshActions(); return; }
+
+  const com = e.target.closest('[data-commit]');
+  if (com) { if (com.dataset.commit === 'bgg_id') return commitId($('#s-bgg').value); closeSheet(); render(); return; }
+
+  if (e.target.closest('#publish') && !e.target.closest('#publish').disabled) { CY = 'published'; mark('[data-cy]', $('[data-cy="published"]')); render(); snack('Juego publicado'); return; }
+  if (e.target.closest('#save')) { Object.keys(START).forEach(k2 => START[k2] = G[k2]); render(); snack('Cambios guardados'); return; }
+  if (e.target.closest('#discard')) { G = { ...START }; render(); return; }
+  /* ---- ROUND 2: leaving with unsaved changes confirms (D-19f) ----
+     The developer's rider, and the replacement for the `Descartar` button the bottom bar used to hold.
+     Only when dirty — a clean editor leaves silently, or the dialog becomes noise on 385 healthy games. */
+  if (e.target.closest('#tbback') || e.target.closest('#back')) {
+    if (dirty()) { openDlg(); return; }
+    snack('Volver a Juegos'); return;
+  }
+  /* Cancelar is the safe option and it is focused by default (D-19f); the destructive verb is red text,
+     never a filled button. */
+  if (e.target.id === 'dlg-stay' || e.target.id === 'dscrim') { closeDlg(); return; }
+  if (e.target.id === 'dlg-leave') { closeDlg(); G = { ...START }; render(); snack('Volviste sin guardar'); return; }
+});
+
+function openDlg() {
+  $('#dlg').classList.add('open'); $('#dscrim').classList.add('open');
+  setTimeout(() => $('#dlg-stay').focus(), 60);
+}
+function closeDlg() { $('#dlg').classList.remove('open'); $('#dscrim').classList.remove('open'); }
+
+/* refresh BOTH action containers without re-rendering the page under an open sheet. H1 is the reason this
+   is a function rather than one line: with Guardar upstairs and Descartar downstairs, a keystroke in a
+   sheet changes what BOTH of them hold, and updating only the bar left a top bar with no Guardar beside a
+   bar that already said "Cambios sin guardar" — the same shape as decision 41's defect, one floor up. */
+function refreshActions() {
+  if (topChrome()) $('#tbar').innerHTML = topbarHTML();
+  $('#savebar').innerHTML = barHTML();
+  const on = barWanted() && barHTML() !== '';
+  $('#savebar').classList.toggle('on', on);
+  $('#device').classList.toggle('hasbar', on);
+}
+
+document.addEventListener('input', e => {
+  const live = e.target.closest('[data-live]');
+  if (live) {
+    G[live.dataset.live] = e.target.value;
+    if (live.dataset.live === 'name') {
+      const h = $('#ghname'); if (h) h.textContent = e.target.value;
+      const t = $('#tbt'); if (t) t.textContent = e.target.value;
+    }
+    refreshActions();
+    /* the title is re-rendered by refreshActions(), so restore it after — otherwise typing a name resets
+       the bar's title to the pre-keystroke value on every character */
+    const t2 = $('#tbt'); if (t2 && live.dataset.live === 'name') t2.textContent = e.target.value;
+  }
+});
+document.addEventListener('focusin', e => { if (KBD_SIM && e.target.matches('input:not([type=number]), textarea')) $('#device').classList.add('kbd'); });
+document.addEventListener('focusout', e => { if (e.target.matches('input, textarea')) setTimeout(() => { if (!document.activeElement?.matches('input, textarea')) $('#device').classList.remove('kbd'); }, 150); });
+document.addEventListener('keydown', e => {
+  /* the dialog is above the sheet, so Esc has to reach it FIRST — otherwise Esc over an open dialog would
+     close a sheet underneath it that the reader cannot even see. */
+  if (e.key === 'Escape' && $('#dlg').classList.contains('open')) { closeDlg(); return; }
+  if (e.key === 'Escape' && $('#sheet').classList.contains('open')) { closeSheet(); render(); }
+});
+
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+$('#scroller').addEventListener('scroll', updateBar, { passive: true });
+render();
+</script>
+</body>
+</html>

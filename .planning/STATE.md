@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 01.8.1
-current_phase_name: Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
-status: executing
-stopped_at: Completed 01.8.1-15-PLAN.md
-last_updated: "2026-09-14T18:02:07.257Z"
-last_activity: 2026-09-14
-last_activity_desc: Phase 01.8.1 execution started
-state_head: 6e70d7e2dc6ff7c68985f858ed20d494d6a49e19
+current_phase: 01.8.2
+current_phase_name: Admin UI/UX Redesign
+status: planning
+stopped_at: Phase 01.8.2 context updated (sketches 072-080 folded in)
+last_updated: "2026-09-22T23:38:02.663Z"
+last_activity: 2026-09-22
+last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
+state_head: fa9edef26f4b9208c3e48feb85ddde74faa47e03
 progress:
-  total_phases: 6
-  completed_phases: 0
+  total_phases: 7
+  completed_phases: 4
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 Total Phases: 9
@@ -33,16 +33,16 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.1 (Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)) — EXECUTING
-Plan: 2 of 15
-Status: Ready to execute
-Last activity: 2026-09-14 — Phase 01.8.1 execution started
+Phase: 01.8.2 — Admin UI/UX Redesign
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-09-22 — Completed quick task 260922-tum (BGG xpath scoping fix + dev re-enrich; production repair still outstanding)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 88
+- Total plans completed: 103
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -59,6 +59,7 @@ Last activity: 2026-09-14 — Phase 01.8.1 execution started
 | 01.4 | 11 | - | - |
 | 01.7 | 5 | - | - |
 | 01.8 | 7 | - | - |
+| 01.8.1 | 15 | - | - |
 
 **Recent Trend:**
 
@@ -351,6 +352,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 25 | Recompute 01.8-VERIFICATION.md covered_digest (deferred-items.md docs-only change in 338ff7e) | 2026-09-13 | 0511cf3 | — | — |
 | 26 | Document pukllay.club registrar (Spaceship) and DNS runbook | 2026-09-14 | 0576dfe | — | — |
 | 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
+| 260922-pni | Re-bake og-fallback.webp at the current ramp (bg #551670→#4A187F, tagline #E3D3F0→#DED4F3, stale since sketch 058's H313.1→H300 rotation); committed re-runnable Pillow generator at tools/og-fallback/ that parses app.css at run time, lossless WebP so colours are exactly assertable, + 2 ExUnit pixel gates binding the shipped asset to app.css. Shipped to production via PR #64 (squash `8078a53`); live asset verified sha256-identical to the committed file, 1200×630, zero pixels of either retired colour. Carried an unrelated mint 1.10.0→1.10.1 bump (EEF-CVE-2026-82672) that was blocking CI for every PR | 2026-09-22 | 8078a53 | complete | [260922-pni-regenerar-og-fallback-webp-en-4a187f-que](./quick/260922-pni-regenerar-og-fallback-webp-en-4a187f-que/) |
+| 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
 
 ### Roadmap Evolution
 
@@ -363,6 +366,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.7 inserted after Phase 01.6 (milestone v1.1): Production Catalog Data & Security Hardening — production's live DB is empty of games, and the now-public repo/passed-around link needs baseline cookie/HSTS/CSP/CSRF hardening plus a one-time full-git-history secrets sweep. Numbered as a decimal insertion continuing the 01.N convention so Phase 2/3/4 keep their numbers and scope.
 - Phase 01.8 inserted after Phase 01.7 (milestone v1.1): SEO, Structured Data & Social Sharing — per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, real image `alt` text. Split from 01.7 because its UAT (share a live game link, run Rich Results Test) requires production to already hold the real catalog, and because its verification mode (crawler/social-preview) is entirely different from 01.7's (operator/`curl -I`/production data).
 - Phase 01.8.1 inserted after Phase 01.8: Staff Admin — Ludoteca, Shelves & Curated Destacados (prioritized ahead of Phase 2/3; from /gsd-explore) (URGENT)
+- Phase 01.8.2 inserted after Phase 01.8.1: Admin UI/UX Redesign — implement sketches 059–065 (scope: .planning/notes/admin-redesign-scope.md)
 
 ## Deferred Items
 
@@ -397,9 +401,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-14T18:01:48.618Z
-Stopped at: Completed 01.8.1-15-PLAN.md
-Resume file: None
+Last session: 2026-09-22T23:38:02.517Z
+Stopped at: Phase 01.8.2 context updated (sketches 072-080 folded in)
+Resume file: .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-CONTEXT.md
 
 ## Operator Next Steps
 

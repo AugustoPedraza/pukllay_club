@@ -3,6 +3,13 @@
    feel true to the real app, not a generic mockup. Drift from upstream is
    checked by ./check-theme-drift.sh — run it after editing either file.
 
+   Quick task 260910-l7q, Task 3 Decision 2 (developer picked D2-i): this
+   mirror keeps RESOLVED HEXES, not `--pk-ramp-*` tokens — sketches stay
+   standalone single-file HTML with no build step, and `check-theme-drift.sh`
+   dereferences upstream's `var(--pk-ramp-NNN)` reads to their hex before
+   comparing (its Task 1 `deref` helper), so the gate stays a plain hex-to-hex
+   compare on this side.
+
    Upstream mapping (app.css daisyUI variable -> sketch variable here):
      --color-base-100      -> --color-bg
      --color-base-200      -> --color-surface
@@ -37,16 +44,16 @@
 :root {
   /* Colors — from 01-UI-SPEC.md daisyUI theme overrides (light) */
   --color-bg: #FFFFFF;
-  --color-surface: #F3ECFA;
-  --color-surface-2: #E3D3F0;
-  --color-text: #241238;
-  --color-text-muted: #6B5B7B;
-  --color-primary: #3D096D;
+  --color-surface: #F1ECFD;
+  --color-surface-2: #DED4F3;
+  --color-text: #231339;
+  --color-text-muted: #675C7D;
+  --color-primary: #3C1269;
   --color-primary-content: #FFFFFF;
-  --color-secondary: #7E4CA5;
-  --color-accent-bg: #EDE1F7;
-  --color-accent-text: #3D096D;
-  --color-border: #E3D3F0;
+  --color-secondary: #7550AC;
+  --color-accent-bg: #E9E2F9;
+  --color-accent-text: #3C1269;
+  --color-border: #DED4F3;
   --color-danger: #B23A5C;
   --color-success: #3F8F6B;
 
@@ -106,20 +113,67 @@
    typography/spacing/shape/motion tokens are brand-locked and identical in
    both palettes. Shadows stay re-based on black instead of the brand-purple
    text color, since a purple-tinted shadow reads as muddy against an
-   already-purple background — they have no upstream daisyUI equivalent. */
+   already-purple background — they have no upstream daisyUI equivalent.
+
+   Re-derived AGAIN (2026-09-10) from sketch 054's winner "A (Lifted Ladder)
+   + W2 (Deep Jewel)" — base ladder lifted, primary deepened to a saturated
+   magenta-violet with white ink. See app.css's own dark daisyui-theme block
+   for the full provenance comment and measured contrast ratios.
+
+   Re-derived a third time (quick task 260910-hdc, 2026-09-10): --color-neutral
+   (mapped to --color-text-muted here) moved #B8A6CC -> #C59CDC, same
+   lightness, chroma lifted onto dark's own brand hue (H313.1) instead of
+   sitting 6.6 degrees off it. See app.css's own dark daisyui-theme block
+   comment for the full measured rationale.
+
+   Re-derived a fourth time (quick task 260910-if9, 2026-09-10): --color-bg /
+   --color-surface / --color-surface-2 (and --color-border, fed by the same
+   base-300 source) rotated onto dark's brand hue (H313.1), holding each
+   value's own lightness and chroma: --color-bg #2F154E -> #361148,
+   --color-surface #391B62 -> #441659, --color-surface-2/--color-border
+   #462278 -> #531B6D. See app.css's own dark daisyui-theme block comment
+   for the full measured before/after OKLCh figures and the C1/C2/C3
+   decision record.
+
+   Re-derived a fifth time (quick task 260910-l7q, 2026-09-10): light
+   --color-primary/--color-accent-text (mapped from base's --color-primary/
+   --color-accent-content) moved #3D096D -> #45105C, and dark --color-surface/
+   --color-surface-2/--color-border/--color-text/--color-primary moved onto
+   the new shared `--pk-ramp-*` ramp's FLAT-envelope stops (--color-surface
+   #441659 -> #45105C, --color-surface-2/--color-border #531B6D -> #551670,
+   --color-text #F3ECFA -> #F6EAFD, --color-primary #8C2BB6 -> #8C2AB7). The
+   headline result: light --color-primary/--color-accent-text and dark
+   --color-surface now resolve to the IDENTICAL hex (#45105C) -- one
+   physical swatch worn as a light-theme button fill and a dark-theme card
+   surface, mirroring upstream's own --pk-ramp-900. See app.css's own ramp
+   block header comment for the full generator/audit provenance.
+
+   Re-derived (quick task 260912-waa, sketch 058): the shared
+   `--pk-ramp-*` ramp's hue moved H313.1 -> H300 (the brand manual's own
+   Lila Oscuro hue), holding each stop's own lightness -- every mirrored
+   hex above that reads a ramp stop or a rotated off-ramp role moved with
+   it: light --color-surface/--color-primary/--color-accent-text and
+   every dark region's --color-bg/--color-surface/--color-surface-2/
+   --color-text/--color-text-muted/--color-primary/--color-secondary/
+   --color-accent-bg/--color-accent-text/--color-border. Light
+   --color-secondary is #7550AC (brand Violeta #7E4CA5
+   rotated to H300). This mirror still keeps resolved hexes, not `--pk-ramp-*`
+   tokens (D2-i, quick task 260910-l7q Task 3 Decision 2) -- see app.css's
+   own ramp block header comment for the full generator/audit provenance
+   and `260912-waa-SUMMARY.md` for the before/after table. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg: #170A26;
-    --color-surface: #22103A;
-    --color-surface-2: #2F1750;
-    --color-text: #F3ECFA;
-    --color-text-muted: #B8A6CC;
-    --color-primary: #A97FD1;
-    --color-primary-content: #170A26;
-    --color-secondary: #7E4CA5;
-    --color-accent-bg: #3D2A56;
-    --color-accent-text: #E4D3F5;
-    --color-border: #2F1750;
+    --color-bg: #2E154E;
+    --color-surface: #3C1269;
+    --color-surface-2: #4A187F;
+    --color-text: #F1ECFD;
+    --color-text-muted: #B8A0E5;
+    --color-primary: #7B2DCE;
+    --color-primary-content: #FFFFFF;
+    --color-secondary: #553384;
+    --color-accent-bg: #33224D;
+    --color-accent-text: #E3D9F9;
+    --color-border: #4A187F;
     --color-danger: #E06B90;
     --color-success: #5FBE95;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -128,17 +182,17 @@
   }
 }
 :root[data-theme="dark"] {
-  --color-bg: #170A26;
-  --color-surface: #22103A;
-  --color-surface-2: #2F1750;
-  --color-text: #F3ECFA;
-  --color-text-muted: #B8A6CC;
-  --color-primary: #A97FD1;
-  --color-primary-content: #170A26;
-  --color-secondary: #7E4CA5;
-  --color-accent-bg: #3D2A56;
-  --color-accent-text: #E4D3F5;
-  --color-border: #2F1750;
+  --color-bg: #2E154E;
+  --color-surface: #3C1269;
+  --color-surface-2: #4A187F;
+  --color-text: #F1ECFD;
+  --color-text-muted: #B8A0E5;
+  --color-primary: #7B2DCE;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #553384;
+  --color-accent-bg: #33224D;
+  --color-accent-text: #E3D9F9;
+  --color-border: #4A187F;
   --color-danger: #E06B90;
   --color-success: #5FBE95;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
@@ -160,11 +214,49 @@
   font-display: swap;
 }
 
+/* Inter mirrors assets/css/app.css exactly: self-hosted 400 + 600 only (latin + latin-ext), no local().
+   It used to be local("Inter") only, so on any machine without Inter installed every sketch rendered body text
+   in the system fallback (Noto Sans here: wider, different metrics). The app ships no 500/700 faces, so a
+   declared 500 renders as 400 and 700 as 600 — sketches should declare 400/600 only (found sketch 063, round 11). */
 @font-face {
   font-family: "Inter";
-  src: local("Inter");
-  font-weight: 400 600;
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
+  src: url("../../../priv/static/fonts/inter-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../priv/static/fonts/inter-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../../priv/static/fonts/inter-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../../../priv/static/fonts/inter-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../../../priv/static/fonts/bebas-neue-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 * {

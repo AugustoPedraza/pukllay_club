@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketch 063 — Admin Game Editor</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); }
+  :root[data-theme="dark"] body { background: #140a22; }
+  button, input { font: inherit; color: inherit; }
+  b, strong { font-weight: 600; }  /* the app ships Inter 400 + 600 only */
+
+  /* ================= sketch chrome (not part of the design) ================= */
+  #state-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #1b1026; color: #fff; font-family: system-ui, sans-serif; font-size: 13px;
+    padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  }
+  #state-nav .lbl { opacity: .6; margin-right: 4px; }
+  .stab { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+  .stab.active { background: #fff; color: #1b1026; border-color: #fff; }
+  #sketch-tools {
+    position: fixed; bottom: 12px; left: 12px; z-index: 9999; font-family: system-ui; font-size: 12px;
+    background: rgba(0,0,0,.75); color: #fff; padding: 8px 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;
+  }
+  #sketch-tools button { background: #333; color: #fff; border: 0; border-radius: 4px; padding: 3px 7px; cursor: pointer; }
+  #sketch-tools button.on { background: #fff; color: #000; }
+  #tools-body { display: none; flex-direction: column; gap: 6px; }
+  #tools-body.show { display: flex; }
+  .notes { max-width: 760px; margin: 16px auto 80px; padding: 0 16px; font-family: system-ui; font-size: 13px; color: #3b3347; line-height: 1.5; }
+  :root[data-theme="dark"] .notes { color: #cfc3e2; }
+  .notes h3 { margin: 0 0 4px; font-size: 14px; }
+  .notes ul { margin: 4px 0 0; padding-left: 18px; }
+
+  /* ================= device frame ================= */
+  .stage { display: flex; justify-content: center; padding: 8px 12px 0; }
+  .device {
+    width: 375px; max-width: 100%; height: 740px; background: var(--color-bg);
+    border-radius: 22px; box-shadow: 0 10px 40px rgba(0,0,0,.28); overflow: hidden;
+    position: relative; display: flex; flex-direction: column;
+  }
+  .device.desk { width: 1180px; border-radius: 10px; height: 760px; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+  .has-tabs .scroller { padding-bottom: 72px; }
+  .desk.has-tabs .scroller { padding-bottom: 0; }
+
+  /* ================= header — ONE header for every state (signed out, public signed in, admin) ================= */
+  .hdr { position: sticky; top: 0; z-index: 20; background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+  .hdr-in { display: flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 56px; max-width: 1280px; margin: 0 auto; }
+  .desk .hdr-in { padding: 6px 32px; }
+  .icon-btn {
+    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; position: relative;
+    border: 0; background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .icon-btn:hover { background: var(--color-surface); }
+  .icon-btn:active { transform: scale(.96); }
+  .icon-btn svg { width: 24px; height: 24px; }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--color-text); cursor: pointer; flex-shrink: 0; text-decoration: none; }
+  .brand img { height: 28px; width: auto; display: block; }
+  .brand .img-dark { display: none; }
+  :root[data-theme="dark"] .brand .img-light { display: none; }
+  :root[data-theme="dark"] .brand .img-dark { display: block; }
+  .brand .word { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; line-height: 1; white-space: nowrap; }
+
+  /* ================= page ================= */
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 32px; }
+  .desk main { padding: 28px 32px 48px; }
+  #main { transition: opacity var(--duration-fast) var(--ease-standard); }
+  #main.swapping { opacity: 0; }
+  .back {
+    display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin: -8px 0 -4px -10px; padding: 0 10px 0 4px;
+    color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; border: 0; background: none; cursor: pointer; border-radius: var(--radius-md);
+  }
+  .back:hover { color: var(--color-text); background: var(--color-surface); }
+  .back svg { width: 18px; height: 18px; }
+  .ptitle { font-family: var(--font-display); font-size: 2rem; letter-spacing: .02em; line-height: 1.05; margin: 4px 0 2px; font-weight: 400; }
+  .psub { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 16px; }
+  /* neutral placeholder bodies — page contents are designed in 060-063 */
+  .ph-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .ph-list li { padding: 13px 14px; border-top: 1px solid var(--color-border); font-size: var(--text-sm); display: flex; justify-content: space-between; gap: 12px; }
+  .ph-list li:first-child { border-top: 0; }
+  .ph-list li span:last-child { color: var(--color-text-muted); white-space: nowrap; }
+  .ph-note { font-size: 11px; color: var(--color-text-muted); margin: 10px 2px 0; font-style: italic; }
+  .fake-shelf h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 18px 0 8px; letter-spacing: .02em; font-weight: 400; }
+  .fake-rail { display: flex; gap: 10px; overflow: hidden; }
+  .fake-poster { flex: 0 0 104px; height: 146px; border-radius: var(--radius-md); background: var(--color-surface-2); }
+  .login { max-width: 360px; margin: 40px auto 0; }
+  .field label { display: block; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px; }
+  .field input { width: 100%; min-height: 48px; border-radius: var(--radius-md); border: 1px solid var(--color-surface-2); background: var(--color-bg); color: var(--color-text); padding: 0 14px; font-size: var(--text-base); }
+  .login .btn { width: 100%; margin-top: 12px; min-height: 44px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-surface); font-weight: 600; cursor: pointer; }
+
+  /* ================= ONE row anatomy: drawer + every sheet ================= */
+  .group-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-muted); margin: 16px 0 4px; }
+  .dlinks { display: flex; flex-direction: column; margin: 0 -16px; }
+  .dlink {
+    display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px; border: 0; background: none; width: 100%;
+    text-align: left; font-size: var(--text-base); font-weight: 400; cursor: pointer; border-left: 3px solid transparent; color: var(--color-text);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink:active { background: var(--color-surface-2); }
+  .dlink .slot { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .dlink .ico { width: 22px; height: 22px; color: var(--color-text-muted); }
+  .dlink .lbl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dlink .lbl .sub { display: block; font-size: 12px; font-weight: 400; color: var(--color-text-muted); margin-top: 1px; }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  /* ================= 060: Admin home — minimal dashboard of boxes ================= */
+  .dash { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .desk .dash { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .box {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; text-align: center; cursor: pointer; color: var(--color-text);
+    padding: 12px 14px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-bg);
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color var(--duration-fast) var(--ease-standard), background var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
+  }
+  .box:hover { background: var(--color-surface); border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border)); }
+  .box:active { transform: scale(.985); background: var(--color-surface-2); }
+  .box:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  /* 065: the box name is the LABEL of a labelled block, so it takes the same 13px/600 as a section
+     label — and the number below it is CONTENT, so it goes to 400. Before this every line in a box
+     was 600 (94% of the Admin home was bold) and the 22px/600 number was typographically identical
+     to the page's own 22px/600 title: nothing led. Now each box has exactly one bold thing, its
+     name, plus the accent pill when there is work pending. */
+  .box-head { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; min-height: 24px; font-size: 13px; font-weight: 600; letter-spacing: .01em; color: var(--color-text); }
+  .box-head .ico { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-text-muted); }
+  .box-head .name { min-width: 0; line-height: 1.3; }
+  .box-num { font-size: 1.375rem; font-weight: 400; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--color-text); }
+  .meter { align-self: stretch; height: 4px; border-radius: 2px; background: var(--color-surface-2); overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--color-primary); border-radius: 2px; }
+  :root[data-theme="dark"] .meter i { background: var(--color-accent-text); }
+  .box-foot { font-size: 12px; color: var(--color-text-muted); min-height: 20px; display: flex; align-items: center; justify-content: center; }
+  .pend { font-size: 12px; font-weight: 600; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; white-space: nowrap; }
+  .var-nav { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; width: 100%; }
+  .dlink .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .count { font-size: 12px; font-weight: 600; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: var(--radius-full); padding: 2px 8px; }
+  .dlink.on { background: var(--color-surface); border-left-color: var(--color-primary); font-weight: 600; }
+  .dlink.on .ico, .dlink.on .chev { color: var(--color-primary); }
+  :root[data-theme="dark"] .dlink.on { border-left-color: var(--color-accent-text); }
+  :root[data-theme="dark"] .dlink.on .ico, :root[data-theme="dark"] .dlink.on .chev { color: var(--color-accent-text); }
+  .dlink.static { cursor: default; }
+  .dlink.static:hover, .dlink.static:active { background: none; }
+  .dlink.danger, .dlink.danger .ico { color: var(--color-danger); }
+  :root[data-theme="dark"] .dlink.danger, :root[data-theme="dark"] .dlink.danger .ico { color: #F2A3B8; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlink.danger, :root:not([data-theme="light"]) .dlink.danger .ico { color: #F2A3B8; } }
+  .dlink[disabled] { cursor: progress; }
+  .dlink[disabled]:not(.danger) { opacity: .4; }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    font-weight: 600; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .avatar.ring { width: 26px; height: 26px; box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3.5px var(--color-success); }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ================= drawer ================= */
+  .backdrop {
+    position: absolute; inset: 0; z-index: 40; background: color-mix(in srgb, var(--color-text) 38%, transparent);
+    opacity: 0; pointer-events: none; transition: opacity var(--duration-base) var(--ease-standard);
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: absolute; top: 0; bottom: 0; right: 0; width: 84%; max-width: 360px; z-index: 50; background: var(--color-bg);
+    display: flex; flex-direction: column; padding: 8px 0 max(16px, env(safe-area-inset-bottom)); overflow: hidden; box-shadow: var(--shadow-lg);
+    transform: translateX(100%); transition: transform var(--duration-slow) var(--ease-out-soft);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-top { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-bottom: 4px; padding: 0 8px 0 16px; flex-shrink: 0; }
+  /* list scrolls; the theme block is pinned to the drawer's bottom edge, so it sits in the same visible spot in every state */
+  .drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 8px; }
+  .drawer-bottom { flex-shrink: 0; padding: 0 16px; }
+  .drawer-bottom .divider { margin-top: 0; }
+  .divider { height: 1px; background: var(--color-border); margin: 12px 0; }
+  .theme-row { display: flex; justify-content: center; gap: 4px; }
+  .theme-row .icon-btn { color: var(--color-text-muted); }
+  .theme-row .icon-btn svg { width: 20px; height: 20px; }
+
+  /* ================= bottom sheet ================= */
+  .sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 60; background: var(--color-bg);
+    border-radius: 18px 18px 0 0; padding: 8px 16px max(16px, calc(env(safe-area-inset-bottom) + 8px)); box-shadow: var(--shadow-lg);
+    transform: translateY(105%); transition: transform var(--duration-slow) var(--ease-out-soft);
+    max-height: 85%; overflow-y: auto; overflow-x: hidden;
+  }
+  .sheet.open { transform: translateY(0); }
+  .sheet.dragging { transition: none; }
+  .sheet .group-label { margin-top: 4px; }
+  .grab { width: 36px; height: 4px; border-radius: 4px; background: var(--color-border); margin: 4px auto 12px; }
+  .sheet-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.5; margin: 0 0 8px; }
+  .sheet-text b { color: var(--color-text); font-weight: 600; overflow-wrap: anywhere; }
+  .desk .sheet { left: auto; right: 32px; bottom: auto; top: 112px; width: 340px; border-radius: var(--radius-lg); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity var(--duration-base), transform var(--duration-base); }
+  .desk .sheet.open { opacity: 1; pointer-events: auto; transform: none; }
+  .desk .sheet.center { left: 50%; right: auto; top: 30%; transform: translate(-50%, -8px); }
+  .desk .sheet.center.open { transform: translate(-50%, 0); }
+  .desk .grab { display: none; }
+  .steps { position: relative; transition: height var(--duration-slow) var(--ease-out-soft); }
+  .steps.animating { overflow: hidden; }
+  .step { transition: opacity var(--duration-base) var(--ease-standard), transform var(--duration-slow) var(--ease-out-soft); }
+  .step[aria-hidden="true"] { position: absolute; top: 0; left: 0; right: 0; opacity: 0; pointer-events: none; }
+  .step-account[aria-hidden="true"] { transform: translateX(-24px); }
+  .step-confirm[aria-hidden="true"] { transform: translateX(24px); }
+  @media (prefers-reduced-motion: reduce) { .step, .steps, .sheet, .drawer, #main { transition: none; } }
+
+  /* ================= tab bar (admin only) ================= */
+  .tabs {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--color-bg);
+    border-top: 1px solid var(--color-border); display: flex; padding: 4px 4px max(10px, env(safe-area-inset-bottom));
+  }
+  .tabs button {
+    flex: 1; min-width: 0; min-height: 52px; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 400; color: var(--color-text-muted);
+    border-radius: var(--radius-md); -webkit-tap-highlight-color: transparent;
+    transition: color var(--duration-fast) var(--ease-standard), transform var(--duration-fast);
+  }
+  .tabs button:hover { color: var(--color-text); }
+  .tabs button:active { transform: scale(.96); }
+  .tabs button svg { width: 24px; height: 24px; }
+  .tabs .tab-ico { position: relative; width: 56px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 15px; transition: background var(--duration-base) var(--ease-out-soft); }
+  .tabs .tab-lbl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tabs button.on { color: var(--color-primary); }
+  .tabs button.on .tab-ico { background: var(--color-accent-bg); }
+  .tabs button.on .tab-lbl { font-weight: 600; }
+  :root[data-theme="dark"] .tabs button.on { color: var(--color-accent-text); }
+  :root[data-theme="dark"] .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs button.on .tab-ico { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); } }
+  .tabs .badge { position: absolute; top: 0; left: 30px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--color-secondary); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+  .desk .tabs { position: sticky; top: 57px; bottom: auto; border-top: 0; border-bottom: 1px solid var(--color-border); justify-content: safe center; gap: 8px; padding: 0 16px; overflow-x: auto; }
+  .desk .tabs button { flex: 0 0 auto; flex-direction: row; min-height: 44px; padding: 0 14px; font-size: 13px; gap: 8px; border-radius: var(--radius-full); }
+  .desk .tabs button svg { width: 18px; height: 18px; }
+  .desk .tabs .tab-ico { width: auto; height: auto; background: none !important; }
+  .desk .tabs button.on { background: var(--color-accent-bg); }
+  .desk .tabs .badge { position: static; margin-left: 6px; }
+
+  /* ================= toast ================= */
+  .toast {
+    position: absolute; left: 50%; top: 68px; z-index: 70; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+    background: var(--color-text); color: var(--color-bg); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius-full);
+    padding: 10px 16px; display: flex; gap: 8px; align-items: center; white-space: nowrap;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast svg { width: 18px; height: 18px; }
+
+  /* ================= 061: Juegos page ================= */
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .jsec + .jsec { margin-top: 20px; }
+  .jsec > .group-label { display: block; margin: 0 0 6px; }
+
+  /* Add form: outlined text field + outlined (never filled) submit — Material "outlined button" */
+  .addrow { display: flex; gap: 8px; align-items: stretch; }
+  .tin {
+    flex: 1; min-width: 0; height: 48px; padding: 0 14px; font-size: var(--text-base); color: var(--color-text);
+    background: var(--color-bg); border: 1px solid var(--color-surface-2); border-radius: var(--radius-md);
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast);
+  }
+  .tin::placeholder { color: var(--color-text-muted); }
+  .tin:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .tin:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .tin.invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .obtn {
+    flex-shrink: 0; min-height: 48px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: var(--text-sm); font-weight: 600; color: var(--color-text); background: transparent; cursor: pointer;
+    border: 1px solid var(--color-surface-2); border-radius: var(--radius-md);
+    transition: background var(--duration-fast) var(--ease-standard), opacity var(--duration-fast), transform var(--duration-fast);
+  }
+  .obtn:hover:not(:disabled) { background: var(--color-surface); }
+  .obtn:active:not(:disabled) { transform: scale(.97); background: var(--color-surface-2); }
+  .obtn:disabled { opacity: .45; cursor: not-allowed; }
+  .obtn[aria-busy="true"] { opacity: 1; cursor: progress; }
+  .obtn:focus-visible, .tbtn:focus-visible, .chip:focus-visible, .seg button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .ferr { margin: 6px 2px 0; font-size: 13px; color: var(--color-danger); min-height: 0; }
+  :root[data-theme="dark"] .ferr, :root[data-theme="dark"] .err-t { color: #F2A3B8; }
+  .ferr:empty { display: none; }
+
+  /* Text button (Material "text button"): row-level secondary actions — Reintentar, Cancelar, Mostrar más */
+  .tbtn {
+    min-height: 44px; padding: 0 12px; border: 0; background: none; cursor: pointer; border-radius: var(--radius-md);
+    font-size: var(--text-sm); font-weight: 600; color: var(--color-primary); flex-shrink: 0;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  :root[data-theme="dark"] .tbtn { color: var(--color-accent-text); }
+  .tbtn:hover { background: var(--color-surface); }
+  .tbtn:active { background: var(--color-surface-2); }
+
+  /* Edition warning: inline banner (Material banner) — text, the matching games as rows, two text actions */
+  .banner { margin-top: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 12px 16px 4px; background: var(--color-surface); }
+  .banner-text { margin: 0 0 4px; font-size: var(--text-sm); line-height: 1.45; }
+  .banner .glist { margin: 0 -16px; }
+  .banner .grow { min-height: 52px; background: none; }
+  .banner .grow:hover { background: var(--color-surface-2); }
+  .banner .thumb { width: 36px; height: 36px; font-size: 14px; }
+  .banner .grow::before { left: 64px; }
+  .banner-actions { display: flex; justify-content: flex-end; gap: 4px; margin: 4px -8px 0 0; }
+
+  /* Search: filled pill with leading magnifier + clear — the universal mobile search field */
+  .sfield { position: relative; }
+  .sfield .ico-l { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--color-text-muted); pointer-events: none; }
+  /* 065 R4: Buscar and Agregar sit 24px apart, same height, same width, same type — but the search
+     field used to be a filled pill (radius-full, --color-surface, transparent border) next to an
+     outlined 8px field, so the two read as different species of control. Worse, --color-surface is
+     what a soft CONTENT BLOCK is made of in this admin (.sbox, .ppanel, the banner), so the search
+     field read as a container rather than something you type into. It now takes the same anatomy as
+     every other field — 8px radius, 1px --stroke, page background, via the 064 block below — and the
+     leading magnifier plus the clear button carry "this is search" on their own. 8px also matches
+     everything else in this stack: the Agregar field, the Agregar button and all four filter chips. */
+  .sfield input {
+    width: 100%; height: 44px; border-radius: var(--radius-md); background: var(--color-bg);
+    padding: 0 44px 0 42px; font-size: var(--text-base); color: var(--color-text);
+  }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield input:focus { outline: none; border-color: var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); }
+  .sfield .clear { position: absolute; right: 0; top: 0; width: 44px; height: 44px; border: 0; background: none; cursor: pointer; color: var(--color-text-muted); display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .sfield .clear svg { width: 18px; height: 18px; }
+  .sfield .clear[hidden] { display: none; }
+
+  /* A1 — Material 3 filter chips: 32px drawn, 44px hit area via ::after, check icon when selected, horizontal scroll */
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 8px -16px 0; padding: 6px 16px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    position: relative; flex: 0 0 auto; height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--color-surface-2); border-radius: var(--radius-md); background: transparent; cursor: pointer;
+    font-size: var(--text-sm); font-weight: 400; color: var(--color-text); white-space: nowrap;
+    transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast);
+  }
+  .chip::after { content: ''; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+  .chip:hover { background: var(--color-surface); }
+  .chip svg { width: 16px; height: 16px; margin-left: -4px; }
+  .chip.on { background: var(--color-accent-bg); border-color: transparent; color: var(--color-accent-text); font-weight: 600; padding-left: 12px; }
+  .chip .n { font-size: 12px; font-weight: 600; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .chip.on .n { color: inherit; }
+
+  /* A2 — iOS segmented control (scope bar under the search field) */
+  .seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 2px; margin-top: 10px; background: var(--color-surface); border-radius: 10px; }
+  .seg button {
+    min-height: 40px; border: 0; background: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--color-text);
+    padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast);
+  }
+  .seg button.on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 600; }
+  :root[data-theme="dark"] .seg button.on { background: var(--color-surface-2); }
+
+  /* Result summary + list */
+  .jsum { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 14px 0 2px; font-size: 13px; color: var(--color-text-muted); }
+  .glist { display: flex; flex-direction: column; margin: 0 -16px; }
+  /* ONE row anatomy (same as the drawer .dlink): slot · name + status line · trailing (chevron or one text action) */
+  .grow {
+    position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px; padding: 8px 8px 8px 16px;
+    border: 0; background: none; text-align: left; color: var(--color-text); font-size: var(--text-base); cursor: pointer;
+    -webkit-tap-highlight-color: transparent; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  button.grow { padding-right: 12px; }
+  .grow::before { content: ''; position: absolute; top: 0; left: 76px; right: 0; height: 1px; background: var(--color-border); }
+  .grow:first-child::before { display: none; }
+  button.grow:hover { background: var(--color-surface); }
+  button.grow:active { background: var(--color-surface-2); }
+  button.grow:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  div.grow { cursor: default; }
+  .grow.flash { animation: flash 1.2s var(--ease-standard); }
+  @keyframes flash { 0% { background: var(--color-accent-bg); } 100% { background: transparent; } }
+  .thumb {
+    --h: 270; width: 48px; height: 48px; flex-shrink: 0; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+    background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); font-weight: 600; font-size: 18px;
+  }
+  :root[data-theme="dark"] .thumb { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  .thumb.skel { background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }
+  .thumb.warn { background: var(--color-surface); color: var(--color-danger); border: 1px dashed var(--color-surface-2); }
+  .thumb.warn svg { width: 22px; height: 22px; }
+  @keyframes pulse { 50% { opacity: .5; } }
+  .gtxt { flex: 1; min-width: 0; }
+  /* G-01.8.1-3: long names WRAP (no nowrap/ellipsis, no clamp) — the row grows, the page never scrolls sideways */
+  .gname { display: block; line-height: 1.3; font-weight: 400; overflow-wrap: anywhere; }
+  .gsub { display: flex; align-items: center; flex-wrap: wrap; gap: 0 6px; margin-top: 3px; font-size: 13px; color: var(--color-text-muted); line-height: 1.35; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--color-text-muted); }
+  .dot.draft { background: #D9892B; }
+  .dot.published { background: var(--color-success); }
+  .dot.retired { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-text-muted); }
+  .st-draft { color: var(--color-text); font-weight: 600; }
+  .err-t { color: var(--color-danger); font-weight: 600; }   /* 065: an error was lighter than the "Borrador" status it replaces */
+  .spin.sm { width: 12px; height: 12px; border-width: 1.5px; }
+  .grow .chev { width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
+  .skel-line { display: block; height: 12px; border-radius: 6px; background: var(--color-surface-2); animation: pulse 1.2s ease-in-out infinite; }
+
+  /* ================= 065 R2: status marks the EXCEPTION — identical block in 061–063 =================
+     412 games are 3 borradores / 407 publicados / 2 retirados, so a "Publicado" label on every row was
+     the least informative word on the page, repeated 407 times. A published row now carries no marker
+     at all. A draft carries the SAME accent pill this admin already uses for pending work everywhere
+     else — the drawer counts, the tab badges, the Admin box's "3 borradores" — so the row and the
+     badge that counts it speak with one voice. A retired game carries a muted outline pill AND a muted
+     row, because retired is the one state that really is inactive (grey means "unavailable" on both
+     iOS and Android; a draft is the most actionable row on the page, so it must never be greyed).
+     Never colour alone: every pill carries its word (WCAG 1.4.1), and the dot this replaces measured
+     2.78:1 against the row, under the 3:1 floor for non-text contrast (WCAG 1.4.11). */
+  .st-pill { display: inline-flex; align-items: center; border-radius: var(--radius-full); border: 1px solid transparent;
+    font-size: 11px; font-weight: 600; line-height: 1.45; padding: 1px 8px; white-space: nowrap; }
+  .st-pill.draft { background: var(--color-accent-bg); color: var(--color-accent-text); }
+  /* Publicado only ever shows in the "¿Es otra edición?" banner, which sits ON --color-surface —
+     a surface-coloured fill vanished there. surface-2 reads as a chip on both grounds. */
+  .st-pill.published { background: var(--color-surface-2); color: var(--color-text); }
+  .st-pill.retired { border-color: var(--color-surface-2); color: var(--color-text-muted); }
+  .grow.is-retired .gname { color: var(--color-text-muted); }
+  .grow.is-retired .thumb { filter: saturate(.3); }
+
+  .more { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 0 4px; border-top: 1px solid var(--color-border); margin: 0 -16px; }
+  .more .cap { font-size: 12px; color: var(--color-text-muted); }
+
+  .empty { text-align: center; padding: 40px 16px 24px; }
+  .empty svg { width: 36px; height: 36px; color: var(--color-text-muted); }
+  .empty h2 { font-size: var(--text-base); font-weight: 600; margin: 8px 0 4px; }
+  .empty p { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0 0 8px; }
+
+  /* Snackbar (Material): bottom, above the tab bar; replaces the flash banner */
+  .snack {
+    position: absolute; left: 12px; right: 12px; bottom: 84px; z-index: 70; display: flex; align-items: center; gap: 8px; min-height: 48px;
+    padding: 4px 8px 4px 16px; border-radius: var(--radius-md); background: var(--color-text); color: var(--color-bg); font-size: var(--text-sm);
+    box-shadow: var(--shadow-md); opacity: 0; transform: translateY(12px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft);
+  }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .desk .snack { left: 50%; right: auto; bottom: 24px; width: 420px; transform: translate(-50%, 12px); }
+  .desk .snack.show { transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .snack, .grow.flash, .thumb.skel, .skel-line { transition: none; animation: none; } }
+
+  /* ================= Round 2: polished hierarchy (.polish on the device; tools → Escala toggles it) =================
+     Tier 1 page title (22px/700 sans, the page's anchor) → tier 2 brand (chrome: 24px logo, 17px wordmark)
+     → tier 3 section labels (11px caps) → body (15px names, 16px input text so iOS doesn't zoom) → meta (12px).
+     One control height (44px) for every field and button; 8px spacing grid; bigger gap between groups than inside them. */
+  .polish .hdr-in { min-height: 52px; padding-block: 4px; }
+  .polish .brand { gap: 6px; }
+  .polish .brand img { height: 24px; }
+  .polish .brand .word { font-size: 1.05rem; letter-spacing: .03em; }
+  .polish main { padding-top: 12px; }
+  .polish .ptitle { font-family: var(--font-sans); font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.2; margin: 4px 0 0; }
+  .polish .ptitle + div[style] { height: 16px !important; }
+  .polish .jsec + .jsec { margin-top: 24px; }
+  .polish .jsec > .group-label { margin-bottom: 8px; }
+  /* Round 3: field text + placeholder 14px (matches body scale); control height stays 44px (touch minimum).
+     iOS zooms on focus under 16px → handled at implementation via the viewport meta (see README). */
+  .polish .tin { height: 44px; padding: 0 12px; font-size: 14px; }
+  .polish .obtn { min-height: 44px; padding: 0 12px; font-size: 13px; font-weight: 600; color: var(--color-text-muted); }
+  .polish .obtn:not(:disabled) { color: var(--color-text); }
+  .polish .sfield input { font-size: 14px; }
+  .polish .sfield .ico-l { width: 16px; height: 16px; left: 14px; }
+  .polish .sfield .clear svg { width: 16px; height: 16px; }
+  .polish .ferr { font-size: 12px; margin-top: 4px; }
+  .polish .sfield input { padding-left: 38px; }
+  .polish .chips { margin-top: 4px; }
+  .polish .chip { font-size: 13px; padding: 0 10px; }
+  .polish .chip.on { padding-left: 10px; }
+  .polish .chip svg { width: 14px; height: 14px; margin-left: -2px; }
+  .polish .jsum { font-size: 12px; margin: 8px 0 0; }
+  .polish .grow { min-height: 60px; padding-block: 8px; }
+  .polish .grow::before { left: 68px; }
+  .polish .thumb { width: 40px; height: 40px; font-size: 15px; border-radius: 6px; }
+  .polish .thumb.warn svg { width: 18px; height: 18px; }
+  .polish .gname { font-size: 15px; line-height: 1.3; }
+  .polish .gsub { font-size: 12px; margin-top: 2px; gap: 0 5px; }
+  .polish .dot { width: 7px; height: 7px; }
+  .polish .grow .chev { width: 16px; height: 16px; }
+  .polish .grow .tbtn { font-size: 13px; }
+  .polish .banner { padding: 10px 12px 2px; }
+  .polish .banner-text { font-size: 13px; }
+  .polish .banner .glist { margin: 0 -12px; }
+  .polish .banner .grow { min-height: 48px; }
+  .polish .banner .thumb { width: 32px; height: 32px; font-size: 13px; }
+  .polish .banner .grow::before { left: 56px; }
+  .polish .more { padding-top: 8px; }
+  .polish .more .tbtn { font-size: 13px; }
+  .polish .more .cap { font-size: 11px; }
+  .polish .empty { padding-top: 32px; }
+  .polish .empty svg { width: 28px; height: 28px; }
+  .polish .empty h2 { font-size: 15px; }
+  .polish .empty p { font-size: 13px; }
+  .polish .snack { font-size: 13px; min-height: 44px; }
+  .polish .psub { font-size: 13px; margin: 2px 0 16px; line-height: 1.45; }
+
+  /* ================= 062: Web · sección · Estantes · Asignar · Revisar niveles · Staff =================
+     Same row anatomy as 061: 40px slot · 15px name (wraps) + 12px meta line · trailing. */
+  .slot40 { width: 40px; height: 40px; flex-shrink: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: var(--color-surface); color: var(--color-text-muted); }
+  .slot40 svg { width: 20px; height: 20px; }
+  .slot40.feat { background: var(--color-accent-bg); color: var(--color-accent-text); }
+  .av40 { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: var(--color-accent-bg); color: var(--color-accent-text); }
+  .gname.muted { color: var(--color-text-muted); }
+  .gsub .arrow { color: var(--color-text-muted); }
+  .gsub .mi { white-space: nowrap; }
+
+  /* split row (variant A): the main area is its own tap target; trailing controls sit beside it */
+  .polish .grow.split, .grow.split { padding: 0 4px 0 0; gap: 0; align-items: stretch; }
+  .gmain {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 8px 8px 16px;
+    border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  button.gmain:hover { background: var(--color-surface); }
+  button.gmain:active { background: var(--color-surface-2); }
+  button.gmain:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .gmain.static { cursor: default; }
+  .gtrail { display: flex; align-items: center; flex-shrink: 0; }
+  .ibtn {
+    width: 44px; height: 44px; flex-shrink: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; color: var(--color-text-muted);
+    display: flex; align-items: center; justify-content: center; transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast);
+  }
+  .ibtn svg { width: 18px; height: 18px; }
+  .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
+  .ibtn:active { background: var(--color-surface-2); }
+  .ibtn:disabled { opacity: .28; cursor: default; background: none; color: var(--color-text-muted); }
+  .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .fixed { font-size: 12px; color: var(--color-text-muted); padding: 0 12px; white-space: nowrap; }
+  .glist.ordering .grow { background: color-mix(in srgb, var(--color-surface) 55%, transparent); }
+  .grow .trail-ico { width: 20px; height: 20px; flex-shrink: 0; margin-right: 4px; color: var(--color-primary); }
+  :root[data-theme="dark"] .grow .trail-ico { color: var(--color-accent-text); }
+  .grow .trail-ico.ok { color: var(--color-success); }
+  .grow.leaving { animation: leave .23s var(--ease-standard) forwards; overflow: hidden; pointer-events: none; min-height: 0; }
+  @keyframes leave { from { max-height: 160px; opacity: 1; } to { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; } }
+
+  /* list header: group label + (B) Ordenar / Listo */
+  .lhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; margin-bottom: 4px; }
+  .jsec > .lhead > .group-label, .lhead .group-label { margin: 0; }
+  .lhead .tbtn { min-height: 36px; margin: -4px -12px -4px 0; font-size: 13px; }
+  .lhead .gcount { font-size: 12px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .lhint { margin: 0 0 4px; font-size: 12px; color: var(--color-text-muted); }
+  .lnote { font-size: 13px; color: var(--color-text-muted); margin: 4px 0 0; line-height: 1.45; }
+  .lnote b { color: var(--color-text); font-weight: 600; }
+  .grp + .grp { margin-top: 20px; }
+  .fhelp { margin: 6px 2px 0; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; }
+  .ferr:not(:empty) + .fhelp { display: none; }
+  .tbtn.danger { color: var(--color-danger); }
+  :root[data-theme="dark"] .tbtn.danger { color: #F2A3B8; }
+  .dlink .lbl.wrap { white-space: normal; line-height: 1.3; padding-block: 6px; overflow-wrap: anywhere; }
+
+  /* Revisar niveles (A): two text actions under the evidence line */
+  .grow.niv { align-items: flex-start; padding-top: 12px; padding-bottom: 4px; }
+  .grow.niv .thumb { margin-top: 2px; }
+  .ractions { display: flex; gap: 4px; margin: 2px 0 0 -12px; }
+
+  /* section editor */
+  .flabel { display: block; font-size: 12px; font-weight: 600; color: var(--color-text-muted); margin: 12px 0 6px; }
+  .flabel:first-of-type { margin-top: 0; }
+  .polish .tin.full, .tin.full { width: 100%; }
+  .sel {
+    appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23857a93' stroke-width='1.8'%3E%3Cpath d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;
+  }
+  .sgroup { margin: 16px -16px 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+  .srow {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 16px; border: 0; background: none;
+    text-align: left; color: var(--color-text); font: inherit; cursor: pointer; transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .srow + .srow { border-top: 1px solid var(--color-border); }
+  .srow:hover { background: var(--color-surface); }
+  .srow.static { cursor: default; }
+  .srow.static:hover { background: none; }
+  .srow .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+  .srow .val { font-size: 13px; color: var(--color-text-muted); white-space: nowrap; }
+  .switch { appearance: none; -webkit-appearance: none; margin: 0; width: 44px; height: 26px; border-radius: 13px; background: var(--color-surface-2); position: relative; flex-shrink: 0; cursor: pointer; transition: background var(--duration-fast); }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .switch:checked { background: var(--color-primary); }
+  .switch:checked::after { transform: translateX(18px); }
+  .switch:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+  /* Estantes: progress + view switch */
+  .prog { margin: 0 0 16px; }
+  .prog-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--color-text-muted); margin-bottom: 6px; min-height: 20px; }
+  .prog .meter { display: block; }
+  .seg.two { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0 0 24px; }
+  .polish .seg button { font-size: 13px; min-height: 36px; }
+  .trow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .trow .ptitle { min-width: 0; overflow-wrap: anywhere; }
+  .trow .tbtn { margin-right: -12px; font-size: 13px; }
+  .renform { margin-top: 4px; }
+  .renform .tbtn { font-size: 13px; }
+  .disclose .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .disclose[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+
+  /* ================= 063: game editor — /admin/juegos/:id/editar =================
+     Same shell, 061 type scale and 062 editor pieces (flabel + tin, sgroup rows, switch, outlined save).
+     Variant axis: ONLY where the lifecycle action (Publicar / Retirar / Restaurar) lives. */
+  textarea { font: inherit; color: inherit; }
+  .ehead { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 16px; }
+  .polish .ehead .thumb { width: 48px; height: 48px; border-radius: 8px; font-size: 18px; margin-top: 1px; }
+  .ehead-t { flex: 1; min-width: 0; }
+  .polish .ehead .ptitle { margin: 0; overflow-wrap: anywhere; }
+  .ehead .gsub { margin-top: 4px; }
+
+  .banner.err { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 12px; margin: 0 0 16px;
+    border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border)); background: color-mix(in srgb, var(--color-danger) 6%, var(--color-bg)); }
+  .banner.err .banner-text { flex: 1; display: flex; gap: 8px; align-items: center; margin: 0; color: var(--color-danger); font-weight: 600; }
+  .banner.err svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .banner.err .banner-actions { margin: 0; }
+  :root[data-theme="dark"] .banner.err .banner-text { color: #F2A3B8; }
+
+  .ed-sec + .ed-sec { margin-top: 28px; }
+  .ed-aside { margin-top: 28px; }
+  .polish .tin.area { height: auto; min-height: 120px; padding: 10px 12px; line-height: 1.5; resize: vertical; display: block; }
+  .polish .tin.num { width: 72px; flex: 0 0 72px; text-align: center; -moz-appearance: textfield; }
+  .tin.num::-webkit-inner-spin-button { opacity: .6; }
+  .srow.frow { min-height: 64px; }
+  .flab { display: block; font-size: 12px; font-weight: 600; color: var(--color-text-muted); margin-bottom: 1px; }
+  .srow .gname { font-size: 15px; }
+  .ok-t { color: var(--color-success); }
+  .stslot { background: var(--color-surface); }
+  .dot.big { width: 12px; height: 12px; }
+  .dot.big.retired { box-shadow: inset 0 0 0 2px var(--color-text-muted); }
+  .slot40.act { background: var(--color-accent-bg); color: var(--color-accent-text); }
+  .slot40.danger { background: color-mix(in srgb, var(--color-danger) 10%, transparent); color: var(--color-danger); }
+  .srow.danger .gname { color: var(--color-danger); }
+  :root[data-theme="dark"] .srow.danger .gname, :root[data-theme="dark"] .slot40.danger { color: #F2A3B8; }
+  .srow .val.hint { color: var(--color-text-muted); font-weight: 600; }
+
+  /* read-only BGG facts: no borders, no chevrons, muted keys — values only */
+  .ro-note { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; color: var(--color-text-muted); margin: 0 0 6px; line-height: 1.4; }
+  .ro-note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; }
+  .facts { margin: 0; }
+  .fact { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--color-border); }
+  .fact:first-child { border-top: 0; }
+  .fact dt { font-size: 12px; color: var(--color-text-muted); line-height: 1.5; }
+  .fact dd { margin: 0; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  .bgg .lhead .tbtn { display: inline-flex; gap: 4px; align-items: center; }
+  .tico { width: 14px; height: 14px; }
+
+  /* B: sticky bottom bar (status + lifecycle text button + outlined Guardar), above the tab bar */
+  .ebar {
+    position: absolute; left: 0; right: 0; bottom: 67px; z-index: 25; display: flex; align-items: center; gap: 2px; min-height: 60px;
+    padding: 8px 12px 8px 16px; background: var(--color-bg); border-top: 1px solid var(--color-border); box-shadow: 0 -4px 12px rgba(0,0,0,.04);
+  }
+  /* .bst / .bl1 / .bl2 / .eactions and the whole inline variant live in the "065 R7: one save bar"
+     block at the end of this stylesheet — the sección in 062 uses the same component. */
+  .has-bar .scroller { padding-bottom: 136px; }
+  .has-bar .snack { bottom: 144px; }
+  .desk .ebar { position: sticky; bottom: 0; padding-inline: max(32px, calc((100% - 1120px) / 2 + 32px)); }
+
+  .desk main.wide { max-width: 1120px; }
+  :root[data-theme="dark"] .tin { color-scheme: dark; }
+  :root[data-theme="dark"] .switch:not(:checked) { background: color-mix(in srgb, var(--color-text) 20%, transparent); }
+  .desk .ed-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 56px; align-items: start; }
+  .desk .ed-aside { margin-top: 0; position: sticky; top: 116px; }
+
+  /* ================= Round 2: mirror of the public detail page =================
+     Values copied from assets/css/app.css (.pk-facts-row, .pk-pill*, .pk-poster-panel, .pk-fact-col dt,
+     .pk-bgg-*, .pk-desc, .pk-detail-masthead) — base-200 → surface, base-300 → surface-2/border, neutral → text-muted. */
+  /* the row carries .back's own offsets, so the editor's back row lands at exactly the height
+     062's drill-downs (sección, Asignar) put theirs at — see sketch 065 */
+  .eback-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px 0 -4px; }
+  .eback-row .back { margin: 0 0 0 -10px; }
+  .eback-row .tbtn { display: inline-flex; gap: 4px; align-items: center; font-size: 14px; margin-right: -12px; }
+  .mast { display: block; }
+  .desk .mast { display: grid; grid-template-columns: 20rem minmax(0, 1fr); gap: 3rem; align-items: start; }
+  .desk .tabs { z-index: 19; }
+
+
+  .ppanel { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1rem;
+    box-shadow: 0 4px 12px color-mix(in srgb, #2a1540 12%, transparent); display: flex; flex-direction: column; gap: .75rem; }
+  .pk-facts-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 6px; }
+  .pk-pill { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; border-radius: 9999px; border: 1px solid transparent; font-weight: 600; font-size: 11px; padding: 4px 9px; }
+  .pk-pill-neutral { background: var(--color-surface); border-color: var(--color-surface-2); color: var(--color-text-muted); }
+  .pk-pill-outline { background: transparent; border-color: var(--color-surface-2); color: var(--color-text-muted); }
+  .pk-pill-tag { background: transparent; border-color: transparent; color: var(--color-primary); font-size: .875rem; font-weight: 400; padding: 0 3px; }
+  :root[data-theme="dark"] .pk-pill-tag { color: var(--color-accent-text); }
+  .pico { width: 12px; height: 12px; flex-shrink: 0; }
+  /* Grouped left, not pinned to the edge. space-between pushed the Nivel pill flush against the box's
+     content edge, so its pencil — 7px inside the pill — missed by 7.7px the vertical line every other
+     pencil in the editor sits on (365.5px, the row content edge). Nothing in this row claims that line
+     now, and it matches how the same pills group on desktop and on the public page. */
+  .ppanel .pk-facts-row { flex-wrap: wrap; justify-content: flex-start; gap: 8px 6px; }
+  .desk .ppanel .pk-facts-row { flex-wrap: wrap; justify-content: flex-start; }
+  :root[data-theme="dark"] .pk-pill-edit { border-color: color-mix(in srgb, var(--color-accent-text) 55%, transparent); color: var(--color-accent-text); }
+  .pk-difficulty { display: inline-flex; align-items: center; gap: 3px; margin-right: 2px; }
+  .pk-difficulty i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-surface-2); }
+  .pk-difficulty i.is-filled { background: var(--color-text-muted); }
+  /* editable pill = same pill + accent outline + ▾, 44px hit area */
+  .pk-pill-edit { gap: 3px; padding: 4px 9px; position: relative; cursor: pointer; background: var(--color-accent-bg); border-color: color-mix(in srgb, var(--color-primary) 35%, transparent); color: var(--color-accent-text); font-family: inherit; }
+  .pk-pill-edit .pk-difficulty i.is-filled { background: var(--color-accent-text); }
+  .pk-pill-edit.is-empty { background: transparent; border-style: dashed; }
+  .pk-pill-edit::after { content: ''; position: absolute; inset: -9px 0; }
+  .pk-pill-edit:hover { border-color: var(--color-primary); }
+  .pk-pill-edit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .band-hint { margin: -4px 0 0; font-size: 12px; color: var(--color-text-muted); text-align: right; }
+  .poster { --h: 30; aspect-ratio: 16 / 10; border-radius: var(--radius-md); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, hsl(var(--h) 55% 38%), hsl(var(--h) 45% 18%)); color: hsl(var(--h) 60% 88%); border: 1px solid var(--color-border); }
+  .desk .poster { aspect-ratio: 1 / 1.05; }
+  .poster span { font-family: var(--font-display); font-size: 2.6rem; letter-spacing: .06em; line-height: 1; }
+  .poster small { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; opacity: .8; }
+  .poster.is-empty { background: var(--color-surface); color: var(--color-text-muted); gap: 6px; border-style: dashed; }
+  .poster.is-empty svg { width: 28px; height: 28px; }
+  .poster.is-empty span { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; }
+
+  .tcol { margin-top: 1.25rem; display: flex; flex-direction: column; }
+  .desk .tcol { margin-top: 0; }
+  .tfield { position: relative; }
+  .title-in { width: 100%; min-height: 48px; padding: 4px 32px 2px 0; border: 0; border-bottom: 1px dashed var(--color-surface-2); border-radius: 0; background: none;
+    font-family: var(--font-display); font-size: 1.875rem; letter-spacing: .02em; line-height: 1.15; color: var(--color-text); }
+  .title-in:hover { border-bottom-color: var(--color-text-muted); }
+  .title-in:focus { outline: none; border-bottom: 2px solid var(--color-primary); padding-bottom: 1px; }
+  :root[data-theme="dark"] .title-in:focus { border-bottom-color: var(--color-accent-text); }
+  .title-in.invalid { border-bottom: 2px solid var(--color-danger); }
+  .tpen { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--color-text-muted); pointer-events: none; }
+  .tfield + .ferr { margin-top: 4px; }
+  .tags-row { display: flex; align-items: center; justify-content: space-between; gap: 4px 8px; flex-wrap: wrap; margin-top: .5rem; min-height: 44px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-left: -3px; }
+  .tags-empty { font-size: 13px; color: var(--color-text-muted); }
+  .polish .tags-row .tbtn { font-size: 13px; margin-right: -12px; }
+  .dt-label { display: block; text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); font-size: .75rem; margin: 0 0 .375rem; }
+  .dfield { margin-top: 1rem; }
+  .polish .tin.desc-in { font-size: 15px; line-height: 1.5; text-align: justify; min-height: 132px; }
+  .club { margin-top: 1.5rem; }
+  .club .sgroup { margin-top: 0; }
+  .desk .club .sgroup { margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .srow .val { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+
+  .bggm { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--color-border); }
+  .ro-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); margin: -8px 0 12px; }
+  .ro-head svg:first-child { width: 14px; height: 14px; }
+  .ro-head span { flex: 1; }
+  .polish .ro-head .tbtn { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; margin-right: -12px; }
+  .spec { margin: 0; display: grid; gap: 1rem; }
+  .srowd dt, .fcol dt { text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); font-size: .75rem; margin: 0 0 .375rem; }
+  .srowd dd { margin: 0; font-size: 15px; }
+  .fcols { display: grid; grid-template-columns: 1fr; gap: 1rem 1.5rem; }
+  .desk .fcols { grid-template-columns: 1fr 1fr; }
+  .fcol dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .fcol .pk-pill { font-size: 12px; padding: 5px 10px; }
+  .comm { margin-top: 2rem; }
+  .comm-row { display: flex; align-items: baseline; flex-wrap: wrap; gap: 1rem; font-size: 12px; color: var(--color-text-muted); }
+  .comm-row b { font-size: .875rem; font-weight: 600; color: var(--color-text); margin-right: 3px; }
+  .sheet-sg { margin: 4px -16px 0; }
+  .desk .sheet-sg { margin: 4px -16px 0; }
+  /* ================= Round 3 final: soft blocks, no lines (B2) =================
+     Strokes and dividers are replaced by soft tinted blocks (surface fill, radius): poster panel, EN EL CLUB, BGG data.
+     The only stroke left in the page body is the Nivel pill's accent outline (the edit cue). */
+  .ppanel { border: 0; box-shadow: none; background: var(--color-surface); }
+  .ppanel .pk-pill-neutral { background: var(--color-bg); border-color: transparent; }
+  .poster { border: 0; }
+  .title-in { border-bottom-color: transparent; }
+  .title-in:hover { border-bottom-color: var(--color-surface-2); }
+  .polish .tin.desc-in, .polish .tin.num { border-color: transparent; background: var(--color-surface); }
+  .polish .tin.desc-in:focus, .polish .tin.num:focus { border-color: var(--color-primary); background: var(--color-bg); }
+  .club .sgroup, .desk .club .sgroup { margin: 0; border: 0; background: var(--color-surface); border-radius: var(--radius-lg); overflow: hidden; }
+  .club .srow + .srow { border-top: 0; }
+  .club .srow { min-height: 48px; }
+  .club .srow:hover { background: var(--color-surface-2); }
+  .polish .club .tin.num { background: var(--color-bg); }
+  .bggm { border-top: 0; margin-top: 1.5rem; padding: 1rem; background: var(--color-surface); border-radius: var(--radius-lg); }
+  .ro-head { margin-top: -4px; }
+  .fcol .pk-pill-outline { background: var(--color-bg); border-color: transparent; }
+  .comm { margin-top: 1.25rem; }
+  .ebar { border-top: 0; box-shadow: 0 -6px 18px color-mix(in srgb, #2a1540 9%, transparent); }
+  :root[data-theme="dark"] .ebar { box-shadow: 0 -6px 18px rgba(0,0,0,.35); }
+  .banner.err { border-color: transparent; background: color-mix(in srgb, var(--color-danger) 9%, var(--color-bg)); border-radius: var(--radius-lg); }
+  .poster.is-empty { background: var(--color-bg); }
+
+  /* ================= Round 4: title first + one pencil rule ================= */
+  .thead { margin: 4px 0 20px; }
+  .desk .thead { margin-bottom: 28px; }
+  .tline { display: flex; align-items: center; gap: 2px; min-height: 48px; }
+  /* input sizes to its text (inline-grid mirror), so the pencil follows the name instead of parking at the far edge */
+  .tfield { display: inline-grid; min-width: 0; max-width: calc(100% - 44px); position: static; }
+  .tfield::after, .tfield .title-in { grid-area: 1 / 1; font-family: var(--font-display); font-size: 1.875rem; letter-spacing: 0; line-height: 1.2; padding: 4px 0 2px; }
+  .tfield::after { content: attr(data-value) ' '; visibility: hidden; white-space: pre; overflow: hidden; border-bottom: 2px solid transparent; }
+  .tfield .title-in { width: 100%; min-width: 1ch; min-height: 0; padding-right: 0; }
+  .tfield .title-in::placeholder { color: var(--color-text-muted); }
+  .pen-hit { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: text; margin-left: -6px; }
+  .tline:focus-within .pen-hit { opacity: 0; }
+  .tags-row { width: 100%; border: 0; background: none; cursor: pointer; text-align: left; padding: 0; justify-content: flex-start; gap: 4px 6px; margin-top: 2px; border-radius: var(--radius-md); font: inherit; }
+  .tags-row:hover .tags-empty, .desc-view:hover .desc-p.muted { color: var(--color-text); }
+  .tags-row:focus-visible, .desc-view:focus-visible, .pk-pill-edit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .tags { margin-right: 2px; }
+  .desc-view { display: block; width: 100%; border: 0; background: none; padding: 0; text-align: left; cursor: text; font: inherit; color: inherit; min-height: 44px; }
+  .desc-p { font-size: 15px; line-height: 1.5; text-align: justify; }
+  .desc-p.muted { color: var(--color-text-muted); text-align: left; }
+  .dfield .pen-row { vertical-align: -1px; margin-left: 6px; }
+  .tcol > .dfield:first-child { margin-top: 0; }
+  .tcol { margin-top: 1.5rem; }
+  .pk-pill-edit, .pk-pill-edit.is-empty { background: var(--color-bg); border-color: transparent; color: var(--color-text-muted); border-style: solid; }
+  :root[data-theme="dark"] .pk-pill-edit { border-color: transparent; color: var(--color-text-muted); }
+  .pk-pill-edit .pk-difficulty i.is-filled { background: var(--color-text-muted); }
+  .club .srow .val { margin-right: 2px; }
+
+  /* the pencil — one glyph, one color, sized to the text it follows */
+  .pen { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--color-accent-text); }
+  .pen svg { width: 100%; height: 100%; }
+  /* P2 chip: same glyph inside a soft accent circle */
+  .pen-chip .pen { border-radius: 50%; background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .pen-chip .pen { background: color-mix(in srgb, var(--color-accent-text) 20%, transparent); }
+  .pen-chip .pen-title { width: 28px; height: 28px; padding: 7px; transform: translateY(-1px); }
+  .pen-chip .pen-row   { width: 22px; height: 22px; padding: 5.5px; }
+  .pen-chip .pen-pill  { width: 10px; height: 10px; margin-left: 2px; background: none !important; border-radius: 0; padding: 0; }
+  .pen-chip .dfield .pen-row { vertical-align: -6px; }
+  .pen-chip .club .pen-row { background: var(--color-bg); }
+  .ppanel { padding: 12px; }
+  .desk .ppanel { padding: 1rem; }
+  .ppanel .pk-facts-row { gap: 8px 4px; }
+  .pk-pill-edit, .pk-pill-edit.is-empty { padding: 4px 7px 4px 8px; }
+
+  /* ================= Round 5: EN EL CLUB lighter ================= */
+  .switch.sm { width: 36px; height: 22px; border-radius: 11px; position: relative; }
+  .switch.sm::after { top: 3px; left: 3px; width: 16px; height: 16px; }
+  .switch.sm:checked::after { transform: translateX(14px); }
+  .switch.sm::before { content: ''; position: absolute; inset: -11px -4px; }
+  /* C2 — same rows, compact */
+  .club-sm .srow, .club.club-sm .srow { min-height: 40px; padding-block: 4px; }
+  .club-sm .srow .gname { font-size: 14px; }
+  .club-sm .srow .val { font-size: 13px; }
+  .polish .club-sm .tin.num { height: 30px; width: 52px; flex-basis: 52px; font-size: 14px; }
+  .club-sm .sgroup { padding-block: 4px; }
+
+  /* ================= R6: consistent section anatomy ================= */
+  /* one label: 13px / 700, full text color — noticeable, one step under the 15px body and far under the title */
+  .r6 .sec-label { font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; color: var(--color-text); margin: 0 0 8px; }
+  .r6 .sec + .sec, .r6 .thead + .sec, .r6 .mast + .sec { margin-top: 24px; }
+  .r6 .thead { margin-bottom: 20px; }
+  /* one box: surface fill, radius-lg, 12px/16px padding (rows: 4px block padding, 16px row padding) */
+  .r6 .sbox, .r6 .ppanel { background: var(--color-surface); border-radius: var(--radius-lg); border: 0; box-shadow: none; }
+  .r6 .ppanel { padding: 12px 16px; }
+  .r6 .desc-view.sbox { padding: 12px 16px; min-height: 48px; }
+  .polish.r6 .tin.desc-in.sbox { padding: 12px 16px; background: var(--color-surface); border: 1px solid var(--color-primary); }
+  .r6 .sbox.rows { padding: 4px 0; overflow: hidden; }
+  .r6 .sbox.rows .srow { min-height: 40px; padding: 4px 16px; }
+  .r6 .sbox.rows .srow .gname { font-size: 14px; }
+  .r6 .sbox.rows .srow .val { font-size: 13px; }
+  .polish.r6 .sbox.rows .tin.num { height: 30px; width: 52px; flex-basis: 52px; font-size: 14px; background: var(--color-bg); border-color: transparent; }
+  .polish.r6 .sbox.rows .tin.num:focus { border-color: var(--color-primary); }
+  .r6 .sbox.rows .srow:hover { background: var(--color-surface-2); }
+  .r6 .club6 .ferr:empty { display: none; }
+  /* Estado: the former sticky bar, inline in the same box — see "065 R7: one save bar" at the end */
+  /* Datos de BGG: collapsed disclosure row inside the box */
+  .r6 .bgg6 { padding: 4px 0; overflow: hidden; }
+  .r6 .bgg-body { padding: 8px 16px 8px; }
+  .r6 .bgg-body .fcol .pk-pill-outline { background: var(--color-bg); border-color: transparent; }
+  .r6 .bgg-body .comm { margin-top: 1rem; }
+  .r6 .bgg-link { display: inline-flex; gap: 4px; align-items: center; margin: 8px 0 0 -12px; font-size: 13px; }
+  /* in-box labels (Año, Diseñadores…) keep the small public dt style: they label values, not sections */
+  .desk.r6 .mast { margin-top: 0; }
+  .desk.r6 .pcol .sec + .sec, .desk.r6 .tcol .sec + .sec { margin-top: 24px; }
+  .desk.r6 .tcol { margin-top: 0; }
+  .r6 .dfield6 .pen-row { margin-left: 6px; }
+  .r6 .sbox.rows .srow + .srow { border-top: 0; }
+  .desk.r6 .mast + .sec { margin-top: 32px; }
+
+  /* ================= Final: two visibility groups ================= */
+  .ghead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+  .gico { width: 28px; height: 28px; border-radius: 50%; background: var(--color-surface); color: var(--color-text-muted); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .gico svg { width: 16px; height: 16px; }
+  .gh-t { font-size: 15px; font-weight: 600; margin: 0; line-height: 1.3; }
+  .gh-s { font-size: 12px; color: var(--color-text-muted); }
+  .r6 .grp-int { margin-top: 40px; }
+  .r6 .grp > .sec:first-of-type, .r6 .ghead + .sec { margin-top: 0; }
+  .r6 .grp-pub .thead { margin: 0 0 20px; }
+  .r6 .grp .thead + .sec { margin-top: 0; }
+  .desk.r6 .mast.int { align-items: start; }
+  .desk.r6 .grp-pub .mast .tcol .sec + .sec { margin-top: 24px; }
+
+  /* R7 keeps: filas lead */
+  .tags-lead { font-size: 13px; color: var(--color-text-muted); margin-right: 2px; }
+  .tags { align-items: baseline; }
+  .tags:has(.tags-lead) { margin-left: 0; }
+
+  /* ================= R8: no-tab separation ================= */
+  .r6 .mast + .sec, .r6 .thead + .sec { margin-top: 0; }
+  .r6 .thead { margin-bottom: 20px; }
+  .zone-int > .sec + .sec { margin-top: 24px; }
+
+  /* ================= R10 (D1): the internal part is marked by a centered labeled divider =================
+     It stays on the page ground with the same surface boxes as the public part. The line is a 1px background (not a border), content width. */
+  .r6 .thead, .r6 .grp-pub .thead { margin-bottom: 24px; }
+  .zdiv { display: flex; align-items: center; gap: 12px; margin: 0; }
+  .zl { flex: 1; height: 1px; background: var(--color-border); }
+  :root[data-theme="dark"] .zl { background: color-mix(in srgb, var(--color-text) 16%, transparent); }
+  .zd-t { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
+  .zd-t svg { width: 16px; height: 16px; color: var(--color-text-muted); }
+  .zd-s { margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted); }
+  .zone-int { margin-top: 40px; }
+  .zone-int .zd-s { text-align: center; margin-bottom: 24px; }
+  /* D2: line, then the group header (same anatomy as the R6 group header) */
+
+  /* ================= R9: where the game shows (Filas) + Unidades control ================= */
+  /* En el inicio (F2): one row per home row */
+  .fnote { margin: 0; padding: 8px 16px 4px; font-size: 12px; color: var(--color-text-muted); line-height: 1.4; }
+  .fslot { width: 28px; height: 28px; border-radius: 50%; background: var(--color-surface-2); color: var(--color-text-muted); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .fslot svg { width: 15px; height: 15px; }
+  .fslot.man { background: var(--color-accent-bg); color: var(--color-accent-text); }
+  :root[data-theme="dark"] .fslot.man { background: color-mix(in srgb, var(--color-accent-text) 20%, transparent); }
+  .fslot.add { background: none; color: var(--color-primary); }
+  :root[data-theme="dark"] .fslot.add, :root[data-theme="dark"] .frow9.add .gname { color: var(--color-accent-text); }
+  .r6 .sbox.rows .srow.frow9 { min-height: 52px; padding-block: 6px; }
+  .r6 .sbox.rows .srow.frow9.add { min-height: 44px; }
+  .frow9 .gsub { font-size: 12px; margin-top: 1px; }
+  .frow9.add .gname { color: var(--color-primary); font-weight: 600; }
+  .frow9 .chev { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+  .filas-box.fst-retired .frow9:not(.add) { opacity: .55; }
+
+  /* Unidades (U2): segmented 1 | 2 | Más; Más turns into an inline stepper — soft fills, no strokes */
+  .stepper { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .stp { position: relative; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--color-surface); color: var(--color-text); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast) var(--ease-standard), transform var(--duration-fast); }
+  .stp::before { content: ''; position: absolute; inset: -6px; }
+  .stp svg { width: 16px; height: 16px; }
+  .stp:hover:not(:disabled) { background: var(--color-surface-2); }
+  .stp:active:not(:disabled) { transform: scale(.92); }
+  .stp:disabled { opacity: .35; cursor: default; }
+  .stp:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .stp-n { min-width: 24px; text-align: center; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sheet .stp { background: var(--color-surface); }
+  .useg { display: inline-flex; gap: 2px; padding: 2px; background: var(--color-surface); border-radius: 10px; flex-shrink: 0; }
+  /* one width for all three cells: "Más" is wider than "1" or "2", so min-width alone left the
+     track at 44 / 44 / 48 and the control read lopsided */
+  .useg > button, .useg > .ustep { position: relative; width: 48px; flex: 0 0 48px; height: 34px; border: 0; background: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px; font-weight: 400; color: var(--color-text); padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; transition: background var(--duration-fast); }
+  .useg > button::before { content: ''; position: absolute; inset: -5px 0; }
+  .useg > .on { background: var(--color-bg); box-shadow: 0 1px 3px rgba(0,0,0,.14); font-weight: 600; }
+  :root[data-theme="dark"] .useg > .on { background: var(--color-surface-2); }
+  .zone-int .useg { background: var(--color-surface-2); }
+  .zone-int .useg > .on { background: var(--color-bg); }
+  :root[data-theme="dark"] .zone-int .useg { background: color-mix(in srgb, #000 30%, var(--color-surface)); }
+  :root[data-theme="dark"] .zone-int .useg > .on { background: var(--color-surface-2); }
+  .useg > button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+  .useg > .ustep { width: auto; flex: 0 0 auto; min-width: 48px; padding: 0 2px; cursor: default; }
+  .ustep .stp { width: 26px; height: 26px; background: none; }
+  .ustep .stp::before { inset: -9px -2px; }
+  .ustep .stp svg { width: 14px; height: 14px; }
+  .ustep .stp-n { min-width: 18px; font-size: 14px; }
+  .r6 .sbox.rows .srow.urow { min-height: 48px; }
+  .r6 .sbox.rows .srow.static:hover { background: none; }
+
+  /* ================= R12: En el inicio action + Datos de BGG in one line ================= */
+  .filas6 { position: relative; }
+  /* C2: soft full-width button closing the box */
+  .cta2-wrap { padding: 4px 12px 8px; }
+  .cta2 { width: 100%; min-height: 40px; border: 0; border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-primary); font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; transition: background var(--duration-fast), transform var(--duration-fast); }
+  .cta2 svg { width: 16px; height: 16px; }
+  .cta2:hover { background: var(--color-surface-2); }
+  .cta2:active { transform: scale(.98); }
+  .cta2:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] .cta2 { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
+  /* R13: Datos de BGG — public-style facts, preview + Ver más / Ver menos */
+  .r6 .bgg6 { padding: 0; }
+  .r6 .bgg6 .bgg-body { padding: 12px 16px 8px; }
+  .bgg-foot { margin: 16px 0 0; font-size: 12px; color: var(--color-text-muted); }
+  .r6 .bgg-body > .bgg-link { margin: 0 0 0 -12px; }
+  /* the box's footer control, the same anatomy .cta2 gives "Agregar a una fila": a soft full-width
+     button on --color-bg inside the surface box, with real space above it. Before this it sat flush
+     against the last fact with no seam, so nothing said it was the thing that collapses the box. */
+  .bgg-more-wrap { padding: 4px 12px 8px; }
+  .bgg-more { width: 100%; min-height: 40px; border: 0; border-radius: var(--radius-md); background: var(--color-bg); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--color-primary); transition: background var(--duration-fast), transform var(--duration-fast); }
+  .bgg-more:hover { background: var(--color-surface-2); }
+  .bgg-more:active { transform: scale(.98); }
+  .bgg-more:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] .bgg-more { color: var(--color-accent-text); background: color-mix(in srgb, #000 22%, var(--color-surface)); }
+  .bgg-more .chev { width: 16px; height: 16px; transition: transform var(--duration-base) var(--ease-out-soft); }
+  .bgg6.open .bgg-more .chev { transform: rotate(180deg); }
+  :root[data-theme="dark"] .bgg-more { color: var(--color-accent-text); }
+  .bgg-empty { margin: 0; padding: 12px 16px; }
+  /* B3: read-only said once, beside the section label */
+  /* plain inline, so "Solo lectura" sits on the section label's own baseline. As an inline-flex its
+     first item was the <svg>, which has no baseline, so the whole note aligned by its box edge and
+     rode ~4px high next to "Datos de BGG". */
+  .sec-note { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--color-text-muted); white-space: nowrap; }
+  .sec-note svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 3px; }
+
+  /* ================= 065: one label per job — identical block in 060–063 =================
+     Composing the whole admin (sketch 065) turned up three answers to "this is a labelled block
+     inside a page": 11px uppercase muted (Agregar juego · Filas del inicio · Equipo · Sin ubicar),
+     12px sentence muted (Nombre · Subtítulo) and 13px sentence in full colour (Portada · En el club).
+     Two labels, one size, from here on:
+       SECTION label  13px/600, full text colour, sentence case — names a block on the page
+       FIELD label    13px/600, muted                          — names one input inside a block
+     .group-label keeps exactly the job 059 gave it — the header of a group of rows in the drawer or a
+     sheet — so it only changes where 061/062 had borrowed it for a page body.
+     A group of setting rows on a page is the editor's soft box, never 062's hairlines (063 R3/R6). */
+  #device main :is(.sec-label, .group-label) {
+    font-size: 13px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    color: var(--color-text); margin: 0 0 8px;
+  }
+  /* A FIELD label must read under a section label, not beside it. At 13px/600 muted next to a
+     13px/600 section label only colour separated them, so "Ajustes / Nombre / Subtítulo" stacked as
+     three near-identical lines. One size step down settles the rank. */
+  #device main :is(.flabel, .field label) {
+    font-size: 12px; font-weight: 600; letter-spacing: .01em; line-height: 1.3; text-transform: none;
+    color: var(--color-text-muted);
+  }
+  #device main .lhead :is(.sec-label, .group-label) { margin: 0; }
+  /* the 16px top margin is load-bearing: without it the box butts straight into the field above it
+     (the Subtítulo input in a sección sat directly on this box's top edge) */
+  #device main .sgroup { margin: 16px 0 0; border: 0; padding: 4px 0; overflow: hidden;
+    background: var(--color-surface); border-radius: var(--radius-lg); }
+  #device main .sgroup .srow { min-height: 40px; padding: 4px 16px; }
+  #device main .sgroup .srow + .srow { border-top: 0; }
+  #device main .sgroup .srow .gname { font-size: 14px; }
+  #device main .sgroup .srow .val { font-size: 13px; }
+  #device main .sgroup .srow:hover { background: var(--color-surface-2); }
+
+  /* The page head sits the same distance above the first block as blocks sit from each other.
+     Sections are 24px apart everywhere (.jsec + .jsec in 061/062, .sec + .sec in 063), but the head
+     was 16px above the first block on list pages — and 12px on Asignar, whose spacer follows .trow
+     instead of .ptitle and so missed the polish rule that bumped the others to 16. One gap now. */
+  #device main > .psub { margin-bottom: 24px; }
+  #device main > :is(.ptitle, .trow) + div[style*="height"] { height: 24px !important; }
+  /* One title height. A page title lands in the same place whether it sits alone (Web, sección),
+     shares its row with a control (Asignar's Renombrar) or is the editor's editable name. Before
+     this it jumped up to 7px between drill-downs, because a 44px control centred the 26px title
+     inside its row while a bare title started at the row's top. */
+  #device main .trow > .ptitle, #device main .tline > .tfield { align-self: flex-start; }
+
+  /* One bottom-sheet rhythm everywhere. Every sheet is 8px/16px/16px with a 4px-auto-12px grab, an
+     11px caps group label, 4px to its first block and 8px between blocks — but the filas sheet's
+     switch rows were .srow at 56px while every other sheet's rows are .dlink at 48px, so one sheet
+     scrolled to a different beat. 48px everywhere. */
+  #device .sheet .srow { min-height: 48px; padding-block: 4px; }
+
+  /* ================= 064: admin button system (S3 Contorno, weight-tuned) — identical block in 059–063 =================
+     One anatomy: 44px · radius-md · 14px/600 · 16px icon · 8px gap. The role is the only thing that changes the paint:
+       Principal  .obtn / .b-pri  1px primary stroke, primary label — at most one per block, last in its row
+       Secundaria .b-sec          1px neutral --stroke (≥ 3:1, the same token as text fields), text-color label
+       Terciaria  .tbtn           no stroke, secondary-purple label (one step lighter than Principal)
+       Peligro    .tbtn.danger    no stroke, danger label — never Principal, confirms in a sheet
+     No disabled buttons (Guardar only shows with changes; submits validate on tap). Sheets keep 059 rows.
+     Scoped with #device so it wins over each sketch's older local .obtn/.tbtn rules. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec):not(.snack .tbtn) { min-height: 44px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec) svg:not(.spin) { width: 16px; height: 16px; }
+  #device :is(.obtn, .b-pri, .b-sec) { padding: 0 16px; border: 1px solid; background: var(--color-bg); opacity: 1; }
+  #device :is(.obtn, .b-pri) { border-color: var(--color-primary); color: var(--color-primary); }
+  #device :is(.obtn, .b-pri):hover { background: color-mix(in srgb, var(--color-primary) 7%, var(--color-bg)); }
+  :root[data-theme="dark"] #device :is(.obtn, .b-pri) { border-color: var(--color-accent-text); color: var(--color-accent-text); background: transparent; }
+  :root[data-theme="dark"] #device :is(.obtn, .b-pri):hover { background: color-mix(in srgb, var(--color-accent-text) 10%, transparent); }
+  #device .b-sec { border-color: var(--stroke); color: var(--color-text); }
+  #device .b-sec:hover { background: var(--color-surface); }
+  :root[data-theme="dark"] #device .b-sec { background: transparent; }
+  :root[data-theme="dark"] #device .b-sec:hover { background: color-mix(in srgb, var(--color-text) 8%, transparent); }
+  #device .tbtn:not(.b-pri):not(.b-sec):not(.snack .tbtn) { padding: 0 12px; border: 0; background: none; color: var(--ter); }
+  #device .tbtn:not(.b-pri):not(.b-sec):not(.snack .tbtn):hover { background: color-mix(in srgb, var(--ter) 10%, transparent); }
+  /* Peligro repeats the Terciaria selector chain so it outranks it (plain .tbtn.danger lost to the :not() chain) */
+  #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn) { color: var(--color-danger); }
+  #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn):hover { background: color-mix(in srgb, var(--color-danger) 9%, transparent); }
+  :root[data-theme="dark"] #device .tbtn.danger:not(.b-pri):not(.b-sec):not(.snack .tbtn) { color: #F2A3B8; }
+  #device :is(.obtn, .tbtn, .b-pri, .b-sec):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  :root[data-theme="dark"] #device :is(.obtn, .tbtn, .b-pri, .b-sec):focus-visible { outline-color: var(--color-accent-text); }
+  #device .btn-block { width: 100%; }
+  /* text fields share the Secundaria stroke (1px, ≥ 3:1); in-place editors (063 title/description/number) keep their soft look */
+  #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in) { border: 1px solid var(--stroke); }
+  #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] #device :is(.tin, .field input, .sfield input):not(.desc-in):not(.num):not(.title-in):focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  #device :is(.tin, .field input, .sfield input).invalid { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  #device .banner-actions { gap: 8px; }
+  /* the -8px pull is for borderless text buttons; an outlined button ends the row on the content edge */
+  #device .banner-actions:has(> :is(.obtn, .b-pri, .b-sec):last-child) { margin-right: 0; }
+  /* 063 Estado under the 064 system: status on top, one action row below (right-aligned, Principal
+     last) — the whole inline bar, its rhythm and its action row are in the "065 R7: one save bar"
+     block that closes this stylesheet, because a sección uses the same component. */
+  #device .cta2 { width: 100%; }
+  #device .tbtn.bgg-more { width: 100%; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+  /* ================= 065 R7: one save bar, one settings panel — identical block in 062/063 =================
+     Three developer notes on a sección, and all three were one thing each: a second implementation.
+
+     1. THE AJUSTES BLOCK HAD TWO SURFACES. A 13px section label, then Nombre and Subtítulo bare on the
+        page background, then a soft --color-surface box holding the two setting rows — one labelled
+        block, two surface treatments, and gaps of 8 / 6 / 12 / 6 / 16px down its middle. The fields
+        join the box as field rows, so the section is ONE surface on ONE rhythm: 12px between every
+        child and 12px above the first and below the last (.ppanel's internal gap, 063 R6 #5).
+        This is also what tells the form apart from the search under it. Round 4 gave the search field
+        the same ANATOMY as every other field on purpose, so anatomy cannot be the thing that separates
+        them — grouping is. The form is now in a panel and the search is the only field left on the
+        page background.
+
+     2. THE ADMIN HAD TWO SAVE BARS. 063 built .ebar.inline — a soft surface block with a status line
+        (.bl1 and its dot over .bl2) and its actions (.eactions, Principal last), with round 6's rhythm
+        rule baked in. 062 built .saverow — a 12px accent note and an outlined button floating loose on
+        the page background, 16px under the settings box. Same job, two components, one tap apart in the
+        walk. This block is the whole definition of the one that survived; build.js throws if 062 and
+        063 ever drift apart again.
+        Rhythm: a borderless text button hides 14px of padding above and below its label, so with an
+        all-text action row the button's own padding IS the rhythm and the gap and the bottom padding go
+        to 0; the moment the row carries an outlined button — which has a real border to keep off the
+        box edge — both come back at 12px. A bar with no action row at all (a sección with nothing left
+        to save) keeps the full 12px.
+
+     3. "ORDENAR" READ AS PURE TEXT. A mode toggle that changes what the whole list below it does is not
+        a Terciaria text link. lhead's control is a real outlined button in both states — Secundaria to
+        enter the mode, Principal ("Listo") to leave it — and an outlined control ends on the row's
+        content edge instead of being pulled 12px out the way a borderless label is. */
+  #device main .sgroup.apanel { margin: 0; padding: 12px 0; display: flex; flex-direction: column; gap: 12px; }
+  #device main .sgroup.apanel > * { padding: 0 16px; }
+  #device main .sgroup.apanel .flabel { margin: 0 0 6px; }
+  #device main .sgroup.apanel .srow { min-height: 40px; }
+  #device .ebar.inline { position: static; display: flex; flex-direction: column; align-items: stretch;
+    min-height: 0; gap: 12px; padding: 12px 16px; border: 0; box-shadow: none;
+    background: var(--color-surface); border-radius: var(--radius-lg); }
+  #device .ebar.inline:has(.eactions):not(:has(.eactions > :is(.obtn, .b-pri, .b-sec))) { gap: 0; padding-bottom: 0; }
+  #device .ebar .bst { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  #device .ebar .bl1 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  #device .ebar .bl2 { font-size: 12px; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #device .ebar .bl2.dirty { color: var(--color-accent-text); font-weight: 600; }
+  #device .ebar .eactions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+  #device .ebar .eactions .push { margin-right: auto; margin-left: -12px; }
+  #device .ebar .eactions > .tbtn:first-child:not(.b-pri):not(.b-sec) { margin-left: -12px; }
+  #device .ebar .eactions > .tbtn:last-child:not(.b-pri):not(.b-sec) { margin-right: -12px; }
+  #device .ebar .obtn { margin-left: 4px; }
+  #device .ebar.inline .obtn { background: var(--color-bg); }
+  /* two soft blocks in one section need a seam: dropping .saverow's 16px margin left the bar butting
+     straight against the settings panel at 0px. 12px — the panel's own rhythm — keeps them one group. */
+  #device main .sgroup.apanel + .ebar.inline { margin-top: 12px; }
+  #device .lhead > :is(.obtn, .b-pri, .b-sec) { margin: 0; }
+  /* ================= 065 R7b: one control for "pick one of N", one grouped list — identical block in 062/063 =================
+     Three more developer notes on Estantes, and again none of them was a matter of taste.
+
+     1. "ESTANTES | JUEGOS POR ESTANTE" FILLED FELT WEIRD — and measured, it is a WCAG failure, not a
+        preference. The track was filled with --color-surface, which round 4 established is what a soft
+        content BLOCK is made of in this admin, and the SELECTED segment was --color-bg, the page
+        background: so the chosen option read as a hole punched in a block. Selected vs track measured
+        1.16:1 light and 1.17:1 dark — WCAG 1.4.11 sets a 3:1 floor for the state of a UI component, so
+        the selected state was effectively invisible in BOTH themes, not just dark. It was also the last
+        10px shape in a control stack where chips, the Agregar field and the search field are all 8px
+        (round 4 killed the search pill for exactly that and missed this one, because nothing audited
+        it), and its first label repeated the page title word for word.
+        The job is "pick one of N, and change what the list below shows" — which is the job 061 already
+        compared a segmented control (A2) against filter chips (A1) for, and chose CHIPS. So the view
+        switch IS the chip row, markup included; .seg survives only as 061's rejected A2 variant. A chip
+        carries its state on four channels — a tick glyph at 11.27:1, 600 weight, the accent fill and
+        the accent label — where the segment had only a 1.16:1 fill.
+        What the chips owed: a chip's own OUTLINE was 1.42:1 light / 1.30:1 dark, and the selected chip
+        had `border-color: transparent`, so the control's boundary was under the same 3:1 floor. Every
+        chip now carries 064's field/Secundaria stroke — one token for one job — and the state stays on
+        the tick, the fill and the weight.
+
+     2. THE GROUPED SHELF VIEW DID NOT SCALE. Every group rendered `games.slice(0, 4)` and then a
+        dead-end "y 64 más" caption: 1702px = 2.30 screens for FOUR shelves, 16 of 412 games (3.9%),
+        and no way to expand any of it. The mobile standard for "many groups × many items on a small
+        screen" is collapsed groups that expand in place (iOS grouped tables, Material expansion
+        panels) — and this admin already ships that component: Asignar's `.grow.disclose`, which
+        round 5 ruled names its own block and therefore satisfies L1. So a group is one disclosure row
+        carrying its count, its games open in place, and a group with more rows than one page offers the
+        same "Mostrar más" the unplaced list already offers instead of a caption that leads nowhere.
+        The groups then have to read as ONE list rather than as 13 separate blocks, so the 20px gap
+        between them goes and the hairline over a group header runs full-bleed (a content row's hairline
+        starts at 76px, past the thumb) — the grouped-table seam.
+
+     3. .lcap IS GONE. "y N más" was a second, mute answer to "there is more here" next to .more's
+        "Mostrar más" + "8 de 68" — and the mute one was on the only two lists you could not page. */
+  #device .chip { border-color: var(--stroke); }
+  #device .chip.on { border-color: var(--stroke); }
+  /* 065 R8: the `.chips.vista` rule went with the view switch — see the R8 block below. The chip
+     fixes above survive on 061's four filter chips, which is where the component still has a job. */
+  #device main .grp + .grp { margin-top: 0; }
+  #device main .grp + .grp > .glist > .disclose::before { display: block; left: 0; }
+  #device main .grp .gnote { margin: 0 16px 12px 76px; }
+  /* ================= 065 R8: ONE Estantes page — identical block in 062/063 =================
+     Round 7b split Estantes into two views behind a chip control. Round 8 retires that control after
+     ONE round, and the measurement is the finding: neither view could answer the page's own first
+     question. "Recorrido" had no search field at all and put the "Nuevo estante" form between the
+     progress line and the first estante, 368px down the page. "Contenido" could say WHICH estante held
+     a game — tab, chip, type — but never where ON it, because a group opened to `G.filter(place===sid)`,
+     catalogue order, not shelf order, with nothing saying so. A control that lasts one round is a
+     finding about its premise, not an embarrassment: two views was the wrong premise.
+
+     THE PREMISE THIS PAGE NOW RESTS ON: the order of the games on an estante IS their physical
+     left-to-right order on the shelf. Everything follows from it — the zone is a game's index read
+     back in words, the neighbours are the slots either side of it, and Ordenar moves a real box, which
+     is why its hint says so.
+
+     WHAT THE PARTS ARE. `.gacts` is an estante's own action strip, which exists only while the estante
+     is open: the bulk job (Agregar juegos) as Secundaria on the left and the estante's options as an
+     `.ibtn` on the right, on the grouped-table seam (`.more`'s own full-bleed hairline). `.pacts` is a
+     page-level secondary action — "Nuevo estante", demoted out of the page body so it stops competing
+     with the finding job. `.gexp` is what a game row opens to: the precise half of the answer, indented
+     to the row's own text column so it reads as that row's continuation and not as a new row. */
+  #device main .gacts { display: flex; align-items: center; gap: 8px; margin: 0 -16px; padding: 10px 16px 2px; border-top: 1px solid var(--color-border); }
+  #device main .gacts .push { margin-left: auto; }
+  /* R10: 8px, not 20. "Nuevo estante" is a Terciaria text action now (rule 2: a page-level action is
+     never Principal and never outlined), and a borderless button hides 14px of padding above its
+     label — so 20px of margin put the LABEL 34px below the block above it, where the outlined button's
+     box edge had sat at 20. 8 + 14 = 22px to the label, which is the same optical distance the outline
+     used to hold. This is round 6 #5's rule ("the button's own padding IS the rhythm") applied to the
+     one action row that had never been measured against it. */
+  #device main .pacts { display: flex; margin-top: 8px; }
+  #device main .pacts .tbtn { margin-left: -12px; }
+  /* a row's expansion is that row's continuation: it starts on the row's text column (40px slot +
+     12px gap past the 16px page edge = 68px, the same line the row hairline starts on) and carries no
+     hairline of its own, so the group still reads as one list. */
+  /* a game row discloses ITSELF, so it gets .gdisc and not .disclose — .disclose names a block, and
+     L1 plus every "this is a group heading" selector leans on that. Same chevron, different job. */
+  #device main .grow.gdisc .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
+  #device main .grow.gdisc[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+  #device main .gexp { padding: 0 16px 10px 68px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .gexp .nbr { margin: 0; font-size: 13px; line-height: 1.35; color: var(--color-text); }
+  /* R10: gap 0, not 4 — see the R10 block. Two borderless text actions already hold 12px of their own
+     padding on each side, and round 6 #5's rule is that that padding IS the rhythm. */
+  #device main .gexp .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .grow.gopen { background: var(--color-surface); }
+  #device main .grow.gopen::before, #device main .grow.gopen + .gexp + .grow::before { display: block; }
+  /* the group's own notes sit on the same 68px text column as its rows — R7b put .gnote at 76px, which
+     is the UNPOLISHED hairline; every row on this page is .polish, whose hairline is at 68. */
+  #device main .grp .gnote { margin: 0 16px 10px 68px; }
+  #device main .grp .glist > .gnote { margin-top: 8px; }
+  /* A STATUS MARKER INSIDE A META ITEM. Round 8 put "Sin ubicar" inside a .mi so the separator logic
+     would give it its "·", and measuring the result caught a bug the eye could not: .dot declares
+     7×7px and has no `display`, so as a direct child of the FLEX .gsub it was blockified and drawn —
+     but inside an inline .mi it is an inline non-replaced box, where width and height do not apply.
+     It measured 0px wide. inline-block restores the box; vertical-align centres it on the text. */
+  #device main .gsub .mi .dot { display: inline-block; vertical-align: -1px; margin-right: 5px; }
+  /* ================= 065 R9: the estante as a RAIL — identical block in 062/063 =================
+     Developer: "what if we use carousel(horizontal scrolable) to represent that physical position,
+     maybe been inspired by Apple iBooks?" — the answer to R8's own open complaint: inside an expanded
+     estante the zone word is identical on every row (5 consecutive rows measured reading "Más a la
+     izquierda"), because the list order already carries the position and the words only restate it.
+     So: stop TELLING the position and SHOW it.
+
+     THIS IS THE APP'S OWN CAROUSEL, TRANSPLANTED — not a second one. Every number and every
+     behaviour below comes from `lib/pukllay_club_web/components/carousel_row.ex` +
+     `assets/css/app.css`'s `.pk-rail`/`.pk-rail-wrap`, and from the four sketches that decided them:
+       · 022-C  the arrows are `@media (hover: hover) and (pointer: fine)` only and are REMOVED FROM
+                LAYOUT on touch (`display: none`), never merely hidden — no dead tap target over the
+                swipe area. They are also gated on `[data-overflows]`, which the rail's own script
+                writes: the device condition and the content condition COMBINE, neither replaces the
+                other.
+       · 023-B  free momentum: no `scroll-snap-type`, and `scroll-behavior: auto` on purpose, because
+                the arrow scroller assigns `scrollLeft` every animation frame and the browser's own
+                smooth-scroll mode would start a competing animation per assignment.
+       · 024-A  NO position/pagination indicator. Edge-fade only. See the README's round-9 "024
+                verdict" — this block adds none, and what that costs is measured rather than argued.
+       · 025-B  shimmer is scoped to repopulation; nothing here repopulates, so nothing here shimmers.
+     THE CO-DEPENDENT MEASUREMENT SET (carousel_row.ex's moduledoc: the edge-fade width, the rail gap,
+     the card width and the side gutter "only work when declared together in one CSS location"). All
+     four are declared here, once, as custom properties on the wrap:
+       card 96px · gap 10px · fade 16px · gutter 16px
+     Three are production's ≤480px values verbatim. The FOURTH is the one that changes: the catalogue's
+     `--pk-gutter` is 14px at ≤480px, and this admin page's is 16px (`main`'s padding). Consequence,
+     measured rather than assumed: at the 375px device the 4th tile starts at 16+3×106 = 334 and is cut
+     at 375, so 41px of it shows and 16 of those sit under the fade — a 25px clear sliver of peek.
+     Production's 14px gutter would leave 27px. The set survives the swap with 2px less peek; asserted,
+     because a fade wider than the peek swallows the very cue it exists to create.
+     GHOST SLOTS, i.e. fixture honesty at rail density. A shelf is an ordered array of slots (R8) and
+     only 36 of the 412 games are named in this sketch, so most slots are real boxes whose titles this
+     sketch does not render. A rail shows many at once, so this is the round where that shows. NO COVER
+     MAY IMPLY A GAME THAT DOES NOT EXIST: a run of unnamed slots is not drawn as covers at all. It
+     collapses into ONE hatched band whose width is the run's REAL length × the tile pitch — so the
+     rail's geometry, its scrollWidth and every distance measured on it stay true — carrying a sticky
+     caption that says exactly what it is ("153 cajas sin título en este boceto"). Sticky, so it is
+     still on screen while you scroll through the stretch it describes. */
+  #device main .erail-wrap {
+    --etile: 96px; --egap: 10px; --efade: 16px; --egut: 16px;
+    position: relative; margin: 0 -16px;
+  }
+  #device main .erail {
+    display: flex; gap: var(--egap); overflow-x: auto; padding: 8px var(--egut);
+    /* 023-B, and the reason it is explicit: see the block header. */
+    scroll-behavior: auto; scrollbar-width: none;
+    /* a horizontal overscroll cannot chain out to the page or trigger the back gesture; both pan axes
+       stay available, because a single-axis `pan-x` would stop a vertical swipe that starts on a tile
+       from scrolling the page — production makes the same trade and says so. */
+    overscroll-behavior-x: contain; touch-action: manipulation;
+  }
+  #device main .erail::-webkit-scrollbar { display: none; }
+  #device main .erail-wrap::before, #device main .erail-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: var(--efade); z-index: 4; pointer-events: none;
+  }
+  #device main .erail-wrap::before { left: 0; background: linear-gradient(90deg, var(--color-bg), transparent); }
+  #device main .erail-wrap::after { right: 0; background: linear-gradient(270deg, var(--color-bg), transparent); }
+  /* 022-C. z-index 5 over the fade's 4, or the glyph renders under the gradient it overlays. */
+  #device main .erail-btn {
+    position: absolute; top: 0; bottom: 0; width: 44px; z-index: 5; display: none;
+    align-items: center; justify-content: center; border: 0; background: transparent;
+    color: var(--color-text); cursor: pointer; padding: 0;
+  }
+  #device main .erail-btn[data-dir="-1"] { left: 0; }
+  #device main .erail-btn[data-dir="1"] { right: 0; }
+  #device main .erail-btn svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+  @media (hover: hover) and (pointer: fine) {
+    #device main .erail-wrap[data-overflows="true"] .erail-btn { display: flex; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
+    #device main .erail-wrap[data-overflows="true"]:hover .erail-btn,
+    #device main .erail-wrap[data-overflows="true"] .erail-btn:focus-visible { opacity: 1; }
+  }
+  /* A TILE. The admin's floor is 44px and its list rows use a 40px thumb; a production rail card is
+     poster-sized. 96px wide is the catalogue's own ≤480px card width, and it is what keeps the
+     co-dependent set intact — so the cover is the list's `.thumb` gradient at poster scale, not a new
+     surface. `aspect-ratio: 1/1.05` is `.pk-card-poster`'s. */
+  #device main .etile {
+    flex: 0 0 auto; width: var(--etile); display: flex; flex-direction: column; gap: 6px;
+    border: 0; background: none; padding: 0; text-align: left; color: var(--color-text);
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  #device main .etile .ecover {
+    --h: 270; width: var(--etile); aspect-ratio: 1 / 1.05; border-radius: 6px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    /* R10, and W1 caught it the first round the rail actually shipped: the letter is a STAND-IN for
+       cover art (in production every tile is an <img> and carries no type at all), and at 28px/600 it
+       outweighed the page title "Estantes" at 22px/600 — five of them at once, on a page whose title
+       is supposed to lead. A placeholder does not get to outrank the page. 21px, under the title. */
+    background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); font-weight: 600; font-size: 21px;
+  }
+  :root[data-theme="dark"] #device main .etile .ecover { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  #device main .etile .ecap {
+    font-size: 12px; line-height: 1.3; color: var(--color-text-muted);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  #device main .etile:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: 8px; }
+  /* THE MARKED TILE. 1.4.11 is a 3:1 floor on a component's own state, and the obvious ring fails it:
+     `--color-primary` measures 2.35:1 against the dark page background (#7B2DCE on #2E154E) — the
+     exact failure round 7 caught in a control that looked fine. So the mark is R7b's chip answer,
+     which already had to solve this: FOUR channels, not one — 064's `--stroke` as the boundary (4.3:1
+     light / 3.49:1 dark), a tick glyph, the accent fill behind the caption, and 600 weight. */
+  #device main .etile.on .ecover { outline: 2px solid var(--stroke); outline-offset: 2px; }
+  #device main .etile.on .ecap { font-weight: 600; color: var(--color-accent-text); background: var(--color-accent-bg); border-radius: 4px; padding: 1px 4px; margin: 0 -4px; }
+  #device main .etile .emark { display: none; }
+  #device main .etile.on .emark {
+    display: flex; align-items: center; justify-content: center; position: absolute; top: -6px; right: -6px;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent-bg); color: var(--color-accent-text);
+    box-shadow: 0 0 0 2px var(--color-bg);
+  }
+  #device main .etile .emark svg { width: 13px; height: 13px; stroke-width: 2.4; }
+  /* the honest band over a run of slots this sketch cannot name — see the block header. */
+  #device main .egap {
+    flex: 0 0 auto; position: relative; border-radius: 6px; display: flex; align-items: center;
+    background: repeating-linear-gradient(135deg, var(--color-surface) 0 6px, var(--color-surface-2) 6px 12px);
+    border: 1px dashed var(--stroke);
+  }
+  /* sticky at the GUTTER, not at 0: at 0 the caption would sit under the 16px edge-fade, which is the
+     same arithmetic that governs the peek. */
+  #device main .egap .gcap {
+    position: sticky; left: var(--egut); padding: 4px 8px; font-size: 11px; line-height: 1.25; font-weight: 600;
+    color: var(--color-text-muted); background: var(--color-bg); border-radius: 4px; white-space: nowrap;
+  }
+  /* what a marked tile opens: the game's name and the two jobs an R8 row carried. It is the row's
+     `.gexp` with the rail above it instead of a sentence inside it, so it keeps `.gexp`'s anatomy. */
+  #device main .epanel { padding: 4px 16px 10px; display: flex; flex-direction: column; gap: 6px; }
+  #device main .epanel .ename { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 600; }
+  /* R10: gap 0, not 4 — two borderless text actions are already 12px of padding apart on each side,
+     and round 6 #5's rule is that that padding IS the rhythm. See the R10 block. */
+  #device main .epanel .gxacts { display: flex; flex-wrap: wrap; gap: 0; margin-left: -12px; }
+  #device main .epanel .emove { display: flex; align-items: center; gap: 4px; }
+  /* a rail inside a row's expansion: .gexp indents to the row's own 68px text column, and a rail is
+     full-bleed by definition — its fade sits at the page's own edges, the way the catalogue rail's fade
+     sits at the shell column edges. So it reaches back out: the ONE place a -68px margin appears, and
+     it is the rail recipe asserting itself over the expansion indent rather than a nudge.
+  */
+  #device main .gexp .erail-wrap { margin: 0 -16px 0 -68px; }
+  /* the rail has no rows to hang a note on, so its note sits on the page's own text edge instead of the
+     list's 68px hairline column. */
+  #device main .grp .gnote.grail { margin: 0 16px 8px; }
+  /* ---- 065 R10: THE ZONE BAR — the three zone words, promoted from description to navigation -------
+     R9 shipped nothing here and wrote down what would have to be true for a rail to need a position
+     control: 024's premise is "either end is one fling away", which holds for the catalogue's 8–10
+     cards and is simply false at 162 boxes, where the edge-fade can tell THREE positions apart and 39
+     of 41 sampled offsets are the same one. R10 promotes B against that measurement, so the cost is
+     now ours: 27 arrow presses (or 8–15 flings) to the middle of Estante D.
+     THE FIX USES NO NEW VOCABULARY. R9's census retired the zone word as a DESCRIPTION — inside an
+     expanded estante it was identical on every row of 60–91% of pages. As NAVIGATION the same three
+     words are exactly right, because they name the only three positions the fade could ever
+     distinguish: the two ends and the middle. The fade says which of the three you are in; the bar
+     lets you GO there. One tap to the middle of 162 boxes instead of 27 presses.
+     THE 024 EXCEPTION, SCOPED: the rail itself still carries no indicator and no per-tile ordinal —
+     the bar is a sibling OUTSIDE the rail, it has three states and not 162, and it only exists past
+     ZONE_NAV_MIN boxes. Under that length nothing is added and 024 is untouched, which is every rail
+     the catalogue ships.
+     IT IS THE ADMIN'S OWN "PICK ONE OF N" CONTROL, not a fourth component: R7b ruled that job is the
+     chip row (a segmented track failed 1.4.11 at 1.16:1) and this is that markup, with the chip's own
+     state channels — the accent fill, the accent label, 600 weight and R7b's --stroke boundary — plus
+     aria-current. No tick glyph, because the current zone changes while you fling and a glyph that
+     appears and disappears would shift the labels under your thumb.
+     ONE THING IT DOES NOT INHERIT: 061's filter chip is a 32px box with a ::after that bleeds its hit
+     area to 44px. A zone jump is a target you hit one-handed standing at a real shelf, so it is a real
+     44px box and the ::after is pulled back to the box, so it cannot bleed into the rail above it. */
+  #device main .ezones { display: flex; gap: 8px; overflow: visible; margin: 0; padding: 0 0 8px; }
+  #device main .ezones .chip { flex: 1 1 0; min-width: 0; height: 44px; justify-content: center; }
+  #device main .ezones .chip::after { top: 0; bottom: 0; }
+  /* ================= 065 R10: ONE action system — identical block in 062/063 =================
+     Developer: "Those too big and kill balance … there are 'text actions' like 'Ver en la ludoteca'
+     and 'Quitar del estante'. We need a consistent way to represent actions everywhere with its
+     corresponding hierachy and correct balance to fix the currently broken rythm."
+
+     064 wrote down the PAINT of a role (Principal / Secundaria / Terciaria / Peligro) and nothing
+     about WHICH SHAPE a role takes in which place, so each place invented one. The census of all 113
+     visible action controls across 25 admin surfaces found 25 context×role pairs and, in five of them,
+     the same role rendering two ways. The rule this block lands:
+
+       THE CONTEXT PICKS THE ANATOMY; THE ROLE PICKS THE PAINT.
+
+     There are exactly four anatomies and no fifth:
+       A1  outlined   44px · 16px side padding · 1px stroke · 8px radius · 14px/600 · inset 0 on BOTH
+                      sides (the stroke ends on the content edge) · 8px between two of them
+       A2  text       44px · 12px side padding · no stroke · 14px/600 · pulled −12px so the LABEL, not
+                      the box, lands on the content edge · 0 between two of them (round 6 #5: their own
+                      padding IS the rhythm) · centred and unpulled in the one pagination context
+       A3  icon       44×44 borderless circle · 18px glyph · pulled −12px so the GLYPH lands on the edge
+       A4  sheet row  48px · full-bleed · 16px/400 · 22px leading icon · commit first with `tick`,
+                      Cancelar last with `chevL` (R7b) — a sheet has no buttons at all
+
+     And the rules the audit enforces (064/audit-admin.js, checks A1–A9):
+       1. at most ONE outlined action per block (064's one-Principal rule, widened: three equal
+          outlines and no Principal is what "kills the balance");
+       2. a PAGE-level action is never Principal and never outlined — it sits under content it does not
+          belong to, so it is A2;
+       3. a ROW-level action (a row, its trailing controls, its expansion, a marked tile's panel) is
+          never outlined;
+       4. a block's MODE control is outlined in both states — Secundaria to enter, Principal to leave
+          (round 7's .lhead decision, now .gacts's too);
+       5. a destructive action is never Principal, is A2/A3/A4 only, and confirms in a sheet;
+       6. 44px floor on everything tappable, a row that opens a sheet included;
+       7. A1 never pulls, A2/A3 always pull on the side that touches the block edge.
+
+     WHAT WAS ACTUALLY WRONG, measured (all three were invisible to every existing check):
+       · `.pacts` applied the borderless −12px pull to an OUTLINED Secundaria, so "Nuevo estante" hung
+         its stroke 12px past the page's left content edge. 064's audit measured only the right edge.
+       · the estante's options `.ibtn` sat at inset 0 while every row arrow directly above it sat at
+         −12, so two identical 18px glyphs were 12px out of line down one column.
+       · "the space between two text actions" was 4px in `.gxacts`, 8px in `.eactions` and
+         `.banner-actions`, and 0 inside a save bar with no outline — four answers to round 6 #5's one
+         rule, which had only ever been applied where round 6 happened to look. */
+  /* rule 7, first half. R7 wrote it for .lhead alone; every A1 context is told now. */
+  #device :is(.lhead, .pacts, .gacts, .eactions, .banner-actions, .cta2-wrap, .addrow) > :is(.obtn, .b-pri, .b-sec) { margin-left: 0; margin-right: 0; }
+  /* rule 7, second half: the two borderless controls that had never been pulled.
+     · the estante's options .ibtn sat at inset 0 while every row arrow above it sat at -12.
+     · `.banner.err .banner-actions { margin: 0 }` cancelled the strip's pull, so 063's lone Reintentar
+       had its label 12px inside the banner's content edge while 061's Cancelar, in the same class, sat
+       on it. The container's pull is dropped for good and the pull is put on the BUTTON, where it
+       belongs: an outlined last child then ends on the edge and a borderless one puts its label there. */
+  #device main .gacts > .ibtn:last-child { margin-right: -12px; }
+  #device .banner-actions { margin-right: 0; }
+  #device .banner-actions > .tbtn:not(.b-pri):not(.b-sec):last-child { margin-right: -12px; }
+  /* rule 6, the 44px floor on anything you tap. Two panels declared 40px for rows that OPEN A SHEET
+     — R7's settings panel in a sección ("Orden · A mano") and the editor's own row boxes ("Estante ·
+     Sin ubicar") — and nothing audited either, because 064's audit only ever looked at buttons. A
+     static row is left alone: it is text, not a target. */
+  #device main :is(.sgroup, .sbox.rows) :is(button, label, a).srow { min-height: 44px; }
+</style>
+</head>
+<body>
+
+<div id="state-nav">
+  <div class="var-nav">
+    <span class="lbl">Sketch 063 · Editor de juego · Ronda 13: Datos de BGG con vista previa</span>
+  </div>
+  <div class="var-nav">
+    <span class="lbl">Estado</span>
+    <button class="stab active" data-status="draft">Borrador</button>
+    <button class="stab" data-status="published">Publicado</button>
+    <button class="stab" data-status="retired">Retirado</button>
+  </div>
+</div>
+
+<div class="stage"><div class="device" id="device"></div></div>
+
+<div class="notes" id="notes"></div>
+<div id="sketch-tools">
+  <button id="tools-toggle" style="align-self:flex-start">⚙ tools</button>
+  <div id="tools-body">
+    <div>Tema: <button data-theme-set="light">☀</button> <button data-theme-set="dark">☾</button> <button data-theme-set="system">Sistema</button></div>
+    <div>Vista: <button data-vp="phone" class="on">Teléfono</button> <button data-vp="desk">Escritorio</button></div>
+    <div>BGG: <button data-bgg="ok" class="on">Datos OK</button> <button data-bgg="failed">Falló</button></div>
+    <div>Destacados: <button data-feat="0" class="on">Con lugar</button> <button data-feat="1">Lleno (20)</button></div>
+  </div>
+</div>
+
+<script>
+const P = {
+  bars: 'M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5',
+  x: 'M6 18 18 6M6 6l12 12',
+  chevR: 'm8.25 4.5 7.5 7.5-7.5 7.5',
+  chevL: 'M15.75 19.5 8.25 12l7.5-7.5',
+  logout: 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9',
+  home: 'm2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25',
+  panel: 'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
+  juegos: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9',
+  secciones: 'M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418', // globe (Web)
+  estantes: 'M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25',
+  niveles: 'M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75',
+  staff: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z',
+  about: 'M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z',
+  ext: 'M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25',
+  more: 'M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z',
+  sun: 'M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z',
+  moon: 'M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z',
+  computer: 'M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25',
+  check: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  search: 'm21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z',
+  warn: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z',
+  tick: 'm4.5 12.75 6 6 9-13.5',
+  star: 'M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z',
+  clock: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  listq: 'M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z',
+  chevUp: 'm4.5 15.75 7.5-7.5 7.5 7.5',
+  chevDown: 'm19.5 8.25-7.5 7.5-7.5-7.5',
+  plusC: 'M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  minusC: 'M15 12H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  lock: 'M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z',
+  userMinus: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM4 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 10.374 21c-2.331 0-4.512-.645-6.374-1.766Z',
+  blank: '',
+};
+const ic = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+/* ---------------- fake data ---------------- */
+const USER = { email: 'lucia.mamani@gmail.com', initials: 'LM' };
+const SCREENS = {
+  panel:      { title: 'Admin', icon: 'panel' },
+  juegos:     { title: 'Juegos', icon: 'juegos' },
+  secciones:  { title: 'Web', icon: 'secciones' },  // curates which rows show on the public web
+  estantes:   { title: 'Estantes', icon: 'estantes' },
+  niveles:    { title: 'Revisar niveles', icon: 'niveles' },
+  staff:      { title: 'Staff', icon: 'staff', ownerOnly: true },
+  seccion:    { title: 'Sección', parent: 'secciones' },   // drill-down: /admin/secciones/:id
+  /* 065 R8: `asignar` is gone — an expanded estante on the Estantes page does its job. */
+};
+const SECTION_ORDER = ['juegos', 'secciones', 'estantes', 'niveles', 'staff'];
+const PHONE_TABS = ['panel', 'juegos', 'secciones', 'estantes'];
+const S = { mode: 'admin', screen: 'secciones', vp: 'phone', role: 'owner', toast: null, pend: true };
+
+
+const home = () => 'panel';
+const topKeys = () => ['panel', ...sections()];
+const sections = () => SECTION_ORDER.filter(k => !(SCREENS[k].ownerOnly && S.role !== 'owner'));
+const activeTop = () => SCREENS[S.screen].parent || S.screen;
+const signedIn = () => S.mode !== 'out';
+
+/* ---------------- ONE row anatomy ----------------
+   [28px slot: icon or avatar] [label (+ secondary line)] [count] [chevron]; only a tone class varies. */
+/* 065 R7b: `type`. A sheet's actions are rows in its .dlinks, never a button footer — so the rename
+   sheet's committing row has to BE the form's submit, or Enter would stop committing from the keyboard.
+   Everything else is type="button", which is also what stops a row that merely closes a sheet from
+   submitting a form it happens to sit inside. A row with neither act nor nav carries only its extras. */
+function row({ act, nav, icon, avatar, avatarText, label, sub, count, tone = '', chev = true, isStatic = false, on = false, extra = '', wrap = false, type = 'button' }) {
+  const tag = isStatic ? 'div' : 'button';
+  const attrs = isStatic ? '' : `type="${type}" ` + (act ? `data-act="${act}" ${extra}` : nav ? `data-nav="${nav}"` : extra);
+  const slot = avatar || avatarText ? `<span class="avatar">${avatarText || USER.initials}</span>` : ic(icon, 'ico');
+  return `<${tag} class="dlink ${tone} ${isStatic ? 'static' : ''} ${on ? 'on' : ''}" ${attrs} ${on ? 'aria-current="page"' : ''}>
+    <span class="slot">${slot}</span><span class="lbl ${wrap ? 'wrap' : ''}">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</span>
+    ${count ? `<span class="count" aria-label="${count} pendientes">${count}</span>` : ''}${chev && !isStatic ? ic('chevR', 'chev') : ''}</${tag}>`;
+}
+const group = (label, rows) => `<div class="group-label">${label}</div><div class="dlinks">${rows}</div>`;
+
+/* Drawer never repeats the nav menu (tab bar). Admin: only sections the tab bar lacks (phone: Revisar niveles,
+   Staff; desktop: none, the tab row holds everything). Public page signed in: no tab bar, so one way in: "Ir a Admin". */
+const drawerAdminKeys = () => {
+  if (S.mode !== 'admin') return ['panel'];
+  const inNav = S.vp === 'desk' ? topKeys() : PHONE_TABS;
+  return topKeys().filter(k => !inNav.includes(k));
+};
+const panelRows = () => {
+  const top = S.mode === 'admin' ? activeTop() : null;
+  return drawerAdminKeys().map(k => row({ nav: k, icon: SCREENS[k].icon, label: S.mode === 'admin' ? SCREENS[k].title : 'Ir a Admin', count: cnt(k), on: top === k })).join('');
+};
+const siteRows = () => row({ nav: 'pub:inicio', icon: 'home', label: 'Inicio', on: S.mode !== 'admin' }) + row({ nav: 'pub:about', icon: 'about', label: 'Quiénes Somos' });
+const accountRows = () =>
+  row({ avatar: true, label: USER.email, sub: `Sesión iniciada · ${S.role === 'owner' ? 'Dueña' : 'Staff'}`, isStatic: true }) +
+  row({ nav: 'pub:inicio', icon: 'ext', label: 'Ver el sitio público' }) +
+  row({ act: 'ask-logout', icon: 'logout', label: 'Cerrar sesión', tone: 'danger' });
+const confirmStep = (cancelAct) => '<div class="group-label">Cerrar sesión</div>' +
+  `<p class="sheet-text">Vas a salir de <b>${USER.email}</b>. Para volver a entrar, te mandamos un link por mail.</p>
+   <div class="dlinks">
+     ${row({ act: 'logout', icon: 'logout', label: 'Sí, cerrar sesión', tone: 'danger', chev: false })}
+     ${row({ act: cancelAct, icon: 'chevL', label: 'Cancelar', chev: false })}
+   </div>`;
+const themeRow = () => `<div class="theme-row" role="group" aria-label="Tema">
+  <button class="icon-btn" data-theme-set="system" aria-label="Sistema">${ic('computer')}</button>
+  <button class="icon-btn" data-theme-set="light" aria-label="Claro">${ic('sun')}</button>
+  <button class="icon-btn" data-theme-set="dark" aria-label="Oscuro">${ic('moon')}</button></div>`;
+
+/* ---------------- shell pieces ---------------- */
+const header = () => `<header class="hdr"><div class="hdr-in">
+  <button class="icon-btn" data-act="open-drawer" aria-label="Abrir menú" aria-haspopup="dialog">${ic('bars')}</button>
+  <a class="brand" data-nav="pub:inicio"><img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt=""><span class="word">Pukllay Club</span></a>
+  </div></header>`;
+
+// Same drawer in every signed-in state (ADMIN → SITIO); signed out has SITIO only. Account lives only in the Perfil tab.
+const drawer = () => `<div class="backdrop" data-act="close"></div>
+  <aside class="drawer" aria-label="Menú">
+    <div class="drawer-top"><span></span><button class="icon-btn" data-act="close" aria-label="Cerrar menú">${ic('x')}</button></div>
+    <div class="drawer-body">
+      ${signedIn() && drawerAdminKeys().length ? group('Admin', panelRows()) : ''}
+      ${group('Sitio', siteRows())}
+    </div>
+    <div class="drawer-bottom"><div class="divider"></div>${themeRow()}</div>
+  </aside>`;
+
+function tabBar() {
+  const top = activeTop();
+  const keys = S.vp === 'desk' ? topKeys() : PHONE_TABS;
+  return `<nav class="tabs" aria-label="Secciones de Admin">
+    ${keys.map(k => `<button data-nav="${k}" data-tab="${k}" class="${top === k ? 'on' : ''}" ${top === k ? 'aria-current="page"' : ''}>
+      <span class="tab-ico">${ic(SCREENS[k].icon)}${cnt(k) ? `<span class="badge">${cnt(k)}</span>` : ''}</span>
+      <span class="tab-lbl">${SCREENS[k].title}</span></button>`).join('')}
+    <button data-act="open-account" data-tab="account" aria-haspopup="dialog" aria-label="Tu perfil (sesión iniciada)">
+      <span class="tab-ico"><span class="avatar ring">${USER.initials}</span></span><span class="tab-lbl">Perfil</span></button>
+  </nav>`;
+}
+
+const accountSheet = () => `<div class="sheet" id="sheet-account" role="dialog" aria-modal="true" aria-label="Tu perfil">
+  <div class="grab"></div>
+  <div class="steps">
+    <div class="step step-account">${group('Tu perfil', accountRows())}</div>
+    <div class="step step-confirm" aria-hidden="true" inert>${confirmStep('cancel-logout')}</div>
+  </div></div>`;
+
+/* ================= 063: game editor ================= */
+Object.assign(P, {
+  archive: 'm20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125 2.25 2.25m0 0 2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z',
+  undo: 'M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3',
+  eye: 'M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+});
+SCREENS.editar = { title: 'Editar juego', parent: 'juegos' };   // drill-down: /admin/juegos/:id/editar
+S.screen = 'editar';
+function cnt(k) { return { juegos: E.status === 'draft' ? '3' : '2', estantes: '84', niveles: '7' }[k] || ''; }
+
+const $ = sel => device.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = n => n.toLocaleString('es-AR');
+const joinY = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1];
+const meta = (...parts) => parts.filter(Boolean).map((p, i) => `<span class="mi">${i ? '· ' : ''}${p}</span>`).join('');
+const slotIco = (name, cls = '') => `<span class="slot40 ${cls}" aria-hidden="true">${ic(name)}</span>`;
+const txt = (name, sub, muted) => `<span class="gtxt"><span class="gname ${muted ? 'muted' : ''}">${name}</span>${sub ? `<span class="gsub">${sub}</span>` : ''}</span>`;
+const w2 = w => w.toFixed(2).replace('.', ',');
+
+/* Real data shapes: Game.admin_changeset/2 casts ONLY name, units, weight_band, is_expansion, description, shelf_id;
+   section_ids travel beside it (manual sections only, D-07). Everything else is BGG-derived and read-only. */
+const BANDS = {
+  d: { label: 'Descubre el hobby', sub: 'Reglas cortas que se explican en 5-10 minutos' },
+  i: { label: 'Ingenio estratega', sub: 'Reglas de 15-20 minutos, pensando un par de jugadas' },
+  e: { label: 'Nivel experto', sub: 'Reglas largas y decisiones profundas' },
+};
+const implied = w => w < 1.9 ? 'd' : w <= 3.1 ? 'i' : 'e';   // Vocabulary.implied_weight_band/1
+const SHELVES = [{ id: 1, name: 'Estante A — familiares' }, { id: 2, name: 'Estante B — estrategia' }, { id: 3, name: 'Estante C — fiesta' }, { id: 4, name: 'Estante D — expertos' }];
+const MANUAL = [
+  { id: 1, name: 'Destacados del club', featured: true },
+  { id: 2, name: 'Crea conexiones', base: 9 },
+  { id: 3, name: 'Equipo ganador', base: 5 },
+  { id: 4, name: 'Duelos memorables', base: 3, hidden: true },
+];
+const BGG = { id: 224517, name: 'Brass: Birmingham', year: 2018, hue: 30, w: 3.86, slug: 'brass-birmingham', facts: [
+  ['Jugadores', '2–4'], ['Duración', '60–120 min'], ['Edad mínima', '14'],
+  ['Mecánicas', 'Construcción de redes, Gestión de mano, Préstamos, Orden de turno variable'], ['Temáticas', 'Economía, Industria, Historia'],
+  ['Diseñadores', 'Gavan Brown, Matt Tolman, Martin Wallace'], ['Ilustradores', 'Lina Cossette, David Forest, Damien Mammoliti'],
+  ['Editorial', 'Roxley, Maldito Games'], ['Valoración BGG', '8,6'], ['Ranking BGG', '1'], ['Peso BGG', '3,86'],
+] };
+const DESC = 'Construí canales, ferrocarriles y fábricas en la Inglaterra de la Revolución Industrial. Dos eras y muchas decisiones: cada carta que jugás abre o cierra caminos.';
+const SEEDS = {
+  draft:     { name: 'Brass: Birmingham', units: 1, band: null, exp: false, shelf: null, desc: '', secs: [] },
+  published: { name: 'Brass: Birmingham', units: 2, band: 'i', exp: false, shelf: 2, desc: DESC, secs: [1] },
+  retired:   { name: 'Brass: Birmingham', units: 2, band: 'i', exp: false, shelf: 2, desc: DESC, secs: [1, 4] },
+};
+const ST = {
+  draft:     { label: 'Borrador',  sub: 'Nadie lo ve en la web todavía', hint: 'Publicar' },
+  published: { label: 'Publicado', sub: 'Se ve en la ludoteca',          hint: 'Retirar' },
+  retired:   { label: 'Retirado',  sub: 'No se ve en la web',            hint: 'Restaurar' },
+};
+const clone = o => ({ ...o, secs: [...o.secs] });
+const E = { layout: 'r6', bggOpen: false, descEdit: false, pen: 'chip', status: 'draft', saved: null, ed: null, errs: {}, saving: false, failed: false, retrying: false,
+  featFull: false, secErr: null, undo: null, pendingNav: null };
+function seed(st) { E.descEdit = false; E.bggOpen = false; E.status = st; E.saved = clone(SEEDS[st]); E.ed = clone(SEEDS[st]); E.errs = {}; E.secErr = null; E.saving = false; }
+seed('draft');
+
+function dirty() {
+  const a = E.saved, b = E.ed;
+  return a.name !== b.name || String(a.units) !== String(b.units) || a.band !== b.band || a.exp !== b.exp ||
+    a.shelf !== b.shelf || a.desc !== b.desc || [...a.secs].sort().join() !== [...b.secs].sort().join();
+}
+function validate() {
+  E.errs = {};
+  if (!E.ed.name.trim()) E.errs.name = 'Poné un nombre.';
+  if (!/^\d+$/.test(String(E.ed.units).trim()) || +E.ed.units < 1) E.errs.units = 'Tiene que haber 1 copia o más.';
+  return !Object.keys(E.errs).length;
+}
+const featBase = () => E.featFull ? (E.saved.secs.includes(1) ? 19 : 20) : 17;
+const featCount = () => featBase() + (E.ed.secs.includes(1) ? 1 : 0);
+const stDot = (st, big) => `<span class="dot ${big ? 'big ' : ''}${st}"></span>`;
+const stLabel = st => `<span class="${st === 'draft' ? 'st-draft' : ''}">${ST[st].label}</span>`;
+
+/* ================= Round 2: the editor mirrors the public detail page (CatalogLive.Show) =================
+   Same order and components as the page members see: facts pills → poster panel → title (display type) →
+   section tags → description → fact grid (Año · Diseñadores · Ilustradores · Mecánicas · Temáticas) → Comunidad BGG.
+   Editable pieces keep the public look plus an edit cue (dashed line / ▾ / text button); BGG pieces are shown exactly
+   as published, with no cue. Club-only fields (Estante, Unidades, Expansión) sit in the buy-box slot where Reservar lives. */
+Object.assign(P, {
+  eyeSlash: 'M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88',
+  minus: 'M5 12h14',
+  pencil: 'm16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125',
+  users: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Z',
+  photo: 'm2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Z',
+  plus: 'M12 4.5v15m7.5-7.5h-15',
+});
+const LEVEL = { d: 1, i: 2, e: 3 };
+const CREATORS = { Diseñadores: ['Gavan Brown', 'Matt Tolman', 'Martin Wallace'], Ilustradores: ['Lina Cossette', 'David Forest', 'Damien Mammoliti'],
+  Mecánicas: ['Construcción de redes', 'Gestión de mano', 'Préstamos', 'Orden de turno variable'], Temáticas: ['Economía', 'Industria', 'Historia'] };
+
+function editHead() {
+  const view = E.status === 'published' ? `<button type="button" class="tbtn" data-act="e-view">Ver en la ludoteca${ic('ext', 'tico')}</button>` : '';
+  return `<div class="eback-row"><button class="back" data-act="e-back">${ic('chevL')}Juegos</button>${view}</div>
+    ${E.failed ? `<div class="banner err" role="alert"><p class="banner-text">${ic('warn')}Error al traer datos de BGG.</p>
+      <div class="banner-actions"><button type="button" class="tbtn" data-act="e-retry" ${E.retrying ? 'aria-busy="true"' : ''}>${E.retrying ? '<span class="spin sm" style="display:inline-block;vertical-align:-1px;margin-right:6px"></span>Reintentando' : 'Reintentar'}</button></div></div>` : ''}`;
+}
+
+/* ================= Round 4: title first · BGG suggestion only in the Nivel sheet · one pencil rule =================
+   ✎ marks every value shown the way members see it, that turns editable on tap: título, Nivel, filas, descripción, estante.
+   Real controls (Unidades number, Expansión switch) carry no pencil: the control itself is the affordance. */
+/* heroicons 16 solid "pencil": a filled glyph keeps its weight at 11–16px, where the 24px outline read thin */
+const PEN = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L6.226 12.25a2.751 2.751 0 0 1-.892.596l-2.047.848a.75.75 0 0 1-.98-.98l.848-2.047a2.75 2.75 0 0 1 .596-.892l7.262-7.261Z"/></svg>';
+const pen = (ctx = '') => `<span class="pen ${ctx}" aria-hidden="true">${PEN}</span>`;
+
+/* ---- image block: facts pills (Nivel editable) + cover ---- */
+function posterPanel() {
+  const e = E.ed;
+  const dots = k => `<span class="pk-difficulty" aria-hidden="true">${[1, 2, 3].map(i => `<i class="${i <= LEVEL[k] ? 'is-filled' : ''}"></i>`).join('')}</span>`;
+  const band = `<button type="button" class="pk-pill pk-pill-edit ${e.band ? '' : 'is-empty'}" data-act="e-band-sheet" aria-haspopup="dialog" aria-label="Nivel: ${e.band ? BANDS[e.band].label : 'sin nivel'}. Editar">
+    ${e.band ? dots(e.band) + BANDS[e.band].label : 'Sin nivel'}${pen('pen-pill')}</button>`;
+  const pills = E.failed ? band : `<span class="pk-pill pk-pill-neutral">${ic('users', 'pico')}2–4</span><span class="pk-pill pk-pill-neutral">${ic('clock', 'pico')}60–120 min</span>${band}`;
+  const cover = E.failed
+    ? `<div class="poster is-empty">${ic('photo')}<span>Sin imagen de BGG</span></div>`
+    : `<div class="poster" style="--h:${BGG.hue}"><span>Brass</span><small>Birmingham</small></div>`;
+  return `<div class="ppanel"><div class="pk-facts-row">${pills}</div>${cover}</div>`;
+}
+
+/* ---- title block: name (sizes to its text, ✎ follows it) + section tags ---- */
+function titleField() {
+  return `<div class="tline"><label class="tfield" data-value="${esc(E.ed.name || 'Nombre del juego')}"><span class="sr">Nombre</span>
+      <input id="ed-name" class="title-in ${E.errs.name ? 'invalid' : ''}" value="${esc(E.ed.name)}" size="1" autocomplete="off" placeholder="Nombre del juego" ${E.errs.name ? 'aria-invalid="true"' : ''} aria-describedby="ed-name-err"></label>
+      <label for="ed-name" class="pen-hit">${pen('pen-title')}</label></div>
+    <p class="ferr" id="ed-name-err" role="alert">${E.errs.name || ''}</p>${E.ed.name.trim() !== BGG.name ? `<p class="fhelp">En BGG: “${BGG.name}”.</p>` : ''}`;
+}
+/* ================= R9: where the game shows on the home page =================
+   The home rows in their public order. Manual rows come from section_ids; the level row follows weight_band;
+   Recientemente añadidos is automatic while the game is among the 20 newest. Hidden manual rows never show on the home. */
+Object.assign(P, { sparkle: 'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z' });
+const HOME = [
+  { key: 'm1', manual: 1, name: 'Destacados del club' },
+  { key: 'bd', band: 'd', name: 'Descubre el hobby' },
+  { key: 'bi', band: 'i', name: 'Ingenio estratega' },
+  { key: 'be', band: 'e', name: 'Nivel experto' },
+  { key: 'm2', manual: 2, name: 'Crea conexiones' },
+  { key: 'm3', manual: 3, name: 'Equipo ganador' },
+  { key: 'rc', recent: true, name: 'Recientemente añadidos' },
+  { key: 'm4', manual: 4, name: 'Duelos memorables', hidden: true },
+];
+const inRow = r => r.manual ? E.ed.secs.includes(r.manual) : r.band ? E.ed.band === r.band : true;
+const homeRows = () => HOME.filter(inRow);
+const whyRow = r => r.manual === 1 ? `Elegida a mano · ${featCount()} de 20 juegos` : r.manual ? (r.hidden ? 'Elegida a mano · fila oculta en el inicio' : 'Elegida a mano')
+  : r.band ? 'Automática · cambia con el Nivel' : 'Automática · de los 20 más nuevos';
+
+const filasNote = () => E.status === 'draft' ? 'Es un borrador: aparece en estas filas cuando lo publiques.'
+  : E.status === 'retired' ? 'Está retirado: hoy no se ve en ninguna fila. Al restaurarlo vuelve a estas.' : '';
+
+/* En el inicio: a section with one row per home row the game is in (why it's there), + Sumar a otra fila */
+function filasList() {
+  const note = filasNote();
+  const r = row => {
+    const body = `<span class="fslot ${row.manual ? 'man' : ''}" aria-hidden="true">${ic(row.manual === 1 ? 'star' : row.manual ? 'listq' : 'sparkle')}</span>${txt(esc(row.name), whyRow(row), row.hidden)}`;
+    return row.manual ? `<button type="button" class="srow frow9" data-act="e-secs-sheet" aria-haspopup="dialog" aria-label="${esc(row.name)}. Editar filas">${body}${pen('pen-row')}</button>`
+      : `<div class="srow static frow9">${body}</div>`;
+  };
+  /* R12 C2: a soft full-width button closes the box */
+  return `<div class="sbox rows filas-box fst-${E.status}">${note ? `<p class="fnote">${note}</p>` : ''}${homeRows().map(r).join('')}
+    <div class="cta2-wrap"><button type="button" class="cta2 b-sec" data-act="e-secs-sheet" aria-haspopup="dialog">${ic('plus')}Agregar a una fila</button></div></div>`;
+}
+
+const filasBox = () => sec('En el inicio', filasList(), 'filas6');
+
+/* ---- Copias: 1 almost always, rarely more than 2. No free-typed number field. ----
+   The label was "Unidades" through rounds 9-13 and verify.js actively banned the word "copia".
+   The developer reversed it (2026-09-16): "copias" is what a club says about having two of a game;
+   "unidades" reads like retail stock. The schema field stays `units` — this is copy, not code. */
+const stepper = (n, min, idp, cls = '') => `<span class="stepper ${cls}" role="group" aria-label="Copias">
+  <button type="button" class="stp" id="${idp}dec" data-act="e-units-dec" data-min="${min}" aria-label="Una copia menos" ${n <= min ? 'disabled' : ''}>${ic('minus')}</button>
+  <output class="stp-n" aria-live="polite">${n}</output>
+  <button type="button" class="stp" id="${idp}inc" data-act="e-units-inc" aria-label="Una copia más">${ic('plus')}</button></span>`;
+function unitsRow() {
+  const n = +E.ed.units, lab = '<span class="gtxt"><span class="gname" id="u-lbl">Copias</span></span>';
+    const b = k => `<button type="button" role="radio" id="u-set${k}" aria-checked="${n === k}" class="${n === k ? 'on' : ''}" data-act="e-units-set" data-n="${k}">${k}</button>`;
+    const more = n >= 3 ? `<span class="ustep on">${stepper(n, 2, 'u-')}</span>`
+      : `<button type="button" role="radio" id="u-set3" aria-checked="false" data-act="e-units-set" data-n="3" aria-label="Más de 2">Más</button>`;
+    return `<div class="srow static urow">${lab}<span class="useg" role="radiogroup" aria-labelledby="u-lbl">${b(1)}${b(2)}${more}</span></div>`;
+}
+function setUnits(n, from) {
+  E.ed.units = Math.max(1, n); delete E.errs.units;
+  patch();
+  const id = from && from.id, again = id && document.getElementById(id);
+  const target = again && !again.disabled ? again : document.getElementById((id || '').replace(/(dec|set3)$/, 'inc')) || document.getElementById('u-inc') || document.getElementById('u-set' + E.ed.units);
+  target?.focus({ preventScroll: true });
+}
+/* description reads like the public paragraph; tap turns it into the text box, blur turns it back */
+/* ---- B: sticky bottom bar (the admin twin of the public mobile Reservar bar) ---- */
+function barHtml() {
+  /* 064 role matrix: Guardar only exists with changes; the draft's Principal is Publicar (it saves first);
+     Retirar is Peligro (never Principal, confirms in a sheet) and sits left of Guardar; Restaurar is Secundaria.
+     Status on top, actions below, Principal last. */
+  const st = E.status, d = dirty();
+  const save = (role) => `<button type="button" class="${role === 'pri' ? 'obtn' : 'tbtn b-sec'}" data-act="e-save" ${E.saving ? 'aria-busy="true"' : ''}>${E.saving ? '<span class="spin sm"></span>Guardando' : 'Guardar'}</button>`;
+  const actions = st === 'draft'
+    ? `${d ? save('sec') : ''}<button type="button" class="tbtn b-pri" data-act="e-publish">Publicar</button>`
+    : st === 'published'
+      ? `<button type="button" class="tbtn danger ${d ? 'push' : ''}" data-act="e-retire-ask" aria-haspopup="dialog">${d ? 'Retirar' : 'Retirar de la web'}</button>${d ? save('pri') : ''}`
+      : `<button type="button" class="tbtn b-sec" data-act="e-restore">Restaurar</button>${d ? save('pri') : ''}`;
+  return `<div class="ebar inline" id="ebar" role="region" aria-label="Estado y guardado">
+    <div class="bst"><span class="bl1">${stDot(st)}${stLabel(st)}</span><span class="bl2 ${d && !E.saving ? 'dirty' : ''}">${E.saving ? 'Guardando…' : d ? 'Cambios sin guardar' : st === 'draft' ? 'Nadie lo ve en la web todavía' : 'Todo guardado'}</span></div>
+    <div class="eactions">${actions}</div></div>`;
+}
+
+/* ================= R6: one section anatomy — label above + soft box, same padding everywhere =================
+   Order: título + filas → imagen → En el club → Descripción → Estado (inline, not sticky) → Datos de BGG (plegado, al final). */
+const secH = (labelHtml, name, body, cls = '') => `<section class="sec ${cls}" aria-label="${name}"><h2 class="sec-label">${labelHtml}</h2>${body}</section>`;
+const sec = (label, body, cls = '') => `<section class="sec ${cls}" aria-label="${label}"><h2 class="sec-label">${label}</h2>${body}</section>`;
+function descBox() {
+  if (E.descEdit) return sec('Descripción', `<label class="sr" for="ed-desc">Descripción</label><textarea id="ed-desc" class="tin full area desc-in sbox" placeholder="Contá de qué se trata en pocas líneas. La leen los socios en la ficha.">${esc(E.ed.desc)}</textarea>`, 'dfield6');
+  return sec('Descripción', `<button type="button" class="desc-view sbox" data-act="e-desc-edit" aria-label="Descripción. Editar">
+    ${E.ed.desc ? `<span class="desc-p">${esc(E.ed.desc)}</span>` : '<span class="desc-p muted">Agregá de qué se trata el juego</span>'}${pen('pen-row')}</button>`, 'dfield6');
+}
+function clubBox() {
+  const e = E.ed, shelf = SHELVES.find(x => x.id === e.shelf);
+  const shelfVal = shelf ? esc(shelf.name) : '<span class="dot draft" style="display:inline-block;margin-right:5px"></span><span class="st-draft">Sin ubicar</span>';
+  return sec('En el club', `<div class="sbox rows">
+      <button type="button" class="srow" data-act="e-shelf-sheet" aria-haspopup="dialog"><span class="gtxt"><span class="gname">Estante</span></span><span class="val">${shelfVal}</span>${pen('pen-row')}</button>
+      ${unitsRow()}
+      <label class="srow" for="ed-exp"><span class="gtxt"><span class="gname">Es una expansión</span></span><input type="checkbox" role="switch" id="ed-exp" class="switch sm" ${e.exp ? 'checked' : ''}></label>
+    </div><p class="ferr" id="ed-units-err" role="alert">${E.errs.units || ''}</p>`, 'club6');
+}
+const imageBox = () => sec('Portada', posterPanel(), 'img6');
+const estadoBox = () => sec('Estado', barHtml(), 'est6');
+function bggBox() {
+  /* R13: "Solo lectura" on the label (R12 B3). The box shows the data the way the public page does (CatalogLive.Show:
+     Año row → fact columns of pills → Comunidad BGG), closed to a preview (Año + the first row of the fact grid: Diseñadores, + Ilustradores on desktop) with the public
+     description's "Ver más / Ver menos" toggle at the bottom. */
+  const label = `Datos de BGG<span class="sec-note">${ic('lock')}Solo lectura</span>`;
+  if (E.failed) return secH(label, 'Datos de BGG', '<div class="sbox bgg6"><p class="lnote bgg-empty">Todavía no hay datos de BGG para este juego. Tocá Reintentar arriba.</p></div>', 'bgg6s');
+  /* closed = the first row of the public fact grid: 1 column on phone, 2 on desktop */
+  const open = E.bggOpen, keys = open ? Object.keys(CREATORS) : Object.keys(CREATORS).slice(0, S.vp === 'desk' ? 2 : 1);
+  const col = k => `<div class="fcol"><dt>${k}</dt><dd>${CREATORS[k].map(n => `<span class="pk-pill pk-pill-outline">${esc(n)}</span>`).join('')}</dd></div>`;
+  const rest = open ? `
+    <div class="comm"><div class="dt-label">Comunidad BGG</div><div class="comm-row"><span><b>8,6</b>Valoración</span><span><b>${w2(BGG.w)}</b>Peso</span><span><b>#1</b>Ranking</span></div></div>
+    <p class="bgg-foot">Vienen de BoardGameGeek y se actualizan solos.</p>
+    <button type="button" class="tbtn bgg-link" data-act="e-bgg">Ver en BoardGameGeek${ic('ext', 'tico')}</button>` : '';
+  return secH(label, 'Datos de BGG', `<div class="sbox bgg6 ${open ? 'open' : ''}">
+    <div class="bgg-body" id="bgg-body"><dl class="spec"><div class="srowd"><dt>Año</dt><dd>${BGG.year}</dd></div><div class="fcols">${keys.map(col).join('')}</div></dl>${rest}</div>
+    <div class="bgg-more-wrap"><button type="button" class="tbtn bgg-more" data-act="e-bgg-toggle" aria-expanded="${open}" aria-controls="bgg-body">${open ? 'Ver menos' : 'Ver más'}${ic('chevDown', 'chev')}</button></div></div>`, 'bgg6s');
+}
+
+/* Two visibility groups, public first:
+   EN LA WEB (members see it): título + filas, Portada, Descripción, Datos de BGG (read-only, collapsed, last of the group)
+   SOLO PARA EL CLUB (never public): En el club, Estado (lifecycle + Guardar — always the last thing on the page) */
+/* ================= Final (R8 V2): zones by background =================
+   One continuous page. Everything public sits on the normal ground (título + filas, Portada, Descripción, Datos de BGG);
+   the internal part (En el club, Estado with lifecycle + Guardar) is a full-bleed muted band that runs to the end of the page,
+   captioned "Solo para el club · no se muestra en la web". No tabs, nothing hidden, Guardar is the last control. */
+const PUB_F = ['name', 'band', 'desc'], INT_F = ['shelf', 'units', 'exp'];
+const dirtyOf = fields => fields.some(k => String(E.saved[k]) !== String(E.ed[k])) || (fields === PUB_F && [...E.saved.secs].sort().join() !== [...E.ed.secs].sort().join());
+const pubBody = desk => desk
+  ? `<div class="mast"><div class="pcol">${imageBox()}</div><div class="tcol">${descBox()}${filasBox()}${bggBox()}</div></div>`
+  : `${imageBox()}${descBox()}${filasBox()}${bggBox()}`;
+
+/* R10 (D1): the internal part is marked off by a centered labeled divider */
+const zoneCap = () => `<div class="zdiv" role="separator" aria-hidden="true"><span class="zl"></span><span class="zd-t">${ic('eyeSlash')}Solo para el club</span><span class="zl"></span></div><p class="zd-s">No se muestra en la web</p>`;
+function editBody() {
+  const desk = S.vp === 'desk';
+  const head = `<div class="thead">${titleField()}</div>`;
+  const inner = desk ? `<div class="mast int"><div class="pcol">${clubBox()}</div><div class="tcol">${estadoBox()}</div></div>` : `${clubBox()}${estadoBox()}`;
+  return `${editHead()}${head}${pubBody(desk)}<section class="zone-int" aria-label="Solo para el club">${zoneCap()}${inner}</section>`;
+}
+
+/* Filas del inicio: the manual sections behind the tags under the title */
+function secsSheet() {
+  const e = E.ed, st = E.status;
+  const sw = s => {
+    const on = e.secs.includes(s.id);
+    const n = s.featured ? `${featCount()} de 20 juegos` : `${nf(s.base + (on ? 1 : 0))} juegos`;
+    return `<label class="srow" for="sec-${s.id}"><span class="gtxt"><span class="gname ${s.hidden ? 'muted' : ''}">${esc(s.name)}</span>
+      <span class="gsub">${meta(s.hidden && 'Oculta en el inicio', n)}</span></span>
+      <input type="checkbox" role="switch" id="sec-${s.id}" data-sec="${s.id}" class="switch" ${on ? 'checked' : ''}></label>`;
+  };
+  const auto = [e.band && `<b>${BANDS[e.band].label}</b> (por su nivel)`, '<b>Recientemente añadidos</b> (mientras sea de los 20 más nuevos)'].filter(Boolean);
+  const lead = st === 'published' ? 'Además aparece solo en' : st === 'draft' ? 'Al publicarlo, además aparece solo en' : 'Al restaurarlo, además aparece solo en';
+  return `<div class="step step-account"><div class="group-label">Filas del inicio</div>
+    <p class="sheet-text">${st === 'draft' ? 'Es un borrador: las filas se aplican al publicarlo.' : st === 'retired' ? 'Está retirado: no se ve en ninguna fila.' : 'Las filas elegidas se ven como etiquetas debajo del nombre.'}</p>
+    <div class="sgroup sheet-sg">${MANUAL.map(sw).join('')}</div>
+    <p class="ferr" role="alert">${E.secErr || ''}</p>
+    <p class="sheet-text" style="margin-top:8px">${lead} ${joinY(auto)}.</p>
+    <div class="dlinks">${row({ act: 'e-close', icon: 'tick', label: 'Listo', chev: false })}</div></div>`;
+}
+
+/* ---- placeholder pages (other admin screens live in 060-062) ---- */
+function juegosBody() {
+  const rows = [[BGG.name, E.status, BGG.year, '2–4', BGG.hue, true], ['Terraforming Mars', 'draft', 2016, '1–5', 18], ['Azul', 'published', 2017, '2–4', 200], ['Codenames', 'retired', 2015, '2–8', 350]];
+  return `<h1 class="ptitle">Juegos</h1><div style="height:12px"></div><p class="lnote" style="margin-bottom:8px">Página completa en el sketch 061. Tocá Brass: Birmingham para volver al editor.</p>
+    <div class="glist">${rows.map(([n, st, y, pl, h, me]) => `<button type="button" class="grow" data-act="${me ? 'e-open' : 'e-other'}">
+      <span class="thumb" style="--h:${h}" aria-hidden="true">${n[0]}</span><span class="gtxt"><span class="gname">${esc(me ? E.saved.name : n)}</span>
+      <span class="gsub">${stDot(st)}${stLabel(st)}<span>·</span><span>${y}</span><span>·</span><span>${pl} jug.</span></span></span>${ic('chevR', 'chev')}</button>`).join('')}</div>`;
+}
+const phBody = () => `<h1 class="ptitle">${SCREENS[S.screen].title}</h1><div style="height:12px"></div><p class="lnote">Diseñada en los sketches 060–062.</p>`;
+function adminBody() { return S.screen === 'editar' ? editBody() : S.screen === 'juegos' ? juegosBody() : phBody(); }
+
+/* ---- sheets (059 row anatomy; one sheet, steps inside) ---- */
+function retireConfirm(back) {
+  return `<div class="group-label">Retirar juego</div>
+    <p class="sheet-text"><b>${esc(E.saved.name)}</b> deja de verse en la ludoteca y en sus filas de la web. Lo podés restaurar cuando quieras.${dirty() ? ' Antes se guardan tus cambios.' : ''}</p>
+    <div class="dlinks">${row({ act: 'e-retire', icon: 'archive', label: 'Sí, retirar', tone: 'danger', chev: false })}
+    ${row({ act: back ? 'e-step-back' : 'e-close', extra: 'data-autofocus', icon: 'chevL', label: 'Cancelar', chev: false })}</div>`;
+}
+function bandSheet() {
+  const imp = implied(BGG.w);
+  const r = (k, label, sub) => row({ act: 'e-pick-band', extra: `data-v="${k}" aria-pressed="${(E.ed.band || '') === k}"`, icon: (E.ed.band || '') === k ? 'tick' : 'blank', label, sub, wrap: true, chev: false });
+  return `<div class="step step-account"><div class="group-label">Nivel</div>
+    <p class="sheet-text">Le dice a los socios qué tan difícil es. ${E.failed ? '' : `El peso en BGG (${w2(BGG.w)}) sugiere <b>${BANDS[imp].label}</b>.`}</p>
+    <div class="dlinks">${Object.entries(BANDS).map(([k, b]) => r(k, b.label, b.sub + (!E.failed && k === imp ? ' · Sugerido por BGG' : ''))).join('')}${r('', 'Sin nivel', 'No aparece en ninguna fila por nivel')}</div></div>`;
+}
+function shelfSheet() {
+  const r = (id, label, sub) => row({ act: 'e-pick-shelf', extra: `data-v="${id}" aria-pressed="${(E.ed.shelf || 0) === id}"`, icon: (E.ed.shelf || 0) === id ? 'tick' : 'blank', label, sub, chev: false });
+  return `<div class="step step-account"><div class="group-label">Estante</div><div class="dlinks">
+    ${SHELVES.map(s => r(s.id, esc(s.name))).join('')}${r(0, 'Sin ubicar', 'Todavía no está en ningún estante')}</div>
+    <div class="divider" style="margin:8px 0"></div><div class="dlinks">${row({ act: 'e-go-estantes', icon: 'estantes', label: 'Administrar estantes' })}</div></div>`;
+}
+const leaveSheet = () => `<div class="step step-account"><div class="group-label">Cambios sin guardar</div>
+  <p class="sheet-text">Cambiaste datos de <b>${esc(E.saved.name)}</b> que todavía no guardaste.</p><div class="dlinks">
+  ${row({ act: 'e-leave-save', icon: 'tick', label: 'Guardar y salir', chev: false })}
+  ${row({ act: 'e-leave-discard', icon: 'undo', label: 'Descartar cambios', tone: 'danger', chev: false })}
+  ${row({ act: 'e-close', extra: 'data-autofocus', icon: 'chevL', label: 'Seguir editando', chev: false })}</div></div>`;
+
+function openAct(steps, opener) {
+  const sh = $('#sheet-act'); if (!sh) return;
+  sh.innerHTML = `<div class="grab"></div><div class="steps">${steps}</div>`;
+  sh.classList.toggle('center', S.vp === 'desk');
+  openEl('#sheet-act', opener);
+  const af = sh.querySelector('.step:not([aria-hidden="true"]) [data-autofocus]'); af && af.focus({ preventScroll: true });
+}
+function snack(msg, action) {
+  const s = $('#snack'); if (!s) return;
+  s.querySelector('span').textContent = msg;
+  const b = s.querySelector('.tbtn'); b.hidden = !action; if (action) { b.textContent = action.label; b.dataset.act = action.act; }
+  clearTimeout(s._t); s.classList.remove('show'); void s.offsetWidth; s.classList.add('show');
+  s._t = setTimeout(() => s.classList.remove('show'), 4000);
+}
+
+/* ---- LiveView-style patch: keeps focus, caret and scroll ---- */
+function patch() {
+  const main = $('#main'); if (!main) return;
+  const a = document.activeElement, id = a && device.contains(a) ? a.id : null;
+  let pos = null; try { pos = a.selectionStart; } catch (_) {}
+  const sc = device.querySelector('.scroller'), top = sc.scrollTop;
+  main.innerHTML = adminBody();
+  const bar = $('#ebar'); if (bar) bar.outerHTML = barHtml();
+  if (id) { const n = document.getElementById(id); if (n) { n.focus({ preventScroll: true }); try { if (pos != null) n.setSelectionRange(pos, pos); } catch (_) {} } }
+  sc.scrollTop = top;
+  device.querySelectorAll('.tabs [data-tab="juegos"] .badge').forEach(b => b.textContent = cnt('juegos'));
+}
+/* typing only touches what depends on "dirty" (LiveView would diff the same way) */
+function sync() {
+  const d = dirty();
+  const bar = $('#ebar'); if (bar) bar.outerHTML = barHtml();
+}
+
+function save(then) {
+  if (E.saving) return;
+  if (!validate()) {
+    patch();
+    const f = document.getElementById(E.errs.name ? 'ed-name' : 'ed-units');
+    if (f) { f.focus({ preventScroll: true }); const sc = device.querySelector('.scroller'); sc.scrollTo({ top: sc.scrollTop + f.getBoundingClientRect().top - sc.getBoundingClientRect().top - sc.clientHeight / 3, behavior: 'smooth' }); }
+    return;
+  }
+  E.saving = true; patch();
+  setTimeout(() => {
+    E.saved = { ...E.ed, name: E.ed.name.trim(), units: +E.ed.units, secs: [...E.ed.secs] }; E.ed = clone(E.saved);
+    E.saving = false; patch();
+    then ? then() : snack('Cambios guardados');
+  }, 550);
+}
+/* D-04/D-08: Publicar (draft → published), Retirar (→ retired, confirmed first), Restaurar (retired → published).
+   Pending valid changes are saved first (shipped Publicar already does this via _action=publish). */
+function lifecycle(to, msg) {
+  const prev = E.status;
+  closeAll();
+  const go = m => {
+    E.status = to; patch();
+    E.undo = () => { E.status = prev; patch(); snack(`Volvió a ${ST[prev].label.toLowerCase()}`); };
+    snack(m, { label: 'Deshacer', act: 'e-undo' });
+  };
+  if (dirty()) return save(() => go(to === 'published' && prev === 'draft' ? 'Guardado y publicado' : msg));
+  go(msg);
+}
+function nav(target) {
+  if (S.screen === 'editar' && target !== 'editar' && dirty()) { E.pendingNav = target; return openAct(leaveSheet(), document.activeElement); }
+  S.screen = target; closeAll(); render();
+}
+
+function eAct(t) {
+  const a = t.dataset.act;
+  switch (a) {
+    case 'e-back': return nav('juegos');
+    case 'e-open': return nav('editar');
+    case 'e-other': return snack('Abre el editor de ese juego');
+    case 'e-secs-sheet': return openAct(secsSheet(), t);
+    case 'e-bgg-toggle': E.bggOpen = !E.bggOpen; patch(); return $('[data-act="e-bgg-toggle"]')?.focus({ preventScroll: true });
+    case 'e-desc-edit': { E.descEdit = true; patch(); const ta = document.getElementById('ed-desc'); ta.focus({ preventScroll: true }); return ta.setSelectionRange(ta.value.length, ta.value.length); }
+    case 'e-publish': return lifecycle('published', 'Juego publicado');
+    case 'e-restore': return lifecycle('published', 'Juego restaurado');
+    case 'e-retire-ask': return openAct(`<div class="step step-account">${retireConfirm(false)}</div>`, t);
+    case 'e-retire-step': { const sh = t.closest('.sheet'); setStep(sh, 'confirm'); return sh.querySelector('.step-confirm [data-autofocus]')?.focus({ preventScroll: true }); }
+    case 'e-step-back': return setStep(t.closest('.sheet'), 'account');
+    case 'e-retire': return lifecycle('retired', 'Juego retirado');
+    case 'e-close': E.pendingNav = null; return closeAll();
+    case 'e-save': return save();
+    case 'e-units-dec': return setUnits(Math.max(+t.dataset.min || 1, +E.ed.units - 1), t);
+    case 'e-units-inc': return setUnits(+E.ed.units + 1, t);
+    case 'e-units-set': return setUnits(+t.dataset.n, t);
+    case 'e-undo': { const u = E.undo; E.undo = null; $('#snack').classList.remove('show'); return u && u(); }
+    case 'e-band-sheet': return openAct(bandSheet(), t);
+    case 'e-pick-band': E.ed.band = t.dataset.v || null; closeAll(); return patch();
+    case 'e-shelf-sheet': return openAct(shelfSheet(), t);
+    case 'e-pick-shelf': E.ed.shelf = +t.dataset.v || null; closeAll(); return patch();
+    case 'e-go-estantes': closeAll(); return setTimeout(() => nav('estantes'), 200);
+    case 'e-view': return snack(`Abre /juegos/${BGG.slug} en una pestaña nueva`);
+    case 'e-bgg': return snack('Abre el juego en BoardGameGeek');
+    case 'e-retry':
+      if (E.retrying) return;
+      E.retrying = true; patch();
+      return setTimeout(() => { E.retrying = false; E.failed = false; document.querySelectorAll('[data-bgg]').forEach(b => b.classList.toggle('on', b.dataset.bgg === 'ok')); patch(); snack('Datos de BGG actualizados'); }, 1500);
+    case 'e-leave-save': { const to = E.pendingNav; E.pendingNav = null; closeAll(); return save(() => { S.screen = to; render(); snack('Cambios guardados'); }); }
+    case 'e-leave-discard': { const to = E.pendingNav; E.pendingNav = null; E.ed = clone(E.saved); E.errs = {}; E.secErr = null; closeAll(); S.screen = to; return render(); }
+  }
+}
+
+const NOTES = `<h3>Ronda 13 · Datos de BGG shows real data (built on C2 + B3)</h3><ul>
+  <li>The label reads "Datos de BGG 🔒 Solo lectura". Closed, the box shows <b>Año + Diseñadores</b> exactly the way the public game page does (Año row, pill column), then "Ver más ⌄". Open, it adds Ilustradores, Mecánicas, Temáticas, Comunidad BGG, "Vienen de BoardGameGeek y se actualizan solos." and "Ver en BoardGameGeek", then "Ver menos ⌃".</li>
+  <li>En el inicio ends with the "+ Agregar a una fila" button (C2). Try <i>tools → BGG Falló</i> for the no-data state.</li></ul>
+  <h3>Sketch 063 · Editor de juego (V2 base)</h3><ul>
+  <li><b>Public part</b> (normal background, mirrors the game page): title ✎, "En el inicio: …" ✎ → Portada (pills with the Nivel pill ✎ + poster) → Descripción ✎ (tap to edit) → Datos de BGG (read-only, collapsed).</li>
+  <li><b>Internal part</b> (V2: a full-width muted band; Round 10: see the Separador switch), captioned "Solo para el club · no se muestra en la web": En el club (Estante ✎, Copias, Expansión) → Estado (status · Cambios sin guardar · Publicar / Retirar (confirm) / Restaurar · Guardar). Guardar is always the last control.</li>
+  <li><b>One section anatomy:</b> a 13px/700 label over a soft box, 24px apart. Inside the band, the boxes turn white. No lines anywhere.</li>
+  <li><b>Try:</b> switch Estado in the top bar, tap the Nivel pill (the BGG suggestion is in the sheet), "En el inicio" ✎ with <i>tools → Destacados lleno</i>, edit the description, clear the title and tap Guardar, change something then ‹ Juegos (unsaved-changes sheet), and <i>BGG Falló</i> → Reintentar. Check phone, desktop and dark.</li></ul>`;
+
+/* ---------------- render ---------------- */
+const device = document.getElementById('device');
+function fitNav() { document.body.style.paddingTop = (document.getElementById('state-nav').offsetHeight + 8) + 'px'; }
+window.addEventListener('resize', fitNav);
+device.addEventListener('scroll', () => { if (device.scrollTop || device.scrollLeft) device.scrollTop = device.scrollLeft = 0; });
+
+function render() {
+  fitNav();
+  const desk = S.vp === 'desk', ed = S.screen === 'editar', bar = false;
+  device.className = 'device polish has-tabs pen-' + E.pen + ' ' + E.layout + (desk ? ' desk' : '') + (bar && !desk ? ' has-bar' : '');
+  device.innerHTML = `<div class="scroller">${header()}${desk ? tabBar() : ''}<main id="main" class="${ed ? 'wide' : ''}">${adminBody()}</main>${bar && desk ? barHtml() : ''}</div>
+    ${bar && !desk ? barHtml() : ''}${desk ? '' : tabBar()}${drawer()}${accountSheet()}<div class="sheet" id="sheet-act" role="dialog" aria-modal="true"></div>
+    <div class="toast" id="toast">${ic('check')}<span></span></div>
+    <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button></div>`;
+  document.querySelectorAll('.stab[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === E.status));
+  document.getElementById('notes').innerHTML = NOTES;
+}
+/* Header, tabs and drawer persist; only the page content swaps (LiveView navigate inside one live_session layout). */
+function softSwap() {
+  const main = device.querySelector('#main');
+  if (!main || S.mode !== 'admin') return render();
+  main.classList.add('swapping');
+  setTimeout(() => {
+    const top = activeTop();
+    main.innerHTML = adminBody();
+    device.querySelectorAll('.tabs [data-tab]').forEach(b => {
+      if (b.dataset.tab === 'account') return;
+      const on = b.dataset.tab === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelectorAll('.drawer .dlink[data-nav]').forEach(b => {
+      const on = b.dataset.nav === top; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current');
+    });
+    device.querySelector('.scroller').scrollTop = 0;
+    main.classList.remove('swapping');
+  }, 100);
+}
+
+/* ---------------- overlays ---------------- */
+let returnFocus = null;
+function resetSteps(sh) {
+  sh.querySelectorAll('.steps').forEach(steps => {
+    clearTimeout(steps._t); steps.classList.remove('animating'); steps.style.height = '';
+    steps.querySelectorAll('.step').forEach(st => {
+      const first = st.classList.contains('step-account');
+      st.style.transition = 'none';
+      first ? st.removeAttribute('aria-hidden') : st.setAttribute('aria-hidden', 'true'); st.inert = !first;
+      void st.offsetWidth; st.style.transition = '';
+    });
+  });
+}
+function setStep(sh, name) {
+  const steps = sh && sh.querySelector('.steps'); if (!steps) return;
+  const from = steps.querySelector('.step:not([aria-hidden="true"])');
+  const to = steps.querySelector('.step-' + name);
+  if (!to || from === to) return;
+  steps.style.height = from.offsetHeight + 'px'; steps.classList.add('animating');
+  from.setAttribute('aria-hidden', 'true'); from.inert = true;
+  to.removeAttribute('aria-hidden'); to.inert = false;
+  void steps.offsetHeight; steps.style.height = to.offsetHeight + 'px';
+  clearTimeout(steps._t); steps._t = setTimeout(() => { steps.style.height = ''; steps.classList.remove('animating'); }, 300);
+  const f = to.querySelector(name === 'confirm' ? '[data-act="cancel-logout"],[data-act="v-step-back"]' : '[data-act="ask-logout"],[data-act="v-staff-confirm"]') || to.querySelector('button');
+  f && f.focus({ preventScroll: true });
+}
+function closeAll() {
+  const had = device.querySelector('.drawer.open,.sheet.open');
+  device.querySelectorAll('.open').forEach(el => { el.classList.remove('open'); el.style.transform = ''; });
+  if (had && returnFocus && document.contains(returnFocus)) returnFocus.focus({ preventScroll: true });
+  if (had) returnFocus = null;
+}
+function openEl(sel, opener) {
+  const keep = returnFocus || opener;
+  closeAll(); returnFocus = keep;
+  const el = device.querySelector(sel); if (!el) return;
+  resetSteps(el);
+  void el.offsetWidth; el.classList.add('open'); device.querySelector('.backdrop').classList.add('open');
+  const first = el.querySelector('button:not([disabled])'); first && first.focus({ preventScroll: true });
+}
+function showToast(msg) {
+  const t = device.querySelector('#toast'); t.querySelector('span').textContent = msg;
+  void t.offsetWidth; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
+}
+function setTheme(v) { if (v === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v; }
+
+/* swipe a bottom sheet down to dismiss (phone) */
+let drag = null, suppressClick = false;
+device.addEventListener('pointerdown', e => {
+  const sh = e.target.closest('.sheet.open'); if (!sh || S.vp === 'desk') return;
+  if (!e.target.closest('.grab') && sh.scrollTop > 0) return;
+  const onButton = e.target.closest('button') && !e.target.closest('.grab');
+  drag = { sh, y: e.clientY, dy: 0, pending: !!onButton };
+  if (!onButton) sh.classList.add('dragging');
+});
+window.addEventListener('pointermove', e => {
+  if (!drag) return; const dy = Math.max(0, e.clientY - drag.y);
+  if (drag.pending) { if (dy < 8) return; drag.pending = false; drag.sh.classList.add('dragging'); }
+  drag.dy = dy; drag.sh.style.transform = `translateY(${dy}px)`;
+});
+window.addEventListener('pointerup', () => {
+  if (!drag) return; const { sh, dy, pending } = drag; drag = null; sh.classList.remove('dragging');
+  if (pending) return;
+  if (dy > 8) { suppressClick = true; setTimeout(() => suppressClick = false, 0); }
+  if (dy > 80) closeAll(); else sh.style.transform = '';
+});
+
+/* ---------------- events ---------------- */
+function refreshSecs(focusId) {
+  const steps = $('#sheet-act.open .steps'); if (steps) steps.innerHTML = secsSheet();
+  const dirtyBar = $('#ebar'); patch();
+  document.getElementById(focusId)?.focus({ preventScroll: true });
+}
+function markOn(attr, t) { document.querySelectorAll(`[${attr}]`).forEach(b => b.classList.toggle('on', b === t)); }
+document.addEventListener('click', e => {
+  if (suppressClick) { e.stopPropagation(); e.preventDefault(); return; }
+  const t = e.target.closest('[data-status],[data-bgg],[data-feat],[data-vp],[data-theme-set],[data-act],[data-nav]');
+  if (!t) return;
+  if (t.dataset.status) { seed(t.dataset.status); S.screen = 'editar'; closeAll(); return render(); }
+  if (t.dataset.bgg) { E.failed = t.dataset.bgg === 'failed'; markOn('data-bgg', t); return patch(); }
+  if (t.dataset.feat) { E.featFull = t.dataset.feat === '1'; E.secErr = null; markOn('data-feat', t); return patch(); }
+  if (t.dataset.vp) { S.vp = t.dataset.vp; markOn('data-vp', t); return render(); }
+  if (t.dataset.themeSet) return setTheme(t.dataset.themeSet);
+  if (t.dataset.act && t.dataset.act.startsWith('e-')) return eAct(t);
+  if (t.dataset.nav) {
+    const n = t.dataset.nav;
+    if (n.startsWith('pub:')) { closeAll(); return showToast('Sitio público (sin cambios)'); }
+    if (['niveles', 'staff', 'panel', 'secciones'].includes(n) && S.screen !== 'editar') { S.screen = n; closeAll(); return render(); }
+    return nav(n === 'juegos' && S.screen === 'juegos' ? 'juegos' : n);
+  }
+  const a = t.dataset.act;
+  if (a === 'open-drawer') openEl('.drawer', t);
+  else if (a === 'open-account') openEl('#sheet-account', t);
+  else if (a === 'ask-logout') setStep(t.closest('.sheet'), 'confirm');
+  else if (a === 'cancel-logout') setStep(t.closest('.sheet'), 'account');
+  else if (a === 'close') { E.pendingNav = null; closeAll(); }
+  else if (a === 'logout') { closeAll(); showToast('Cerrar sesión: ver sketch 059'); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const confirm = device.querySelector('.sheet.open .step-confirm:not([aria-hidden="true"])');
+  if (confirm) setStep(confirm.closest('.sheet'), 'account'); else { E.pendingNav = null; closeAll(); }
+});
+document.addEventListener('focusout', e => {
+  if (e.target.id === 'ed-desc' && E.descEdit) setTimeout(() => { if (document.activeElement?.id !== 'ed-desc') { E.descEdit = false; patch(); } }, 0);
+});
+document.addEventListener('input', e => {
+  const el = e.target, id = el.id;
+  const clearErr = k => { if (!E.errs[k]) return; delete E.errs[k]; el.classList.remove('invalid'); el.removeAttribute('aria-invalid'); const f = document.getElementById(`ed-${k}-err`); if (f) f.textContent = ''; };
+  if (id === 'ed-name') { E.ed.name = el.value; el.closest('.tfield').dataset.value = el.value || 'Nombre del juego'; clearErr('name'); return sync(); }
+  if (id === 'ed-units') { E.ed.units = el.value; clearErr('units'); return sync(); }
+  if (id === 'ed-desc') { E.ed.desc = el.value; return sync(); }
+  if (id === 'ed-exp') { E.ed.exp = el.checked; return sync(); }
+  if (el.dataset.sec) {
+    const sid = +el.dataset.sec, s = MANUAL.find(x => x.id === sid);
+    if (el.checked && s.featured && featBase() + 1 > 20) {
+      el.checked = false; E.secErr = 'Destacados del club ya tiene 20 juegos. Quitá uno desde Web para sumar este.'; return refreshSecs(id);
+    }
+    E.ed.secs = el.checked ? [...E.ed.secs, sid] : E.ed.secs.filter(x => x !== sid); E.secErr = null;
+    return refreshSecs(id);
+  }
+});
+document.getElementById('tools-toggle').addEventListener('click', () => document.getElementById('tools-body').classList.toggle('show'));
+render();
+</script>
+</body>
+</html>

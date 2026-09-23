@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sketch 071 — Juegos</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  /* Sketch 071 — the admin Juegos tab, restarted from the job (notes/juegos-ui-redesign.md, decisions 1–5).
+     Standalone: only the Juegos UI. Components are copied from 069 (search, dropdown, sheets, dialog, snackbar,
+     form sheet) and 070 (header icons, list rows, count badge, tag), not redrawn. */
+  :root { --stroke: color-mix(in srgb, var(--color-text) 58%, var(--color-bg)); --ter: var(--color-secondary); }
+  :root[data-theme="dark"] { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --stroke: color-mix(in srgb, var(--color-text) 42%, var(--color-bg)); --ter: var(--color-text-muted); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9d4e0; font-family: var(--font-sans); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  :root[data-theme="dark"] body { background: #120a1c; }
+  button, input, textarea { font: inherit; color: inherit; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg { display: block; }
+
+  .stage { min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; padding: 24px 16px 64px; }
+  .device { position: relative; width: 375px; height: 740px; background: var(--color-bg); border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 10, 50, .25); display: flex; flex-direction: column; }
+  @media (max-width: 430px) { .stage { padding: 0; } .device { width: 100%; height: 100vh; border-radius: 0; } }
+
+  /* chrome — context only */
+  .hdr { height: 53px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px 0 4px; border-bottom: 1px solid var(--color-border); }
+  .hdr .burger { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; }
+  .hdr img { height: 26px; }
+  .hdr .img-dark { display: none; }
+  :root[data-theme="dark"] .hdr .img-light { display: none; } :root[data-theme="dark"] .hdr .img-dark { display: block; }
+  .hdr .word { font-family: var(--font-display); font-size: 1.05rem; letter-spacing: .03em; }
+  .scroller { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; }
+  .tabs { position: absolute; left: 0; right: 0; bottom: 0; height: 67px; display: grid; grid-template-columns: repeat(5, 1fr); padding: 4px 4px 8px;
+    background: var(--color-bg); border-top: 1px solid var(--color-border); z-index: 20; }
+  .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); }
+  .tab .ti { width: 56px; height: 30px; border-radius: 15px; display: grid; place-items: center; }
+  .tab .ti svg { width: 20px; height: 20px; }
+  .tab.on { color: var(--color-accent-text); } .tab.on .ti { background: var(--color-accent-bg); }
+  :root[data-theme="dark"] .tab.on .ti { background: color-mix(in srgb, var(--color-accent-text) 22%, transparent); }
+  .tab .av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; box-shadow: inset 0 0 0 1.5px var(--color-success); }
+  .device.kbd .tabs { display: none; }
+  /* the pinned tier's height: a 44px title bar, or the 60px sticky search on Juegos */
+  .device { --bar: 44px; }
+  .device[data-bar="search"] { --bar: 60px; }
+
+  main { padding: 16px 16px 79px; flex: 1 0 auto; display: flex; flex-direction: column; }
+
+  /* ---- decision 22 — a search-first tab root has no resting title ----
+     Measured, the chrome was a FIXED 265px: on a 360x640 that is 51% of usable height and exactly three games.
+     The handoff's "43%" was the 375x740 figure — the roomiest phone — so the real number is worse the smaller
+     the phone gets.
+     The <h1> is dropped and the + moves beside the field. This is decision 7's own argument applied to the
+     resting page: that decision already deleted the scrolled title BAR because it "repeats the word the pinned
+     heading already says", and the bottom tab bar says Juegos and highlights it, persistently. The h1 survives
+     as .sr for the accessibility tree, so the document still has a heading.
+     SCOPE, checked rather than assumed: Estantes' search is `position: relative` and Web has none, so Juegos is
+     the only search-first tab root and the only page with a .pbar. Estantes and Web keep their .ptitle — this
+     is not an app-wide sweep, it is a rule for the one page whose pinned tier is its search. */
+  .srow-wrap { display: flex; align-items: center; gap: 8px; }
+  .srow-wrap .sfield { flex: 1; min-width: 0; }
+  .srow-wrap .ibtn { margin-right: -12px; }   /* same pull as .hacts, so + keeps the header icon's edge */
+  /* decision 22 removed the resting title row from this page; .phead/.ptitle/.hacts went with it, the way
+     decision 17 removed .wblock with the thing that needed it. Estantes and Web still define their own. */
+  .back { display: inline-flex; align-items: center; gap: 2px; height: 44px; margin-left: -10px; padding: 0 10px 0 4px; border: 0; background: none; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; align-self: flex-start; }
+  .back svg { width: 18px; height: 18px; }
+  .tbtn { height: 44px; padding: 0 12px; border: 0; background: none; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--ter); cursor: pointer; white-space: nowrap; }
+  .tbtn.pull-r { margin-right: -12px; }
+  .tbtn:hover { background: color-mix(in srgb, var(--ter) 8%, transparent); }
+  .tbtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .ibtn { width: 44px; height: 44px; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; flex-shrink: 0; position: relative; }
+  .ibtn svg { width: 20px; height: 20px; }
+  .ibtn:hover { background: var(--color-surface); color: var(--color-text); }
+  .ibtn:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .obtn { height: 44px; padding: 0 16px; border: 1px solid var(--stroke); background: var(--color-bg); border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .obtn.pri { border-color: var(--color-primary); color: var(--color-accent-text); }
+  :root[data-theme="dark"] .obtn.pri { border-color: var(--color-accent-text); }
+  .obtn.wide { width: 100%; }
+
+  /* D-19g — pending work behind a header icon with a count badge (primary fill, top-right) */
+  .ibtn .badge { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--color-primary); color: #fff; font-size: 11px; font-weight: 600; line-height: 1; display: grid; place-items: center; }
+  :root[data-theme="dark"] .ibtn .badge { background: var(--color-accent-text); color: #1b1024; }
+
+  /* ---- search (069): magnifier on the RIGHT, → ✕ once a name is kept ---- */
+  /* decision 3 — the field is the page's main control and the list is a new group under it:
+     title row → field 16 · field → "Juegos del club" 32 (24 of container + the heading's own 8) */
+  /* decision 7 — on Juegos the pinned tier IS the search: the page's one job follows you down all 435 rows,
+     instead of a title bar repeating the word the pinned heading already says.
+     It is the SAME input pinning, not a copy in a bar — so there is never a second search to keep in sync
+     (the back link needed `inert` for exactly that reason). Padding is compensated in the margins so the
+     resting rhythm is untouched: field top 129, heading text top 209. */
+  /* decision 22 — with the title gone the field leads the page, so its own 12px top margin drops to 4:
+     16 (main) + 4 + 4 (padding) = 24px of air under the app header. */
+  .search { position: sticky; top: 0; z-index: 12; margin: 4px -16px 0; padding: 4px 16px 8px; background: var(--color-bg); }
+  .search.stuck { border-bottom: 1px solid var(--color-border); }
+  /* decision 17 — ONE LIST: sections butt together with no gap, so there is no pitch to read as a stripe and
+     no block to separate. Decision 11's 24 / 0 / 32 / 0 gap system and the .wblock it grouped are gone with it. */
+  .search + .lgroup { margin-top: 12px; }
+  .device[data-bar="search"] .pbar { display: none; }
+  .sfield { position: relative; }
+  .sfield input { width: 100%; height: 48px; padding: 0 48px 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; text-overflow: ellipsis; }
+  .sfield input::placeholder { color: var(--color-text-muted); }
+  .sfield input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  :root[data-theme="dark"] .sfield input:focus { border-color: var(--color-accent-text); box-shadow: 0 0 0 1px var(--color-accent-text); }
+  .sfield input::-webkit-search-cancel-button { display: none; }
+  .sfield .sico { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text-muted); border-radius: 8px; }
+  .sfield .sico svg { width: 20px; height: 20px; }
+  button.sico { cursor: pointer; }
+
+  /* suggestions drop down OVER the list below (069 decision 12) */
+  /* anchored 4px under the FIELD, not under the padded sticky block — decision 7's 8px of bottom padding
+     pushed it 5px under the 292px keyboard (453 vs 448), the same trap 069 decision 61 hit */
+  /* decision 22 — the + now sits beside the field, so the field no longer spans the block. The dropdown moves
+     INSIDE .sfield (already position:relative) and anchors left:0/right:0 to the field itself, which keeps it
+     aligned at any width with no magic offset to drift. top:100%+4 reproduces the previous y exactly. */
+  .sugg { position: absolute; left: 0; right: 0; top: calc(100% + 4px); background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px;
+    box-shadow: var(--shadow-lg); padding: 4px 0; max-height: 264px; overflow-y: auto; scrollbar-width: none; }
+  .sugg::-webkit-scrollbar { display: none; }
+  .sugg[hidden] { display: none; }
+  .sglabel { font-size: 13px; color: var(--color-text-muted); padding: 8px 12px 4px; }
+  .srow { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 6px 12px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .srow:hover, .srow.hl { background: var(--color-surface); }
+  .srow .ttl { font-size: 15px; line-height: 1.3; }
+  .srow .ttl mark { background: none; color: inherit; font-weight: 600; }
+  /* decision 4 — the search creates: "Crear «texto»" on no match, "Agregar desde BGG" on a pasted id/link */
+  .srow.create .cov { display: grid; place-items: center; background: var(--color-surface); color: var(--color-accent-text); }
+  .srow.create .cov svg { width: 22px; height: 22px; }
+  .srow.create .ttl { color: var(--color-accent-text); font-weight: 600; }
+  .snone { padding: 14px 16px; font-size: 14px; color: var(--color-text-muted); }
+
+  /* covers */
+  .cov { width: 40px; height: 40px; border-radius: 6px; flex-shrink: 0; object-fit: cover; background: var(--color-surface); display: grid; place-items: center; font-weight: 600; font-size: 16px; }
+  .cov.l { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  :root[data-theme="dark"] .cov.l { background: hsl(var(--h) 30% 30%); color: hsl(var(--h) 50% 88%); }
+  /* a game with no data at all: a quiet placeholder, not a coloured letter tile */
+  .cov.none { background: var(--color-surface); color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+  .cov.none svg { width: 18px; height: 18px; }
+  .txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .sub { font-size: 13px; line-height: 1.35; color: var(--color-text-muted); display: flex; align-items: center; gap: 6px; }
+  /* D-19h — a status is a DOT + TEXT, never a pill */
+  /* D-19h — a status is a DOT + TEXT, never a pill and never an alert box. These rules have sat here unused
+     since decision 1 removed the per-row status that only repeated its section. Enrichment is the state that
+     actually earns them: it is TRANSIENT and per-row, not a restatement of the heading. */
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #D9892B; }
+  .dot.err { background: var(--color-danger); }
+  /* pending has no cover yet — the shipped admin draws a skeleton here, and that part of it is right */
+  .cov.skel { background: linear-gradient(100deg, var(--color-surface) 30%, #efeaf6 50%, var(--color-surface) 70%);
+    background-size: 220% 100%; animation: sweep 1.4s linear infinite; border: 0; }
+  :root[data-theme="dark"] .cov.skel { background-image: linear-gradient(100deg, var(--color-surface) 30%, #2a1f3a 50%, var(--color-surface) 70%); }
+  @keyframes sweep { to { background-position: -120% 0; } }
+  @media (prefers-reduced-motion: reduce) { .cov.skel { animation: none; } }
+  /* variant C — the failure count on a CLOSED section caption */
+  .lhead .warn { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; font-weight: 400; color: var(--color-text-muted); }
+
+  /* ---- decision 6 (D-19n) — a long list keeps its context while you scroll ----
+     Two tiers pinned inside the scroller, the iOS pairing: a compact page bar (back + title) once the title row
+     scrolls off, and the section heading under it. The "stacked" push comes free from position:sticky — each
+     heading is confined to its own .lgroup, so an arriving section pushes the previous heading out.
+     The bar is an ABSOLUTE overlay on .device, not a sticky child: at rest it must cost zero layout. */
+  .pbar { position: absolute; top: 53px; left: 0; right: 0; z-index: 15; height: 44px; display: flex; align-items: center; gap: 2px;
+    padding: 0 6px; background: var(--color-bg); border-bottom: 1px solid var(--color-border);
+    opacity: 0; transform: translateY(-8px); pointer-events: none;
+    transition: opacity 160ms var(--ease-out-soft), transform 160ms var(--ease-out-soft); }
+  .device.scrolled .pbar { opacity: 1; transform: none; pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) { .pbar { transition: opacity 160ms linear; transform: none; } }
+  .pbar .pbt { font-size: 17px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pbar .back { height: 44px; margin: 0; align-self: center; }
+  .pbar .back + .pbt { margin-left: 2px; }
+  .device.kbd .pbar { display: none; }
+
+  /* ---- the list (decision 3) ---- */
+  .lgroup { margin-top: 0; }   /* decision 17 — sections butt together; the list is continuous */
+  /* full-bleed so the full-bleed rows cannot slide visibly past its left/right edges while it is pinned */
+  /* decision 8 — the heading is now a collapsible group's control, so it is a real 44px target.
+     The caret is a TRAILING chevron-DOWN that rotates 180°, never a chevron-right: under D-19i a "›" means
+     "this row opens another page", which a group header must not claim. Heading text stays at 16px like
+     everything else on the page (a leading caret would have pushed it to 40). */
+  /* decision 17 — ONE header anatomy. A section header is a CAPTION: a span, never a control, so it needs no
+     caret, no 44px target and no tonal band to stop it reading as a row. Decision 16's rank (13/600 muted on the
+     16 container keyline) applies to every section. It stays sticky and gains its fill only when it PINS, which
+     is the one moment it must terminate itself over rows sliding under it — the iOS plain-table behaviour. */
+  .lhw { position: sticky; top: var(--bar); z-index: 5; margin: 0 -16px; background: var(--color-bg); }
+  .lhead { width: 100%; display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; border: 0;
+    background: transparent; text-align: left; font-size: 15px; font-weight: 600; line-height: 1.3;
+    color: var(--color-text); }
+  .lhead .cnt { font-weight: 400; margin-left: 4px; color: var(--color-text-muted); }
+  /* ---- decision 29 — the fill is a BAND DRAWN AROUND THE INK, never the caption's own background ----
+     Decision 27 fixed the pinned band by halving the padding, which was right for that state and wrong as a
+     method: it patched the ONE state that had been reported. Hovering a caption showed the identical defect
+     (14px of colour above the text, 1.2 below) because `.lhead.tap:hover` painted the same asymmetric box.
+     Decision 27 wrote the general rule — an element that draws nothing at rest but something in another state
+     has TWO geometries — and then applied it to a single state. The fix has to be structural.
+     A ::before anchored to the CONTENT box (which is where the ink is) and grown by --band each way is centred
+     BY CONSTRUCTION, in every state, present and future. It also moves no text: the caption's own padding — and
+     with it decision 21's 3:1 resting ratio — is untouched, so hovering cannot make the label jump.
+     Pinned keeps a full-height bar (it is a bar under the search, not a highlight), and decision 27's padding
+     halving is what centres the ink inside it. Two band shapes, one invariant: the ink is centred in whatever
+     is actually drawn — and the harness now asserts that for every state that draws. */
+  /* --cap: the band centres on the CAP BLOCK, because for versalita the line box is not the ink. At 14/600 the
+     line box is 17px inside an 18.2px content box, and the capitals are 11px measured glyph-independently (an
+     "H" probe — a J's descending tail must not drag the optical centre). Centring the LINE box left the cap
+     block 0.6px high in BOTH states, so both take the same 0.6px downward nudge. Measured, --cap 0 gives -1.2
+     in each; --cap 0.6 gives 0.0.
+     The nudge changes neither band height nor the caption's own padding, so the breathing room and decision 21's
+     resting rhythm are untouched. The harness asserts cap-block centring, so this constant is CHECKED, not
+     trusted — change the font or the size and the guard fires. */
+  /* --band: the breath around the cap block. Measured at 5 / 6 / 7 the band is 28.2 / 30.2 / 32.2 and its edge
+     lands 24.6 / 23.6 / 22.6 from the NEXT label's capitals, against 33.2 of ink-to-ink between labels — so none
+     of the three crowds the rhythm and the choice is 2px of heft. 6 gives 9.6px of breath around an 11px cap:
+     a band 2.7x the cap, comfortably smaller than a row's own 64px hover. */
+  .lhead { position: relative; --band: 6px; --bandp: 12.9px; --cap: 0.6px; }
+  .lhead::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0;
+    /* NOTE the signs: this state moves the BAND while the pinned state below moves the INK (via padding), and
+       raising the band is the same as lowering the ink inside it. Same --cap, opposite-looking expressions. */
+    top: calc(var(--pt) - var(--band) - var(--cap)); bottom: calc(var(--cap) - var(--band));
+    background: transparent; transition: background 120ms var(--ease-out-soft); }
+  @media (prefers-reduced-motion: reduce) { .lhead::before { transition: none; } }
+  /* decision 31 — the pinned bar is CHROME, so its height is uniform and owes nothing to the resting rhythm.
+     It used to be the caption's own box, which meant it inherited decision 21's deliberate first-section
+     exception (--pt 14 vs 26) and the bar under SIN DATOS measured 32.2 against JUEGOS DEL CLUB's 44.2. That
+     exception is correct at rest — the 48px search already separates the first section — and meaningless once
+     the label is a bar pinned under that same search.
+     Because the band is a pseudo-element its thickness is independent of the box, so --bandp fixes the bar at
+     44px (matching .pbar and the touch floor) for every section, with no flow change and no jump. This also
+     retires decision 27's padding halving: one mechanism now serves both states, differing only in thickness. */
+  .lhw.pinned .lhead::before { top: calc(var(--pt) - var(--bandp) - var(--cap)); bottom: calc(var(--cap) - var(--bandp));
+    background: var(--color-surface); }
+
+  /* decision 21 — air ABOVE a section label, none below it. Measured TEXT-TO-TEXT (the headers are transparent,
+     so box edges are invisible and lie — box gaps reported the variants as identical), the list read 15px above a
+     label against 17px below: INVERTED PROXIMITY. Each label clung to the label ABOVE it rather than to the rows
+     it heads, which is why three 15/600 labels read as one block instead of three sections. Now 27 against 9, a
+     3.0:1 ratio.
+     Rejected: air above alone (1.7:1, and 8px more chrome — it keeps the loose 17px below); a hairline above each
+     section (1.2:1 — the rule would do the work instead of proximity, and it draws a line this list otherwise
+     does not have); and welding the label to its rows alone, which FAILED at 1.2:1 because a header's bottom
+     padding feeds the gap to the NEXT header too, so welding tightened both ends at once. Proximity is a RATIO —
+     the two ends have to move in opposite directions. */
+  .lhead { --pt: 26px; padding-top: var(--pt); padding-bottom: 0; }
+  .lgroup:first-of-type .lhead { --pt: 14px; }
+
+  /* decision 27 — the leading air is REDISTRIBUTED when the header pins, because a pinned header has a second
+     geometry the resting one never shows. At rest the caption draws nothing, so its 26px of padding-top is pure
+     air; the moment it pins it gains --color-surface and that same padding becomes 26px of EMPTY TINT above the
+     text, with the text jammed against the band's bottom edge (measured: 26.0 above, 0.5 below).
+     Halving --pt onto both sides centres the ink in the band and keeps the box height byte-identical, so the
+     sticky element's flow slot does not change and nothing jumps at the moment it pins.
+     The lesson this adds to "measure ink, not boxes": an element that draws NOTHING at rest but something in
+     another state has TWO geometries, and spacing tuned for the invisible one becomes visible in the other. */
+  /* decision 31 retires decision 27's padding halving: the bar's geometry is the band's now, not the box's, so
+     the caption's padding never changes between states and no text can move as it pins. */
+
+  /* ---- decision 28 — a section label is VERSALITA: 14/600 uppercase, tracked ----
+     From the device: "I need the look and feel of those header looks more different of the rest of the content."
+     Until now a caption differed from a row name by WEIGHT alone (600 vs 400), plus keyline, cover and chevron —
+     decision 20 put them at the same size and colour deliberately, following D-19j. Four differentiators that
+     are all position and weight still read as "a row without a picture", because the TEXT is the same kind.
+     Case changes the kind, so a label can never be mistaken for a game's name at any size.
+
+     Why 14, measured as CAP HEIGHT rather than font-size — the only comparison that means anything for caps:
+
+       fila 15/400        mayúscula 11px · minúscula 8px
+       versalita 12/600   mayúscula  9px (82% de la may. de fila, 113% de su minúscula)
+       versalita 13/600   mayúscula  9px  <- idéntica a 12: la fuente las aparea a este tamaño
+       versalita 14/600   mayúscula 11px (100% / 138%)
+       versalita 15/600   mayúscula 11px  <- idéntica a 14, y 4px más de chrome
+
+     The scale collapses to two real options (9px or 11px of cap), so within each pair the cheaper one wins.
+     14 matches a row name's own capitals exactly while reading 138% of the lowercase body the eye actually
+     scans — full presence, different category — and it is CHEAPER than what it replaces: chrome 213 -> 209.
+
+     Rejected: a permanent tinted band (built and measured — it does stay 3 separate masses rather than decision
+     14's stripe, but it costs 24px and a whole row, and reopens decision 17's "nothing is tinted at rest", which
+     is what ended seven rounds of band negotiation); and 17/600 lower-case, which restores a ladder step but is
+     still the SAME kind of text, only bigger — the least answer to what was asked. */
+  .lhead .ln { letter-spacing: .07em; text-transform: uppercase; }
+  .lhead { font-size: 14px; }
+
+  /* decision 20 — the section label returns to D-19j's rank, 15/600 at full strength. Audited, the ladder was
+     INVERTED: the label organising 385 rows was 2px smaller and 2.8x lower contrast than a single row inside it
+     (13/600 @6.17 vs 15/400 @17.16), and byte-identical to a row's SECOND line (the year, 13 @6.17) — so a
+     section name carried the weight of row metadata. Cause: decision 16 demoted it to separate it from the
+     banded 15/600 CONTROLS, decision 17 deleted those controls, and the demotion outlived its reason. It also
+     mis-cited the BENCHMARK's "Label (group) 13/600", which was measured from a FORM section label in 065, not
+     a list section header — D-19j puts a list section at 15/600, above row names.
+     Against a row this still differs by weight (600 vs 400), keyline (16 vs 68) and the absent 40px cover, so
+     decision 10's header-vs-row confusion cannot return: that was a 44px CONTROL with a trailing icon in the
+     row-chevron slot, and no such thing exists any more.
+     Rejected: 15/600 muted (fixes size, keeps the label 2.8x fainter than its own rows — the inversion partly
+     survives) and 12/600 all-caps tracked (earns presence from case rather than size and costs less height, but
+     it is a harder, more systemy voice than the sentence-case Spanish this admin uses everywhere else). */
+  /* decision 18 — a collapsible section carries an INLINE caret after its count. Inline, not leading, so the
+     caption keeps the 16 keyline and the x=16 column has no hole; and not trailing at x=339, which D-19i
+     reserves for "opens a page". The visual row stays at the caption's height while the HIT BOX is stretched to
+     the 44px touch floor by a pseudo-element, so reaching the floor costs no rhythm. */
+  .lhead.tap { cursor: pointer; position: relative; }
+  .lhead.tap::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .lhead.tap:hover::before { background: var(--color-surface); }
+  .lhw.pinned .lhead.tap:hover::before { background: var(--color-surface-2); }
+  /* the focus ring rides the same band, so it cannot frame the empty half of the box either */
+  .lhead.tap:focus-visible { outline: none; }
+  .lhead.tap:focus-visible::before { background: var(--color-surface); outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .lhead .caret { width: 14px; height: 14px; margin-left: 4px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform 160ms var(--ease-out-soft); }
+  /* decision 25 — the caret is a chevron-DOWN that flips to chevron-UP. Decision 18 had used chevR, the glyph
+     D-19i reserves for "opens a page", and separated the two by POSITION alone (x=126 vs x=339) — measured, it
+     was byte-identical to the row chevron (`M9 5l7 7-7 7`). Decision 10 had already written the rule the right
+     way round ("a disclosure triangle, never a trailing ›") and decision 18 kept the position fix while losing
+     the glyph rule. Down means expand, up means collapse; neither ever points the way a row chevron does, so the
+     collision is resolved by GLYPH, not by placement. */
+  .lhead[aria-expanded="true"] .caret { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { .lhead .caret { transition: none; } }
+
+
+  /* decision 16 — the caption gets its OWN RANK, at 16. Decision 15 made this header behave like a caption but
+     it still looked like a peer: measured, byte-identical type to the two controls above it (15/600,
+     rgb(35,19,57)), so it read as a group header that had lost its band and caret rather than a different kind
+     of thing. It was also the only element on the page with an empty leading slot — the x=16 column ran
+     caret · caret · EMPTY · cover · cover. Both causes were separated by variant and both are fixed here:
+     13/600 muted is the system's existing "Label (group)" rank (BENCHMARK; iOS 13pt section header, M3
+     subheader), and 16 puts its text back in the leading column. Contrast 6.17 on the page background.
+     Rejected: the quieter rank alone at 68 (the hole stayed) and the move alone (type stayed identical).
+     The caption no longer aligns with the rows it heads — it sits on the container keyline, which is exactly
+     what a Material list subheader does, and decision 13 is untouched because the page still measures 16 / 68. */
+
+  /* decision 9 — scrolling down slides the search away (+1 row on every viewport); the smallest flick up
+     brings it back, already usable. Measured: collapsing it to a 44px icon bar saves only 16px — a quarter of
+     a row — so it gained 0 rows at 375×667 and still cost a tap. */
+  .device[data-bar="search"] .search { transition: transform 200ms var(--ease-out-soft); }
+  .device[data-bar="search"].hidesearch .search { transform: translateY(calc(-100% - 1px)); }
+  .device[data-bar="search"].hidesearch { --bar: 0px; }
+  @media (prefers-reduced-motion: reduce) { .device[data-bar="search"] .search { transition: none; } }
+
+  /* decision 19 — the per-section hint returns, as its own line inside an OPENED section only. Decision 17 had
+     dropped it because a paragraph under every header was a second anatomy in a list whose whole point is one;
+     decision 18 changed that premise, since a hint can now only appear where the reader has already asked for
+     the section. Measured: zero cost at rest (the resting list is byte-identical — 30.9px captions, catalog at
+     206), and 26px spent only in the moment the hint is relevant.
+     Rejected: folding it into the caption line — measured, that wrapped the header to 2.78 lines EVEN WHILE
+     COLLAPSED and pushed the catalog 206 -> 223, paying at rest on every visit for text that only matters once
+     the section is open. */
+  .hint { margin: 2px 0 6px; font-size: 13px; font-weight: 400; color: var(--color-text-muted); line-height: 1.4; }
+  .rows { margin: -4px -16px 0; }   /* decision 21 — the label is welded to the rows it heads */
+  .row { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border: 0; background: none; text-align: left; cursor: pointer; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--color-border); }
+  .row:hover { background: var(--color-surface); }
+  .row .name { font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+  /* D-19i — a chevron means THIS ROW OPENS ANOTHER PAGE. A game row opens its editor (decision 2), so it has one. */
+  .chev { width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted); }
+  .more { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 8px; }
+  .more .cap { font-size: 12px; color: var(--color-text-muted); }
+
+  /* ---- sheets (D-19e) ---- */
+  .backdrop { position: absolute; inset: 0; background: color-mix(in srgb, #231339 38%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--duration-base); z-index: 40; }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-radius: 18px 18px 0 0; z-index: 41;
+    transform: translateY(105%); transition: transform 260ms var(--ease-out-soft); box-shadow: var(--shadow-lg); max-height: 85%; overflow-y: auto;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px)); scrollbar-width: none; }
+  .sheet::-webkit-scrollbar { display: none; }
+  .sheet.open { transform: none; }
+  .sheet:focus { outline: none; }
+  .sheet.full { top: 24px; max-height: none; }
+  .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-surface-2); margin: 0 auto 8px; }
+  .sh-top { position: sticky; top: 0; z-index: 4; background: var(--color-bg); padding-top: 8px; margin-bottom: 8px; }
+  .sheet.full .sh-top { margin-bottom: 0; }
+  .sh-head { display: flex; gap: 16px; align-items: center; padding: 8px 16px 16px; border-bottom: 1px solid var(--color-border); }
+  .sh-head .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .sh-head .tile { width: 56px; height: 60px; border-radius: 6px; background: var(--color-surface); display: grid; place-items: center; color: var(--color-accent-text); flex-shrink: 0; }
+  .sh-head .tile svg { width: 28px; height: 28px; }
+  .sh-txt { flex: 1; min-width: 0; }
+  .sh-title { font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .ctx { margin: 0 0 4px; font-size: 13px; line-height: 1.3; color: var(--color-text-muted); }
+  .sh-x { width: 44px; height: 44px; margin: -6px -10px 0 0; align-self: flex-start; flex-shrink: 0; border: 0; background: none; border-radius: 50%; display: grid; place-items: center; color: var(--color-text-muted); cursor: pointer; }
+  .sh-x svg { width: 22px; height: 22px; }
+  .sh-x:hover { background: var(--color-surface); }
+  .sh-x:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+  .dlink { width: 100%; display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border: 0; background: none; font-size: 16px; text-align: left; cursor: pointer; }
+  .dlink:hover { background: var(--color-surface); }
+  .dlink svg { width: 22px; height: 22px; color: var(--color-text-muted); flex-shrink: 0; }
+  .dlink .dsub { display: block; font-size: 13px; color: var(--color-text-muted); }
+  .dlink:has(.dsub) { min-height: 64px; padding-block: 8px; }
+  .dlink:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+
+  /* form sheet (restart 67) — the Agregar juego sheet */
+  .fbody { padding: 8px 16px 16px; }
+  .flab { display: block; margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+  .tfield { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--stroke); border-radius: 8px; background: var(--color-bg); font-size: 16px; outline: none; }
+  .tfield:focus { border-color: var(--color-primary); box-shadow: 0 0 0 1px var(--color-primary); }
+  .tfield[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: 0 0 0 1px var(--color-danger); }
+  .fbody .hint { margin: 6px 0 0; }
+  .ferr { margin: 6px 0 0; font-size: 13px; color: var(--color-danger); }
+  .ferr[hidden] { display: none; }
+  .fbody .obtn.wide { margin-top: 16px; }
+  .fsep { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; font-size: 13px; color: var(--color-text-muted); }
+  .fsep::before, .fsep::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+  /* the edition prompt (D-03): a banner inside the sheet, games listed as compact rows */
+  .edp { margin-top: 16px; padding: 12px; border: 1px solid var(--stroke); border-radius: 8px; }
+  .edp p { margin: 0 0 8px; font-size: 14px; line-height: 1.4; }
+  .edp .srow { min-height: 48px; padding: 4px 0; }
+  .edp .eacts { display: flex; justify-content: flex-end; gap: 8px; margin: 8px -12px -4px 0; }
+  .device.kbd .sheet.full, .device.kbd .sheet.form { bottom: 292px; padding-bottom: 0; }
+
+  /* ---- editor stand-in (the real screen is sketch 063) ---- */
+  .ehead { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+  .ehead .cov { width: 56px; height: 60px; border-radius: 6px; }
+  .ehead h2 { margin: 0; font-size: 22px; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+  .enote { margin-top: 24px; padding: 16px; border: 1px dashed var(--stroke); border-radius: 8px; font-size: 14px; line-height: 1.5; color: var(--color-text-muted); }
+  /* stand-in blocks: only to give the page 063's real length, which is what justifies the pinned bar */
+  .estub { height: 180px; margin: 8px -16px 0; background: repeating-linear-gradient(135deg, var(--color-surface) 0 10px, transparent 10px 20px); border-radius: 8px; }
+
+  /* ---- dialog (D-19f) ---- */
+  .dscrim { position: absolute; inset: 0; z-index: 60; background: color-mix(in srgb, #231339 38%, transparent); display: grid; place-items: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity var(--duration-base); }
+  .dscrim.open { opacity: 1; pointer-events: auto; }
+  .dialog { width: 100%; max-width: 312px; background: var(--color-bg); border-radius: 16px; padding: 24px 24px 12px; box-shadow: var(--shadow-lg); transform: scale(.96); transition: transform var(--duration-base) var(--ease-out-soft); }
+  .dscrim.open .dialog { transform: none; }
+  .dialog h2 { margin: 0 0 8px; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .dialog p { margin: 0 0 16px; font-size: 14px; line-height: 1.45; color: var(--color-text-muted); }
+  .dacts { display: flex; justify-content: flex-end; gap: 8px; margin-right: -12px; }
+  .tbtn.dan { color: var(--color-danger); }
+
+  /* ---- snackbar (D-19b/c) ---- */
+  .snack { position: absolute; left: 12px; right: 12px; bottom: 79px; z-index: 30; display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 4px 4px 4px 16px;
+    background: var(--color-text); color: var(--color-bg); border-radius: 8px; font-size: 14px; opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity var(--duration-base), transform var(--duration-base) var(--ease-out-soft); }
+  .snack.show { opacity: 1; transform: none; pointer-events: auto; }
+  .snack span { flex: 1; padding: 8px 0; }
+  .snack .tbtn { color: var(--color-accent-bg); }
+  .snack .x { width: 44px; height: 44px; border: 0; background: none; color: var(--color-bg); display: grid; place-items: center; cursor: pointer; }
+  .snack .x svg { width: 18px; height: 18px; }
+  .snack [hidden] { display: none; }
+
+  .kbd-sim { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 25; background: #d2d4da; display: none; padding: 10px 4px; }
+  :root[data-theme="dark"] .kbd-sim { background: #2b2b30; }
+  .device.kbd .kbd-sim { display: grid; grid-template-rows: repeat(4, 1fr); gap: 10px; }
+  .kbd-sim .krow { display: flex; gap: 5px; justify-content: center; }
+  .kbd-sim .k { flex: 0 0 31px; border-radius: 5px; background: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.3); display: grid; place-items: center; font: 17px system-ui; color: #111; }
+  :root[data-theme="dark"] .kbd-sim .k { background: #6b6b70; color: #fff; }
+  .kbd-sim .k.wide { flex-basis: 180px; font-size: 12px; }
+
+  #tools { position: fixed; right: 12px; top: 12px; z-index: 99; font: 12px system-ui; background: rgba(0,0,0,.72); color: #fff; padding: 6px 10px; border-radius: 8px; }
+  #tools > div + div { margin-top: 4px; }
+  #tools button.on { background: #fff; color: #000; }
+  #tools button { font: inherit; color: #fff; background: none; border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+
+  /* ---------- decision 32: the press state ----------
+     Measured before building: the page had 8 `:hover` rules, 6 `:focus-visible` and **ZERO `:active`**, so a
+     press painted byte-identical to a hover. On a pointer that is harmless — the hover already painted. On
+     TOUCH there is no hover at all, so the only feedback a tap got was the platform's own highlight, and
+     `-webkit-tap-highlight-color` was authored NOWHERE: every tappable surface sat at the platform default
+     (rgba(51,181,229,0.4), Android's Holo cyan, under touch emulation). That cyan appears nowhere in this palette.
+
+     The property INHERITS, so suppressing it at the root covers every surface at once — including ones added
+     later, which is why it is not enumerated per selector. */
+  :root { -webkit-tap-highlight-color: transparent; }
+
+  /* ONE press token, --color-surface-2, on every pressable surface. Rejected: press = the hover fill (lightest
+     of the options — #F1ECFD on white, which a ~100ms tap on a phone in daylight can miss), and press = one
+     step PAST hover everywhere (reads three ranks on a pointer, but needs a fabricated rgb(188,177,210) on the
+     pinned caption, a value that exists nowhere else in the system).
+     The accepted cost: a POINTER pressing a PINNED collapsible caption reads press == hover, because that
+     caption's hover is already surface-2. It is the narrowest case on the page and touch never reaches it —
+     touch, which is what this state exists for, has no hover to collide with. */
+  .row:active,
+  .ibtn:active,
+  .dlink:active,
+  .sh-x:active,
+  .srow:active,
+  .tbtn:active { background: var(--color-surface-2); }
+  /* the caption paints through its band pseudo-element, never its own box (decisions 27/29/31).
+     transition-duration 0s on the way IN: the band fades over 120ms, longer than a quick tap, so a
+     transitioned press fill would show only partly faded — or, on a fast tap, not at all. */
+  .lhead.tap:active::before,
+  .lhw.pinned .lhead.tap:active::before { background: var(--color-surface-2); transition-duration: 0s; }
+  @media (prefers-reduced-motion: reduce) { .lhead.tap:active::before { transition: none; } }
+
+</style>
+</head>
+<body>
+<div class="stage"><div class="device" id="device">
+  <header class="hdr">
+    <button class="burger" aria-label="Abrir menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img class="img-light" src="../../../priv/static/images/isologo-light.png" alt=""><img class="img-dark" src="../../../priv/static/images/isologo-dark.png" alt="">
+    <span class="word">PUKLLAY CLUB</span>
+  </header>
+  <div class="pbar" id="pbar" inert></div>
+  <div class="scroller" id="scroller"><main id="main"></main></div>
+  <nav class="tabs" aria-label="Secciones de Admin">
+    <span class="tab"><span class="ti" id="t-admin"></span>Admin</span>
+    <span class="tab on" aria-current="page"><span class="ti" id="t-juegos"></span>Juegos</span>
+    <span class="tab"><span class="ti" id="t-web"></span>Web</span><span class="tab"><span class="ti" id="t-est"></span>Estantes</span>
+    <span class="tab"><span class="ti"><span class="av">LM</span></span>Perfil</span>
+  </nav>
+  <div class="snack" id="snack" role="status"><span></span><button class="tbtn" hidden></button><button class="x" aria-label="Cerrar aviso" hidden></button></div>
+  <div class="kbd-sim" aria-hidden="true"><div class="krow">qwertyuiop</div><div class="krow">asdfghjklñ</div><div class="krow">zxcvbnm</div><div class="krow"><span class="k wide">espacio</span></div></div>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+  <div class="dscrim" id="dscrim"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t" aria-describedby="dlg-d">
+    <h2 id="dlg-t"></h2><p id="dlg-d"></p>
+    <div class="dacts"><button class="tbtn" data-act="dlg-no">Cancelar</button><button class="tbtn dan" data-act="dlg-yes"></button></div></div></div>
+</div></div>
+<div id="tools">
+  <div>Tema: <button data-theme-set="light">Claro</button> <button data-theme-set="dark">Oscuro</button> · Teclado: <button data-kbd-set="1" class="on">Sí</button> <button data-kbd-set="0">No</button></div>
+  <div>Estado BGG: <button data-enr-set="" class="on">—</button> <button data-enr-set="pending">pendiente</button> <button data-enr-set="failed">error</button></div>
+
+</div>
+
+<script src="../069-estantes-ubicar/games.js"></script>
+<script>
+/* ---------- icons ---------- */
+const P = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  chevR: '<path d="M9 5l7 7-7 7"/>',
+  chevL: '<path d="M15 5l-7 7 7 7"/>',
+  chevD: '<path d="M5 9l7 7 7-7"/>',
+  inbox: '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 5h13l2.5 8v5a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-5z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  home: '<path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/>',
+  shelf: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18"/>',
+  dice: '<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
+  img: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M4 17l5-4 4 3 3-2 4 3"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  file: '<path d="M14 3v5h5"/><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/>',
+  down: '<path d="M12 5v13M6 13l6 6 6-6"/>'
+};
+const ic = (n, s = 1.7) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${s}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+
+/* ---------- data: the 434 published games + 1 draft, exactly as the dev DB has them ----------
+   The fixture's 49 thumb-less games ARE the 49 incomplete ones (no cover, no description, no year) — verified
+   against pukllay_club_dev. They were bulk-imported 2026-08-10, so newest-first puts them at the bottom. */
+let G = GAMES067.map((x, i) => ({
+  id: i + 1, name: x.n, thumb: x.t, hue: hue(x.n),
+  year: x.t ? x.y : null,               /* the 49 have no year either */
+  gap: !x.t,                            /* "sin datos": no cover, no description */
+  status: 'published',
+  added: x.t ? 2000 + i : 0             /* the 49 all share the oldest timestamp */
+}));
+G.push({ id: 900, name: 'Ark Nova', thumb: null, hue: hue('Ark Nova'), year: 2021, gap: false, status: 'draft', added: 999999, enr: 'enriched' });
+/* enrichment_status — the SHIPPED column (pending | enriched | no_bgg_id | bgg_missing | failed; live code writes
+   only pending, enriched and failed). The dev DB has ZERO pending and ZERO failed rows today, so these are
+   SCENARIOS applied to the existing draft, not extra fixture rows: the resting page stays the real 49+1+385. */
+let ENR = '';        /* '' | 'pending' | 'failed' — a SCENARIO toggle, not a variant: the dev DB has no such
+                        rows, so this is the only way to see the state at all (like the Teclado toggle). */
+
+
+const enrOf = g => (g.id === 900 && ENR) ? ENR : (g.enr || 'enriched');
+const byId = id => G.find(g => g.id === id);
+const TOTAL = () => G.length;
+const GAPS = () => G.filter(g => g.gap);
+const DRAFTS = () => G.filter(g => g.status === 'draft');
+let PEND_MODE = 50;
+const pend = () => PEND_MODE === 50 ? GAPS().length + DRAFTS().length : PEND_MODE;
+/* newest first (decision 3) */
+const byNew = () => [...G].sort((a, b) => b.added - a.added);
+
+const PAGE = 50;
+const S = { screen: 'juegos', shown: PAGE, q: '', kept: null, recent: [], open: { gap: false, draft: false } };
+let KBD_SIM = true, opener = null;
+
+const main = $('#main'), device = $('#device');
+const cover = (g, cls = 'cov') => enrOf(g) === 'pending'
+  ? `<span class="${cls} skel" aria-hidden="true"></span>`
+  : g.thumb
+  ? `<img class="${cls}" src="${esc(g.thumb)}" alt="" loading="lazy">`
+  : g.gap ? `<span class="${cls} none" aria-hidden="true">${ic('img')}</span>`
+    : `<span class="${cls} l" style="--h:${g.hue}" aria-hidden="true">${esc(g.name[0])}</span>`;
+const jn = n => n === 1 ? '1 juego' : `${n} juegos`;
+
+/* decision 8 — the three groups PARTITION the catalog (49 + 1 + 385 = 435); a game is never in two of them */
+/* decision 18 — the two EXCEPTION sections close at rest, so the catalog is not 50 rows down. `shut` marks a
+   section as collapsible AND collapsed by default; the body section has no `shut`, so it never collapses and the
+   empty-page state decision 15 found stays unreachable. */
+const GROUPS = [
+  { key: 'gap', name: 'Sin datos', shut: true, hint: 'Se ven en la web sin tapa ni descripción.', has: g => g.status !== 'draft' && g.gap },
+  { key: 'draft', name: 'Borradores', one: 'borrador', shut: true, hint: 'Todavía no se ven en la web.', has: g => g.status === 'draft' },
+  { key: 'rest', name: 'Juegos del club', hint: null, has: g => g.status !== 'draft' && !g.gap }
+];
+const inGroup = k => byNew().filter(GROUPS.find(x => x.key === k).has);
+
+/* a row's second line: the year. The GROUP names the state, so a row never repeats it — inside "Sin datos"
+   all 49 rows saying "● Sin datos" under a heading that already says it was pure noise. */
+/* decision 24 — enrichment is the row's SECOND LINE, the slot the year already occupies, as a dot + text
+   (D-19h). No new anatomy, no new left edge. It does NOT repeat the section's state — a draft is a draft whether
+   or not BGG answered — which is what decision 1 actually objected to.
+   The row keeps its chevron and nothing else: D-19i reserves the trailing slot for "opens a page" and decision 2
+   says picking a game opens its editor, so Reintentar belongs in the editor, not in the row. */
+function sub(g) {
+  const e = enrOf(g);
+  if (e === 'pending') return '<span class="dot"></span>Trayendo datos de BGG…';
+  if (e === 'failed') return '<span class="dot err"></span>Error al traer datos de BGG';
+  return g.year ? esc(String(g.year)) : '';
+}
+/* pending arrives BEFORE the name does: draft_changeset writes the placeholder "Juego #<bgg_id>" */
+const rowName = g => enrOf(g) === 'pending' ? 'Juego #342942' : esc(g.name);
+const gameRow = g => `<button class="row" data-act="open" data-id="${g.id}" aria-label="${esc(g.name)}">
+  ${cover(g)}<span class="txt"><span class="name">${rowName(g)}</span>${sub(g) ? `<span class="sub">${sub(g)}</span>` : ''}</span>
+  <span class="chev" aria-hidden="true">${ic('chevR')}</span></button>`;
+
+/* ---------- screens ---------- */
+/* decision 6 — the compact bar mirrors the page's own back link + title. Exactly ONE of the two back controls is
+   focusable at a time (inert on the other), so the accessibility tree never carries a duplicate "Juegos". */
+const BAR = { juegos: { back: null, title: 'Juegos' } };
+function renderBar() {
+  const b = S.screen === 'editor'
+    ? { back: 'Juegos', title: byId(S.editing).name }
+    : BAR[S.screen];
+  $('#pbar').innerHTML = (b.back ? `<button class="back" data-act="juegos">${ic('chevL')}${esc(b.back)}</button>` : '')
+    + `<span class="pbt">${esc(b.title)}</span>`;
+}
+function render() {
+  if (S.screen === 'juegos') renderJuegos();
+  else if (S.screen === 'editor') renderEditor();
+  $('#t-juegos').innerHTML = ic('dice'); $('#t-admin').innerHTML = ic('grid');
+  $('#t-web').innerHTML = ic('home'); $('#t-est').innerHTML = ic('shelf');
+  device.dataset.bar = S.screen === 'juegos' ? 'search' : 'title';
+  renderBar(); updateBar();
+}
+
+let lastY = 0;
+const HIDE_AFTER = 140;   /* past the title row; the search is stuck from ~116 */
+
+/* the pinned tier takes over once the title row has gone behind it.
+   Juegos pins the search itself (decision 7); every other screen pins the back + title bar. */
+const scroller = () => $('#scroller');
+function updateBar() {
+  const search = main.querySelector('.search');
+  if (search) {                                   /* Juegos: the field is the pinned tier */
+    /* sticky top:0 pins to the SCROLLER's top edge, not the viewport's — compare against that, not 0 */
+    const sc = scroller(), y = sc.scrollTop, scTop = sc.getBoundingClientRect().top;
+    search.classList.toggle('stuck', search.getBoundingClientRect().top - scTop <= 0.5);
+    /* decision 9 — hide going down, show going up. Never while the field has focus (its dropdown is open),
+       and never near the top, where the search belongs to the resting layout. */
+    const dy = y - lastY;
+    if (y <= HIDE_AFTER || document.activeElement === $('#q')) device.classList.remove('hidesearch');
+    else if (Math.abs(dy) > 6) device.classList.toggle('hidesearch', dy > 0);
+    lastY = y;
+    /* Franjas A/B need to know when a heading has actually pinned, so it can gain a background only there.
+       Sticky pins to the SCROLLER's top edge offset by --bar, never the viewport's. */
+    const barPx = parseFloat(getComputedStyle(device).getPropertyValue('--bar')) || 0;
+    main.querySelectorAll('.lhw').forEach(w => {
+      const sec = w.closest('.lgroup').getBoundingClientRect();
+      /* held at the bar = its top has reached the bar AND its own section still extends past it. Without the
+         second half, a header that has scrolled entirely out of view still counts as pinned — three at once. */
+      w.classList.toggle('pinned', w.getBoundingClientRect().top - scTop <= barPx + 0.5 && sec.bottom - scTop > barPx + 0.5);
+    });
+    device.classList.remove('scrolled'); $('#pbar').inert = true;
+    return;
+  }
+  /* the element that must scroll away before the bar takes over: the title row, or the editor's game head */
+  const ph = main.querySelector('.ehead'); if (!ph) return;   /* decision 22 — Juegos has no title row */
+  const on = scroller().scrollTop > ph.offsetTop + ph.offsetHeight - 44;
+  device.classList.toggle('scrolled', on);
+  $('#pbar').inert = !on;
+  const inPage = main.querySelector('.back'); if (inPage) inPage.inert = on;
+}
+
+/* decision 8 — one list, three collapsible groups. The two work groups sit on top, collapsed by default, so at
+   rest both counts are on screen AND the newest-first catalog starts immediately. No Pendientes page, no badge.
+   The caret is LEADING and rotates (decision 10): a disclosure triangle, never a trailing "›", which under
+   D-19i means "opens a page". */
+/* decision 17 — ONE LIST. The page is a single continuous list whose sections happen to hold different content,
+   not a block of work groups plus a catalog. Every section header is the SAME caption — a span, no caret, no
+   control, 13/600 muted at 16, sticky, gaining its fill only when it pins — so the rhythm is uniform by
+   construction. This is the iOS plain-table / Contacts model the BENCHMARK already records, and it supersedes
+   the whole band negotiation: decisions 10, 11, 13, 14 and 15 existed only because there were TWO kinds of
+   header. There is now one. Decision 16's caption rank survives, generalised to every section. */
+function groupSection(g) {
+  const all = inGroup(g.key), paged = g.key === 'rest' ? all.slice(0, S.shown) : all;
+  const open = !g.shut || !!S.open[g.key];
+  /* ONE anatomy still (decision 17): same tag family, rank, colour, height and 16 keyline. The only difference
+     is a disclosure caret, which is the thing that TELLS you a section collapses — honest signalling, not a
+     second kind of header. It sits INLINE after the count, so there is no leading slot and therefore no hole in
+     the x=16 column (decision 16's defect). The hit box is stretched to 44 by a pseudo-element so the caption's
+     visual rhythm is not loosened to reach the touch floor. */
+  /* decision 24 — a failure inside a CLOSED section is otherwise invisible: measured, the row is not even in
+     the DOM at rest. The caption carries it as the SAME dot + text a row would use (D-19h), never a badge — and
+     only while closed, since an open section shows the rows themselves. Costs the resting page nothing.
+     This is decision 18's move again: an optional affordance on ONE anatomy, not a second kind of header. */
+  const bad = all.filter(x => enrOf(x) === 'failed').length;
+  const warn = (bad && !open) ? `<span class="warn"><span class="dot err"></span>${bad} con error</span>` : '';
+  const head = g.shut
+    ? `<button class="lhead tap" data-act="group" data-g="${g.key}" aria-expanded="${open}">
+        <span class="ln">${g.name}</span><span class="cnt">${all.length}</span>${warn}
+        <span class="caret" aria-hidden="true">${ic('chevD')}</span></button>`
+    : `<span class="lhead"><span class="ln">${g.name}</span><span class="cnt">${all.length}</span></span>`;
+  return `<section class="lgroup${g.key === 'rest' ? ' main' : ''}${open ? '' : ' shut'}">
+    <h2 class="lhw">${head}</h2>
+    ${open && g.hint ? `<p class="hint">${g.hint}</p>` : ''}
+    ${open ? `<div class="rows">${all.length ? paged.map(gameRow).join('') : `<p class="snone">No hay ${g.name.toLowerCase()}.</p>`}</div>
+    ${g.key === 'rest' && S.shown < all.length ? `<div class="more"><button class="tbtn" data-act="more">Mostrar más</button><span class="cap">${S.shown} de ${all.length}</span></div>` : ''}` : ''}
+  </section>`;
+}
+
+/* decision 22 — no resting page title: the tab bar names the page, the field leads it, and the + keeps the
+   header icon's right edge beside the field. The h1 stays in the accessibility tree as .sr. */
+function renderJuegos() {
+  main.innerHTML = `
+    <h1 class="sr">Juegos</h1>
+    <div class="search">
+      <div class="srow-wrap">
+        <div class="sfield">
+          <input id="q" type="search" placeholder="Buscá un juego" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg" aria-label="Buscá un juego">
+          <span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>
+          <div class="sugg" id="sugg" role="listbox" hidden></div>
+        </div>
+        <button class="ibtn" data-act="add" aria-label="Agregar un juego">${ic('plus')}</button>
+      </div>
+    </div>
+    ${GROUPS.map(groupSection).join('')}`;
+}
+
+function renderEditor() {
+  const g = byId(S.editing);
+  main.innerHTML = `
+    <button class="back" data-act="juegos">${ic('chevL')}Juegos</button>
+    <div class="ehead">${cover(g, 'cov')}<div><h2>${esc(g.name)}</h2>
+      <div class="sub" style="margin-top:4px">${sub(g)}</div></div></div>
+    <div class="enote">Acá va el editor del juego — <strong>sketch 063</strong>. No se vuelve a dibujar en este sketch:
+      071 sólo diseña la pestaña Juegos y cómo se llega hasta acá. Los bloques de abajo están sólo para que la
+      página tenga el largo real del editor, que es lo que justifica la barra fija de arriba.</div>
+    ${['Datos del club', 'En la web', 'Datos de BGG'].map(s => `<section class="lgroup"><h2 class="lhw"><span class="lhead" style="cursor:default">
+      <span class="ln">${s}</span></span></h2><div class="estub"></div></section>`).join('')}`;
+}
+
+/* ---------- the search (069) ---------- */
+/* decision 4 — one field, three answers: a name searches, a BGG id or link offers to add it,
+   no match offers to create it by name. The shipped parser already accepts a number or a BGG link. */
+const BGG_RE = /^(?:\s*(\d{2,7})\s*|.*boardgamegeek\.com\/boardgame(?:expansion)?\/(\d{2,7})\b.*)$/i;
+const bggId = q => { const m = String(q).match(BGG_RE); return m ? (m[1] || m[2]) : null; };
+
+function markMatch(name, q) {
+  const n = norm(q.trim()), i = norm(name).indexOf(n);
+  if (i < 0 || !n) return esc(name);
+  return esc(name.slice(0, i)) + '<mark>' + esc(name.slice(i, i + n.length)) + '</mark>' + esc(name.slice(i + n.length));
+}
+const sugRow = (g, q) => `<button class="srow" role="option" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${markMatch(g.name, q)}</span><span class="sub">${sub(g)}</span></span></button>`;
+
+function renderSugg() {
+  const box = $('#sugg'), inp = $('#q'); if (!box || !inp) return;
+  const q = inp.value, sico = $('#sico');
+  /* a kept name: the magnifier became a ✕ that goes back (069 decision 60) */
+  if (S.kept) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+  sico.outerHTML = `<span class="sico" id="sico" aria-hidden="true">${ic('search')}</span>`;
+
+  if (!q.trim()) {                                   /* focused + empty → Últimas búsquedas */
+    const rec = S.recent.map(byId).filter(Boolean).slice(0, 3);
+    if (!rec.length) { box.hidden = true; inp.setAttribute('aria-expanded', 'false'); return; }
+    box.innerHTML = `<div class="sglabel">Últimas búsquedas</div>` + rec.map(g => sugRow(g, '')).join('');
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  const id = bggId(q);
+  if (id) {                                          /* a BGG number or link → add, don't search */
+    box.innerHTML = `<button class="srow create" role="option" data-act="addbgg" data-bgg="${esc(id)}">
+      <span class="cov">${ic('plus')}</span>
+      <span class="txt"><span class="ttl">Agregar desde BGG</span><span class="sub">BGG ${esc(id)} · se agrega como borrador</span></span></button>`;
+    box.hidden = false; inp.setAttribute('aria-expanded', 'true'); return;
+  }
+
+  const hits = G.filter(g => norm(g.name).includes(norm(q.trim()))).slice(0, 6);
+  box.innerHTML = hits.map(g => sugRow(g, q)).join('')
+    + `<button class="srow create" role="option" data-act="create" data-name="${esc(q.trim())}">
+        <span class="cov">${ic('plus')}</span>
+        <span class="txt"><span class="ttl">Crear «${esc(q.trim())}»</span><span class="sub">Un juego que BGG no tiene</span></span></button>`;
+  box.hidden = false; inp.setAttribute('aria-expanded', 'true');
+}
+
+/* a new screen always starts at the top — otherwise the bar shows on arrival at a page you never scrolled */
+function go(screen) { S.screen = screen; scroller().scrollTop = 0; lastY = 0; device.classList.remove('hidesearch'); render(); }
+
+function openGame(id, from) {
+  S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 3);
+  S.editing = id; S.from = from || S.screen;
+  device.classList.remove('kbd'); go('editor');
+}
+
+/* ---------- sheets ---------- */
+function openSheet(head, body, from, opt = {}) {
+  opener = from || null;
+  const sh = $('#sheet');
+  sh.className = 'sheet' + (opt.full ? ' full' : '') + (opt.form ? ' form' : '');
+  sh.innerHTML = `<div class="sh-top"><div class="grab"></div><div class="sh-head">${head}
+      <button class="sh-x" data-act="close" aria-label="Cerrar">${ic('x')}</button></div></div>${body}`;
+  sh.classList.add('open'); $('#backdrop').classList.add('open');
+  setTimeout(() => { const f = sh.querySelector('input'); f ? f.focus() : sh.querySelector('button:not(.sh-x)')?.focus(); }, 60);
+}
+function closeSheet() { device.classList.remove('kbd'); $('#sheet').classList.remove('open'); $('#backdrop').classList.remove('open'); opener?.isConnected && opener.focus?.({ preventScroll: true }); }
+
+/* decision 4 — the "+" sheet: the BGG path first, the manual path under a separator */
+function addSheet(from, prefill) {
+  openSheet(
+    `<span class="tile" aria-hidden="true">${ic('plus')}</span>
+     <div class="sh-txt"><p class="ctx">${TOTAL()} juegos en el club</p><div class="sh-title">Agregar juego</div></div>`,
+    `<div class="fbody">
+       <label class="flab" for="bg">Número o link de BGG</label>
+       <input class="tfield" id="bg" value="${esc(prefill || '')}" placeholder="342942" inputmode="text" autocomplete="off">
+       <p class="ferr" id="bgerr" hidden></p>
+       <p class="hint">Traemos la tapa, los jugadores, la duración y el nivel. Queda como borrador hasta que lo publiques.</p>
+       <button class="obtn pri wide" data-act="addgo">Agregar</button>
+       <div class="fsep">o</div>
+       <button class="dlink" data-act="manual" style="padding-left:0"><span>${ic('edit')}</span>
+         <span>Crear a mano<span class="dsub">Para un juego que BGG no tiene</span></span></button>
+     </div>`, from, { form: true });
+  if (KBD_SIM) device.classList.add('kbd');
+}
+
+/* D-03 — a BGG id that already belongs to a game: warn, list the holders, let staff confirm an edition */
+function editionPrompt(id) {
+  const holders = [byId(1), byId(2)];
+  const body = $('#sheet').querySelector('.fbody');
+  if (body.querySelector('.edp')) return;
+  body.insertAdjacentHTML('beforeend', `<div class="edp">
+    <p>Ya tenés ${holders.map(g => esc(g.name)).join(' y ')} con este BGG ID. ¿Es otra edición?</p>
+    ${holders.map(g => `<button class="srow" data-act="open" data-id="${g.id}">${cover(g)}<span class="txt"><span class="ttl">${esc(g.name)}</span><span class="sub">${sub(g)}</span></span></button>`).join('')}
+    <div class="eacts"><button class="tbtn" data-act="edcancel">Cancelar</button><button class="obtn" data-act="edok">Sí, agregar edición</button></div></div>`);
+}
+
+function addGame(bgg) {
+  const g = { id: 1000 + G.length, name: `Juego #${bgg}`, thumb: null, hue: hue(bgg), year: null, gap: false, status: 'draft', added: 1e6 + G.length, pending: true };
+  G.push(g); closeSheet(); S.screen = 'juegos'; S.shown = PAGE; render();
+  snack('Juego agregado como borrador');
+  setTimeout(() => { g.name = 'Ark Nova'; g.year = 2021; g.pending = false; if (S.screen === 'juegos') render(); }, 1600);
+}
+
+function createManual(name) {
+  const g = { id: 1000 + G.length, name: name || 'Juego nuevo', thumb: null, hue: hue(name || 'x'), year: null, gap: true, status: 'draft', added: 1e6 + G.length };
+  G.push(g); closeSheet(); openGame(g.id, 'juegos'); snack('Juego creado');
+}
+
+/* ---------- dialog / snackbar ---------- */
+const DLG = { run: null };
+function openDialog({ title, text, yes, run }) {
+  DLG.run = run; $('#dlg-t').textContent = title; $('#dlg-d').textContent = text;
+  $('[data-act="dlg-yes"]').textContent = yes; $('#dscrim').classList.add('open');
+  setTimeout(() => $('[data-act="dlg-no"]').focus(), 60);
+}
+function closeDialog() { $('#dscrim').classList.remove('open'); DLG.run = null; }
+let snackT;
+function snack(msg, action) {
+  const s = $('#snack'), [t, b, x] = [s.querySelector('span'), s.querySelector('.tbtn'), s.querySelector('.x')];
+  t.textContent = msg; b.hidden = !action; x.hidden = !action;
+  if (action) { b.textContent = action.label; b.onclick = () => { action.run(); hide(); }; x.innerHTML = ic('x'); x.onclick = hide; }
+  s.classList.add('show'); clearTimeout(snackT); snackT = setTimeout(hide, action ? 10000 : 4000);
+  function hide() { s.classList.remove('show'); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a === 'open') return openGame(+t.dataset.id, S.screen);
+  if (a === 'juegos') return go('juegos');
+  if (a === 'group') {
+    /* decision 8's rule, kept: the tapped heading stays exactly where the finger left it, so opening a section
+       never scrolls the page out from under you. Re-query after the render — reusing the stale node silently
+       mutated the page once and every later measurement was wrong. */
+    const k = t.dataset.g, top = t.getBoundingClientRect().top;
+    S.open[k] = !S.open[k]; render();
+    const now = main.querySelector(`[data-g="${k}"]`);
+    if (now) scroller().scrollTop += now.getBoundingClientRect().top - top;
+    return;
+  }
+  if (a === 'more') { S.shown += PAGE; return render(); }
+  if (a === 'add') return addSheet(t);
+  if (a === 'addbgg') { const id = t.dataset.bgg; closeSuggest(); return addSheet(null, id); }
+  if (a === 'create') return createManual(t.dataset.name);
+  if (a === 'manual') { closeSheet(); return createManual($('#q')?.value?.trim() || ''); }
+  if (a === 'addgo') {
+    const v = $('#bg').value.trim(), id = bggId(v);
+    if (!id) { $('#bg').setAttribute('aria-invalid', 'true'); const er = $('#bgerr'); er.textContent = 'Pegá un número de BGG o el link del juego.'; er.hidden = false; return; }
+    if (id === '13') return editionPrompt(id);
+    return addGame(id);
+  }
+  if (a === 'edcancel') { $('.edp')?.remove(); return; }
+  if (a === 'edok') return addGame('13');
+  if (a === 'close') return closeSheet();
+  if (a === 'dlg-no') return closeDialog();
+  if (a === 'dlg-yes') { const r = DLG.run; closeDialog(); r?.(); return; }
+});
+function closeSuggest() { const b = $('#sugg'); if (b) { b.hidden = true; $('#q')?.setAttribute('aria-expanded', 'false'); } }
+$('#backdrop').addEventListener('click', closeSheet);
+$('#dscrim').addEventListener('click', e => { if (e.target.id === 'dscrim') closeDialog(); });
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { S.kept = null; renderSugg(); }
+  if (e.target.id === 'bg') { e.target.removeAttribute('aria-invalid'); $('#bgerr').hidden = true; }
+});
+document.addEventListener('focusin', e => {
+  if (e.target.id === 'q') { if (KBD_SIM) device.classList.add('kbd'); renderSugg(); }
+  if (e.target.id === 'bg' && KBD_SIM) device.classList.add('kbd');
+});
+document.addEventListener('focusout', e => {
+  if (e.target.id === 'q') setTimeout(() => { if (document.activeElement?.id !== 'q' && !$('#sugg')?.contains(document.activeElement)) { device.classList.remove('kbd'); closeSuggest(); } }, 180);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('#dscrim').classList.contains('open')) return closeDialog();
+  if ($('#sheet').classList.contains('open')) return closeSheet();
+  if (!$('#sugg')?.hidden) { closeSuggest(); $('#q')?.blur(); }
+});
+
+/* ---------- tools ---------- */
+document.addEventListener('click', e => {
+  const th = e.target.closest('[data-theme-set]'); if (th) { document.documentElement.dataset.theme = th.dataset.themeSet; mark('[data-theme-set]', th); }
+  const k = e.target.closest('[data-kbd-set]'); if (k) { KBD_SIM = k.dataset.kbdSet === '1'; if (!KBD_SIM) device.classList.remove('kbd'); mark('[data-kbd-set]', k); }
+  const en = e.target.closest('[data-enr-set]'); if (en) { ENR = en.dataset.enrSet; mark('[data-enr-set]', en); render(); }
+});
+function mark(sel, on) { $$(sel).forEach(b => b.classList.toggle('on', b === on)); }
+
+scroller().addEventListener('scroll', updateBar, { passive: true });
+render();
+</script>
+</body>
+</html>

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 3
 waived_count: 1
 fixed_count: 25
-total_count: 28
-last_updated: 2026-09-13T03:59:03.929Z
+total_count: 29
+last_updated: 2026-09-23T01:02:46.110Z
 ---
 
 # Broken Windows Ledger
@@ -43,6 +43,7 @@ last_updated: 2026-09-13T03:59:03.929Z
 | 26 | 01.8-05 | stub | priv/static/images/og-fallback.webp |  | OG-fallback branded share card (SHARE-04, D-04/D-05) not yet on disk -- blocked on a /gsd-sketch round (Task 2 checkpoint, gate=blocking-human); GET / and GET /club's og:image/twitter:image 404 until the sketch-approved asset lands | fixed |  | 2026-09-12T03:07:10.127Z | 2026-09-12T03:32:01.626Z |
 | 27 | quick-260912-waa | deviation | assets/css/app.css |  | Pre-existing WCAG gap unrelated to sketch 058: light theme's --color-success-content (#FFFFFF) on --color-success (#3F8F6B) measures 3.92:1, below the 4.5:1 text floor. Neither role is touched by this task's ramp/hue rotation (D-Semantics, out of scope); logged as a documented exception in h300-audit.mjs --check rather than silently fixed. | open |  | 2026-09-13T02:42:53.734Z |  |
 | 28 | quick-260913-0h6 | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 90 | Pre-existing flake, unrelated to this task: mechanic-chip-overflow test asserts absence of literal +7 in rendered HTML, but the page's CSP script nonce is a random base64 string that occasionally contains +7 by chance | open |  | 2026-09-13T03:59:03.929Z |  |
+| 29 | quick-260922-tum | deviation | lib/pukllay_club_web/game_text.ex |  | Plan's <=25-publisher acceptance threshold (Task 3 verify/done) does not hold against real post-fix data: 17 of 394 dev games legitimately carry 26-45 real, deduplicated international publishers (cross-checked against BGG raw XML). Not a defect -- see 260922-tum-SUMMARY.md Deviation 2 for full analysis and recommendation. | open |  | 2026-09-23T01:02:46.110Z |  |
 
 ````json
 [
@@ -381,6 +382,19 @@ last_updated: 2026-09-13T03:59:03.929Z
     "reason": "",
     "recorded_at": "2026-09-13T03:59:03.929Z",
     "resolved_at": null
+  },
+  {
+    "id": 29,
+    "kind": "deviation",
+    "phase": "quick-260922-tum",
+    "file": "lib/pukllay_club_web/game_text.ex",
+    "line": null,
+    "description": "Plan's <=25-publisher acceptance threshold (Task 3 verify/done) does not hold against real post-fix data: 17 of 394 dev games legitimately carry 26-45 real, deduplicated international publishers (cross-checked against BGG raw XML). Not a defect -- see 260922-tum-SUMMARY.md Deviation 2 for full analysis and recommendation.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-23T01:02:46.110Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
   }
 ]
 ````

@@ -21,7 +21,7 @@
     {
       "number": "01.8.1",
       "name": "Staff Admin — Ludoteca, Shelves & Curated Destacados",
-      "status": "in_progress"
+      "status": "complete"
     },
     {
       "number": "2",
@@ -41,8 +41,8 @@
   ],
   "next": {
     "command": "/gsd:progress --next",
-    "label": "Advance to the next step",
-    "reason": "Phase 01.8.1 of 6 · executing"
+    "label": "Advance to the next step (plan phase 01.8.2)",
+    "reason": "Phase 01.8.2 of 7 — needs a plan"
   },
-  "updated_at": "2026-09-14T17:06:49.655Z"
+  "updated_at": "2026-09-16T20:29:49.104Z"
 }

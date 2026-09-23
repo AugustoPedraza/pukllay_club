@@ -1,105 +1,123 @@
 # Sketch Wrap-Up Summary
 
-**Date:** 2026-09-02
-**Sketches processed:** 5 (045-049)
-**Design areas:** About Page Content (folded into existing area, not a new one)
+**Date:** 2026-09-22
+**Sketches processed:** 29 (052–080)
+**Design areas:** 9 — 7 new, 2 folded into existing areas
 **Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
 
-## Included Sketches
-| # | Name | Winner | Design Area |
-|---|------|--------|-------------|
-| 045 | about-header-scroll-isologo | A3 — 180px hero mark, true scroll-linked pin | About Page Content |
-| 046 | about-photo-rail-mobile-hero | A — Autoplay Crossfade+Snap; tagline "Volvé a jugar. Volvé a encontrarte." | About Page Content |
-| 047 | about-content-bands | Developer-authored final copy | About Page Content |
-| 048 | about-faq-contacto | A — Current/flat color confirmed official; merged Contacto card | About Page Content |
-| 049 | about-closing-cta-mobile | A — single "Sumate" CTA | About Page Content |
-
-## Excluded Sketches
-None — all five included.
-
-## Design Direction
-A revision pass over the already-shipped About page (not greenfield), driven by direct developer
-feedback across header behavior, photo carousel, content copy, FAQ/contact, and closing CTA.
-Every decision reuses existing tokens, components, and patterns already established elsewhere in
-the app (the footer's `social_links/1` icon pattern, the shared `.pk-band`/`.pk-band-inner`
-recipe, the hero's `sumate_cta/1`, sketch 037's "one shared edge, no floating pieces" precedent)
-rather than introducing new visual language.
-
-## Key Decisions
-- **Motion:** a new page-specific header pattern (hidden until scroll, isologo auto-enters then
-  morphs into the header mark at the exact geometric crossing point) — deliberately scoped to the
-  About page only, not proposed as a site-wide header change.
-- **Copy:** developer-authored final copy beat every AI draft; the process caught a real live
-  factual bug (origin date wrong on the shipped page).
-- **Layout bug:** a shared-class width mismatch (`.pk-band-inner` vs. the shell) affecting every
-  About-page content band, found while investigating what looked like an FAQ-only complaint.
-- **Component reuse:** Contacto rebuilt from the footer's existing icon/link pattern rather than
-  inventing new icons; closing CTA reuses the hero's existing button rather than adding new ones.
-- **Two more real bugs caught and fixed during sketching** (not design decisions, implementation
-  defects): three overlapping mark elements computing position against hidden zero-size
-  containers (045), and a missing `justify-content: center` on a CTA that gets stretched to full
-  width only on mobile (049) — both fixed in the sketch and now documented so the same mistake
-  isn't repeated during real implementation.
-
-## Open items for implementation (not resolved by sketching)
-- No real club photography exists — every photo is a labeled placeholder.
-- No real Google Maps thumbnail image exists — sourcing one (manual screenshot vs. Static Maps
-  API + key/cost) is an implementation-time decision.
-- The "2024 → April 2021" origin-date correction is independent of the rest of this round and
-  could ship on its own if the full page rework is deferred.
-
----
-
-**Date:** 2026-09-07
-**Sketches processed:** 2 (050-051)
-**Design areas:** About Page Content (folded into existing area, not a new one)
-**Skill output:** `./.claude/skills/sketch-findings-pukllay_club/`
+This is the largest wrap-up so far, and the first to cover the **staff admin** surface. Everything
+wrapped before this (001–051) was the public site; 059 onward is a second application living in the
+same Phoenix app, with its own shell, its own button system and its own composition rules.
 
 ## Included Sketches
+
 | # | Name | Winner | Design Area |
 |---|------|--------|-------------|
-| 050 | about-morph-companion-text | Companion wordmark baked into isologo mark (~25px), mark anchored in-flow, eyebrow synced to dock-crossing state | About Page Content |
-| 051 | about-full-page-cta-rhythm | Contacto card chrome dropped at all widths; soft-chip contact links (+Facebook); Maps moved to Juntadas; Cierre full-screen desktop with unified rhythm; alternating band backgrounds page-wide | About Page Content |
+| 053 | about-mobile-cta-bar-footer-clearance | D (refined) — hero-synced full-width bar, reserved footer clearance | About — Mobile CTA |
+| 054 | dark-mode-color-composition | A (Lifted Ladder) + W2 (Deep Jewel) | Dark Mode & Palette |
+| 055 | dark-primary-as-text-contrast-fix | A2 | Dark Mode & Palette |
+| 056 | dark-cta-contrast-fix | B | Dark Mode & Palette |
+| 057 | og-fallback-share-card | B — ramp-800 + isologo-dark + wordmark + tagline | Share Card |
+| 058 | dark-purple-hue | C | Dark Mode & Palette |
+| 059 | admin-shell | C2 (final, single design) | Admin — Shell & Navigation |
+| 060 | admin-panel-entries | B layout — centered 2-col boxes, no chevron | Admin — Shell & Navigation |
+| 062 | admin-list-rows | B — Modo ordenar + hojas | Admin — Shell & Navigation |
+| 064 | admin-button-system | S3 (Contorno), tuned in round 2 | Admin — Button System |
+| 065 | admin-composition | composition, 10 rounds, 11 drift bugs | Admin — Shell & Navigation |
+| 069 | estantes-ubicar | 68 developer decisions, no variants | Admin — Estantes |
+| 070 | web-destacados | one page — destacada inline + Otras filas (d1–20) | Admin — Web / Destacados |
+| 071 | admin-juegos | single, refined across decisions 1–17 | Admin — Juegos |
+| 072 | admin-game-editor | A (spine) + D+B (affordance) | Admin — Game Editor |
+| 073 | admin-bgg-state | D · D2 · F2 (r2 later superseded) | Admin — Game Editor |
+| 074 | admin-header | N1 · W3 Texto (d43–44) | Admin — Game Editor |
+| 076 | admin-create-visibility | V2 Se abre + Toast «Ver» | Admin — Juegos |
+| 077 | admin-pending-sheet | AV1 sólo la hoja | Admin — Juegos |
+| 078 | admin-publish-gate | P2 · la hoja del borrador, un solo CTA | Admin — Game Editor |
+| 079 | admin-lifecycle | el ⋮ arriba · tinte + lápiz · hoja · franja de estado | Admin — Game Editor |
+| 080 | admin-guardar-fijo | `Guardar` fijo al pie · divisor · ancho natural a la derecha | Admin — Game Editor |
 
-## Excluded Sketches
-None — both included.
+## Superseded and Closed — folded in as "What to Avoid"
+
+Kept as anti-patterns rather than dropped, so a future build does not re-propose a shape that was
+already tried and rejected.
+
+| # | Name | Why it is not the target |
+|---|------|--------------------------|
+| 052 | about-mobile-cta-alternatives | Winner B (content-sized floating pill) **rejected on real-device UAT** — it overlays the footer's "Powered by BGG" line at the real scrolled page bottom. 053 replaces it. |
+| 061 | admin-juegos-page | Predates the 01.8.2 restart. 071 states it is "the starting point to question, not the target" — its estado chips filter 435 games into 435. |
+| 063 | admin-game-editor | Same restart. Superseded by the 072→080 editor chain (d33's spine replaces the long form). |
+| 066 | estante-focus | 069 states it replaces everything 065-R8 and 066 drew for estantes. |
+| 067 | estante-read | Same restart; check `admin-estantes.md` for which of its cover/clamp findings 069 kept. |
+| 068 | locate-box | `winner: null`. The developer's response was *"let's start over all of this UI"* — which is what 069 is. |
+| 075 | admin-remedy-dirty | **Closed with no winner, 2026-09-22.** Four rounds, 26/26, and the question dissolved twice — see below. |
+
+## Two restarts run through this batch
+
+Neither is visible from the sketch numbers, and both were verified against the artefacts rather than
+inferred from names:
+
+1. **The estantes restart (068 → 069).** 069's README states outright that it replaces 065-R8 and
+   066. What survived: search answers *where it is*, the order of games IS the shelf order,
+   neighbours are one tap away, and "Asignar" is deleted.
+2. **The 01.8.2 admin restart (061/063 → 071/072…).** 071 states 061 and 063 "predate the estante
+   restart and the Web redesign, so they are the starting point to question, not the target."
+
+## Sketch 075 — closed, not answered
+
+Worth recording because it is the only sketch here that produced no design and still changed the
+product. It asked where the BGG remedy (`Vincular` / `Corregir ID`) lives while the editor is dirty.
+The question stopped existing twice:
+
+- **079 and 080 removed the CTA slot** the question depended on. Round 4 re-measured on the decided
+  chrome and found the remedy was not demoted but **absent** — reachable 0 of 8 while the d38
+  accusation *«Se está viendo así en la web»* was present word for word. That is the configuration
+  round 3's own guard had declared must not ship.
+- **Then the scenario itself was removed.** Asked to delete the games with no/bad BGG id, the dev-DB
+  query contradicted the premise: ~26 of the 41 `no_bgg_id` are **expansions and promos the club
+  owns and lends**, and the 8 `bgg_missing` carry plausible ids that could not be verified because
+  BGG's API answers 401 unauthenticated while `bgg_missing` is assigned on an *empty list*, not an
+  error. Decision: **the 49 are unpublished, not deleted** — see
+  `.planning/notes/staff-admin-decisions.md`.
+
+A draft is not on the web, so the sentence the whole sketch rested on becomes false. **The editor
+must not ship d38's accusation copy on a draft.** That is the single easiest thing for a future build
+to get wrong, and it is recorded in `references/admin-game-editor.md`.
 
 ## Design Direction
-Continues the direct-developer-feedback revision pattern from the 2026-09-02 round (045-049):
-started as a single todo ("surface Pukllay Club brand name") and expanded through live iteration
-into a full CTA-rhythm and band-background pass across the whole About page. Every decision
-verified live in a browser (not just reasoned about), including a real 375px iframe-based
-responsive preview built specifically because the sketch toolbar's own viewport buttons couldn't
-trigger real `@media` breakpoints.
+
+The admin is **not** a smaller version of the public site. Its rules, established across 059–080:
+
+- **Mobile-first, phone-width primary** — staff use this standing at a shelf, not at a desk.
+- **One row anatomy, one field anatomy, one list label, one component per job** (065's 10 rounds of
+  drift-hunting). Persistent controls never move between states.
+- **A value is a row that opens a sheet** (d33), and such a row carries **no chevron** (d34).
+- **One outline button system** (064 S3 "Contorno"), cited as "064 A1" by every later sketch.
+- **Status is a dot + text**, never a pill.
+- **The sheet prepares, the foot writes** (080) — sheets stage edits into a draft; a fixed footer
+  bar commits.
+- Pages are shaped by **what staff actually do**, measured against real dev-DB counts, rather than
+  by the filter-and-table habit (071, 069, 070 all opened this way).
 
 ## Key Decisions
-- **Brand name surfaced** without adding new UI: baked into the isologo's own scroll-morph
-  element rather than a separate label, so it travels/melts into the header's real wordmark.
-- **CTA de-duplication and grouping is a page-wide system now**, not per-section fixes: every
-  touchpoint (hero, Contacto, Cierre, mobile sticky bar) was checked together, not in isolation —
-  this is what surfaced the redundancy between Cierre's own Sumate and the mobile sticky bar, and
-  between Contacto's Instagram link and the closing meta line.
-- **Band backgrounds became a reusable page pattern**: FAQ's existing dark band (already shipped)
-  inspired an alternating plain/tint rhythm for the rest of the page, with FAQ explicitly kept as
-  the one bold exception rather than diluted into the alternation.
 
-## Real bugs found and fixed during sketching (5 total, not design decisions)
-1. Sketch theme's shared `default.css` never loaded the real Bebas Neue font file (fixed at the
-   theme level — benefits every sketch, not just this one).
-2. Header's `.brand-slot` never reserved space for the docked mark icon, causing text overlap.
-3. Debug annotation flags were positioned inside their target's box, hiding small buttons
-   entirely.
-4. A shared `.band p` CSS rule silently out-specified a target's own single-class font-size rule
-   for multiple rounds before a layout change (2-line wrap) made the wrong size visible.
-5. A rebuild of Cierre's spacing system silently dropped its `text-align: center` rule; invisible
-   until multi-line content exposed the missing alignment.
+- **Dark mode** resolved as a chain, not a single pick: 054's lifted ladder, 055's text-contrast fix
+  for the primary, 056's CTA fix, and 058's hue change to the ramp. `references/dark-mode-palette.md`
+  records the final combined state — do not implement any one of the four in isolation.
+- **Admin chrome (current):** top bar `‹ · título · ⋮` with the ⋮ as the only control; body carries a
+  status note then the ficha; a fixed foot bar with a 1px background-coloured divider and `Guardar`
+  at natural width on the right, 14px keel, enabled only when dirty.
+- **Create flow:** `+` sheet → V2 "Se abre" → completion toast «Ver» → the pending sheet speaks
+  alone (AV1). 076 and 077 are one continuous scenario.
+- **Estantes** is the locate-and-return surface: search to one game, see it raised among its
+  neighbours, place it by choosing the gap. 9 horizontal estantes, up to 50 boxes each.
 
-## Open items for implementation (not resolved by sketching)
-- Moving the Maps thumbnail from Contacto to Juntadas reopens sketch 048's original placement
-  decision — flag for developer sign-off before shipping.
-- The closing meta line's simplification (dropping its Instagram link) resolves an open question
-  already flagged in the real `about_live.ex` code comment, but is itself a content decision, not
-  purely visual — confirm before shipping.
-- Contacto's new soft-chip link style (`.cl-soft`) and its mobile icon-only variant have no
-  real-app CSS class yet; would need to be built as actual classes, and the real `Contacto` call
-  site needs `icons={[:whatsapp, :instagram, :facebook]}` added.
+## Caveats carried into implementation
+
+- **Nothing in 069–080 is confirmed on a real device.** Every one of those sketches says so in its
+  own status line. They are decided on measurements taken in headless Chrome at 375×667 and 360×640.
+- **064's "no disabled buttons" rule is in open conflict** with 080's `Guardar`, which ships
+  disabled while clean. Recorded as unresolved in `references/admin-button-system.md`.
+- **`TODO(palette)` ×2** — `--val` and `--warn` are local tokens inherited through 073/075/079/080
+  and still owed a real stop in `app.css`.
+- **The shared sketch theme had drifted** from the copy stored in the skill; `sources/themes/default.css`
+  was refreshed during this wrap-up.

@@ -1,0 +1,34 @@
+/* ================= 068: locate a box ================= */
+  #device main .r068-hit { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; }
+  #device main .r068-hit .thumb { width: 48px; height: 48px; }
+  #device main .r068-img { object-fit: cover; background: var(--color-surface); padding: 0; }
+  #device main .r068-hit .chev { align-self: center; }
+  #device main .r068-place { display: block; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--color-text); }
+  #device main .r068-nbr { display: block; margin-top: 2px; font-size: 13px; line-height: 1.35; color: var(--color-text-muted); }
+  #device main .r068-nbr b, #device main .r068-selline b { font-weight: 600; color: var(--color-text); }
+  /* the position bar: 4px track, a 10px marker, the shelf's two ends named */
+  #device main .r068-barwrap { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  #device main .r068-end { font-size: 11px; color: var(--color-text-muted); flex-shrink: 0; }
+  #device main .r068-bar { position: relative; flex: 1; height: 4px; border-radius: 2px; background: var(--color-surface-2); }
+  #device main .r068-bar i { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--color-bg); }
+  :root[data-theme="dark"] #device main .r068-bar i { background: var(--color-accent-text); }
+  /* B */
+  #device main .r068-hit.b .chev { transform: rotate(90deg); transition: transform var(--duration-base) var(--ease-out-soft); }
+  #device main .r068-hit.b[aria-expanded="true"] .chev { transform: rotate(-90deg); }
+  #device main .r068-card { padding: 4px 16px 12px 76px; }
+  #device main .r068-nbrs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #device main .r068-nt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  #device main .r068-ncov { width: 100%; aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+  #device main .r068-letter { background: hsl(var(--h) 45% 84%); color: hsl(var(--h) 40% 28%); }
+  #device main .r068-nt.on .r068-ncov { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  #device main .r068-edge { background: none; border: 1px dashed var(--color-surface-2); color: var(--color-text-muted); font-size: 11px; font-weight: 400; text-align: center; line-height: 1.3; }
+  #device main .r068-ncap { font-size: 12px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #device main .r068-nlab { font-size: 11px; color: var(--color-text-muted); }
+  #device main .r068-nt.on .r068-ncap { font-weight: 600; }
+  #device main .r068-cacts { margin: 4px 0 0 -12px; }
+  /* the selected box on the estante page */
+  #device main .r068-sel { padding: 4px 0 4px; }
+  #device main .r068-selline { margin: 0; font-size: 14px; line-height: 1.4; color: var(--color-text-muted); }
+  #device main .r068-selline b:first-child { color: var(--color-text); }
+  #device main .r068-sel .r068-barwrap { margin-top: 10px; }
+  #device main .r068-selacts { margin: 4px 0 0 -12px; }

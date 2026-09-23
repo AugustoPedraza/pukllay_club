@@ -6,10 +6,10 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricher do
   Two public entry points:
 
     * `enrich_from_bgg/2` re-fetches `bgg_weight`/`bgg_rating`/`bgg_rank`/
-      `artists`/`bgg_payload` from BGG's live API for every game with a
-      `bgg_id`, batched through `BggClient.fetch_batch/2` (which already
-      retries `429`/`5xx` responses with backoff — this module adds no new
-      retry logic).
+      `artists`/`publishers`/`bgg_payload` from BGG's live API for every
+      game with a `bgg_id`, batched through `BggClient.fetch_batch/2`
+      (which already retries `429`/`5xx` responses with backoff — this
+      module adds no new retry logic).
     * `backfill_artists_from_payload/1` fills `artists` from data already
       sitting in each game's stored `bgg_payload`, with no BGG network call
       at all.
@@ -43,6 +43,9 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricher do
     * `:batch_size` — games per BGG batch request (default `#{@default_batch_size}`,
       clamped to `BggClient.max_batch_size/0` — BggClient's own hard cap)
     * `:delay_ms` — sleep between batches, in ms (default `#{@default_delay_ms}`)
+
+  Writes `bgg_weight`, `bgg_rating`, `bgg_rank`, `artists`, `publishers`
+  and `bgg_payload` — see `update_game_stats/2`.
 
   Returns a summary map with `:candidates`, `:fetched`, `:updated`,
   `:missing_from_bgg` (bgg_ids requested but absent from the response),
@@ -146,11 +149,18 @@ defmodule PukllayClub.Catalog.Seed.StatsEnricher do
       bgg_rating: item.average_rating,
       bgg_rank: item.rank,
       artists: item.artists,
+      # `:publishers` joined the allowlist alongside `:artists`: the
+      # `BggClient.parse_items/1` xpath-scoping fix means a re-enrichment
+      # run is now the repair path for this column too — a game re-run
+      # through this function overwrites a contaminated `publishers` list
+      # (folded-in version-item publishers, quick task 260922-tum) with the
+      # corrected top-level-only extraction.
+      publishers: item.publishers,
       bgg_payload: item
     }
 
     game
-    |> Ecto.Changeset.cast(attrs, [:bgg_weight, :bgg_rating, :bgg_rank, :artists, :bgg_payload])
+    |> Ecto.Changeset.cast(attrs, [:bgg_weight, :bgg_rating, :bgg_rank, :artists, :publishers, :bgg_payload])
     |> Repo.update()
   end
 

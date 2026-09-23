@@ -32,7 +32,8 @@ numbers and their scope; nothing from them is pulled forward.
 
 - [x] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets (completed 2026-09-11)
 - [x] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text (completed 2026-09-12)
-- [ ] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3)
+- [x] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3) (completed 2026-09-16)
+- [ ] **Phase 01.8.2: Admin UI/UX Redesign** - Implement sketches 059–065 across the staff admin: in-shelf position backend, admin shell, Estantes as one page, one save bar, one action system, sheets (inserted 2026-09-16)
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
 
@@ -134,7 +135,7 @@ prioritized ahead of Phase 2/3 for Saturday operations and a living home page.
   4. Staff manage the home page's sections: create, rename, reorder and hide them; each is hand-picked (type-ahead add, ↑/↓, remove) or automatic by rule (difficulty band, recently added), the first is a hand-picked featured hero capped at ~20 games, empty sections are hidden, and the catalog filter offers a sections facet *(rewritten 2026-09-13 per 01.8.1-CONTEXT.md D-17..D-28 — supersedes "rename the first carousel; all other rows remain automatic")*
   5. Staff can see games whose CSV `weight_band` disagrees with their `bgg_weight`, and either correct the band or explicitly keep it
 
-**Plans:** 14/15 plans executed
+**Plans:** 15/15 plans complete
 **UI hint**: yes
 
 Plans:
@@ -178,7 +179,23 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 01.8.1-14-PLAN.md — Production rollout: pre-deploy baseline, green PR, merge + owner creation (human action), live smoke verification (SC-1..SC-5)
+- [x] 01.8.1-14-PLAN.md — Production rollout: pre-deploy baseline, green PR, merge + owner creation (human action), live smoke verification (SC-1..SC-5)
+
+### Phase 01.8.2: Admin UI/UX Redesign (INSERTED)
+
+**Goal:** The staff admin shipped in 01.8.1 is rebuilt to the design validated in sketches
+059–065 — every physical copy carries a real left-to-right shelf position (reversing 01.8.1 D-11), Estantes is one page
+with the Asignar screen retired, and every admin screen shares one shell, one save bar, one
+action system and one sheet.
+**Requirements**: TBD
+**Depends on:** Phase 01.8.1
+**Context:** `.planning/notes/admin-redesign-scope.md`
+**UI hint**: yes
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 01.8.2 to break down)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
@@ -220,6 +237,11 @@ Plans:
 > moved forward into Phase 01.8.1 (Staff Admin). Phase 4 keeps physical copies, rental tracking,
 > and promotions — revisit these criteria (and seed `saturday-sessions-and-managed-carousels`)
 > when Phase 4 is planned.
+>
+> **Scope note (2026-09-16):** copies as rows, the copy count, and per-copy shelf position moved
+> forward into Phase 01.8.2 (see `01.8.2-CONTEXT.md` D-01..D-04, D-20). Phase 4 keeps checkout/return
+> state, who has a copy, the rentals dashboard, and promotions, building on 01.8.2's copies table.
+> Criterion 3 ("add, edit, and remove … physical copies") is partially satisfied by 01.8.2.
 **Mode:** mvp
 **Depends on**: Phase 3
 **Requirements**: CLUBOPS-01, CLUBOPS-02, CLUBOPS-03, CLUBOPS-04
@@ -236,7 +258,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 3 → 4
+Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 01.8.2 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -244,7 +266,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 2 → 
 | 1. Catalog v1 (+ 01.1–01.6) | 87/87 | Complete — shipped v1.0 | 2026-09-11 |
 | 01.7. Production Catalog Data & Security Hardening | 5/5 | Complete    | 2026-09-11 |
 | 01.8. SEO, Structured Data & Social Sharing | 7/7 | Complete    | 2026-09-12 |
-| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 14/15 | In Progress|  |
+| 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 15/15 | Complete    | 2026-09-16 |
 | 2. Natural-Language Spanish Search + Auth | 0/TBD | Not started | - |
 | 3. RAG Rules Oracle | 0/TBD | Not started | - |
 | 4. Club Operations | 0/TBD | Not started | - |
