@@ -39,6 +39,7 @@ defmodule PukllayClubWeb.AdminComponents do
 
   alias Phoenix.HTML.Form
   alias Phoenix.HTML.FormField
+  alias Phoenix.LiveView.JS
   alias PukllayClubWeb.CoreComponents
 
   # ============================================================
@@ -494,6 +495,144 @@ defmodule PukllayClubWeb.AdminComponents do
   def count_pill(assigns) do
     ~H"""
     <span class={["pk-admin-count-pill", @class]}>{@count}</span>
+    """
+  end
+
+  # ============================================================
+  # Plan 01.8.2-08, Task 1 — the bottom sheet shell and the centred
+  # destructive dialog (D-19e, D-19f)
+  # ============================================================
+
+  @doc """
+  Renders D-19e's one bottom-sheet shell: a pinned grabber + header (an
+  optional 56×60 `cover`, an 18/600 `title`, a 14px `subtitle`, and a 44px
+  ✕ — `action/1` `anatomy="a3"`), a full-width 1px divider, 8px, then the
+  default slot's rows scrolling underneath. Caps at 85vh; a sheet taller
+  than that scrolls its rows while the grabber and header stay pinned, so
+  the ✕ never scrolls away.
+
+  Renders **no** `Cancelar` row — D-19e replaces 065 round 7's commit-first/
+  Cancelar-last shape outright. The optional `:commit` slot, if present,
+  renders first (above the scrolling rows), for a sheet whose first row is
+  a save/commit action.
+
+  Esc, a scrim tap and a drag-down on the grabber all close the sheet
+  (`assets/js/hooks/admin_sheet.js`, `phx-hook="AdminSheet"`) by clicking
+  the same close control a pointer tap would — one path, not three. Open/
+  closed state is the `pk-admin-overlay--open` class on the root element
+  (never an inline `display`, per the 01.7 `JS.show` finding recorded as
+  T-01.8.2-32) — pass `open={true}` for a sheet a LiveView assign drives,
+  or leave it `false` and toggle the class client-side via
+  `Phoenix.LiveView.JS.toggle_class/2`.
+  """
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  attr :cover, :string, default: nil
+  attr :open, :boolean, default: false
+  attr :on_close, JS, default: %JS{}
+  attr :class, :any, default: nil
+
+  slot :commit
+  slot :inner_block, required: true
+
+  def sheet(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={["pk-admin-overlay-root", @open && "pk-admin-overlay--open", @class]}
+      phx-hook="AdminSheet"
+      data-pk-sheet
+    >
+      <div class="pk-admin-overlay-scrim" phx-click={@on_close} data-pk-sheet-scrim></div>
+      <div
+        class="pk-admin-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={"#{@id}-title"}
+        data-pk-sheet-panel
+        tabindex="-1"
+      >
+        <div class="pk-admin-sheet__grabber" data-pk-sheet-grabber aria-hidden="true"></div>
+        <div class="pk-admin-sheet__header">
+          <img :if={@cover} src={@cover} alt="" class="pk-admin-sheet__cover" />
+          <div class="pk-admin-sheet__header-text">
+            <p id={"#{@id}-title"} class="pk-admin-sheet__title">{@title}</p>
+            <p :if={@subtitle} class="pk-admin-sheet__subtitle">{@subtitle}</p>
+          </div>
+          <.action
+            anatomy="a3"
+            role="terciaria"
+            aria-label="Cerrar"
+            phx-click={@on_close}
+            data-pk-sheet-close
+          >
+            <CoreComponents.icon name="hero-x-mark" class="size-5" />
+          </.action>
+        </div>
+        <div class="pk-admin-sheet__divider"></div>
+        <div :if={@commit != []} class="pk-admin-sheet__commit">{render_slot(@commit)}</div>
+        <div class="pk-admin-sheet__rows">{render_slot(@inner_block)}</div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders D-19f's one destructive-confirmation anatomy: a centred 312px
+  dialog, 16px radius, an 18/600 `question` naming the thing, an optional
+  14px muted `consequence` line, and two right-aligned `action/1`
+  `anatomy="a2"` controls — `Cancelar` first in DOM order (and carrying
+  initial focus) and `verb` in the Peligro role. Never nested inside a
+  `sheet/1` (T-01.8.2-30's mitigation; `admin_components_test.exs` asserts
+  this directly).
+
+  Scrim tap and Esc cancel, via the same `AdminSheet` hook `sheet/1` uses.
+  """
+  attr :id, :string, required: true
+  attr :question, :string, required: true
+  attr :consequence, :string, default: nil
+  attr :verb, :string, required: true
+  attr :open, :boolean, default: false
+  attr :on_confirm, JS, required: true
+  attr :on_cancel, JS, default: %JS{}
+  attr :class, :any, default: nil
+
+  def dialog(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={["pk-admin-overlay-root", @open && "pk-admin-overlay--open", @class]}
+      phx-hook="AdminSheet"
+      data-pk-dialog
+    >
+      <div class="pk-admin-overlay-scrim" phx-click={@on_cancel} data-pk-sheet-scrim></div>
+      <div
+        class="pk-admin-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={"#{@id}-question"}
+        data-pk-sheet-panel
+        tabindex="-1"
+      >
+        <p id={"#{@id}-question"} class="pk-admin-dialog__question">{@question}</p>
+        <p :if={@consequence} class="pk-admin-dialog__consequence">{@consequence}</p>
+        <div class="pk-admin-dialog__actions">
+          <.action
+            anatomy="a2"
+            role="terciaria"
+            phx-click={@on_cancel}
+            data-pk-dialog-cancel
+            autofocus
+          >
+            Cancelar
+          </.action>
+          <.action anatomy="a2" role="peligro" phx-click={@on_confirm}>
+            {@verb}
+          </.action>
+        </div>
+      </div>
+    </div>
     """
   end
 end

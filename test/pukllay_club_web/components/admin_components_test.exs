@@ -585,4 +585,232 @@ defmodule PukllayClubWeb.AdminComponentsTest do
   # `mix test`. Removed rather than loosened: there is no invariant left
   # here worth re-asserting once app.css is legitimately owned by more than
   # one plan.
+
+  # ============================================================
+  # Plan 01.8.2-08 Task 1 — sheet/1, dialog/1 (D-19e, D-19f)
+  # ============================================================
+
+  @admin_sheet_js_path Path.expand("../../../assets/js/hooks/admin_sheet.js", __DIR__)
+  defp admin_sheet_js, do: File.read!(@admin_sheet_js_path)
+
+  describe "sheet/1 (D-19e)" do
+    test "renders a 44px close control with an aria-label" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-1" title="Mover a">
+          fila
+        </AdminComponents.sheet>
+        """)
+
+      assert html =~ "pk-admin-action--a3"
+      assert html =~ ~s(aria-label="Cerrar")
+      assert html =~ "data-pk-sheet-close"
+    end
+
+    test "renders no element whose text is Cancelar" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-2" title="Mover a">
+          fila
+        </AdminComponents.sheet>
+        """)
+
+      refute html =~ "Cancelar"
+    end
+
+    test "renders the optional cover, title and subtitle" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-3" title="Catan" subtitle="Elegí un estante" cover="/c.webp">
+          fila
+        </AdminComponents.sheet>
+        """)
+
+      assert html =~ "pk-admin-sheet__cover"
+      assert html =~ "Catan"
+      assert html =~ "pk-admin-sheet__subtitle"
+      assert html =~ "Elegí un estante"
+    end
+
+    test "renders the commit slot first, ahead of the default rows slot" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-4" title="Editar">
+          <:commit>ACCION-COMMIT</:commit>
+          FILA-NORMAL
+        </AdminComponents.sheet>
+        """)
+
+      commit_at = html |> :binary.match("ACCION-COMMIT") |> elem(0)
+      row_at = html |> :binary.match("FILA-NORMAL") |> elem(0)
+      assert commit_at < row_at
+    end
+
+    test "carries phx-hook=\"AdminSheet\" on the overlay root" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-5" title="Catan">fila</AdminComponents.sheet>
+        """)
+
+      assert html =~ ~s(phx-hook="AdminSheet")
+      assert html =~ "data-pk-sheet"
+    end
+
+    test "open renders the pk-admin-overlay--open class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-6" title="Catan" open>fila</AdminComponents.sheet>
+        """)
+
+      assert html =~ "pk-admin-overlay--open"
+    end
+  end
+
+  describe "dialog/1 (D-19f)" do
+    test "renders Cancelar before the verb, in DOM order" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.dialog
+          id="dlg-1"
+          question="¿Confirmás esta acción?"
+          verb="Eliminar"
+          on_confirm={Phoenix.LiveView.JS.push("confirm")}
+        />
+        """)
+
+      {cancelar_at, _} = :binary.match(html, "Cancelar")
+      {verb_at, _} = :binary.match(html, "Eliminar")
+      assert cancelar_at < verb_at
+    end
+
+    test "sets initial focus on Cancelar via the autofocus attribute" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.dialog
+          id="dlg-2"
+          question="¿Quitar Catan del estante?"
+          verb="Quitar"
+          on_confirm={Phoenix.LiveView.JS.push("confirm")}
+        />
+        """)
+
+      cancel_button = html |> String.split("Cancelar") |> List.first()
+      assert cancel_button =~ "autofocus"
+    end
+
+    test "renders the verb in the peligro role" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.dialog
+          id="dlg-3"
+          question="¿Eliminar estante?"
+          consequence="Sus juegos quedan sin lugar."
+          verb="Eliminar"
+          on_confirm={Phoenix.LiveView.JS.push("confirm")}
+        />
+        """)
+
+      assert html =~ "pk-admin-action--peligro"
+      assert html =~ "Eliminar"
+      assert html =~ "Sus juegos quedan sin lugar."
+    end
+
+    test "renders question and consequence text" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.dialog
+          id="dlg-4"
+          question="¿Quitar a x@example.com del staff?"
+          verb="Quitar"
+          on_confirm={Phoenix.LiveView.JS.push("confirm")}
+        />
+        """)
+
+      assert html =~ "pk-admin-dialog__question"
+      assert html =~ "¿Quitar a x@example.com del staff?"
+    end
+  end
+
+  describe "dialog/1 never nests inside sheet/1 markup (T-01.8.2-30)" do
+    test "a sheet's rendered markup contains no dialog markup, and vice versa" do
+      assigns = %{}
+
+      sheet_html =
+        rendered_to_string(~H"""
+        <AdminComponents.sheet id="sheet-7" title="Catan">fila</AdminComponents.sheet>
+        """)
+
+      dialog_html =
+        rendered_to_string(~H"""
+        <AdminComponents.dialog
+          id="dlg-5"
+          question="¿Quitar?"
+          verb="Quitar"
+          on_confirm={Phoenix.LiveView.JS.push("confirm")}
+        />
+        """)
+
+      refute sheet_html =~ "pk-admin-dialog"
+      refute dialog_html =~ "pk-admin-sheet"
+    end
+  end
+
+  describe "assets/css/admin/components.css — sheet/dialog measured geometry" do
+    test "declares the 85vh max-height cap, 312px dialog width, 18px top radius and 36px grabber" do
+      css = components_css()
+      assert css =~ "85vh"
+      assert css =~ "312px"
+      assert css =~ ~r/\.pk-admin-sheet\s*\{[^}]*border-radius:\s*18px/s
+      assert css =~ ~r/\.pk-admin-sheet__grabber\s*\{[^}]*width:\s*36px/s
+    end
+  end
+
+  describe "assets/js/hooks/admin_sheet.js" do
+    test "handles Escape, a scrim click and a pointer drag-down" do
+      js = admin_sheet_js()
+      assert js =~ "Escape"
+      assert js =~ "scrim"
+      assert js =~ "pointerdown"
+      assert js =~ "pointermove"
+      assert js =~ "pointerup"
+    end
+
+    test "never calls core_components' show/hide JS commands" do
+      js = admin_sheet_js()
+      # A prose comment MAY explain the T-01.8.2-32 rationale by name; the
+      # invariant this test actually guards is that the hook never IMPORTS
+      # or CALLS the CoreComponents show/2 or hide/2 JS-command helpers.
+      refute js =~ ~r/import.*core_components/i
+      refute js =~ ~r/CoreComponents\.(show|hide)\(/
+      refute js =~ ~r/(?<![.\w])(show|hide)\(\s*(js|%JS\{\})/
+    end
+
+    test "never checks visibility via a .hidden class — only offsetParent" do
+      js =
+        admin_sheet_js() |> String.split("\n") |> Enum.reject(&(String.trim(&1) =~ ~r{^(//|/\*|\*)})) |> Enum.join("\n")
+
+      refute js =~ ~r/\.hidden\b/
+      assert js =~ "offsetParent"
+    end
+  end
 end

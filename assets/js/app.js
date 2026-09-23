@@ -24,12 +24,19 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/pukllay_club"
 import topbar from "../vendor/topbar"
+// AdminSheet (01.8.2-08): a hand-authored, non-colocated hook — see its own
+// moduledoc-style header comment for why it isn't a `Phoenix.LiveView.
+// ColocatedHook` block like `CarouselRow`'s `.CarouselScroll` (two
+// components, `sheet/1` and `dialog/1`, need the identical behaviour).
+// Referenced from admin_components.ex via `phx-hook="AdminSheet"` — no
+// leading dot, since that syntax is reserved for colocated hooks.
+import AdminSheet from "./hooks/admin_sheet"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, AdminSheet},
 })
 
 // Show progress bar on live navigation and form submits, and on any

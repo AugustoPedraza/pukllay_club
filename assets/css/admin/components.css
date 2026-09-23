@@ -462,3 +462,149 @@
   font-weight: 600;
   color: var(--color-neutral);
 }
+
+/* ============================================================
+   Plan 01.8.2-08 Task 1 — the bottom sheet shell and the centred
+   destructive dialog (D-19e, D-19f). Both share one overlay root
+   (`.pk-admin-overlay-root`/`.pk-admin-overlay-scrim`) and one open/close
+   class (`.pk-admin-overlay--open`), toggled by `assets/js/hooks/
+   admin_sheet.js` — never an inline `display` (T-01.8.2-32).
+   ============================================================ */
+
+.pk-admin-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: none;
+}
+
+.pk-admin-overlay-root.pk-admin-overlay--open {
+  display: block;
+}
+
+/* 38% scrim per 01.8.2-BENCHMARK.md's "Bottom sheet"/"Confirmation" rows. */
+.pk-admin-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 38%);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Sheet: pinned grabber + header, rows scroll underneath, capped at 85vh
+   (D-19e — a sheet taller than this scrolls its rows under the pinned
+   grabber+header so the ✕ never scrolls away). 18px top radius, 36×4
+   grabber — both BENCHMARK's measured figures, verbatim. */
+.pk-admin-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  background: var(--color-base-100);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+}
+
+.pk-admin-sheet__grabber {
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto;
+  border-radius: 999px;
+  background: var(--color-base-300);
+  touch-action: none;
+}
+
+.pk-admin-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 0 16px 8px;
+}
+
+.pk-admin-sheet__cover {
+  width: 56px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.pk-admin-sheet__header-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pk-admin-sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-sheet__subtitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+/* Full-width 1px divider, then 8px before the rows (D-19f's anatomy note,
+   shared by the sheet header). */
+.pk-admin-sheet__divider {
+  flex-shrink: 0;
+  height: 1px;
+  background: var(--color-base-300);
+}
+
+.pk-admin-sheet__commit {
+  flex-shrink: 0;
+  padding-top: 8px;
+}
+
+.pk-admin-sheet__rows {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Dialog: centred 312px M3 basic dialog, 16px radius (D-19f). */
+.pk-admin-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 312px;
+  max-width: calc(100vw - 32px);
+  padding: 24px 16px 16px;
+  background: var(--color-base-100);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.pk-admin-dialog__question {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-dialog__consequence {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+.pk-admin-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 16px;
+}
