@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-05-PLAN.md
-last_updated: "2026-09-23T14:07:46.713Z"
+stopped_at: Completed 01.8.2-06-PLAN.md
+last_updated: "2026-09-23T14:31:58.239Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: 693ba848c7d6576ce0df31d265857e0cb07da59d
+state_head: c2cd8f2420c7052f5694646f4808fc8b131ea039
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 32
+  completed_plans: 33
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 6 of 22
+Plan: 7 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -137,6 +137,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P03 | 40min | 3 tasks | 3 files |
 | Phase 01.8.2 P04 | 30min | 3 tasks | 5 files |
 | Phase 01.8.2 P05 | ~45min | 2 tasks | 8 files |
+| Phase 01.8.2 P06 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -282,6 +283,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-04: the unpublish migration's reversibility is backed by a dedicated audit table (unpublish_still_empty_games_audit), created/dropped within the same migration, rather than a marker column on games
 - [Phase 01.8.2]: 01.8.2-05: checkpoint resolved 'drop now' — games.units dropped, count(copies) via Shelves.count_for_game/1 is the only Copias source; admin_changeset/2 cast ceiling narrows to [:name, :weight_band, :is_expansion, :description, :shelf_id]
 - [Phase 01.8.2]: 01.8.2-05: copies_test.exs's backfill-replay tests removed (raw SQL read games.units, which this plan drops) and replaced with count_for_game/1/counts_for_games/1 coverage
+- [Phase 01.8.2]: D-05 clear-slate migration ships as specified: no backfill, no audit table, down/0 raises Ecto.MigrationError — Nothing survives the delete for a rollback to read from; the pre-deploy pg_dump is the only recovery path (01.8.2-06)
+- [Phase 01.8.2]: Data-only migrations use PukllayClub.Repo directly instead of the repo() migration-DSL helper when they need direct-call testability — repo() requires an active Ecto.Migrator Runner process; a migration with no DDL can safely use Repo directly and be unit-tested via Code.require_file + direct up/0 invocation (01.8.2-06)
 
 ### Pending Todos
 
@@ -425,8 +428,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T14:07:46.594Z
-Stopped at: Completed 01.8.2-05-PLAN.md
+Last session: 2026-09-23T14:31:58.121Z
+Stopped at: Completed 01.8.2-06-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
