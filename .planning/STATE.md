@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-09-PLAN.md
-last_updated: "2026-09-23T15:44:47.034Z"
+stopped_at: Completed 01.8.2-08-PLAN.md
+last_updated: "2026-09-23T16:12:47.071Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: 16574b2bfaedeb4e837138a2bc5feb41a0148e6b
+state_head: 46ecaaafcb96264702f2b24deb7857820381ad07
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 35
+  completed_plans: 36
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 9 of 22
+Plan: 10 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -140,6 +140,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P06 | 25min | 2 tasks | 3 files |
 | Phase 01.8.2 P07 | 55min | 3 tasks | 4 files |
 | Phase 01.8.2 P09 | 45min | 3 tasks | 17 files |
+| Phase 01.8.2 P08 | 24min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -291,6 +292,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-07: wired assets/css/admin/components.css via a nested @import inside admin/tokens.css, not app.css — Task 3's own <verify> requires assets/css/app.css to stay untouched by this plan; tokens.css already imports into app.css, so the nested import resolves the same way
 - [Phase 01.8.2]: 01.8.2-09: PukllayClubWeb.Layouts.NavDrawer (a stateful LiveComponent, id="pk-nav-drawer") now owns the drawer's open/close state directly, addressed via phx-target from the hamburger and backdrop -- fixes G-01.8.1-1b (the hook that used to wire this was only attached when @sticky was true, so every admin page and three non-sticky public pages had a hamburger with no click handler at all)
 - [Phase 01.8.2]: 01.8.2-09: Layouts.app/1 gained admin_chrome (boolean, passed explicitly by all 10 admin-scoped LiveViews) as D-00b's structural no-footer-on-/admin predicate -- touches 10 LiveView call sites beyond this plan's stated files, documented as necessary since no existing attr reliably distinguished admin routes from two public routes sharing the same call shape
+- [Phase 01.8.2]: 01.8.2-08: sheet/1, dialog/1, snackbar/1 (routed via Layouts.admin_flash/1, deleting the admin top toast), save_bar/1, back_row/1, page_bar/1 land in AdminComponents; admin_sheet.js hand-authored non-colocated hook shared by sheet/dialog; --pk-save-bar-h is the single source for both the 77px bar height and its calc()-derived body clearance
 
 ### Pending Todos
 
@@ -434,8 +436,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T15:44:46.908Z
-Stopped at: Completed 01.8.2-09-PLAN.md
+Last session: 2026-09-23T16:12:46.966Z
+Stopped at: Completed 01.8.2-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
