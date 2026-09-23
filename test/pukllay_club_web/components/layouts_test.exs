@@ -1429,6 +1429,86 @@ defmodule PukllayClubWeb.LayoutsTest do
     defp conn, do: Phoenix.ConnTest.build_conn()
   end
 
+  # Task 2, plan 01.8.2-09 (D-19d): the drawer moves to the leading (left)
+  # edge site-wide — the BENCHMARK's deviation D-4, resolved ALIGN. Asserts
+  # against assets/css/app.css's SOURCE (not rendered markup, since the
+  # anchoring lives in a CSS rule, not an HTML attribute) using the exact
+  # negative-grep idiom this plan's own <verify> runs, so this test and the
+  # CI/CD gate can never silently drift apart.
+  describe "the drawer moves left, site-wide (01.8.2-09 Task 2, D-19d)" do
+    @app_css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    test "no .pk-drawer rule in app.css anchors to the right edge" do
+      # Same shell pipeline as this plan's own <verify> command, run here
+      # too so this ExUnit gate and the plan's verify can never silently
+      # drift apart from re-implementing the same check two different ways.
+      cmd = """
+      grep -vE '^\\s*(/\\*|\\*)' #{@app_css_path} | grep -B2 -A2 "pk-drawer" | grep -cE "right: *0"
+      """
+
+      {output, _exit} = System.shell(cmd)
+
+      assert String.trim(output) == "0",
+             "A .pk-drawer-adjacent rule still anchors to the right edge — D-19d moves the " <>
+               "drawer left SITE-WIDE, and a half-moved drawer is worse than either position."
+    end
+
+    test "the .pk-drawer rule anchors left: 0 and enters via a negative translateX" do
+      css = File.read!(@app_css_path)
+
+      drawer_rule =
+        case Regex.run(~r/(?m)^\.pk-drawer\s*\{([^}]*)\}/s, css) do
+          [_, body] -> body
+          nil -> flunk("no top-level `.pk-drawer { ... }` rule found in assets/css/app.css")
+        end
+
+      assert drawer_rule =~ ~r/left:\s*0\b/
+      refute drawer_rule =~ ~r/right:\s*0\b/
+      assert drawer_rule =~ ~r/transform:\s*translateX\(-100%\)/
+    end
+
+    test "the drawer opens flush against the left edge (translateX(0) once .is-open, same as before the move)" do
+      css = File.read!(@app_css_path)
+
+      open_rule =
+        case Regex.run(~r/(?m)^\.pk-drawer\.is-open\s*\{([^}]*)\}/s, css) do
+          [_, body] -> body
+          nil -> flunk("no top-level `.pk-drawer.is-open { ... }` rule found in assets/css/app.css")
+        end
+
+      assert open_rule =~ ~r/transform:\s*translateX\(0\)/
+    end
+
+    test "the hamburger renders before the brand wordmark in header DOM order" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      hamburger_index = html |> :binary.match(~s(class="pk-nav-hamburger")) |> elem(0)
+      brand_index = html |> :binary.match(~s(pk-brand-wordmark)) |> elem(0)
+
+      assert hamburger_index < brand_index,
+             "The hamburger must precede the brand wordmark in DOM order — with no `order` " <>
+               "override anywhere in app.css (verified: no `order:` property on any .pk-nav-* " <>
+               "or .pk-drawer* selector), plain flex DOM order is what visually places the " <>
+               "hamburger on the left, D-19d's other half."
+    end
+
+    test "assets/css/admin/chrome.css exists and opens with a comment stating the public-vs-admin CSS split" do
+      chrome_css_path = Path.expand("../../../assets/css/admin/chrome.css", __DIR__)
+
+      assert File.exists?(chrome_css_path)
+
+      content = File.read!(chrome_css_path)
+      assert content |> String.trim_leading() |> String.starts_with?("/*")
+      assert content =~ "PUBLIC-VS-ADMIN SPLIT"
+      assert content =~ "app.css"
+    end
+
+    test "app.css imports admin/chrome.css" do
+      css = File.read!(@app_css_path)
+      assert css =~ ~s(@import "./admin/chrome.css";)
+    end
+  end
+
   # social_links/1 is now a PUBLIC component (promoted in plan 01.4-02
   # Task 3) with three real call sites: the footer (.pk-footer-social), the
   # mobile drawer (.pk-drawer-social), and the About page's Contacto card

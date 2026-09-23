@@ -1,0 +1,35 @@
+/* Admin-only shared-chrome CSS (plan 01.8.2-09, D-12/D-19d/D-13a).
+
+   PUBLIC-VS-ADMIN SPLIT — read before adding a rule here:
+
+   The drawer and the hamburger that opens it are SHARED chrome — a public
+   visitor sees them too (Layouts.app/1 renders them unconditionally on
+   every page, not gated on being under /admin). Their CSS therefore stays
+   in `assets/css/app.css`, alongside every other rule a public visitor's
+   browser must load regardless of whether they ever reach /admin. Task 2
+   of this plan moved the drawer's anchoring (`right: 0` -> `left: 0`,
+   D-19d) entirely inside `app.css` for exactly this reason — do not move
+   it here later under a mistaken "it's in the admin plan, so it's admin
+   CSS" assumption.
+
+   THIS file is for rules that only ever apply to a signed-in staff
+   member's ADMIN-ONLY chrome — content that never renders for an
+   anonymous visitor and never renders on a public page. Task 3 (this same
+   plan) is the first to populate it: the staff drawer's three sectioned
+   groups (PANEL / SITIO / TU CUENTA, D-13a) are staff-only content, but
+   even then, only the parts of that markup with no public-drawer
+   counterpart belong here — a rule that also has to look right for the
+   public drawer's plain link list stays in `app.css`, shared, not
+   duplicated into two files that could drift.
+
+   Plan 01.8.2-10 (next wave) is the second consumer: the 5-tab admin tab
+   bar (D-13b) is genuinely admin/staff-only chrome (it never renders on a
+   public page for an anonymous visitor) and belongs entirely in this
+   file — leave room here rather than restructuring `chrome.css` when that
+   plan lands.
+
+   Imported directly from `app.css` (`@import "./admin/chrome.css";`),
+   sibling to the existing `@import "./admin/tokens.css";` — unlike plan
+   01.8.2-07's `components.css`, this plan's own `<verify>` does not forbid
+   touching `app.css`, so there is no need for tokens.css's nested-import
+   workaround here. */

@@ -4,6 +4,7 @@
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/pukllay_club/colocated.css";
 @import "./admin/tokens.css";
+@import "./admin/chrome.css";
 @source "../css";
 @source "../js";
 @source "../../lib/pukllay_club_web";
@@ -3088,11 +3089,19 @@ body:has(#pk-nav-drawer.is-open) .pk-drawer-backdrop {
    here either, now that the drawer's ancestor is the LiveView root, not the
    sticky header). See .pk-drawer-backdrop above for the matching backdrop
    tier. */
+/* Task 2 (01.8.2-09, D-19d): the drawer moves to the LEADING (left) edge,
+   site-wide (public and admin) — the BENCHMARK's deviation D-4, resolved
+   ALIGN against Material 3's modal navigation drawer, which opens from the
+   leading edge, never the right. `right: 0` -> `left: 0` and the enter
+   transform's sign flips to match (`translateX(100%)` traveled in FROM the
+   right at rest; `translateX(-100%)` now travels in from the left). `.is-
+   open`'s `translateX(0)` is unchanged — the panel's RESTING position is
+   the same regardless of which edge it enters from. */
 .pk-drawer {
   display: none;
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   width: 82%;
   max-width: 20rem;
@@ -3102,7 +3111,7 @@ body:has(#pk-nav-drawer.is-open) .pk-drawer-backdrop {
   padding: 1rem;
   overflow-y: auto;
   flex-direction: column;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   /* --ease-standard, not --ease-out-soft — same reasoning as .pk-sheet, see the
      long note on that rule. This panel travels its own width (82%, capped at
      20rem = ~320px at 390px wide), and --ease-out-soft (easeOutExpo) puts 32.7%
