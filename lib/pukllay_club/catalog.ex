@@ -482,28 +482,37 @@ defmodule PukllayClub.Catalog do
   defp fetch_published_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
 
   @doc """
-  Moves `game` to `:published` from any other status (D-04, D-08) — used
-  both for a staff-drafted game's first publish and for un-retiring one
-  (though `restore_game/1` is the dedicated retired -> published entry
-  point for that second case). Returns `{:ok, game}` / `{:error, changeset}`.
+  Moves `game` to `:published` from `:draft` only (D-04, D-08, D-37 gate 1)
+  — a staff-drafted game's first publish. A retired game reaches
+  `:published` only through `restore_game/1`, the dedicated retired ->
+  published entry point; publishing it directly here would bypass that
+  function's guard, the exact gap sketch 078 proved was pure paint (a drawn
+  gate the code never enforced). Returns `{:ok, game}` on a draft, or
+  `{:error, :not_publishable}` for any other origin status (leaving it
+  unchanged).
   """
-  def publish_game(%Game{} = game) do
+  def publish_game(%Game{status: :draft} = game) do
     game
     |> Game.status_changeset(%{status: :published})
     |> Repo.update()
   end
 
+  def publish_game(%Game{}), do: {:error, :not_publishable}
+
   @doc """
-  Moves `game` to `:retired` from any status (D-08's soft delete) — a
-  retired game disappears from every public surface `:draft` already did
-  (T-01.8.1-12), restorable via `restore_game/1`. Returns `{:ok, game}` /
-  `{:error, changeset}`.
+  Moves `game` to `:retired` from `:published` only (D-08's soft delete,
+  D-37 gate 1) — a retired game disappears from every public surface
+  `:draft` already did (T-01.8.1-12), restorable via `restore_game/1`.
+  Returns `{:ok, game}` on a published game, or `{:error, :not_retirable}`
+  for any other origin status (leaving it unchanged).
   """
-  def retire_game(%Game{} = game) do
+  def retire_game(%Game{status: :published} = game) do
     game
     |> Game.status_changeset(%{status: :retired})
     |> Repo.update()
   end
+
+  def retire_game(%Game{}), do: {:error, :not_retirable}
 
   @doc """
   Restores a `:retired` game back to `:published` (D-08). A game that is

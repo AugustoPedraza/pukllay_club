@@ -154,11 +154,18 @@ defmodule PukllayClub.CatalogTest do
       assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
     end
 
-    test "publish_game/1 moves a retired game to published" do
+    test "publish_game/1 on a retired game refuses, leaving status unchanged (D-37 gate 1)" do
       game = game_fixture(%{name: "Vuelve", status: :retired})
 
-      assert {:ok, published} = Catalog.publish_game(game)
-      assert published.status == :published
+      assert Catalog.publish_game(game) == {:error, :not_publishable}
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
+    test "publish_game/1 on an already-published game refuses (D-37 gate 1)" do
+      game = game_fixture(%{name: "Ya publicado", status: :published})
+
+      assert Catalog.publish_game(game) == {:error, :not_publishable}
+      assert Catalog.get_game!(game.id).status == :published
     end
 
     test "retire_game/1 moves a published game to retired, removing it from filter_games/1" do
@@ -169,6 +176,13 @@ defmodule PukllayClub.CatalogTest do
       assert {:ok, retired} = Catalog.retire_game(game)
       assert retired.status == :retired
       refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "retire_game/1 on a draft game refuses, leaving status unchanged (D-37 gate 1)" do
+      game = game_fixture(%{name: "Borrador", status: :draft})
+
+      assert Catalog.retire_game(game) == {:error, :not_retirable}
+      assert Catalog.get_game!(game.id).status == :draft
     end
 
     test "restore_game/1 on a retired game moves it back to published, reappearing in filter_games/1" do
