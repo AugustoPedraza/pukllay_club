@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 17/22 plans executed
+**Plans:** 18/22 plans executed
 
 Plans:
 
@@ -239,7 +239,7 @@ Plans:
 **Wave 9**
 
 - [ ] 01.8.2-18-PLAN.md — Pendientes and Administrar estantes: the name sheet, Ordenar, D-09's first run, D-10's undoable delete
-- [ ] 01.8.2-19-PLAN.md — the editor's field sheets (D-30's two patterns, never mixed) and the ⋮ status menu
+- [x] 01.8.2-19-PLAN.md — the editor's field sheets (D-30's two patterns, never mixed) and the ⋮ status menu
 
 **Wave 10**
 
