@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8.2 — Admin UI/UX Redesign
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-22 — Completed quick task 260922-w5o (rpc→eval production invocation correction); production BGG data repair still outstanding, human-gated
+Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-run): publishers.max 178→45, rows-with-duplicates 385→0, controls unmoved; prod report now matches dev field-for-field. Catalog data repair closed.
 
 ## Performance Metrics
 
@@ -358,7 +358,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
 | 260922-pni | Re-bake og-fallback.webp at the current ramp (bg #551670→#4A187F, tagline #E3D3F0→#DED4F3, stale since sketch 058's H313.1→H300 rotation); committed re-runnable Pillow generator at tools/og-fallback/ that parses app.css at run time, lossless WebP so colours are exactly assertable, + 2 ExUnit pixel gates binding the shipped asset to app.css. Shipped to production via PR #64 (squash `8078a53`); live asset verified sha256-identical to the committed file, 1200×630, zero pixels of either retired colour. Carried an unrelated mint 1.10.0→1.10.1 bump (EEF-CVE-2026-82672) that was blocking CI for every PR | 2026-09-22 | 8078a53 | complete | [260922-pni-regenerar-og-fallback-webp-en-4a187f-que](./quick/260922-pni-regenerar-og-fallback-webp-en-4a187f-que/) |
 | 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
-| 260922-veq | Added `Release.enrich_bgg_stats/1` + `StatsAudit.report/0`/`Release.bgg_stats_report/0` so the BGG re-enrichment can be invoked and measured on a production release (Mix is absent from a release). Code + runbook only — nothing run against production | 2026-09-22 | 029f2c4 | complete | [260922-veq-add-release-enrich-bgg-stats-so-bgg-stat](./quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/) |
+| 260922-veq | Added `Release.enrich_bgg_stats/1` + `StatsAudit.report/0`/`Release.bgg_stats_report/0` so the BGG re-enrichment can be invoked and measured on a production release (Mix is absent from a release). Code + runbook only; production repair subsequently run by the operator on 2026-09-23 and verified (178→45, 385→0 duplicates) | 2026-09-22 | 029f2c4 | complete | [260922-veq-add-release-enrich-bgg-stats-so-bgg-stat](./quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/) |
 | 260922-w5o | Corrected the production invocation for the BGG re-enrichment entrypoints from `rpc` (verified unavailable on the prod container — `:noconnection`, root cause not established) to `eval` plus an explicit `:req`/`:ecto_sql`/`Repo.start_link` preamble, across release.ex, the runbook, AGENTS.md and the guard's pinned test assertion | 2026-09-22 | 1e57d6a | complete | [260922-w5o-correct-the-production-invocation-docs-f](./quick/260922-w5o-correct-the-production-invocation-docs-f/) |
 
 ### Roadmap Evolution
