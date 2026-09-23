@@ -5,11 +5,11 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-14-PLAN.md
-last_updated: "2026-09-23T20:41:38.553Z"
+stopped_at: Completed 01.8.2-15-PLAN.md
+last_updated: "2026-09-23T21:29:08.801Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: d7c49a85fce40f623d66cd542491ef8f0fe99c90
+state_head: a9517dd945c5211e2b14a5ed32526dab45acf654
 progress:
   total_phases: 7
   completed_phases: 4
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 15 of 22
+Plan: 16 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -146,6 +146,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P12 | 47min | 3 tasks | 11 files |
 | Phase 01.8.2 P13 | ~120min | 3 tasks | 10 files |
 | Phase 01.8.2 P14 | ~100min | 3 tasks | 13 files |
+| Phase 01.8.2 P15 | ~140min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -307,6 +308,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-13: Shelves.search_copies/1 caps suggestions at 20 results / 120-char query (CatalogFilters' 20x120 precedent), across BOTH placed and unplaced copies; Estantes rebuilt wholesale from the 01.8.2-01 tracer to D-08's real search-first design with a live-update handle_info over admin:estantes.
 - [Phase 01.8.2]: 01.8.2-14: Catalog.list_admin_games_by_status/1 groups Juegos by status in one un-paginated query; D-25's grouping replaces Cargar más entirely, no per-row query for Copias (batched counts_for_games/1) — Status is a mutually-exclusive Ecto.Enum (D-04), so the partition is schema-guaranteed rather than derived from three predicates
 - [Phase 01.8.2]: 01.8.2-14: back_row/page_bar back_to both point at /admin (dashboard) since Juegos is a tab-root page with no other natural back destination; components.css's page_bar--visible gained position:fixed (Rule 1 fix) since no prior plan had a live call site proving the pin mechanism — First live call site for AdminComponents.page_bar/1's scrolled-pin behavior
+- [Phase 01.8.2]: 01.8.2-15: Web opens on the destacada's own rail (reused .pk-rail/.pk-poster-card) with Otras filas below as navigation; Quitar de la fila is undoable (D-19k, no exact-position restore — Deshacer re-adds at the end via existing Sections.add_game/2, since no new Sections function was in this plan's scope); Ordenar->Listo reorder mode (AdminComponents.reorder_header/reorder_row) restores its pre-mode order via a selection-sort of adjacent Sections.move_section/2 / move_game/3 swaps, reusing the existing neighbour-swap primitive rather than adding a bulk-reorder function; Niveles' Pasar a {nivel} row sources its meaning from Vocabulary.weight_bands/0 dynamically (never duplicated as literal text in band_audit_live.ex)
 
 ### Pending Todos
 
@@ -450,8 +452,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T20:41:38.428Z
-Stopped at: Completed 01.8.2-14-PLAN.md
+Last session: 2026-09-23T21:29:08.668Z
+Stopped at: Completed 01.8.2-15-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
