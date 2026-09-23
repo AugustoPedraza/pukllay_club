@@ -304,8 +304,17 @@
    screen is its only caller.
    ============================================================ */
 
+/* `margin: 0`, not a top gap — the page head's own `margin: 0` already
+   cancels the intended 24px page-head-to-body gap everywhere in this
+   admin (a pre-existing, accepted quirk — see this phase's
+   deferred-items.md), so every OTHER page's title-adjacent element also
+   carries no margin of its own (Tailwind's preflight zeroes it by
+   default); a margin here would be the one exception, and this plan's
+   own `test/visual/admin_components.mjs` D3 check measures exactly that
+   uniformity (found live by this plan's own required harness run,
+   fixed before committing — same shape as 01.8.2-13's D3 finding). */
 .pk-admin-niveles-subtitle {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 14px;
   color: var(--color-neutral);
 }
