@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-01-PLAN.md
-last_updated: "2026-09-23T11:02:23.243Z"
+stopped_at: Completed 01.8.2-02-PLAN.md
+last_updated: "2026-09-23T11:19:14.918Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: fc8f31a8991df484f079b87fecf40327a96e2444
+state_head: df282347f3b9d13be440d4a3a064e83a54492615
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 2 of 22
+Plan: 3 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -133,6 +133,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
 | Phase quick-260922-veq P01 | 15min | 3 tasks | 6 files |
 | Phase 01.8.2 P01 | 90min | 3 tasks | 16 files |
+| Phase 01.8.2 P02 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -268,6 +269,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-01: place_copy/3 handles first placement, cross-estante move, and same-estante reorder with one algorithm — vacate the copy's own position first (removing it from the position space entirely), then insert with a descending-order shift; avoids a transient collision on the NOT DEFERRABLE copies_shelf_position_unique index.
 - [Phase 01.8.2]: 01.8.2-01: the old game-level ShelfLive.Index/Assign screens and their router lines were deleted in Task 2 (not Task 3) because Task 2's own strict verify grep for zero surviving assign_game/unassign_game/games_on_shelf/pick_list references is unsatisfiable while those screens' only remaining callers still exist.
 - [Phase 01.8.2]: 01.8.2-01: @estante_lock_namespace = 8_811_016, distinct from catalog.ex's @bgg_id_lock_namespace (8_811_015) — same two-int4 pg_advisory_xact_lock form, separate pg_locks.objsubid key space.
+- [Phase 01.8.2]: 01.8.2-02: D-33 --val lands on --pk-ramp-400 dark / --pk-ramp-700 light, distinct from --color-primary's own ramp stop in each theme, measured 6.52:1 in dark (beats the 4.83:1 floor)
+- [Phase 01.8.2]: 01.8.2-02: D-34 token reconciliation table (01.8.2-TOKENS.md) fates all 24 admin-sketch custom properties; --color-accent-bg/--color-accent-text confirmed DISCARD, Sin guardar dot resolves to --color-warning
 
 ### Pending Todos
 
@@ -411,8 +414,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T11:02:23.133Z
-Stopped at: Completed 01.8.2-01-PLAN.md
+Last session: 2026-09-23T11:19:14.808Z
+Stopped at: Completed 01.8.2-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
