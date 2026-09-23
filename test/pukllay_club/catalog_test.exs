@@ -12,6 +12,17 @@ defmodule PukllayClub.CatalogTest do
   alias PukllayClub.Repo
   alias PukllayClub.Workers.EnrichGameWorker
 
+  # `priv/repo/migrations/*.exs` files are not part of the app's normal
+  # compilation path — `Ecto.Migrator` loads them dynamically at migrate
+  # time, not at `mix compile`/`mix test` — so
+  # `UnpublishStillEmptyGames.still_empty_query/0` (D-36 migration
+  # predicate test below) must be required explicitly. Guarded against
+  # redefinition warnings on a re-run within the same VM (`mix test.watch`,
+  # iex -S mix test).
+  unless Code.ensure_loaded?(PukllayClub.Repo.Migrations.UnpublishStillEmptyGames) do
+    Code.require_file("priv/repo/migrations/20260923122000_unpublish_still_empty_games.exs")
+  end
+
   describe "published-only public reads (D-04, D-08)" do
     # Table-driven over every public read function that must exclude
     # draft/retired games (RESEARCH.md Pitfall 2). Each case seeds one
@@ -1307,6 +1318,50 @@ defmodule PukllayClub.CatalogTest do
       assert updated.enrichment_status == "pending"
 
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+  end
+
+  describe "UnpublishStillEmptyGames.still_empty_query/0 (D-36 migration predicate)" do
+    alias PukllayClub.Repo.Migrations.UnpublishStillEmptyGames
+
+    test "selects a published game with no description and no cover" do
+      empty = game_fixture(%{name: "Vacío", status: :published, description: nil, cover_url: nil})
+
+      ids = Repo.all(UnpublishStillEmptyGames.still_empty_query())
+
+      assert ids == [empty.id]
+    end
+
+    test "treats a blank-string description the same as a nil one" do
+      empty = game_fixture(%{name: "Descripción vacía", status: :published, description: "", cover_url: nil})
+
+      ids = Repo.all(UnpublishStillEmptyGames.still_empty_query())
+
+      assert ids == [empty.id]
+    end
+
+    test "excludes a game with a description, even with no cover" do
+      game_fixture(%{name: "Con descripción", status: :published, description: "Algo", cover_url: nil})
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
+    end
+
+    test "excludes a game with a cover, even with no description" do
+      game_fixture(%{
+        name: "Con portada",
+        status: :published,
+        description: nil,
+        cover_url: "https://images.test.invalid/games/1/cover-large.webp"
+      })
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
+    end
+
+    test "excludes a draft or retired game even when empty (only :published rows are candidates)" do
+      game_fixture(%{name: "Borrador vacío", status: :draft, description: nil, cover_url: nil})
+      game_fixture(%{name: "Retirado vacío", status: :retired, description: nil, cover_url: nil})
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
     end
   end
 
