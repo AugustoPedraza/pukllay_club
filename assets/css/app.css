@@ -3,6 +3,7 @@
 
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/pukllay_club/colocated.css";
+@import "./admin/tokens.css";
 @source "../css";
 @source "../js";
 @source "../../lib/pukllay_club_web";
