@@ -805,12 +805,22 @@ defmodule PukllayClubWeb.AdminComponentsTest do
       refute js =~ ~r/(?<![.\w])(show|hide)\(\s*(js|%JS\{\})/
     end
 
-    test "never checks visibility via a .hidden class — only offsetParent" do
+    test "never checks visibility via a .hidden class or offsetParent — only resolved display" do
+      # Was: `assert js =~ "offsetParent"`. FIX (plan 01.8.2-12 Task 3):
+      # `offsetParent !== null` is unconditionally `false` for a
+      # `position: fixed` element in Chrome — proven empirically against
+      # the real `.pk-admin-overlay-root` (also `position: fixed`), which
+      # made `isOpen()` always return `false` and silently broke Esc,
+      # drag-down, the focus trap and focus-return. `getComputedStyle(...)
+      # .display !== "none"` replaces it — same "never a class-name string
+      # match" guard rule this test enforces, just via a check that
+      # actually returns true for an open fixed-position element.
       js =
         admin_sheet_js() |> String.split("\n") |> Enum.reject(&(String.trim(&1) =~ ~r{^(//|/\*|\*)})) |> Enum.join("\n")
 
       refute js =~ ~r/\.hidden\b/
-      assert js =~ "offsetParent"
+      refute js =~ "offsetParent"
+      assert js =~ "getComputedStyle"
     end
   end
 

@@ -15,12 +15,24 @@
 // `display:block` and silently overrides a stylesheet's intended
 // `display:flex`). Open/closed state lives entirely in ONE stylesheet-owned
 // class — `pk-admin-overlay--open`, toggled on the root element this hook
-// is mounted on — never an inline style. Visibility checks in this file use
-// `offsetParent`, never a class-name string match: a class that sets
-// `display` out-specifies a bare `[hidden]` attribute selector, so testing
-// `.hidden` would silently pass even while the element is still painted (the
-// 072-080 sketch lineage's own guard rule, ported here — see the moduledoc
-// on `AdminComponents.sheet/1`).
+// is mounted on — never an inline style. Visibility checks in this file
+// read the RESOLVED `display` (never a class-name string match, and never
+// `offsetParent`): a class that sets `display` out-specifies a bare
+// `[hidden]` attribute selector, so testing `.hidden` would silently pass
+// even while the element is still painted (the 072-080 sketch lineage's own
+// guard rule, ported here — see the moduledoc on `AdminComponents.sheet/1`).
+//
+// FIX (plan 01.8.2-12 Task 3, deferred-items.md's "SEVERE" finding):
+// `offsetParent !== null` is unconditionally `false` for a `position: fixed`
+// element in Chrome — spec behaviour, not a bug in this app — and
+// `.pk-admin-overlay-root` (the element this hook mounts on) IS
+// `position: fixed`, so the old `isOpen()` always returned `false`. That
+// silently broke Esc, drag-down, the focus trap and focus-return: every one
+// of them early-returns on `!this.isOpen()`. Read `getComputedStyle(...)
+// .display` instead — exactly what `test/visual/admin_components.mjs`'s own
+// `isOverlayOpen` helper does, and exactly what `.pk-admin-overlay--open`'s
+// class toggle actually controls (`components.css`: `display: none` at
+// rest, `display: block` when open).
 export default {
   mounted() {
     // The element carrying `phx-hook="AdminSheet"` is always the OVERLAY
@@ -36,12 +48,14 @@ export default {
       this.el.querySelector("[data-pk-sheet-close]") || this.el.querySelector("[data-pk-dialog-cancel]")
     this.grabber = this.el.querySelector("[data-pk-sheet-grabber]")
 
-    // `offsetParent !== null` is the ONE visibility test used anywhere in
-    // this file — never a class-name check. A class that sets `display`
-    // always wins over a bare `[hidden]` selector, so a `.hidden`-based
-    // test can read "closed" while the element is still on screen; the
-    // computed box is the only thing that cannot lie.
-    this.isOpen = () => this.el.offsetParent !== null
+    // Resolved `display` is the ONE visibility test used anywhere in this
+    // file — never a class-name check, and never `offsetParent` (that
+    // reads unconditionally `false` for this element's `position: fixed`,
+    // regardless of visibility — see this file's header comment). A class
+    // that sets `display` always wins over a bare `[hidden]` selector, so a
+    // `.hidden`-based test can read "closed" while the element is still on
+    // screen; the resolved `display` is the only thing that cannot lie.
+    this.isOpen = () => getComputedStyle(this.el).display !== "none"
 
     this.lastFocused = null
 
@@ -133,8 +147,24 @@ export default {
         : this.panel?.querySelector("[data-pk-sheet-close]")
       initial?.focus()
     }
+    // Guarded on `document.activeElement === document.body` (plan
+    // 01.8.2-12 Task 3, found via CDP tracing while fixing the DOM-removal
+    // close path below): `ask-remove` closes THIS sheet and opens
+    // `confirm-remove-dialog` in the SAME server diff. LiveView mounts the
+    // new dialog hook (which focuses Cancelar in ITS OWN onOpen) BEFORE it
+    // destroys this sheet's hook — confirmed empirically by instrumenting
+    // both callbacks. An unconditional restore here would therefore run
+    // AFTER the dialog already claimed focus and silently steal it back to
+    // the row, failing D-19f's "Cancelar carries initial focus" for the
+    // EXACT case that matters most (a destructive-action handoff). Only
+    // restore when nothing else has claimed focus in the meantime — the
+    // browser's own removal-of-focused-element behaviour resets
+    // `document.activeElement` to `body` synchronously (confirmed the same
+    // way), so `body` reliably means "no other overlay's onOpen ran first".
     this.onClose = () => {
-      if (this.lastFocused && document.contains(this.lastFocused)) this.lastFocused.focus()
+      if (this.lastFocused && document.contains(this.lastFocused) && document.activeElement === document.body) {
+        this.lastFocused.focus()
+      }
       this.lastFocused = null
     }
 
@@ -167,6 +197,23 @@ export default {
   },
 
   destroyed() {
+    // FIX (plan 01.8.2-12 Task 3): the shipped call sites (`staff_live/
+    // index.ex`'s `:if={@selected_staff}`/`:if={@confirm_remove}`) never
+    // toggle `pk-admin-overlay--open` OFF on a element that stays mounted —
+    // `on_close`/`on_cancel` push a server event that sets the driving
+    // assign back to nil, and LiveView removes this whole hooked element
+    // from the DOM instead. The MutationObserver above, which only fires on
+    // a CLASS mutation of a still-present element, therefore never sees a
+    // close for that pattern, and `onClose()` (the focus-return call) was
+    // never reached — the sheet closed but focus was never restored to the
+    // invoking row. `this.wasOpen` still being `true` here means exactly
+    // that: this element is being torn down while it was open, so this is
+    // the close this hook's own class-based path would have caught had the
+    // caller used a stay-mounted/toggle-class pattern instead. Guarded on
+    // `wasOpen` so a genuinely-already-closed (stay-mounted) element being
+    // destroyed later — its own class-based close already ran `onClose()`
+    // and flipped `wasOpen` to `false` — never double-fires focus-return.
+    if (this.wasOpen) this.onClose()
     document.removeEventListener("keydown", this.onKeydown)
     document.removeEventListener("keydown", this.onKeydownTrap)
     this.scrim?.removeEventListener("click", this.onScrimClick)

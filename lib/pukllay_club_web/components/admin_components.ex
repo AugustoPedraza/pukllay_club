@@ -414,7 +414,7 @@ defmodule PukllayClubWeb.AdminComponents do
       """
     else
       ~H"""
-      <div class={["pk-admin-row", @class]} data-pk-pressable="true" {@rest}>
+      <div class={["pk-admin-row", @class]} data-pk-pressable="true" tabindex="0" {@rest}>
         <img :if={@cover} src={@cover} alt="" class="pk-admin-row__cover" />
         <span class="pk-admin-row__body">
           <span class="pk-admin-row__name">{@name}</span>
