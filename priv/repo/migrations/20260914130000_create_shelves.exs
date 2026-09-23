@@ -7,9 +7,13 @@ defmodule PukllayClub.Repo.Migrations.CreateShelves do
   `position`. Games are given **at most one location** — `games.shelf_id`
   is nullable (an unplaced game has none) and `on_delete: :nilify_all` so
   deleting a shelf never deletes the games on it, it just unplaces them.
-  Copies of a multi-unit game (`games.units > 1`) are assumed stored
-  together — there is no in-shelf position, "shelf number is enough"
-  (staff-admin-decisions.md).
+  **Superseded by 01.8.2-01/05 (D-01, D-31):** the assumption below that a
+  multi-unit game's copies are stored together with no in-shelf position
+  no longer holds — each physical copy now gets its own row (`copies`
+  table) with its own estante and left-to-right position, and
+  `games.units` itself has been dropped. `games.shelf_id` (this
+  migration's own DDL) is untouched and still exists, but is a legacy,
+  game-level location distinct from a copy's real per-copy location.
 
   No seed rows: the room layout is entered by staff on `/admin/estantes`
   (UI-SPEC E5 has an explicit empty state for zero shelves) — this is

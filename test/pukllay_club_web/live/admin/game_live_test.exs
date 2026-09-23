@@ -52,20 +52,19 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert html =~ "Gestión de mano"
     end
 
-    test "submitting a new name and units saves and the public page renders the new name", %{
+    test "submitting a new name saves and the public page renders the new name", %{
       conn: conn
     } do
-      game = game_fixture(%{name: "Catán Viejo", units: 1})
+      game = game_fixture(%{name: "Catán Viejo"})
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
 
       lv
-      |> form("#game-form", game: %{name: "Catán Nuevo", units: "3"})
+      |> form("#game-form", game: %{name: "Catán Nuevo"})
       |> render_submit()
 
       updated = Catalog.get_game!(game.id)
       assert updated.name == "Catán Nuevo"
-      assert updated.units == 3
 
       conn = get(conn, ~p"/juegos/#{updated}")
       assert html_response(conn, 200) =~ "Catán Nuevo"

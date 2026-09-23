@@ -9,7 +9,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   `:published` one, even though its public `/juegos/:id` 404s (D-04,
   D-08). Only `Catalog.change_game_admin/2`/`update_game_admin/2` ever
   touch this form's data, and those route through
-  `Game.admin_changeset/2`'s five-field cast allowlist — a BGG-derived
+  `Game.admin_changeset/2`'s cast allowlist (D-31: four club-owned
+  fields plus `:shelf_id`, the old count field dropped outright) — a BGG-derived
   fact submitted in the form params (`bgg_weight`, `mechanics`, ...) is
   silently dropped, never persisted (T-01.8.1-21).
 
@@ -268,7 +269,6 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
         <.form for={@form} id="game-form" phx-change="validate" phx-submit="save" class="space-y-2">
           <.input field={@form[:name]} type="text" label="Nombre" />
-          <.input field={@form[:units]} type="number" label="Unidades" />
           <.input
             field={@form[:weight_band]}
             type="select"

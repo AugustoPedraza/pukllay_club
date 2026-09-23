@@ -3,7 +3,7 @@ defmodule PukllayClub.Catalog.Seed.DbSourceOfTruthTest do
   Guard test for D-09: proves the CSV seed path and its clobbering
   `Catalog.upsert_game!/1` upsert are gone, and that every surviving
   offline write path leaves a staff-curated game's club-owned fields
-  (name, units, weight_band, is_expansion, tags, description) untouched.
+  (name, weight_band, is_expansion, tags, description) untouched.
   """
   use PukllayClub.DataCase, async: true
 
@@ -45,7 +45,6 @@ defmodule PukllayClub.Catalog.Seed.DbSourceOfTruthTest do
         game_fixture(%{
           bgg_id: 184_267,
           name: "Un Nombre Curado Por Staff",
-          units: 3,
           weight_band: "ingenio_estratega",
           is_expansion: true,
           tags: ["#CreaConexiones"],
@@ -59,7 +58,6 @@ defmodule PukllayClub.Catalog.Seed.DbSourceOfTruthTest do
       reloaded = Repo.get!(Game, game.id)
 
       assert reloaded.name == game.name
-      assert reloaded.units == game.units
       assert reloaded.weight_band == game.weight_band
       assert reloaded.is_expansion == game.is_expansion
       assert reloaded.tags == game.tags

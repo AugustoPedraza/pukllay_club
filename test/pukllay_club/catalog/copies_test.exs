@@ -3,11 +3,21 @@ defmodule PukllayClub.Catalog.CopiesTest do
   Proves the `copies` table + `Copy` schema (D-01, D-02, D-03, D-05,
   01.8.2-01 — the phase tracer): both unique indexes surface as changeset
   errors, the two `on_delete` behaviors hold, and
-  `priv/repo/migrations/20260923120000_create_copies.exs`'s own
-  `backfill_statements/0` produces exactly the copy rows D-05 describes
-  when replayed against fixture data. `async: false` (DataCase): the
-  backfill-replay tests delete every `copies` row before replaying,
-  which would race any concurrently-running async test creating copies.
+  `Shelves.count_for_game/1`/`counts_for_games/1` (D-02, D-31) are the
+  only Copias read path. `async: false` (DataCase): historically also
+  needed by the backfill-replay tests this file carried before D-31's
+  flat-count-column drop; kept for consistency now that those tests are
+  gone (they raced `Repo.delete_all(Copy)` against concurrently-running
+  async tests).
+
+  **D-31 note:** the `priv/repo/migrations/20260923120000_create_copies.exs`
+  `backfill_statements/0` replay tests that used to live here were
+  removed by plan `01.8.2-05` — that raw SQL reads the old per-game
+  integer count column directly, which D-31's migration removes, so
+  replaying it against the current schema would fail with a missing
+  column error. That migration's backfill is proven historically (it
+  already ran in production/dev); this file now proves the copy-count
+  read path that replaces it.
   """
   use PukllayClub.DataCase, async: false
 
@@ -16,9 +26,8 @@ defmodule PukllayClub.Catalog.CopiesTest do
   import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Catalog.Copy
+  alias PukllayClub.Catalog.Shelves
   alias PukllayClub.Repo
-
-  @migration_path Path.join([File.cwd!(), "priv/repo/migrations/20260923120000_create_copies.exs"])
 
   describe "changeset/2" do
     test "requires game_id and number" do
@@ -83,60 +92,54 @@ defmodule PukllayClub.Catalog.CopiesTest do
     end
   end
 
-  describe "replaying backfill_statements/0 against fixture data (D-01, D-02, D-03, D-05)" do
-    setup do
-      Code.require_file(@migration_path)
-      Repo.delete_all(Copy)
-      :ok
+  describe "Shelves.count_for_game/1 (D-02, D-31)" do
+    test "a game with three copy rows reports a Copias count of 3" do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+      copy_fixture(%{game_id: game.id})
+      copy_fixture(%{game_id: game.id})
+
+      assert Shelves.count_for_game(game.id) == 3
     end
 
-    test "a game with units = 3 backfills to exactly 3 unplaced copies numbered 1, 2, 3" do
-      game = game_fixture(%{units: 3})
-      other = game_fixture(%{name: "Otro juego", units: 1})
+    test "a game with one copy row reports 1" do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
 
-      run_backfill()
-
-      copies = game.id |> copies_for_game() |> Enum.sort_by(& &1.number)
-      assert Enum.map(copies, & &1.number) == [1, 2, 3]
-      assert Enum.all?(copies, &(is_nil(&1.shelf_id) and is_nil(&1.position)))
-
-      assert [other_copy] = copies_for_game(other.id)
-      assert other_copy.number == 1
+      assert Shelves.count_for_game(game.id) == 1
     end
 
-    test "a game with units = NULL backfills to exactly 1 unplaced copy numbered 1" do
-      game = game_fixture(%{units: nil})
+    test "a game with zero copy rows reports 0, never nil" do
+      game = game_fixture()
 
-      run_backfill()
-
-      assert [copy] = copies_for_game(game.id)
-      assert copy.number == 1
-      assert is_nil(copy.shelf_id)
-      assert is_nil(copy.position)
+      assert Shelves.count_for_game(game.id) == 0
     end
 
-    test "backfill never places a copy, regardless of the game's own games.shelf_id" do
+    test "placed and unplaced copies both count" do
       shelf = shelf_fixture()
-      game = game_fixture(%{units: 2})
-      game |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id, shelf_id: shelf.id, position: 0})
+      copy_fixture(%{game_id: game.id})
 
-      run_backfill()
-
-      copies = copies_for_game(game.id)
-      assert length(copies) == 2
-      assert Enum.all?(copies, &(is_nil(&1.shelf_id) and is_nil(&1.position)))
+      assert Shelves.count_for_game(game.id) == 2
     end
   end
 
-  defp run_backfill do
-    migration = Module.concat(PukllayClub.Repo.Migrations, CreateCopies)
+  describe "Shelves.counts_for_games/1 (D-02, D-31)" do
+    test "returns a map of game_id => count for every requested game, N+1-free" do
+      game_a = game_fixture(%{name: "Juego A"})
+      game_b = game_fixture(%{name: "Juego B"})
+      game_c = game_fixture(%{name: "Juego C"})
+      copy_fixture(%{game_id: game_a.id})
+      copy_fixture(%{game_id: game_a.id})
+      copy_fixture(%{game_id: game_b.id})
 
-    for sql <- migration.backfill_statements() do
-      Repo.query!(sql)
+      counts = Shelves.counts_for_games([game_a.id, game_b.id, game_c.id])
+
+      assert counts[game_a.id] == 2
+      assert counts[game_b.id] == 1
+      refute Map.has_key?(counts, game_c.id)
+      assert Map.get(counts, game_c.id, 0) == 0
     end
-  end
-
-  defp copies_for_game(game_id) do
-    Repo.all(from(c in Copy, where: c.game_id == ^game_id))
   end
 end

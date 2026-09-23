@@ -22,7 +22,6 @@ defmodule PukllayClub.Catalog.Game do
     field :name, :string
     field :csv_row, :integer
     field :bgg_id, :integer
-    field :units, :integer
     field :min_players, :integer
     field :max_players, :integer
     field :min_playtime, :integer
@@ -80,10 +79,23 @@ defmodule PukllayClub.Catalog.Game do
     # history, not a live chip source any more).
     field :section_names, {:array, :string}, virtual: true, default: []
 
-    # Staff-only physical storage location (D-10, D-11, 01.8.1-09) — at
-    # most one shelf per game, no in-shelf position. `nil` means unplaced
-    # ("Sin ubicar"). Never rendered on any public page (D-16).
+    # Staff-only physical storage location (D-10, D-11, 01.8.1-09). This
+    # game-level column is legacy: since 01.8.2-01/D-01, the real
+    # location model is per-COPY (`Copy.shelf_id`/`Copy.position` below),
+    # not per-game — a game can have several copies on several estantes,
+    # or none. `games.shelf_id` itself is a separate column from D-31's
+    # drop below and still backs `Shelves.location_progress/0`'s
+    # dashboard badge (a later plan migrates that read to `copies`).
+    # Never rendered on any public page (D-16).
     belongs_to :shelf, PukllayClub.Catalog.Shelf
+
+    # D-01/D-02/D-31 (01.8.2-01/05): every physical copy of this game is
+    # its own row — `count(copies)` is the ONLY source of the Copias
+    # count (see `PukllayClub.Catalog.Shelves.count_for_game/1`), and
+    # each copy carries its own estante + left-to-right position
+    # (`Copy.shelf_id`/`Copy.position`), replacing the flat integer
+    # count column plan 01.8.2-05's migration removes.
+    has_many :copies, PukllayClub.Catalog.Copy
 
     # Band-audit "keep" override snapshot (D-30, 01.8.1-13, migration
     # `add_band_review_to_games`) — see `Game.band_review_changeset/2` and
@@ -111,7 +123,6 @@ defmodule PukllayClub.Catalog.Game do
       :name,
       :csv_row,
       :bgg_id,
-      :units,
       :min_players,
       :max_players,
       :min_playtime,
@@ -225,27 +236,27 @@ defmodule PukllayClub.Catalog.Game do
   @doc """
   Changeset for the D-07 admin edit screen
   (`Catalog.change_game_admin/2`, `Catalog.update_game_admin/2`) — casts
-  the five club-owned fields staff may edit (`:name`, `:units`,
-  `:weight_band`, `:is_expansion`, `:description`) plus `:shelf_id` (D-10,
-  01.8.1-09). Every BGG-derived fact (players,
-  playtime, age, mechanics, themes, designers, artists, publishers,
-  rating, rank, `bgg_weight`, images) is read-only in the admin and is
-  never cast here — `status` changes only through `status_changeset/2`'s
-  dedicated transition functions (`Catalog.publish_game/1`, `retire_game/1`,
-  `restore_game/1`).
+  the four club-owned fields staff may edit (`:name`, `:weight_band`,
+  `:is_expansion`, `:description`) plus `:shelf_id` (D-10, 01.8.1-09).
+  D-31 drops the old count-field from this ceiling outright — the Copias count is
+  `count(copies)` (`PukllayClub.Catalog.Shelves.count_for_game/1`),
+  never a cast field, so this changeset has no write path to it at all.
+  Every BGG-derived fact (players, playtime, age, mechanics, themes,
+  designers, artists, publishers, rating, rank, `bgg_weight`, images) is
+  read-only in the admin and is never cast here — `status` changes only
+  through `status_changeset/2`'s dedicated transition functions
+  (`Catalog.publish_game/1`, `retire_game/1`, `restore_game/1`).
 
-  `validate_inclusion/3`/`validate_number/3` skip a `nil` value by
-  Ecto's own `validate_change/3` contract, so a blank `weight_band` (the
-  select's `Sin nivel` prompt), a blank `units`, and a blank `shelf_id`
-  (unassigning) all pass through unvalidated rather than needing an
-  explicit `allow_nil` branch.
+  `validate_inclusion/3` skips a `nil` value by Ecto's own
+  `validate_change/3` contract, so a blank `weight_band` (the select's
+  `Sin nivel` prompt) and a blank `shelf_id` (unassigning) both pass
+  through unvalidated rather than needing an explicit `allow_nil` branch.
   """
   def admin_changeset(game, attrs) do
     game
-    |> cast(attrs, [:name, :units, :weight_band, :is_expansion, :description, :shelf_id])
+    |> cast(attrs, [:name, :weight_band, :is_expansion, :description, :shelf_id])
     |> validate_required([:name])
     |> validate_length(:name, max: 255)
-    |> validate_number(:units, greater_than: 0)
     |> validate_inclusion(:weight_band, Enum.map(Vocabulary.weight_bands(), & &1.value))
     |> foreign_key_constraint(:shelf_id)
   end

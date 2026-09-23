@@ -142,8 +142,7 @@ defmodule PukllayClub.Catalog.Shelves do
   01.8.2-01's copy-level rewrite below, since it still reads the
   pre-existing `games.shelf_id` column directly rather than deriving from
   `copies` (a later plan revisits this once `games.shelf_id` itself is
-  retired — D-31 only schedules `games.units`, not this column, for
-  removal).
+  retired — D-31 dropped the old flat count column, not this one).
   """
   @spec location_progress() :: {non_neg_integer(), non_neg_integer()}
   def location_progress do
@@ -211,6 +210,33 @@ defmodule PukllayClub.Catalog.Shelves do
         preload: [game: g]
       )
     )
+  end
+
+  @doc """
+  Copies count for one game (D-02, D-31) — `count(copies)` is the ONLY
+  source for the Copias value; every display of it calls this function
+  (or `counts_for_games/1` for a list). Never `nil`: a game backed by
+  zero copy rows reports `0`, not a missing value.
+  """
+  @spec count_for_game(integer()) :: non_neg_integer()
+  def count_for_game(game_id) do
+    Repo.aggregate(from(c in Copy, where: c.game_id == ^game_id), :count)
+  end
+
+  @doc """
+  Batch copies-count for several games at once (D-02, D-31) — avoids an
+  N+1 `count_for_game/1` call per row on a list screen. Returns a map of
+  `game_id => count`; a `game_id` with zero copies is simply absent from
+  the map (callers should read it with `Map.get(counts, game_id, 0)`).
+  """
+  @spec counts_for_games([integer()]) :: %{integer() => non_neg_integer()}
+  def counts_for_games(game_ids) do
+    Copy
+    |> where([c], c.game_id in ^game_ids)
+    |> group_by([c], c.game_id)
+    |> select([c], {c.game_id, count(c.id)})
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """
