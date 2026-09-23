@@ -5,11 +5,11 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign
 status: planning
-stopped_at: Phase 01.8.2 context updated (sketches 072-080 folded in)
-last_updated: "2026-09-22T23:38:02.663Z"
+stopped_at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
+last_updated: "2026-09-23T02:29:25.724Z"
 last_activity: 2026-09-22
 last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
-state_head: fa9edef26f4b9208c3e48feb85ddde74faa47e03
+state_head: 1e57d6a78e8ce6250cc456c72fb0d25d4b419e03
 progress:
   total_phases: 7
   completed_phases: 4
@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8.2 — Admin UI/UX Redesign
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-22 — Completed quick task 260922-tum (BGG xpath scoping fix + dev re-enrich; production repair still outstanding)
+Last activity: 2026-09-22 — Completed quick task 260922-w5o (rpc→eval production invocation correction); production BGG data repair still outstanding, human-gated
 
 ## Performance Metrics
 
@@ -131,6 +131,7 @@ Last activity: 2026-09-22 — Completed quick task 260922-tum (BGG xpath scoping
 | Phase 01.8.1 P12 | 52min | 3 tasks | 12 files |
 | Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
 | Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
+| Phase quick-260922-veq P01 | 15min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -260,6 +261,9 @@ Recent decisions affecting current work:
 - [Phase 01.8.1]: 01.8.1-13: keep_band/1 snapshots the game's CURRENT implied band + timestamp (not a boolean flag, RESEARCH.md A4) so a later bgg_weight drift to a different implied band re-surfaces the game in the audit
 - [Phase 01.8.1]: 01.8.1-13: BandAudit.mismatches/0 computes the weight-band mismatch entirely in Elixir via Vocabulary.implied_weight_band/1 (never a second threshold copy in SQL); Revisar niveles inserted fourth in the dashboard's fixed D-35 card order, completing it
 - [Phase 01.8.1]: Implemented D-03 revised via a per-BGG-id pg_advisory_xact_lock(8_811_015, bgg_id) as the first Ecto.Multi step, with the existing-editions re-check as its own subsequent Multi.run step (fresh READ COMMITTED read); acknowledged_game_ids always sourced server-side from :edition_prompt, never client params (T-01.8.1-69); no unique index added to games.bgg_id (rejected fix), guarded by an automated pg_indexes test.
+- [Phase 01.8.2]: 260922-veq: ensure_live_node!/1 takes its process-name list as an argument (not hardcoded) so the raise branch is testable and the real required-process list is itself asserted satisfiable
+- [Phase 01.8.2]: 260922-veq: Release.enrich_bgg_stats/1 and Release.bgg_stats_report/0 print one JSON line via IO.puts + Logger.info and write no file under priv/ (discarded on every deploy) — repair still pending a human-authorized production run per docs/runbooks/production-bgg-reenrichment.md
+- [Phase 01.8.2]: Quick task 260922-w5o: corrected the production invocation rule from rpc to eval across release.ex, release_test.exs, the runbook, and AGENTS.md (rpc verified unavailable on the production container 2026-09-22, :noconnection, root cause not established; eval + three-expression preamble is proven); Credentials.fetch() also proven resolving on production
 
 ### Pending Todos
 
@@ -354,6 +358,8 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
 | 260922-pni | Re-bake og-fallback.webp at the current ramp (bg #551670→#4A187F, tagline #E3D3F0→#DED4F3, stale since sketch 058's H313.1→H300 rotation); committed re-runnable Pillow generator at tools/og-fallback/ that parses app.css at run time, lossless WebP so colours are exactly assertable, + 2 ExUnit pixel gates binding the shipped asset to app.css. Shipped to production via PR #64 (squash `8078a53`); live asset verified sha256-identical to the committed file, 1200×630, zero pixels of either retired colour. Carried an unrelated mint 1.10.0→1.10.1 bump (EEF-CVE-2026-82672) that was blocking CI for every PR | 2026-09-22 | 8078a53 | complete | [260922-pni-regenerar-og-fallback-webp-en-4a187f-que](./quick/260922-pni-regenerar-og-fallback-webp-en-4a187f-que/) |
 | 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
+| 260922-veq | Added `Release.enrich_bgg_stats/1` + `StatsAudit.report/0`/`Release.bgg_stats_report/0` so the BGG re-enrichment can be invoked and measured on a production release (Mix is absent from a release). Code + runbook only — nothing run against production | 2026-09-22 | 029f2c4 | complete | [260922-veq-add-release-enrich-bgg-stats-so-bgg-stat](./quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/) |
+| 260922-w5o | Corrected the production invocation for the BGG re-enrichment entrypoints from `rpc` (verified unavailable on the prod container — `:noconnection`, root cause not established) to `eval` plus an explicit `:req`/`:ecto_sql`/`Repo.start_link` preamble, across release.ex, the runbook, AGENTS.md and the guard's pinned test assertion | 2026-09-22 | 1e57d6a | complete | [260922-w5o-correct-the-production-invocation-docs-f](./quick/260922-w5o-correct-the-production-invocation-docs-f/) |
 
 ### Roadmap Evolution
 
@@ -401,9 +407,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-22T23:38:02.517Z
-Stopped at: Phase 01.8.2 context updated (sketches 072-080 folded in)
-Resume file: .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-CONTEXT.md
+Last session: 2026-09-23T02:29:20.565Z
+Stopped at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
+Resume file: None
 
 ## Operator Next Steps
 
