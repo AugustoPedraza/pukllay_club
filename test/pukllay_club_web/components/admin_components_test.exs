@@ -22,6 +22,24 @@ defmodule PukllayClubWeb.AdminComponentsTest do
 
   defp components_css, do: File.read!(@components_css_path)
 
+  # Same idiom as nav_drawer_stacking_test.exs's `rule_body!` — parse a
+  # rule's declared font-size directly from source rather than hardcoding
+  # a "known good" number twice.
+  defp font_size_px!(css, selector) do
+    pattern = ~r/(?m)^#{Regex.escape(selector)}\s*\{([^}]*)\}/s
+
+    case Regex.run(pattern, css) do
+      [_, body] ->
+        case Regex.run(~r/font-size:\s*(\d+)px/, body) do
+          [_, value] -> String.to_integer(value)
+          nil -> flunk("`#{selector}` declares no font-size in assets/css/admin/components.css")
+        end
+
+      nil ->
+        flunk("no `#{selector} { ... }` rule found in assets/css/admin/components.css")
+    end
+  end
+
   describe "action/1 — A1 outlined" do
     test "renders the a1 anatomy and principal role classes" do
       assigns = %{}
@@ -194,6 +212,167 @@ defmodule PukllayClubWeb.AdminComponentsTest do
 
     test "components.css never references a daisyUI filled/ghost/modal-action class" do
       refute components_css() =~ ~r/btn-primary|btn-outline|btn-ghost|btn-error|modal-action/
+    end
+  end
+
+  describe "field/1" do
+    test "default type renders the label above a 44px control" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.field name="nombre" value="" label="Nombre" />
+        """)
+
+      assert html =~ "pk-admin-label--field"
+      assert html =~ "pk-admin-field__control"
+      assert html =~ "Nombre"
+    end
+
+    test "renders errors from a plain errors list" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.field name="nombre" value="" label="Nombre" errors={["no puede estar vacío"]} />
+        """)
+
+      assert html =~ "pk-admin-field__error"
+      assert html =~ "no puede estar vacío"
+    end
+
+    test "checkbox type renders a checkbox input" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.field
+          type="checkbox"
+          name="es_expansion"
+          value={false}
+          label="Es una expansión"
+        />
+        """)
+
+      assert html =~ ~s(type="checkbox")
+      assert html =~ "pk-admin-field__checkbox-label"
+    end
+
+    test "select type renders the given options" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.field
+          type="select"
+          name="nivel"
+          value=""
+          label="Nivel"
+          options={[{"Bajo", "bajo"}, {"Alto", "alto"}]}
+        />
+        """)
+
+      assert html =~ "<select"
+      assert html =~ "Bajo"
+      assert html =~ "Alto"
+    end
+
+    test "textarea type renders a textarea control" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.field type="textarea" name="descripcion" value="hola" label="Descripción" />
+        """)
+
+      assert html =~ "<textarea"
+      assert html =~ "hola"
+    end
+  end
+
+  describe "section_panel/1" do
+    test "renders the tonal section-panel class and its label slot" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.section_panel>
+          <:label>Ajustes</:label>
+          contenido
+        </AdminComponents.section_panel>
+        """)
+
+      assert html =~ "pk-admin-section-panel"
+      assert html =~ "pk-admin-label--group"
+      assert html =~ "Ajustes"
+      assert html =~ "contenido"
+    end
+  end
+
+  describe "form_label/1" do
+    test "rank=\"field\" renders the field-rank class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.form_label rank="field">Nombre</AdminComponents.form_label>
+        """)
+
+      assert html =~ "pk-admin-label--field"
+    end
+
+    test "rank=\"group\" renders the group-rank class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.form_label rank="group">Ajustes</AdminComponents.form_label>
+        """)
+
+      assert html =~ "pk-admin-label--group"
+    end
+  end
+
+  describe "list_section_label/1" do
+    test "renders the list-section-label class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.list_section_label>Borradores</AdminComponents.list_section_label>
+        """)
+
+      assert html =~ "pk-admin-list-section-label"
+      assert html =~ "Borradores"
+    end
+  end
+
+  describe "the two label ranks stay distinct (D-19j / D-19g-bis decision 20)" do
+    # 01.8.2-BENCHMARK.md's "List rows" row fixes a row name at 14-15px and
+    # its second line at 13px muted — the literal figures a future row
+    # component (Task 3) must build to. Grounding the comparison in these
+    # documented numbers, rather than Task 3's not-yet-written CSS, means
+    # this guard holds the moment Task 3 lands the row classes at the same
+    # spec, with nothing left to reconcile.
+    @row_name_px 14
+    @row_meta_px 13
+
+    test "a list section label's font-size is >= the documented row-name size" do
+      assert font_size_px!(components_css(), ".pk-admin-list-section-label") >= @row_name_px
+    end
+
+    test "a list section label's (size, weight) pair differs from the documented row second-line pair" do
+      list_size = font_size_px!(components_css(), ".pk-admin-list-section-label")
+      group_size = font_size_px!(components_css(), ".pk-admin-label--group")
+
+      refute list_size == @row_meta_px and list_size == group_size
+      assert list_size != @row_meta_px
+    end
+  end
+
+  describe "coarse-pointer field text size" do
+    test "components.css guards the 16px no-zoom field size behind pointer: coarse" do
+      assert components_css() =~ "pointer: coarse"
     end
   end
 end

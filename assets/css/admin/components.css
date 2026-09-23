@@ -178,3 +178,118 @@
   border-color: var(--color-neutral);
   background: var(--color-base-100);
 }
+
+/* ============================================================
+   Task 2 — field, section panel, and the two label ranks
+   ============================================================ */
+
+.pk-admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk-admin-field__label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk-admin-field__control {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pk-admin-field__control:focus {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+:root[data-theme="dark"] .pk-admin-field__control:focus {
+  border-color: var(--pk-ramp-400);
+  outline-color: var(--pk-ramp-400);
+}
+
+.pk-admin-field__control--textarea {
+  min-height: 88px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.pk-admin-field__control--error {
+  border-color: var(--color-error);
+}
+
+/* 16px input text under a coarse (touch) pointer so iOS never zooms on
+   focus (BENCHMARK "Field" row). Desktop keeps the 14px scale above —
+   this rule intentionally lives in its own `@media` block, not merged
+   into the base rule, so the desktop scale is unaffected. */
+@media (pointer: coarse) {
+  .pk-admin-field__control {
+    font-size: 16px;
+  }
+}
+
+.pk-admin-field__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.pk-admin-field__error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin: 0;
+}
+
+/* Section panel: tonal fill, no border, 12px radius, 16px padding. */
+.pk-admin-section-panel {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* The two label ranks (D-19j / D-19g-bis decision 20) — kept visibly
+   distinct on purpose. `--field` and `--group` are BENCHMARK's "Label
+   (field)" / "Label (group)" rows — both govern a FORM label. A list
+   section header is a different rank entirely: see
+   `.pk-admin-list-section-label` below, which must never collapse onto
+   either of these two. */
+.pk-admin-label {
+  display: block;
+  margin: 0;
+}
+
+.pk-admin-label--field {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutral);
+}
+
+.pk-admin-label--group {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* A LIST section label (D-19g-bis decision 20): 15/600 at full strength —
+   never smaller than the rows it heads (`.pk-admin-row__name`, 14px) and
+   never identical to a row's second line (`.pk-admin-row__meta`, 13px
+   muted). Conflating this with `.pk-admin-label--group` above (13/600
+   full-strength, a FORM label) is exactly the inverted-ladder bug
+   D-19g-bis decision 20 records and fixes. */
+.pk-admin-list-section-label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}

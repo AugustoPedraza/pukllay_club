@@ -37,6 +37,10 @@ defmodule PukllayClubWeb.AdminComponents do
   """
   use Phoenix.Component
 
+  alias Phoenix.HTML.Form
+  alias Phoenix.HTML.FormField
+  alias PukllayClubWeb.CoreComponents
+
   # ============================================================
   # Task 1 — the A1-A4 action system (D-18, D-00a, 064 S3 Contorno)
   # ============================================================
@@ -150,4 +154,206 @@ defmodule PukllayClubWeb.AdminComponents do
   defp blank?(nil), do: true
   defp blank?(""), do: true
   defp blank?(_), do: false
+
+  # ============================================================
+  # Task 2 — field, section panel, and the two label ranks
+  # ============================================================
+
+  @doc """
+  Renders an admin form field — the same `Phoenix.HTML.FormField` plumbing
+  `PukllayClubWeb.CoreComponents.input/1` uses (`used_input?/1` gating,
+  `CoreComponents.translate_error/1`), in Scope A chrome: label above the
+  control, the control 44px tall with a 1px `--stroke` border and 8px
+  radius, and 16px input text under a coarse-pointer media query so iOS
+  never zooms on focus (`01.8.2-BENCHMARK.md`'s "Field" row).
+
+  Accepts `type`: `"text"`, `"number"`, `"select"`, `"textarea"`,
+  `"checkbox"` — the same subset `admin_components_test.exs` exercises.
+  """
+  attr :id, :any, default: nil
+  attr :name, :any
+  attr :label, :string, default: nil
+  attr :value, :any
+
+  attr :type, :string, default: "text", values: ~w(text number select textarea checkbox)
+
+  attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
+
+  attr :errors, :list, default: []
+  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
+  attr :prompt, :string, default: nil, doc: "the prompt for select inputs"
+  attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
+  attr :class, :any, default: nil
+
+  attr :rest, :global, include: ~w(accept autocomplete cols disabled form list max maxlength min minlength
+                pattern placeholder readonly required rows size step)
+
+  def field(%{field: %FormField{} = field} = assigns) do
+    errors = if Phoenix.Component.used_input?(field), do: field.errors, else: []
+
+    assigns
+    |> assign(field: nil, id: assigns.id || field.id)
+    |> assign(:errors, Enum.map(errors, &CoreComponents.translate_error/1))
+    |> assign_new(:name, fn -> field.name end)
+    |> assign_new(:value, fn -> field.value end)
+    |> field()
+  end
+
+  def field(%{type: "checkbox"} = assigns) do
+    assigns =
+      assign_new(assigns, :checked, fn ->
+        Form.normalize_value("checkbox", assigns[:value])
+      end)
+
+    ~H"""
+    <div class="pk-admin-field">
+      <label for={@id} class="pk-admin-field__checkbox-label">
+        <input
+          type="hidden"
+          name={@name}
+          value="false"
+          disabled={@rest[:disabled]}
+          form={@rest[:form]}
+        />
+        <input type="checkbox" id={@id} name={@name} value="true" checked={@checked} {@rest} />
+        <span :if={@label} class="pk-admin-label pk-admin-label--field">{@label}</span>
+      </label>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  def field(%{type: "select"} = assigns) do
+    ~H"""
+    <div class="pk-admin-field">
+      <label for={@id} class="pk-admin-field__label-wrap">
+        <span :if={@label} class="pk-admin-label pk-admin-label--field">{@label}</span>
+        <select
+          id={@id}
+          name={@name}
+          class={[
+            @class || "pk-admin-field__control",
+            @errors != [] && "pk-admin-field__control--error"
+          ]}
+          {@rest}
+        >
+          <option :if={@prompt} value="">{@prompt}</option>
+          {Form.options_for_select(@options, @value)}
+        </select>
+      </label>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  def field(%{type: "textarea"} = assigns) do
+    ~H"""
+    <div class="pk-admin-field">
+      <label for={@id} class="pk-admin-field__label-wrap">
+        <span :if={@label} class="pk-admin-label pk-admin-label--field">{@label}</span>
+        <textarea
+          id={@id}
+          name={@name}
+          class={[
+            @class || "pk-admin-field__control pk-admin-field__control--textarea",
+            @errors != [] && "pk-admin-field__control--error"
+          ]}
+          {@rest}
+        >{Form.normalize_value("textarea", @value)}</textarea>
+      </label>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  # text, number, and any other input type this attr's `values:` allows.
+  def field(assigns) do
+    ~H"""
+    <div class="pk-admin-field">
+      <label for={@id} class="pk-admin-field__label-wrap">
+        <span :if={@label} class="pk-admin-label pk-admin-label--field">{@label}</span>
+        <input
+          type={@type}
+          name={@name}
+          id={@id}
+          value={Form.normalize_value(@type, @value)}
+          class={[
+            @class || "pk-admin-field__control",
+            @errors != [] && "pk-admin-field__control--error"
+          ]}
+          {@rest}
+        />
+      </label>
+      <.field_error :for={msg <- @errors}>{msg}</.field_error>
+    </div>
+    """
+  end
+
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  defp field_error(assigns) do
+    ~H"""
+    <p class="pk-admin-field__error">{render_slot(@inner_block)}</p>
+    """
+  end
+
+  @doc """
+  Renders a tonal section panel: `--color-surface` fill, no border, 12px
+  radius, 16px padding (`01.8.2-BENCHMARK.md`'s "Section panel" row). The
+  optional `:label` slot renders as a `form_label/1 rank="group"` caption
+  above the panel body.
+  """
+  attr :class, :any, default: nil
+  slot :label
+  slot :inner_block, required: true
+
+  def section_panel(assigns) do
+    ~H"""
+    <section class={["pk-admin-section-panel", @class]}>
+      <p :if={@label != []} class="pk-admin-label pk-admin-label--group">{render_slot(@label)}</p>
+      {render_slot(@inner_block)}
+    </section>
+    """
+  end
+
+  @doc """
+  Renders one of the two **form** label ranks (`01.8.2-BENCHMARK.md`'s
+  "Label (field)" / "Label (group)" rows — BOTH govern a form label, not a
+  list section header; see `list_section_label/1` for that rank, which
+  must never collapse onto either of these):
+
+    * `rank="field"` — 12px/600, muted (`--color-neutral`). Sits directly
+      above one control.
+    * `rank="group"` — 13px/600, sentence case, full strength
+      (`--color-base-content`). Sits above a group of fields.
+  """
+  attr :rank, :string, required: true, values: ~w(field group)
+  slot :inner_block, required: true
+
+  def form_label(assigns) do
+    ~H"""
+    <span class={["pk-admin-label", "pk-admin-label--#{@rank}"]}>{render_slot(@inner_block)}</span>
+    """
+  end
+
+  @doc """
+  Renders a **list** section header caption (D-19g-bis decision 20): 15px/
+  600 at full strength (`--color-base-content`) — above `form_label/1`'s
+  13px/600 "group" rank, and above `list_row/1`'s own 14px row name, on
+  purpose. A list section label organises the rows beneath it and must
+  never read as smaller or lower-contrast than they are; conflating this
+  rank with the BENCHMARK's *form* "Label (group)" row is exactly the
+  inverted-ladder bug D-19g-bis decision 20 records and fixes. Renders a
+  plain `<span>` — never a control (no caret, no `aria-expanded`, no 44px
+  target): this atom renders one caption, not a collapsible section: that
+  behaviour belongs to whatever screen composes it.
+  """
+  slot :inner_block, required: true
+
+  def list_section_label(assigns) do
+    ~H"""
+    <span class="pk-admin-list-section-label">{render_slot(@inner_block)}</span>
+    """
+  end
 end
