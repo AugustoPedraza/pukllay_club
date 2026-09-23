@@ -503,10 +503,19 @@
    admin_sheet.js` — never an inline `display` (T-01.8.2-32).
    ============================================================ */
 
+/* FIX (plan 01.8.2-12 Task 3, deferred-items.md's other "SEVERE" finding):
+   was `z-index: 70` — IDENTICAL to `.pk-admin-tab-bar`'s (chrome.css). Both
+   are `bottom: 0`-anchored fixed elements, so a short sheet's bottom-most
+   row(s) sat in the tab bar's 67px band with no reliable stacking order
+   between the two, confirmed via a real coordinate click + elementFromPoint
+   landing on the tab bar instead of "Quitar del staff". `75` sits strictly
+   between the tab bar's `70` and the snackbar's `80` (components.css below)
+   — above the chrome it must cover, below the one component (the snackbar)
+   that already needs to paint over an open sheet/dialog too. */
 .pk-admin-overlay-root {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: 75;
   display: none;
 }
 
