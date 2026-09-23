@@ -128,3 +128,15 @@ this evaporate. Items 4, 5 and 8 on that checklist are framed as "verify the fix
 fail"), since Defects A and B above are already fixed and harness-verified as of this plan; a
 `FIX NOW` result on any of those three during the device pass would mean a real device diverges
 from the harness's own headless-Chrome evidence.
+
+## From plan 19 (2026-09-23) — a pre-existing flaky test, not caused by this plan's changes
+
+- **`test/pukllay_club_web/live/catalog_show_test.exs`'s mechanics-overflow test
+  (`refute html =~ "+7"`) failed once during a full `mix test --warnings-as-errors` run**,
+  unrelated to this plan's files (`form.ex`/`editor.css`/`game_live_test.exs` — the public
+  catalog show page's mechanics-chip overflow indicator, not the admin editor). Reproduction
+  attempts (standalone file, full suite with the SAME `--seed`, both with and without this
+  plan's changes stashed) all passed clean — the failure did not reproduce under a controlled
+  seed either on this plan's branch or on the pre-plan baseline. Logged as a pre-existing,
+  non-deterministic flake (Scope Boundary rule: out of scope for this plan, not fixed) —
+  worth a closer look if it recurs, but not blocking this plan's own verification.

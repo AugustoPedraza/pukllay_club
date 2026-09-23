@@ -435,3 +435,70 @@ body:has(.pk-game-editor) main {
   margin: 0 0 8px;
   background: var(--color-base-300);
 }
+
+/* ============================================================
+   Plan 01.8.2-19 — the two sheet patterns (D-30), never mixed:
+   `.pk-editor-opt` is the CHOICE row (choosing commits and closes, no
+   commit control anywhere in the sheet); `.pk-editor-sheet-save` is the
+   TEXT sheet's own wide `Guardar` (the ONLY commit control in that
+   pattern). Plans 01.8.2-20/-21 extend this section for the draft sheet
+   and the Copias stepper — keep the `.pk-editor-opt`/`.pk-editor-sheet-*`
+   naming so those plans compose rather than fork it.
+   ============================================================ */
+
+.pk-editor-opt {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 -16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+.pk-editor-opt__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pk-editor-opt__label {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.pk-editor-opt__sub {
+  font-size: 13px;
+  color: var(--color-neutral);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+/* D-23: the selected option gets a TICK, never the `--val` tint — tinting
+   it here would collide with the at-rest editable marker already carried
+   by the row that opened this sheet (`.pk-editor-pill--editable`, etc). */
+.pk-editor-opt__tick {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
+}
+
+/* The text sheet's own wide `Guardar` — `action/1` `anatomy="a1"` stays
+   outline (Scope A's S3 Contorno; D-27's top-bar exception does not
+   extend here), only WIDTH is widened past A1's usual natural-width rule,
+   since this is a sheet's own commit slot, not the save bar's A1 (D-28
+   keeps that one natural-width and right-aligned; the two never share a
+   container). Loads after `tokens.css`'s nested `components.css` (see
+   `app.css`'s import order), so this single-class selector wins the
+   `.pk-admin-action--a1` width on source order alone. */
+.pk-editor-sheet-save {
+  width: 100%;
+  margin-top: 8px;
+}

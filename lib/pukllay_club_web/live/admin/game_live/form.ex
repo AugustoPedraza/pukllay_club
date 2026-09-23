@@ -23,13 +23,28 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   ⋮ menu's lifecycle actions (`Catalog.retire_game/1`/`restore_game/1`)
   commit on their own, never through `Guardar`.
 
-  The `"draft-change"` event is this plan's own generic write-into-the-
-  draft entry point — plan 01.8.2-19's field sheets are the first real
-  callers; this plan wires the plumbing (and exercises it directly in its
-  own tests) but ships no sheet UI of its own. Every editable block's own
-  `"edit-field"` click currently does nothing beyond naming which field was
-  tapped — the sheet bodies are plan 01.8.2-19's scope, named at each call
-  site.
+  The `"draft-change"` event is the generic write-into-the-draft entry
+  point plan 01.8.2-17 wired and plan 01.8.2-19's field sheets now call
+  directly (`choice_sheet/1`'s `"choice-select"` and `text_sheet/1`'s
+  `"text-sheet-save"` both end by writing into `@draft`, never the
+  database — see D-30 below).
+
+  **D-30 — two sheet patterns, never mixed.** `choice_sheet/1` (nivel, es
+  una expansión): an `.opt` row per option, the selected one carries a
+  **tick** (D-23 — never the `--val` tint, which stays on the row that
+  opened the sheet), and **choosing IS the commit** — it writes into
+  `@draft` and closes the sheet in one round trip. No `Guardar` renders
+  inside it. `text_sheet/1` (nombre, descripción): its own **wide
+  `Guardar`** commits the typed value into `@draft` and closes; **✕
+  discards** what was typed (079's fix for 073 d41's "exactly one
+  `Guardar`" — closing a text sheet with ✕ used to silently drop the
+  edit). Only the foot `save_bar/1` ever reaches the database — a field
+  sheet, whichever pattern, never calls `Catalog` directly.
+
+  Copias and Estante (`field="copias"`/`field="shelf_id"`) are
+  deliberately **not** wired to either pattern here — D-31/D-32 give them
+  their own write paths, plan 01.8.2-21's scope. The cover's pencil
+  (`field="cover"`) stays inert, per this module's own note below.
   """
   use PukllayClubWeb, :live_view
 
@@ -63,7 +78,10 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
      |> assign(:copies_count, Shelves.count_for_game(game.id))
      |> assign(:menu_open, false)
      |> assign(:confirm_retire, false)
-     |> assign(:confirm_discard, false)}
+     |> assign(:confirm_discard, false)
+     |> assign(:open_sheet, nil)
+     |> assign(:sheet_value, nil)
+     |> assign(:sheet_error, nil)}
   end
 
   defp draft_from_game(game), do: Map.take(game, @draft_fields)
@@ -109,16 +127,108 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     end
   end
 
-  # Every editable block's open event, for plan 01.8.2-19 to replace with
-  # real sheet-opening logic — see this module's own moduledoc. The
-  # cover's pencil (`edit-field` field="cover") is deliberately NOT wired
-  # to this or any handler: `admin-game-editor.md`'s own "What to Avoid"
-  # section records that redrawing the cover reverts 01.3.1/D-07 on
-  # purpose, the badge exists because the pencil needs a target, not
-  # because the cover is genuinely editable.
+  # Every editable block's open event. The two choice fields (D-23/D-30)
+  # open `choice_sheet/1`; the two text fields open `text_sheet/1`,
+  # priming `@sheet_value` from the CURRENT draft so a sheet reopened after
+  # a discard shows the draft's real value, not a stale typed one.
+  # Copias/Estante (D-31/D-32, plan 01.8.2-21's own write paths) and the
+  # cover (`field="cover"`, deliberately inert — `admin-game-editor.md`'s
+  # own "What to Avoid" section records that redrawing the cover reverts
+  # 01.3.1/D-07; the badge exists because the pencil needs a target, not
+  # because the cover is genuinely editable) all fall through to the
+  # catch-all no-op below.
+  @impl true
+  def handle_event("edit-field", %{"field" => field}, socket) when field in ["weight_band", "is_expansion"] do
+    {:noreply, assign(socket, :open_sheet, String.to_existing_atom(field))}
+  end
+
+  @impl true
+  def handle_event("edit-field", %{"field" => field}, socket) when field in ["name", "description"] do
+    key = String.to_existing_atom(field)
+
+    {:noreply,
+     socket
+     |> assign(:open_sheet, key)
+     |> assign(:sheet_value, Map.get(socket.assigns.draft, key) || "")
+     |> assign(:sheet_error, nil)}
+  end
+
   @impl true
   def handle_event("edit-field", %{"field" => _field}, socket) do
     {:noreply, socket}
+  end
+
+  # Live typing inside `text_sheet/1` (T-01.8.2-88's own mitigation): this
+  # tracks `@sheet_value` ONLY — never `@draft` — so `close-field-sheet`
+  # below has real typed-but-unsubmitted text to discard, and a submit
+  # (`"text-sheet-save"`) has the true current value even if the browser
+  # round-trip beat a keystroke.
+  @impl true
+  def handle_event("sheet-input", %{"field" => field, "value" => value}, socket) when field in ["name", "description"] do
+    {:noreply, assign(socket, :sheet_value, value)}
+  end
+
+  # ✕ (or Esc/scrim/drag-down, via `AdminSheet`): discards whatever was
+  # typed/selected without touching `@draft` — the write model's other
+  # half from `"draft-change"`'s own no-op-on-stale-field guard.
+  @impl true
+  def handle_event("close-field-sheet", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:open_sheet, nil)
+     |> assign(:sheet_value, nil)
+     |> assign(:sheet_error, nil)}
+  end
+
+  # `choice_sheet/1`'s own commit: choosing an option IS the commit (D-30)
+  # — it writes into `@draft` (never `Catalog`) and closes in one round
+  # trip. Reuses `@draft_fields`/`cast_draft_value/2` verbatim so a
+  # stale/forged `field` can never corrupt the draft, exactly like
+  # `"draft-change"` above.
+  @impl true
+  def handle_event("choice-select", %{"field" => field, "choice" => choice}, socket) do
+    case Enum.find(@draft_fields, &(Atom.to_string(&1) == field)) do
+      nil ->
+        {:noreply, socket}
+
+      key ->
+        {:noreply,
+         socket
+         |> assign(:draft, Map.put(socket.assigns.draft, key, cast_draft_value(key, choice)))
+         |> assign(:open_sheet, nil)}
+    end
+  end
+
+  # `text_sheet/1`'s own wide `Guardar`: runs the ONE changed field
+  # through `Game.admin_changeset/2` at commit time (T-01.8.2-92) so a
+  # validation error (the name's `validate_length(:name, max: 255)`)
+  # surfaces inside the sheet, where the typing happened, instead of
+  # after a silent close — built from `socket.assigns.game` (the last
+  # PERSISTED values), never `@draft`, so an unrelated dirty field can
+  # never leak a spurious error into this one field's check. Valid ->
+  # writes into `@draft` and closes; invalid -> keeps the sheet open with
+  # the typed value retained and the translated error shown.
+  @impl true
+  def handle_event("text-sheet-save", %{"field" => field, "value" => value}, socket)
+      when field in ["name", "description"] do
+    key = String.to_existing_atom(field)
+    changeset = Catalog.change_game_admin(socket.assigns.game, %{key => value})
+
+    case Keyword.get(changeset.errors, key) do
+      nil ->
+        {:noreply,
+         socket
+         |> assign(:draft, Map.put(socket.assigns.draft, key, value))
+         |> assign(:open_sheet, nil)
+         |> assign(:sheet_value, nil)
+         |> assign(:sheet_error, nil)}
+
+      error ->
+        {:noreply,
+         socket
+         |> assign(:sheet_value, value)
+         |> assign(:sheet_error, translate_error(error))}
+    end
   end
 
   # ============================================================
@@ -168,6 +278,9 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
     {:noreply, assign(socket, :confirm_retire, false)}
   end
 
+  # `status` commits on its own, outside `@draft`/`@saved` entirely (D-27's
+  # moduledoc note) — neither branch below touches either assign, which is
+  # what lets an in-progress field edit survive a status change untouched.
   @impl true
   def handle_event("confirm-retire", _params, socket) do
     case Catalog.retire_game(socket.assigns.game) do
@@ -178,8 +291,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
          |> assign(:confirm_retire, false)
          |> put_flash(:info, "Juego retirado.")}
 
-      {:error, _changeset} ->
-        {:noreply, assign(socket, :confirm_retire, false)}
+      {:error, _reason} = error ->
+        {:noreply,
+         socket
+         |> assign(:confirm_retire, false)
+         |> put_flash(:error, lifecycle_error_message(error))}
     end
   end
 
@@ -193,8 +309,11 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
          |> assign(:menu_open, false)
          |> put_flash(:info, "Juego restaurado.")}
 
-      {:error, _reason} ->
-        {:noreply, assign(socket, :menu_open, false)}
+      {:error, _reason} = error ->
+        {:noreply,
+         socket
+         |> assign(:menu_open, false)
+         |> put_flash(:error, lifecycle_error_message(error))}
     end
   end
 
@@ -283,6 +402,100 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   defp lifecycle_action(:published), do: {"Retirar", "Deja de verse en la web y sale del estante.", "retire"}
   defp lifecycle_action(:retired), do: {"Restaurar", "Vuelve a la ludoteca y a la web.", "restore"}
   defp lifecycle_action(:draft), do: nil
+
+  # D-37's origin-guard refusal tuples (T-01.8.2-90) — this screen only
+  # ever calls `retire_game/1` (-> `:not_retirable`) and `restore_game/1`
+  # (-> `:not_retired`), but `:not_publishable` is included too: it's
+  # `publish_game/1`'s own refusal, named explicitly in this plan's
+  # `<read_first>` alongside the other two, and a future ⋮ action reusing
+  # this same helper for a publish path (this screen only ever reaches a
+  # published game, D-30, so it never fires today) should find the message
+  # already here rather than a silent fourth case. A refused transition
+  # surfaces via the shared snackbar (`put_flash`, routed by
+  # `Layouts.admin_flash/1`, D-19c) — never a silent no-op.
+  defp lifecycle_error_message({:error, :not_publishable}), do: "No se pudo publicar. El estado cambió mientras tanto."
+
+  defp lifecycle_error_message({:error, :not_retirable}), do: "No se pudo retirar. El estado cambió mientras tanto."
+
+  defp lifecycle_error_message({:error, :not_retired}), do: "No se pudo restaurar. El estado cambió mientras tanto."
+
+  defp lifecycle_error_message({:error, _other}), do: "No se pudo completar la acción."
+
+  # ============================================================
+  # D-30's two sheet patterns — NEVER MIXED. `choice_sheet/1` is the
+  # `.opt` + tick pattern (nivel, es una expansión): choosing IS the
+  # commit and closes, no `Guardar` renders. `text_sheet/1` is the other
+  # pattern (nombre, descripción): its own wide `Guardar` commits, ✕
+  # discards. Do not add a commit control to `choice_sheet/1` and do not
+  # make `text_sheet/1` commit on selection/close — that is exactly the
+  # blur D-30 names and forbids.
+  # ============================================================
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :field, :atom, required: true
+  attr :options, :list, required: true, doc: "[%{value: any, label: string, sub: string | nil}]"
+  attr :selected, :any
+  attr :open, :boolean, default: false
+  attr :on_close, JS, default: %JS{}
+
+  defp choice_sheet(assigns) do
+    ~H"""
+    <AdminComponents.sheet id={@id} title={@title} open={@open} on_close={@on_close}>
+      <button
+        :for={opt <- @options}
+        type="button"
+        class="pk-editor-opt"
+        data-pk-pressable="true"
+        phx-click="choice-select"
+        phx-value-field={@field}
+        phx-value-choice={to_string(opt.value)}
+      >
+        <span class="pk-editor-opt__text">
+          <span class="pk-editor-opt__label">{opt.label}</span>
+          <span :if={opt[:sub]} class="pk-editor-opt__sub">{opt.sub}</span>
+        </span>
+        <.icon :if={opt.value == @selected} name="hero-check" class="pk-editor-opt__tick" />
+      </button>
+    </AdminComponents.sheet>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :field, :atom, required: true
+  attr :label, :string, required: true
+  attr :value, :string, default: ""
+  attr :error, :string, default: nil
+  attr :textarea, :boolean, default: false
+  attr :open, :boolean, default: false
+  attr :on_close, JS, default: %JS{}
+
+  defp text_sheet(assigns) do
+    ~H"""
+    <AdminComponents.sheet id={@id} title={@title} open={@open} on_close={@on_close}>
+      <form id={"#{@id}-form"} phx-submit="text-sheet-save" phx-change="sheet-input">
+        <input type="hidden" name="field" value={@field} />
+        <AdminComponents.field
+          type={if @textarea, do: "textarea", else: "text"}
+          name="value"
+          id={"#{@id}-input"}
+          label={@label}
+          value={@value}
+          errors={if @error, do: [@error], else: []}
+        />
+        <AdminComponents.action
+          anatomy="a1"
+          role="principal"
+          type="submit"
+          class="pk-editor-sheet-save"
+        >
+          Guardar
+        </AdminComponents.action>
+      </form>
+    </AdminComponents.sheet>
+    """
+  end
 
   @impl true
   def render(assigns) do
@@ -466,6 +679,56 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
           {elem(lifecycle_action(@game.status), 0)}
         </AdminComponents.action>
       </AdminComponents.sheet>
+
+      <%!-- D-30's choice-field sheets (D-23's tick, never a tint; choosing
+      commits and closes — see `choice_sheet/1`'s own moduledoc). --%>
+      <.choice_sheet
+        id="editor-weight-band-sheet"
+        title="Nivel"
+        field={:weight_band}
+        options={
+          Enum.map(
+            Vocabulary.weight_bands(),
+            &%{value: &1.value, label: &1.label, sub: &1.descriptor}
+          )
+        }
+        selected={@draft.weight_band}
+        open={@open_sheet == :weight_band}
+        on_close={JS.push("close-field-sheet")}
+      />
+      <.choice_sheet
+        id="editor-is-expansion-sheet"
+        title="Es una expansión"
+        field={:is_expansion}
+        options={[%{value: true, label: "Sí"}, %{value: false, label: "No"}]}
+        selected={@draft.is_expansion}
+        open={@open_sheet == :is_expansion}
+        on_close={JS.push("close-field-sheet")}
+      />
+
+      <%!-- D-30's text-field sheets (a wide in-sheet `Guardar`; ✕ discards
+      — see `text_sheet/1`'s own moduledoc). --%>
+      <.text_sheet
+        id="editor-name-sheet"
+        title="Nombre"
+        field={:name}
+        label="Nombre"
+        value={@sheet_value || @draft.name}
+        error={@sheet_error}
+        open={@open_sheet == :name}
+        on_close={JS.push("close-field-sheet")}
+      />
+      <.text_sheet
+        id="editor-description-sheet"
+        title="Descripción"
+        field={:description}
+        label="Descripción"
+        value={@sheet_value || @draft.description}
+        error={@sheet_error}
+        textarea
+        open={@open_sheet == :description}
+        on_close={JS.push("close-field-sheet")}
+      />
 
       <AdminComponents.dialog
         id="editor-discard-dialog"
