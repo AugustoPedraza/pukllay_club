@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 15/22 plans executed
+**Plans:** 16/22 plans executed
 
 Plans:
 
@@ -234,7 +234,7 @@ Plans:
 **Wave 8**
 
 - [ ] 01.8.2-16-PLAN.md — D-00c's «¿Dónde va?» and «¿Qué juego va acá?» sheets, the cover options sheet, place/move/remove with Deshacer
-- [ ] 01.8.2-17-PLAN.md — the editor shell: the 56px top bar (D-27), the consequence franja (D-29), the fixed foot bar (D-28), the ficha-mirroring body (D-26)
+- [x] 01.8.2-17-PLAN.md — the editor shell: the 56px top bar (D-27), the consequence franja (D-29), the fixed foot bar (D-28), the ficha-mirroring body (D-26)
 
 **Wave 9**
 

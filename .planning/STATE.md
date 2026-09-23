@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-15-PLAN.md
-last_updated: "2026-09-23T21:29:08.801Z"
+stopped_at: Completed 01.8.2-17-PLAN.md
+last_updated: "2026-09-23T22:18:07.784Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: a9517dd945c5211e2b14a5ed32526dab45acf654
+state_head: c37834901741c187ff22fef79669a950fc89336b
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 41
+  completed_plans: 43
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 16 of 22
+Plan: 17 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -147,6 +147,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P13 | ~120min | 3 tasks | 10 files |
 | Phase 01.8.2 P14 | ~100min | 3 tasks | 13 files |
 | Phase 01.8.2 P15 | ~140min | 3 tasks | 12 files |
+| Phase 01.8.2 P17 | ~100min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -309,6 +310,9 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-14: Catalog.list_admin_games_by_status/1 groups Juegos by status in one un-paginated query; D-25's grouping replaces Cargar más entirely, no per-row query for Copias (batched counts_for_games/1) — Status is a mutually-exclusive Ecto.Enum (D-04), so the partition is schema-guaranteed rather than derived from three predicates
 - [Phase 01.8.2]: 01.8.2-14: back_row/page_bar back_to both point at /admin (dashboard) since Juegos is a tab-root page with no other natural back destination; components.css's page_bar--visible gained position:fixed (Rule 1 fix) since no prior plan had a live call site proving the pin mechanism — First live call site for AdminComponents.page_bar/1's scrolled-pin behavior
 - [Phase 01.8.2]: 01.8.2-15: Web opens on the destacada's own rail (reused .pk-rail/.pk-poster-card) with Otras filas below as navigation; Quitar de la fila is undoable (D-19k, no exact-position restore — Deshacer re-adds at the end via existing Sections.add_game/2, since no new Sections function was in this plan's scope); Ordenar->Listo reorder mode (AdminComponents.reorder_header/reorder_row) restores its pre-mode order via a selection-sort of adjacent Sections.move_section/2 / move_game/3 swaps, reusing the existing neighbour-swap primitive rather than adding a bulk-reorder function; Niveles' Pasar a {nivel} row sources its meaning from Vocabulary.weight_bands/0 dynamically (never duplicated as literal text in band_audit_live.ex)
+- [Phase 01.8.2]: 01.8.2-17: Nivel (weight_band) is edited via the top pills row, not the divider trio -- resolves an ambiguity between D-26's abbreviated order text and the packaged design doc by cross-checking sketch 072's own concrete markup (weight_band/units/shelf_id/is_expansion), giving exactly seven editable blocks
+- [Phase 01.8.2]: 01.8.2-17: The D-29 franja is fixed directly under the top bar (top: 56px), per CONTEXT.md's own text closing 080's open item 4 -- not the later-superseded in-body/scrolling placement an earlier mid-lineage note in the packaged reference doc still describes
+- [Phase 01.8.2]: 01.8.2-17: The editor's Secciones checkbox fieldset is removed outright, not relocated -- D-26 renders the chip de seccion read-only and section_live/edit.ex (plan 15) already owns add_game/remove_game exclusively
 
 ### Pending Todos
 
@@ -452,8 +456,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T21:29:08.668Z
-Stopped at: Completed 01.8.2-15-PLAN.md
+Last session: 2026-09-23T22:18:07.647Z
+Stopped at: Completed 01.8.2-17-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
