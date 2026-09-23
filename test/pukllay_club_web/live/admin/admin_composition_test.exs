@@ -36,7 +36,10 @@ defmodule PukllayClubWeb.Admin.AdminCompositionTest do
     "lib/pukllay_club_web/live/admin/dashboard_live.ex",
     "lib/pukllay_club_web/live/admin/staff_live/index.ex",
     "lib/pukllay_club_web/live/admin/estante_live/index.ex",
-    "lib/pukllay_club_web/live/admin/game_live/index.ex"
+    "lib/pukllay_club_web/live/admin/game_live/index.ex",
+    "lib/pukllay_club_web/live/admin/section_live/index.ex",
+    "lib/pukllay_club_web/live/admin/section_live/edit.ex",
+    "lib/pukllay_club_web/live/admin/band_audit_live.ex"
   ]
 
   # The eleven retired patterns this guard exists to catch — the exact

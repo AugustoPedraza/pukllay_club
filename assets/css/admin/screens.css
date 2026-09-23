@@ -294,3 +294,43 @@
   align-items: flex-end;
   gap: 12px;
 }
+
+/* ============================================================
+   Plan 01.8.2-15, Task 3 — Niveles (`Admin.BandAuditLive`, D-19h, D-19i,
+   R1 #10): the "Pasar a {nivel}" sheet row, composed directly against
+   `pk-admin-action`/`--a4`'s own shape (a two-line variant, D-19f's
+   anatomy: short verb + one 13px grey line) rather than a fork of the
+   component — `AdminComponents` has no two-line row atom yet, and this
+   screen is its only caller.
+   ============================================================ */
+
+.pk-admin-niveles-subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--color-neutral);
+}
+
+.pk-admin-niveles-empty {
+  padding: 24px 0;
+  text-align: center;
+}
+
+.pk-admin-niveles-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.pk-admin-niveles-row__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-niveles-row__hint {
+  font-size: 13px;
+  color: var(--color-neutral);
+  white-space: normal;
+}
