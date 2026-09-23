@@ -177,6 +177,22 @@ bin/pukllay_club eval 'PukllayClub.Release.create_owner("owner@example.com")'
 (D-32) — see `PukllayClub.Release.create_owner/1`, which delegates to `Accounts.create_owner/1`
 inside `Ecto.Migrator.with_repo/2`.
 
+Production's ~400 pre-existing games still carry the `boardgameversion`-contaminated
+`publishers`/`artists` lists the `BggClient` xpath-scoping fix (quick task 260922-tum) only
+prevents going forward. `PukllayClub.Release.enrich_bgg_stats/1` (the repair) and
+`PukllayClub.Release.bgg_stats_report/0` (the read-only before/after measurement) are the
+release-callable equivalent of `mix catalog.enrich_bgg_stats` for a compiled release, where Mix
+doesn't exist. Both **must** be invoked with `rpc`, never `eval` — an `eval` node starts no
+supervision tree, so Req's HTTP pool doesn't exist there and every BGG request would fail — and,
+unlike the dev Mix task, neither writes a file (a `priv/` write would be discarded on the next
+deploy):
+
+```bash
+bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'
+bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats(dry_run: true)'
+```
+
+See `docs/runbooks/production-bgg-reenrichment.md` for the full six-step operator sequence.
 
 <!-- phoenix-gen-auth-start -->
 ## Authentication
