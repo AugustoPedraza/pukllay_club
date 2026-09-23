@@ -2,11 +2,10 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
   @moduledoc """
   D-08's search-first Estantes screen (plan 01.8.2-13, rebuilding the
   01.8.2-01 tracer this replaces): the idle prompt+field at rest, the
-  search dropdown (recent/suggestions/no-match), and the answered
-  state's rail — reusing `Shelves.copies_on_shelf/1`'s real `position`
-  order and D-03/D-04's accessible-name contract. D-11's live-update
-  behaviour over `"admin:estantes"` broadcasts is Task 3's own addition
-  to this same file.
+  search dropdown (recent/suggestions/no-match), the answered state's
+  rail — reusing `Shelves.copies_on_shelf/1`'s real `position` order and
+  D-03/D-04's accessible-name contract — and D-11's live-update behaviour
+  over `"admin:estantes"` broadcasts.
   """
   use PukllayClubWeb.ConnCase, async: true
 
@@ -284,6 +283,64 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert html =~ "Últimas búsquedas"
       assert html =~ ~s(id="recent-#{copy.id}")
       assert html =~ "Recordado"
+    end
+  end
+
+  describe "live updates (D-11, plan 01.8.2-13 Task 3)" do
+    setup :register_and_log_in_staff
+
+    test "a broadcast for the shown estante re-renders the rail", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Primero"}).id})
+      {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "primero"})
+      lv |> element("#suggestion-#{c0.id}") |> render_click()
+
+      c1 = copy_fixture(%{game_id: game_fixture(%{name: "Segundo"}).id})
+      {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
+
+      assert render(lv) =~ "estante-copy-#{c1.id}"
+    end
+
+    test "a broadcast for a different estante leaves the rail's rendered order and selection unchanged",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Estante A"})
+      shelf_b = shelf_fixture(%{name: "Estante B"})
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Quedate"}).id})
+      {:ok, _} = Shelves.place_copy(c0.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "quedate"})
+      before_html = lv |> element("#suggestion-#{c0.id}") |> render_click()
+
+      other = copy_fixture(%{game_id: game_fixture(%{name: "Otro"}).id})
+      {:ok, _} = Shelves.place_copy(other.id, shelf_b.id, 0)
+
+      after_html = render(lv)
+      assert after_html =~ "Estante A"
+      refute after_html =~ "Otro"
+      assert before_html =~ "estante-copy-#{c0.id}"
+      assert after_html =~ "estante-copy-#{c0.id}"
+    end
+
+    test "a broadcast moving the selected copy elsewhere renders a snackbar with no action",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Estante A"})
+      shelf_b = shelf_fixture(%{name: "Estante B"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Movido"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "movido"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_b.id, 0)
+
+      html = render(lv)
+      assert html =~ "cambió de lugar"
+      assert html =~ ~s(data-timeout="4000")
     end
   end
 

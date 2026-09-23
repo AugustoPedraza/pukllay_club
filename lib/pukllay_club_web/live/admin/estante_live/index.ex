@@ -22,8 +22,15 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   creates — rendered as plain string `navigate` paths (not `~p`, which
   would fail to compile against a route that does not exist yet).
 
-  Live-update handling over `"admin:estantes"` broadcasts (D-11) is this
-  plan's own Task 3.
+  Subscribes to `"admin:estantes"` (mirrors `Admin.GameLive.Index`'s
+  `"admin:games"` subscription) and re-reads live per D-11: a broadcast
+  for the estante currently on screen re-renders the rail; a broadcast for
+  any other estante only refreshes the Pendientes badge, leaving the
+  rail's scroll position alone; and if the SELECTED copy's own location
+  changed underneath the viewing staff member (place/move/remove by
+  someone else), a quiet 4-second snackbar says so via the shared admin
+  snackbar mechanism (`Layouts.admin_flash/1`, D-19c) rather than a
+  bespoke one.
 
   This route lives inside the existing `live_session :require_staff`
   block (T-01.8.2-03) — a signed-out visitor is redirected before this
@@ -95,6 +102,52 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
     # when the placeholder button (`#estantes-open-donde-va`) is tapped —
     # it is a documented no-op until that plan lands.
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:estante_updated, shelf_id}, socket) do
+    socket = assign(socket, :pending_count, pending_count())
+    {:noreply, reconcile_selection(socket, shelf_id)}
+  end
+
+  # No copy currently selected — nothing on screen can be stale, only the
+  # Pendientes badge (already refreshed above) can have changed.
+  defp reconcile_selection(%{assigns: %{selected_copy: nil}} = socket, _shelf_id), do: socket
+
+  defp reconcile_selection(%{assigns: %{selected_copy: %{shelf_id: current}}} = socket, shelf_id)
+       when current != shelf_id do
+    # D-11: "a broadcast for a different estante ... does not disturb the
+    # rail's scroll position" — leaving every rail-related assign
+    # untouched is what keeps the LiveView diff empty for this branch.
+    socket
+  end
+
+  defp reconcile_selection(%{assigns: %{selected_copy: old_copy}} = socket, _shelf_id) do
+    fresh = Shelves.get_copy!(old_copy.id)
+
+    if fresh.shelf_id != old_copy.shelf_id or fresh.position != old_copy.position do
+      # D-11: "if a copy you are acting on changed underneath you, a quiet
+      # snackbar says so" — routed through the shared admin snackbar
+      # (`Layouts.admin_flash/1`, D-19c) rather than composing a second,
+      # bespoke one; no `action`, so it takes the default 4s duration.
+      socket
+      |> put_flash(:info, "«#{fresh.game.name}» cambió de lugar.")
+      |> select_copy_struct(fresh)
+    else
+      reload_rail(socket, fresh)
+    end
+  rescue
+    Ecto.NoResultsError ->
+      socket
+      |> assign(:selected_copy, nil)
+      |> assign(:copies, [])
+      |> assign(:copy_counts, %{})
+  end
+
+  defp reload_rail(socket, copy) do
+    socket
+    |> assign(:selected_copy, copy)
+    |> load_rail(copy)
   end
 
   defp select_copy(socket, id) do
@@ -177,14 +230,24 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
       admin_chrome
       active_tab={:estantes}
     >
-      <div
-        id="estantes-page"
-        phx-hook="AdminRail"
-        class="pk-estantes"
-        data-raised={to_string(@selected_copy != nil)}
-      >
-        <header class="pk-estantes-header">
-          <h1 class="pk-admin-page-title">Estantes</h1>
+      <div class="mx-auto w-full max-w-3xl space-y-6">
+        <div
+          id="estantes-page"
+          phx-hook="AdminRail"
+          class="pk-estantes"
+          data-raised={to_string(@selected_copy != nil)}
+        >
+          <%!-- The header icons come BEFORE the title in DOM order and are
+          absolutely positioned (`.pk-estantes-header-actions`, `.pk-estantes`
+          itself is the `position: relative` anchor) so `<h1>`'s own
+          `nextElementSibling` is genuine body content, not a header
+          sibling — `test/visual/admin_components.mjs`'s D3 check walks
+          exactly that sibling to measure the page-head-to-body rhythm, and
+          a title+icons flex row where the icons come AFTER the title in
+          DOM broke that measurement (found live against this screen,
+          `01.8.2-13`'s own Task 3 harness run). Visual order (title left,
+          icons right) is unaffected — it is drawn purely by
+          `position: absolute`, not by DOM order. --%>
           <div class="pk-estantes-header-actions">
             <span class="pk-estantes-icon-badge">
               <AdminComponents.action
@@ -195,7 +258,11 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
               >
                 <.icon name="hero-inbox" class="size-5" />
               </AdminComponents.action>
-              <span :if={@pending_count > 0} class="pk-estantes-icon-badge__count" aria-hidden="true">
+              <span
+                :if={@pending_count > 0}
+                class="pk-estantes-icon-badge__count"
+                aria-hidden="true"
+              >
                 {badge_text(@pending_count)}
               </span>
             </span>
@@ -208,126 +275,131 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
               <.icon name="hero-cog-6-tooth" class="size-5" />
             </AdminComponents.action>
           </div>
-        </header>
+          <h1 class="pk-admin-page-title pk-estantes-title">Estantes</h1>
 
-        <div :if={is_nil(@selected_copy)} class="pk-estantes-hero">
-          <p class="pk-estantes-prompt">¿Qué juego buscás?</p>
-        </div>
-
-        <div id="estantes-search-wrap" class="pk-estantes-search-wrap">
-          <form id="estantes-search-form" phx-change="search" class="pk-estantes-search">
-            <input
-              type="text"
-              id="estantes-search-input"
-              name="q"
-              value={@query}
-              placeholder="Buscá un juego"
-              aria-label="Buscá un juego"
-              autocomplete="off"
-              phx-debounce="200"
-              onfocus="this.select()"
-            />
-            <button
-              :if={@query != "" or @selected_copy}
-              type="button"
-              class="pk-estantes-search__clear"
-              aria-label="Limpiar búsqueda"
-              phx-click="clear"
-            >
-              <.icon name="hero-x-mark" class="size-5" />
-            </button>
-
-            <div class="pk-estantes-dropdown" id="estantes-dropdown">
-              <div :if={@query != "" and @suggestions != []} id="estantes-suggestions">
-                <.suggestion_row :for={copy <- @suggestions} id={"suggestion-#{copy.id}"} copy={copy} />
-              </div>
-
-              <div :if={@query != "" and @suggestions == []} class="pk-estantes-no-match">
-                <p class="pk-estantes-no-match__hint">Ningún juego se llama así.</p>
-                <AdminComponents.list_row
-                  id="estantes-create-row"
-                  name={"Crear «#{@query}»"}
-                  meta="Agregarlo al catálogo"
-                  navigate={~p"/admin/juegos?nombre=#{@query}"}
-                  opens_page
-                />
-              </div>
-
-              <div :if={@query == "" and @recent_searches != []} id="estantes-recent">
-                <AdminComponents.list_section_label>
-                  Últimas búsquedas
-                </AdminComponents.list_section_label>
-                <.suggestion_row
-                  :for={copy <- @recent_searches}
-                  id={"recent-#{copy.id}"}
-                  copy={copy}
-                />
-              </div>
-
-              <p :if={@query == "" and @recent_searches == []} class="pk-estantes-no-recent">
-                Todavía no buscaste ningún juego.
-              </p>
-            </div>
-          </form>
-        </div>
-
-        <div :if={is_nil(@selected_copy)} class="pk-estantes-spacer-bottom"></div>
-
-        <div :if={@selected_copy} class="pk-estantes-answer">
-          <div :if={@selected_copy.shelf} class="pk-estantes-estante-context">
-            <.icon name="hero-archive-box" class="size-4" />
-            <span>{@selected_copy.shelf.name}</span>
+          <div :if={is_nil(@selected_copy)} class="pk-estantes-hero">
+            <p class="pk-estantes-prompt">¿Qué juego buscás?</p>
           </div>
 
-          <div :if={@selected_copy.shelf} class="pk-rail-wrap">
-            <div class="pk-rail" id="estantes-rail">
-              <div
-                :for={{copy, index} <- Enum.with_index(@copies)}
-                id={"estante-copy-#{copy.id}"}
-                class={[
-                  "pk-poster-card",
-                  "pk-estantes-cover",
-                  copy.id == @selected_copy.id && "pk-estantes-cover--lifted"
-                ]}
-                data-pk-rail-selected={to_string(copy.id == @selected_copy.id)}
+          <div id="estantes-search-wrap" class="pk-estantes-search-wrap">
+            <form id="estantes-search-form" phx-change="search" class="pk-estantes-search">
+              <input
+                type="text"
+                id="estantes-search-input"
+                name="q"
+                value={@query}
+                placeholder="Buscá un juego"
+                aria-label="Buscá un juego"
+                autocomplete="off"
+                phx-debounce="200"
+                onfocus="this.select()"
+              />
+              <button
+                :if={@query != "" or @selected_copy}
+                type="button"
+                class="pk-estantes-search__clear"
+                aria-label="Limpiar búsqueda"
+                phx-click="clear"
               >
-                <div
-                  role="img"
-                  aria-label={cover_alt(copy, index, length(@copies), @copy_counts)}
-                  class="pk-estantes-cover__art"
-                >
-                  <img
-                    :if={copy.game.thumbnail_url}
-                    src={copy.game.thumbnail_url}
-                    alt=""
-                    class="pk-estantes-cover__img"
+                <.icon name="hero-x-mark" class="size-5" />
+              </button>
+
+              <div class="pk-estantes-dropdown" id="estantes-dropdown">
+                <div :if={@query != "" and @suggestions != []} id="estantes-suggestions">
+                  <.suggestion_row
+                    :for={copy <- @suggestions}
+                    id={"suggestion-#{copy.id}"}
+                    copy={copy}
                   />
-                  <div :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
-                    <.icon name="hero-puzzle-piece" class="size-8" />
+                </div>
+
+                <div :if={@query != "" and @suggestions == []} class="pk-estantes-no-match">
+                  <p class="pk-estantes-no-match__hint">Ningún juego se llama así.</p>
+                  <AdminComponents.list_row
+                    id="estantes-create-row"
+                    name={"Crear «#{@query}»"}
+                    meta="Agregarlo al catálogo"
+                    navigate={~p"/admin/juegos?nombre=#{@query}"}
+                    opens_page
+                  />
+                </div>
+
+                <div :if={@query == "" and @recent_searches != []} id="estantes-recent">
+                  <AdminComponents.list_section_label>
+                    Últimas búsquedas
+                  </AdminComponents.list_section_label>
+                  <.suggestion_row
+                    :for={copy <- @recent_searches}
+                    id={"recent-#{copy.id}"}
+                    copy={copy}
+                  />
+                </div>
+
+                <p :if={@query == "" and @recent_searches == []} class="pk-estantes-no-recent">
+                  Todavía no buscaste ningún juego.
+                </p>
+              </div>
+            </form>
+          </div>
+
+          <div :if={is_nil(@selected_copy)} class="pk-estantes-spacer-bottom"></div>
+
+          <div :if={@selected_copy} class="pk-estantes-answer">
+            <div :if={@selected_copy.shelf} class="pk-estantes-estante-context">
+              <.icon name="hero-archive-box" class="size-4" />
+              <span>{@selected_copy.shelf.name}</span>
+            </div>
+
+            <div :if={@selected_copy.shelf} class="pk-rail-wrap">
+              <div class="pk-rail" id="estantes-rail">
+                <div
+                  :for={{copy, index} <- Enum.with_index(@copies)}
+                  id={"estante-copy-#{copy.id}"}
+                  class={[
+                    "pk-poster-card",
+                    "pk-estantes-cover",
+                    copy.id == @selected_copy.id && "pk-estantes-cover--lifted"
+                  ]}
+                  data-pk-rail-selected={to_string(copy.id == @selected_copy.id)}
+                >
+                  <div
+                    role="img"
+                    aria-label={cover_alt(copy, index, length(@copies), @copy_counts)}
+                    class="pk-estantes-cover__art"
+                  >
+                    <img
+                      :if={copy.game.thumbnail_url}
+                      src={copy.game.thumbnail_url}
+                      alt=""
+                      class="pk-estantes-cover__img"
+                    />
+                    <div :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
+                      <.icon name="hero-puzzle-piece" class="size-8" />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div
-            :if={is_nil(@selected_copy.shelf)}
-            class="pk-estantes-needs-placement"
-            id="estantes-needs-placement"
-          >
-            <p>«{@selected_copy.game.name}» no tiene lugar todavía.</p>
-            <%!-- Placeholder for the «¿Dónde va?» entry point (D-00c) —
+            <div
+              :if={is_nil(@selected_copy.shelf)}
+              class="pk-estantes-needs-placement"
+              id="estantes-needs-placement"
+            >
+              <p>«{@selected_copy.game.name}» no tiene lugar todavía.</p>
+              <%!-- Placeholder for the «¿Dónde va?» entry point (D-00c) —
             plan 01.8.2-16 replaces this button with the real full-height
             sheet; the event it dispatches already exists
             (`handle_event("open-donde-va", ...)` above). --%>
-            <AdminComponents.action
-              id="estantes-open-donde-va"
-              anatomy="a1"
-              role="principal"
-              phx-click="open-donde-va"
-            >
-              Elegir dónde va
-            </AdminComponents.action>
+              <AdminComponents.action
+                id="estantes-open-donde-va"
+                anatomy="a1"
+                role="principal"
+                phx-click="open-donde-va"
+              >
+                Elegir dónde va
+              </AdminComponents.action>
+            </div>
           </div>
         </div>
       </div>

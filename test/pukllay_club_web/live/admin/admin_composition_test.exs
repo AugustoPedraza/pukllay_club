@@ -34,7 +34,8 @@ defmodule PukllayClubWeb.Admin.AdminCompositionTest do
   # one path per line — see the moduledoc's "Contract for later plans".
   @files [
     "lib/pukllay_club_web/live/admin/dashboard_live.ex",
-    "lib/pukllay_club_web/live/admin/staff_live/index.ex"
+    "lib/pukllay_club_web/live/admin/staff_live/index.ex",
+    "lib/pukllay_club_web/live/admin/estante_live/index.ex"
   ]
 
   # The eleven retired patterns this guard exists to catch — the exact

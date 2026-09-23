@@ -92,7 +92,7 @@ const THEMES = ["light", "dark"]
 // shipped the dashboard + Staff). Append a new route here the same way
 // `admin_composition_test.exs`'s own `@files` list is appended per plan —
 // no other change to this file is needed.
-const PAGES = ["/admin", "/admin/staff"]
+const PAGES = ["/admin", "/admin/staff", "/admin/estantes"]
 
 function log(...args) {
   console.log(...args)

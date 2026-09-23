@@ -23,17 +23,23 @@
    Proven reaching `priv/static/assets/css/app.css` after `mix
    assets.build` — see this plan's SUMMARY for the grep proof. */
 
-.pk-estantes-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
+/* Absolutely positioned relative to `.pk-estantes` (below) — see the
+   `<h1>` call site's own comment for why this precedes the title in DOM
+   order instead of sitting beside it in a flex header row. */
 .pk-estantes-header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Room for `.pk-estantes-header-actions`'s two 44px icons so a long
+   heading (not "Estantes" itself, but any future rename) cannot run
+   under them. */
+.pk-estantes-title {
+  padding-right: 100px;
 }
 
 /* Mirrors `chrome.css`'s `.pk-admin-tab-badge` D-19g visual contract
@@ -69,6 +75,7 @@
    "nothing below it may look heavier than the field" — there is nothing
    else in this block on purpose. */
 .pk-estantes {
+  position: relative;
   display: flex;
   flex-direction: column;
   /* Room to distribute the 2:3 idle split into — flex-grow has nothing to
