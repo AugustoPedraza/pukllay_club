@@ -1,13 +1,17 @@
 defmodule PukllayClubWeb.Admin.SectionLive.Edit do
   @moduledoc """
-  Section settings screen at `/admin/secciones/:id` (D-17, D-19, D-25,
-  UI-SPEC E6) — rename, edit subtitle, hide/show, (D-19) pick the
-  section's sort rule, and (D-25, `:manual` sections only) a phone-first
-  member picker: a debounced type-ahead search to add games and, when
-  `sort == :manual`, ↑/↓ to reorder plus a per-item `Quitar` (no
-  confirmation — mirrors unchecking a filter). `:id` is parsed
-  defensively with `Integer.parse/1` (T-01-37/T-01.8.1-46 convention),
-  mirroring `Admin.ShelfLive.Assign`'s own `:id` handling.
+  A non-featured home row's own page at `/admin/secciones/:id` (D-00a,
+  D-19f, D-19h, D-19i, D-19j, D-19k, D-19m — sketch 070 decision 12: "any
+  hand-picked row opens the same page" as the destacada's own
+  `Admin.SectionLive.Index`, just reached with a `‹ Volver` back link
+  instead of Web's own resting place). Rename, edit subtitle, hide/show
+  (D-19), pick the section's sort rule, and (D-25, `:manual` sections
+  only) a phone-first member picker: a debounced type-ahead search to add
+  games and a per-item `Quitar de la fila` (D-19k: at once, a 10s
+  Deshacer snackbar, no dialog, never Peligro — removing a game from a
+  curated row loses no state staff would have to rebuild). `:id` is
+  parsed defensively with `Integer.parse/1` (T-01-37/T-01.8.1-46
+  convention), mirroring `Admin.ShelfLive.Assign`'s own `:id` handling.
 
   The sort select's options depend on the section's own `kind` (D-19,
   D-20, D-21 — enforced server-side by `Section.settings_changeset/2`,
@@ -19,12 +23,19 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
   primero" line (D-21 — the ordering IS the automatic rule). A
   `:weight_band` section shows "Los juegos de esta sección salen de su
   nivel." in place of any member list — it never has one (D-20).
+
+  `Sections`' own context calls (`settings_changeset/2` reading `kind` off
+  the struct, the featured cap checked inside the insert transaction,
+  01.8.1-12's closure of T-01.8.1-56) are called exactly as before — this
+  plan changes presentation and the removal/undo shape only.
   """
   use PukllayClubWeb, :live_view
 
+  alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Section
   alias PukllayClub.Catalog.Sections
+  alias PukllayClubWeb.AdminComponents
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -40,6 +51,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
          |> assign(:q, "")
          |> assign(:search_results, [])
          |> assign(:add_error, nil)
+         |> assign(:removed, nil)
          |> reload_members()}
 
       _not_an_integer ->
@@ -55,7 +67,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
   def handle_event("validate", %{"section" => params}, socket) do
     changeset =
       socket.assigns.section
-      |> Sections.change_section(params)
+      |> Sections.change_section(normalize_ajustes_params(params))
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :form, to_form(changeset))}
@@ -63,14 +75,14 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
 
   @impl true
   def handle_event("save", %{"section" => params}, socket) do
-    case Sections.update_section(socket.assigns.section, params) do
+    case Sections.update_section(socket.assigns.section, normalize_ajustes_params(params)) do
       {:ok, section} ->
         {:noreply,
          socket
          |> assign(:section, section)
          |> assign(:page_title, section.name)
          |> assign(:form, to_form(Sections.change_section(section)))
-         |> put_flash(:info, "Sección guardada.")}
+         |> put_flash(:info, "Fila guardada.")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -108,12 +120,20 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
     end
   end
 
+  # D-19k: at once, no dialog, never Peligro — Deshacer (`undo-remove`
+  # below) is a plain re-add, since the game and its shelf spot are
+  # untouched by removal from a curated row.
   @impl true
   def handle_event("remove-game", %{"game-id" => id}, socket) do
     case Integer.parse(id) do
       {int_id, ""} ->
+        member = Enum.find(socket.assigns.members, &(&1.game_id == int_id))
         {:ok, _section} = Sections.remove_game(socket.assigns.section, int_id)
-        {:noreply, reload_members(socket)}
+
+        {:noreply,
+         socket
+         |> assign(:removed, member && %{game_id: int_id, name: member.game.name})
+         |> reload_members()}
 
       _not_an_integer ->
         {:noreply, socket}
@@ -121,10 +141,39 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
   end
 
   @impl true
+  def handle_event("undo-remove", _params, socket) do
+    case socket.assigns.removed do
+      nil ->
+        {:noreply, socket}
+
+      %{game_id: game_id} ->
+        {:ok, _section} = Sections.add_game(socket.assigns.section, game_id)
+        {:noreply, socket |> assign(:removed, nil) |> reload_members()}
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss-remove-snackbar", _params, socket) do
+    {:noreply, assign(socket, :removed, nil)}
+  end
+
+  @impl true
   def handle_event("move-member-up", %{"game-id" => id}, socket), do: move_member(socket, id, :up)
 
   @impl true
   def handle_event("move-member-down", %{"game-id" => id}, socket), do: move_member(socket, id, :down)
+
+  # D-19l's "Mostrar en el inicio" is the shipped `hidden` column's
+  # INVERSE — the copy flip (`admin-redesign-scope.md` gap #14) must
+  # invert the value it submits, not just the label, or the control would
+  # silently do the opposite of what it says (T-01.8.2-65).
+  defp normalize_ajustes_params(%{"shown" => shown} = params) do
+    params
+    |> Map.delete("shown")
+    |> Map.put("hidden", to_string(shown != "true"))
+  end
+
+  defp normalize_ajustes_params(params), do: params
 
   defp move_member(socket, id, direction) do
     case Integer.parse(id) do
@@ -172,108 +221,129 @@ defmodule PukllayClubWeb.Admin.SectionLive.Edit do
       active_tab={:web}
     >
       <div class="mx-auto w-full max-w-3xl space-y-6">
-        <.header>
-          {@section.name}
-          <:actions>
-            <.link navigate={~p"/admin/secciones"} class="text-sm text-neutral">
-              ← Volver
-            </.link>
-          </:actions>
-        </.header>
+        <AdminComponents.back_row to={~p"/admin/secciones"} />
+        <h1 class="pk-admin-page-title">{@section.name}</h1>
 
-        <.form
-          for={@form}
-          id="section-form"
-          phx-change="validate"
-          phx-submit="save"
-          class="space-y-2"
-        >
-          <.input field={@form[:name]} type="text" label="Nombre" />
-          <.input field={@form[:subtitle]} type="text" label="Subtítulo" />
-          <.input field={@form[:hidden]} type="checkbox" label="Ocultar en la home" />
+        <AdminComponents.section_panel>
+          <:label>Ajustes</:label>
+          <.form
+            for={@form}
+            id="section-form"
+            phx-change="validate"
+            phx-submit="save"
+            class="pk-admin-stacked-form"
+          >
+            <AdminComponents.field field={@form[:name]} label="Nombre" />
+            <AdminComponents.field field={@form[:subtitle]} label="Subtítulo" />
+            <AdminComponents.field
+              type="checkbox"
+              id="section-ajustes-shown"
+              name="section[shown]"
+              checked={!@form[:hidden].value}
+              label="Mostrar en el inicio"
+            />
 
-          <p :if={@section.kind == :recent} class="text-neutral text-sm">
-            Orden: más recientes primero
-          </p>
-          <.input
-            :if={@section.kind != :recent}
-            field={@form[:sort]}
-            type="select"
-            label="Orden"
-            options={sort_options(@section.kind)}
-          />
+            <p :if={@section.kind == :recent} class="pk-admin-empty-note">
+              Orden: más recientes primero
+            </p>
+            <AdminComponents.field
+              :if={@section.kind != :recent}
+              field={@form[:sort]}
+              type="select"
+              label="Orden"
+              options={sort_options(@section.kind)}
+            />
 
-          <.button variant="primary">Guardar cambios</.button>
-        </.form>
+            <AdminComponents.action anatomy="a1" role="principal" type="submit">
+              Guardar
+            </AdminComponents.action>
+          </.form>
+        </AdminComponents.section_panel>
 
-        <p :if={@section.kind == :weight_band} class="text-neutral text-sm">
+        <p :if={@section.kind == :weight_band} class="pk-admin-empty-note">
           Los juegos de esta sección salen de su nivel.
         </p>
 
         <div :if={@section.kind == :manual} id="section-members" class="space-y-3">
-          <h2 class="font-display text-xl">Juegos ({length(@members)})</h2>
+          <AdminComponents.list_section_label>
+            Juegos ({length(@members)})
+          </AdminComponents.list_section_label>
 
-          <p :if={add_error_message(@add_error)} class="text-warning text-sm">
+          <p :if={add_error_message(@add_error)} class="pk-admin-web-add-error">
             {add_error_message(@add_error)}
           </p>
 
-          <form id="section-member-search" phx-change="search" class="w-full">
-            <.input
+          <form id="section-member-search" phx-change="search" class="pk-admin-web-search">
+            <AdminComponents.field
               type="text"
               id="section-member-search-input"
               name="q"
               value={@q}
-              placeholder="Buscar un juego para agregar"
+              label="Agregar un juego"
+              placeholder="Buscá un juego"
               phx-debounce="300"
             />
           </form>
 
-          <div :if={@q != ""} class="space-y-1">
-            <p :if={@search_results == []} class="text-neutral text-sm">Sin resultados.</p>
-            <button
+          <div :if={@q != ""} id="section-search-results" class="pk-admin-web-search-results">
+            <p :if={@search_results == []} class="pk-admin-empty-note">Sin resultados.</p>
+            <AdminComponents.list_row
               :for={game <- @search_results}
-              type="button"
+              id={"section-search-result-#{game.id}"}
+              name={game.name}
               phx-click="add-game"
               phx-value-game-id={game.id}
-              class="flex w-full min-h-11 items-center gap-2 rounded-box border border-base-300 p-2 text-left"
-            >
-              <span class="flex-1">{game.name}</span>
-            </button>
+            />
           </div>
 
-          <ul class="space-y-1">
-            <li
-              :for={member <- @members}
-              class="flex items-center gap-2 rounded-box border border-base-300 p-2"
+          <div :for={member <- @members} class="pk-admin-web-otras-row">
+            <AdminComponents.list_row
+              id={"section-member-#{member.game_id}"}
+              class="pk-admin-web-otras-row__row"
+              name={member.game.name}
             >
-              <span class="flex-1 min-h-11 flex items-center">{member.game.name}</span>
-              <button
-                :if={@section.sort == :manual}
-                type="button"
-                phx-click="move-member-up"
-                phx-value-game-id={member.game_id}
-                aria-label={"Subir #{member.game.name}"}
-                class="btn btn-ghost btn-square min-h-11 min-w-11"
-              >
-                <.icon name="hero-arrow-up" />
-              </button>
-              <button
-                :if={@section.sort == :manual}
-                type="button"
-                phx-click="move-member-down"
-                phx-value-game-id={member.game_id}
-                aria-label={"Bajar #{member.game.name}"}
-                class="btn btn-ghost btn-square min-h-11 min-w-11"
-              >
-                <.icon name="hero-arrow-down" />
-              </button>
-              <.button variant="secondary" phx-click="remove-game" phx-value-game-id={member.game_id}>
-                Quitar
-              </.button>
-            </li>
-          </ul>
+              <:trailing>
+                <AdminComponents.action
+                  anatomy="a2"
+                  role="terciaria"
+                  phx-click="remove-game"
+                  phx-value-game-id={member.game_id}
+                >
+                  Quitar de la fila
+                </AdminComponents.action>
+              </:trailing>
+            </AdminComponents.list_row>
+            <AdminComponents.action
+              :if={@section.sort == :manual}
+              anatomy="a3"
+              role="terciaria"
+              aria-label={"Subir #{member.game.name}"}
+              phx-click="move-member-up"
+              phx-value-game-id={member.game_id}
+            >
+              <.icon name="hero-arrow-up" class="size-5" />
+            </AdminComponents.action>
+            <AdminComponents.action
+              :if={@section.sort == :manual}
+              anatomy="a3"
+              role="terciaria"
+              aria-label={"Bajar #{member.game.name}"}
+              phx-click="move-member-down"
+              phx-value-game-id={member.game_id}
+            >
+              <.icon name="hero-arrow-down" class="size-5" />
+            </AdminComponents.action>
+          </div>
         </div>
       </div>
+
+      <AdminComponents.snackbar
+        :if={@removed}
+        id="section-remove-snackbar"
+        message={"«#{@removed.name}» quitado de la fila."}
+        action={%{label: "Deshacer", event: "undo-remove"}}
+        on_close={JS.push("dismiss-remove-snackbar")}
+      />
     </Layouts.app>
     """
   end

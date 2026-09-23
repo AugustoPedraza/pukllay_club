@@ -167,3 +167,120 @@
   font-size: 13px;
   color: var(--color-neutral);
 }
+
+/* ============================================================
+   Plan 01.8.2-15 — shared: a plain vertically-stacked form (`web-ajustes-
+   form`, `section-form`, `create-section-form`) — `.pk-admin-field`
+   itself carries no margin between consecutive fields (only an internal
+   4px label-to-control gap), so a form with more than one field needs
+   this to read as a group rather than a run-on stack.
+   ============================================================ */
+
+.pk-admin-stacked-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pk-admin-stacked-form .pk-admin-field {
+  width: 100%;
+}
+
+/* ============================================================
+   Plan 01.8.2-15, Task 1 — Web (`Admin.SectionLive.Index`/`Edit`, D-19k,
+   D-19l, D-19m, sketch 070): the destacada's rail, Otras filas, and the
+   Ajustes panel. The rail reuses the PUBLIC catalog's own `.pk-rail`/
+   `.pk-rail-wrap`/`.pk-poster-card` (`app.css`) — same reuse
+   `estante_live/index.ex` (plan 01.8.2-13) already established for an
+   admin screen; only the cover art's own inner structure is new here,
+   mirroring `estantes.css`'s `.pk-estantes-cover__*` shape verbatim.
+   ============================================================ */
+
+.pk-admin-web-destacada__name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-web-destacada__context {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--color-neutral);
+}
+
+.pk-admin-web-cover__art {
+  aspect-ratio: 96 / 100;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.pk-admin-web-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pk-admin-web-cover__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-primary);
+}
+
+.pk-admin-web-search {
+  margin-top: 16px;
+}
+
+.pk-admin-web-add-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-warning);
+}
+
+.pk-admin-web-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.pk-admin-web-ajustes {
+  margin-top: 16px;
+}
+
+.pk-admin-web-otras {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* One row = the (link-mode) `list_row/1` plus its ↑/↓ actions as true DOM
+   SIBLINGS, never nested inside the row's own `<.link>` — an anchor
+   cannot legally contain interactive content, and a click on a nested
+   button would also bubble to the link's own navigation. */
+.pk-admin-web-otras-row {
+  display: flex;
+  align-items: center;
+}
+
+.pk-admin-web-otras-row__row {
+  flex: 1;
+  min-width: 0;
+}
+
+.pk-admin-web-create {
+  margin-top: 8px;
+}
+
+.pk-admin-web-create-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}

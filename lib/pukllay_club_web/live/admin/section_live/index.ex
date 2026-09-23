@@ -1,29 +1,65 @@
 defmodule PukllayClubWeb.Admin.SectionLive.Index do
   @moduledoc """
-  Secciones management at `/admin/secciones` (D-17, D-18, UI-SPEC E6) —
-  every section, hidden ones included, in the same featured-first-then-
-  position order the public home page renders (`Catalog.list_home_sections/0`).
-  Each row links to its own `Admin.SectionLive.Edit` settings screen.
-  Staff create new hand-picked sections here and reorder the non-featured
-  ones with ↑/↓ (D-19) — the featured row is pinned first with no arrows
-  (D-18, UI-SPEC Visual Hierarchy).
+  Web at `/admin/secciones` (D-00a, D-19f, D-19h, D-19i, D-19j, D-19k,
+  D-19l, D-19m — the renamed Secciones, sketch 070's design) — the page
+  opens directly on the destacada's own rail, D-19l's counterpart to
+  D-19g: a short, stable list of the same kind of thing (home rows) earns
+  its place below the destacada's main control, as navigation
+  (`Otras filas`), not a second control. Tapping an `Otras filas` row
+  opens `Admin.SectionLive.Edit`, the same page shape scoped to that
+  section — the destacada's own settings and member management live
+  directly on this page instead, since D-19l already gives it a resting
+  place at the top.
+
+  `Quitar de la fila` (D-19k) is the explicit counter-case to D-19f: it
+  happens at once with a 10s Deshacer snackbar, no dialog, and the row is
+  never Peligro red — removing a game from a curated row loses no state
+  staff would have to rebuild. The Ajustes «Mostrar en el inicio» toggle
+  is the shipped `hidden` column's *inverse* — the previously-shipped
+  label read the opposite polarity (`admin-redesign-scope.md` gap #14), a
+  copy flip that must not silently invert the control.
+  `normalize_ajustes_params/1` below is the one place that inversion
+  happens.
 
   No delete action exists anywhere on this screen (E6 empty: cannot occur
   at launch since plan 10's migration seeds 3 sections plus an empty
-  featured one; sections are hide-only, per D-17/E6).
+  featured one; sections are hide-only, per D-17/E6). `Sections`' own
+  context calls (`settings_changeset/2` reading `kind` off the struct,
+  the featured cap checked inside the insert transaction, 01.8.1-12's
+  closure of T-01.8.1-56) are called exactly as before — this plan
+  changes presentation and the removal/undo shape only.
   """
   use PukllayClubWeb, :live_view
 
+  alias Phoenix.LiveView.JS
+  alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Sections
+  alias PukllayClubWeb.AdminComponents
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Secciones")
+     |> assign(:page_title, "Web")
      |> assign(:name_input, "")
      |> assign(:name_error, nil)
-     |> assign(:sections, Sections.list_sections())}
+     |> assign(:q, "")
+     |> assign(:search_results, [])
+     |> assign(:add_error, nil)
+     |> assign(:selected_member, nil)
+     |> assign(:removed, nil)
+     |> load_sections()}
+  end
+
+  defp load_sections(socket) do
+    sections = Sections.list_sections()
+    featured = Enum.find(sections, & &1.featured)
+
+    socket
+    |> assign(:featured, featured)
+    |> assign(:other_sections, Enum.reject(sections, & &1.featured))
+    |> assign(:featured_members, if(featured, do: Sections.section_members(featured), else: []))
+    |> assign(:form, if(featured, do: to_form(Sections.change_section(featured))))
   end
 
   @impl true
@@ -44,20 +80,155 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   @impl true
   def handle_event("move-down", %{"section-id" => id}, socket), do: move(socket, id, :down)
 
-  defp move(socket, id, direction) do
+  @impl true
+  def handle_event("validate", %{"section" => params}, socket) do
+    changeset =
+      socket.assigns.featured
+      |> Sections.change_section(normalize_ajustes_params(params))
+      |> Map.put(:action, :validate)
+
+    {:noreply, assign(socket, :form, to_form(changeset))}
+  end
+
+  @impl true
+  def handle_event("save", %{"section" => params}, socket) do
+    case Sections.update_section(socket.assigns.featured, normalize_ajustes_params(params)) do
+      {:ok, _section} ->
+        {:noreply, socket |> load_sections() |> put_flash(:info, "Fila guardada.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  @impl true
+  def handle_event("search", %{"q" => q}, socket) do
+    results = if q == "", do: [], else: search_candidates(socket, q)
+    {:noreply, socket |> assign(:q, q) |> assign(:search_results, results)}
+  end
+
+  @impl true
+  def handle_event("add-game", %{"game-id" => id}, socket) do
     case Integer.parse(id) do
       {int_id, ""} ->
-        {:ok, _section} = int_id |> Sections.get_section!() |> Sections.move_section(direction)
-        {:noreply, assign(socket, :sections, Sections.list_sections())}
+        case Sections.add_game(socket.assigns.featured, int_id) do
+          {:ok, _section} ->
+            {:noreply,
+             socket
+             |> assign(:add_error, nil)
+             |> assign(:q, "")
+             |> assign(:search_results, [])
+             |> load_sections()}
+
+          {:error, reason} ->
+            {:noreply, assign(socket, :add_error, reason)}
+        end
 
       _not_an_integer ->
         {:noreply, socket}
     end
   end
 
-  defp kind_hint(:manual), do: "Elegida a mano"
-  defp kind_hint(:weight_band), do: "Por nivel"
-  defp kind_hint(:recent), do: "Recientes"
+  @impl true
+  def handle_event("open-member-sheet", %{"game-id" => id}, socket) do
+    case Integer.parse(id) do
+      {int_id, ""} ->
+        member = Enum.find(socket.assigns.featured_members, &(&1.game_id == int_id))
+        {:noreply, assign(socket, :selected_member, member)}
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("close-member-sheet", _params, socket) do
+    {:noreply, assign(socket, :selected_member, nil)}
+  end
+
+  # D-19k: at once, no dialog, never Peligro — the game and its shelf
+  # spot are untouched, so Deshacer (`undo-remove` below) is a plain
+  # re-add rather than a state restore.
+  @impl true
+  def handle_event("remove-game", %{"game-id" => id}, socket) do
+    case Integer.parse(id) do
+      {int_id, ""} ->
+        member = Enum.find(socket.assigns.featured_members, &(&1.game_id == int_id))
+        {:ok, _section} = Sections.remove_game(socket.assigns.featured, int_id)
+
+        {:noreply,
+         socket
+         |> assign(:selected_member, nil)
+         |> assign(:removed, member && %{game_id: int_id, name: member.game.name})
+         |> load_sections()}
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("undo-remove", _params, socket) do
+    case socket.assigns.removed do
+      nil ->
+        {:noreply, socket}
+
+      %{game_id: game_id} ->
+        {:ok, _section} = Sections.add_game(socket.assigns.featured, game_id)
+        {:noreply, socket |> assign(:removed, nil) |> load_sections()}
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss-remove-snackbar", _params, socket) do
+    {:noreply, assign(socket, :removed, nil)}
+  end
+
+  defp move(socket, id, direction) do
+    case Integer.parse(id) do
+      {int_id, ""} ->
+        {:ok, _section} = int_id |> Sections.get_section!() |> Sections.move_section(direction)
+        {:noreply, load_sections(socket)}
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
+  # D-19l's "Mostrar en el inicio" is the shipped `hidden` column's
+  # INVERSE — the copy flip (`admin-redesign-scope.md` gap #14) must
+  # invert the value it submits, not just the label, or the control would
+  # silently do the opposite of what it says (T-01.8.2-65). This is the
+  # ONE place that inversion happens; `Sections`/`Section` never learn a
+  # "shown" concept, only ever `hidden`.
+  defp normalize_ajustes_params(%{"shown" => shown} = params) do
+    params
+    |> Map.delete("shown")
+    |> Map.put("hidden", to_string(shown != "true"))
+  end
+
+  defp normalize_ajustes_params(params), do: params
+
+  defp search_candidates(socket, q) do
+    member_game_ids = Enum.map(socket.assigns.featured_members, & &1.game_id)
+
+    [q: q, limit: 20]
+    |> Catalog.list_admin_games()
+    |> Enum.reject(&(&1.status == :retired or &1.id in member_game_ids))
+  end
+
+  defp kind_tag_label(:manual), do: "personalizada"
+  defp kind_tag_label(_automatic), do: "automática"
+
+  defp other_section_meta(%{kind: :manual} = section) do
+    count = length(Sections.section_members(section))
+    "#{count} juego#{if count == 1, do: "", else: "s"}"
+  end
+
+  defp other_section_meta(_automatic), do: nil
+
+  defp other_section_count(%{kind: :manual} = section), do: length(Sections.section_members(section))
+  defp other_section_count(_automatic), do: nil
 
   @impl true
   def render(assigns) do
@@ -70,11 +241,141 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
       active_tab={:web}
     >
       <div class="mx-auto w-full max-w-3xl space-y-6">
-        <.header>Secciones</.header>
+        <h1 class="pk-admin-page-title">Web</h1>
 
-        <form id="create-section-form" phx-submit="create" class="flex flex-wrap items-end gap-3">
-          <div class="flex-1 min-w-48">
-            <.input
+        <div :if={@featured} id="web-destacada" class="pk-admin-web-destacada">
+          <p class="pk-admin-web-destacada__name">{@featured.name}</p>
+          <p class="pk-admin-web-destacada__context">
+            {length(@featured_members)} juego{if length(@featured_members) == 1, do: "", else: "s"}
+          </p>
+
+          <div :if={@featured_members != []} class="pk-rail-wrap">
+            <div class="pk-rail" id="web-destacada-rail">
+              <button
+                :for={member <- @featured_members}
+                type="button"
+                id={"web-cover-#{member.game_id}"}
+                class="pk-poster-card"
+                data-pk-pressable="true"
+                phx-click="open-member-sheet"
+                phx-value-game-id={member.game_id}
+              >
+                <div role="img" aria-label={member.game.name} class="pk-admin-web-cover__art">
+                  <img
+                    :if={member.game.thumbnail_url}
+                    src={member.game.thumbnail_url}
+                    alt=""
+                    class="pk-admin-web-cover__img"
+                  />
+                  <div :if={!member.game.thumbnail_url} class="pk-admin-web-cover__fallback">
+                    <.icon name="hero-puzzle-piece" class="size-8" />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <p :if={@featured_members == []} class="pk-admin-empty-note">
+            Sin juegos, no se ve en el inicio.
+          </p>
+
+          <form id="web-search-form" phx-change="search" class="pk-admin-web-search">
+            <AdminComponents.field
+              type="text"
+              id="web-search-input"
+              name="q"
+              value={@q}
+              label="Agregar un juego"
+              placeholder="Buscá un juego"
+              phx-debounce="300"
+            />
+          </form>
+
+          <p :if={add_error_message(@add_error)} class="pk-admin-web-add-error">
+            {add_error_message(@add_error)}
+          </p>
+
+          <div :if={@q != ""} id="web-search-results" class="pk-admin-web-search-results">
+            <p :if={@search_results == []} class="pk-admin-empty-note">Sin resultados.</p>
+            <AdminComponents.list_row
+              :for={game <- @search_results}
+              id={"web-search-result-#{game.id}"}
+              name={game.name}
+              phx-click="add-game"
+              phx-value-game-id={game.id}
+            />
+          </div>
+
+          <AdminComponents.section_panel class="pk-admin-web-ajustes">
+            <:label>Ajustes</:label>
+            <.form
+              for={@form}
+              id="web-ajustes-form"
+              phx-change="validate"
+              phx-submit="save"
+              class="pk-admin-stacked-form"
+            >
+              <AdminComponents.field field={@form[:name]} label="Nombre" />
+              <AdminComponents.field field={@form[:subtitle]} label="Subtítulo" />
+              <AdminComponents.field
+                type="checkbox"
+                id="web-ajustes-shown"
+                name="section[shown]"
+                checked={!@form[:hidden].value}
+                label="Mostrar en el inicio"
+              />
+              <AdminComponents.action anatomy="a1" role="principal" type="submit">
+                Guardar
+              </AdminComponents.action>
+            </.form>
+          </AdminComponents.section_panel>
+        </div>
+
+        <section :if={@other_sections != []} id="web-otras-filas" class="pk-admin-web-otras">
+          <AdminComponents.list_section_label>Otras filas</AdminComponents.list_section_label>
+
+          <div :for={section <- @other_sections} class="pk-admin-web-otras-row">
+            <AdminComponents.list_row
+              id={"other-section-#{section.id}"}
+              class="pk-admin-web-otras-row__row"
+              name={section.name}
+              meta={other_section_meta(section)}
+              navigate={~p"/admin/secciones/#{section.id}"}
+              opens_page
+            >
+              <:trailing>
+                <AdminComponents.kind_tag label={kind_tag_label(section.kind)} />
+                <AdminComponents.count_pill
+                  :if={other_section_count(section)}
+                  count={other_section_count(section)}
+                />
+              </:trailing>
+            </AdminComponents.list_row>
+            <AdminComponents.action
+              anatomy="a3"
+              role="terciaria"
+              aria-label={"Subir #{section.name}"}
+              phx-click="move-up"
+              phx-value-section-id={section.id}
+            >
+              <.icon name="hero-arrow-up" class="size-5" />
+            </AdminComponents.action>
+            <AdminComponents.action
+              anatomy="a3"
+              role="terciaria"
+              aria-label={"Bajar #{section.name}"}
+              phx-click="move-down"
+              phx-value-section-id={section.id}
+            >
+              <.icon name="hero-arrow-down" class="size-5" />
+            </AdminComponents.action>
+          </div>
+        </section>
+
+        <AdminComponents.section_panel class="pk-admin-web-create">
+          <:label>Nueva fila</:label>
+          <form id="create-section-form" phx-submit="create" class="pk-admin-web-create-form">
+            <AdminComponents.field
               type="text"
               id="create-section-name"
               name="name"
@@ -82,48 +383,44 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
               label="Nombre de la sección"
               errors={if @name_error, do: [@name_error], else: []}
             />
-          </div>
-          <.button variant="primary">Crear sección</.button>
-        </form>
-
-        <ul class="space-y-2">
-          <li
-            :for={section <- @sections}
-            class="flex items-center gap-2 rounded-box border border-base-300 p-2"
-          >
-            <.link
-              navigate={~p"/admin/secciones/#{section.id}"}
-              class="flex-1 min-h-11 flex items-center gap-2"
-            >
-              <span class="flex-1">{section.name}</span>
-              <span class="text-neutral text-sm">{kind_hint(section.kind)}</span>
-              <span :if={section.featured} class="badge">Destacada</span>
-              <span :if={section.hidden} class="badge badge-neutral">Oculta</span>
-            </.link>
-            <button
-              :if={!section.featured}
-              type="button"
-              phx-click="move-up"
-              phx-value-section-id={section.id}
-              aria-label={"Subir #{section.name}"}
-              class="btn btn-ghost btn-square min-h-11 min-w-11"
-            >
-              <.icon name="hero-arrow-up" />
-            </button>
-            <button
-              :if={!section.featured}
-              type="button"
-              phx-click="move-down"
-              phx-value-section-id={section.id}
-              aria-label={"Bajar #{section.name}"}
-              class="btn btn-ghost btn-square min-h-11 min-w-11"
-            >
-              <.icon name="hero-arrow-down" />
-            </button>
-          </li>
-        </ul>
+            <AdminComponents.action anatomy="a1" role="principal" type="submit">
+              Crear sección
+            </AdminComponents.action>
+          </form>
+        </AdminComponents.section_panel>
       </div>
+
+      <AdminComponents.sheet
+        :if={@selected_member}
+        id="web-member-sheet"
+        title={@selected_member.game.name}
+        subtitle={@featured.name}
+        open
+        on_close={JS.push("close-member-sheet")}
+      >
+        <AdminComponents.action
+          anatomy="a4"
+          role="terciaria"
+          phx-click="remove-game"
+          phx-value-game-id={@selected_member.game_id}
+        >
+          Quitar de la fila
+        </AdminComponents.action>
+      </AdminComponents.sheet>
+
+      <AdminComponents.snackbar
+        :if={@removed}
+        id="web-remove-snackbar"
+        message={"«#{@removed.name}» quitado de la fila."}
+        action={%{label: "Deshacer", event: "undo-remove"}}
+        on_close={JS.push("dismiss-remove-snackbar")}
+      />
     </Layouts.app>
     """
   end
+
+  defp add_error_message(:featured_full), do: "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
+
+  defp add_error_message(:already_member), do: "Ese juego ya está en la sección."
+  defp add_error_message(_other), do: nil
 end
