@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 11/22 plans executed
+**Plans:** 12/22 plans executed
 
 Plans:
 
@@ -223,7 +223,7 @@ Plans:
 
 **Wave 6**
 
-- [ ] 01.8.2-12-PLAN.md — D-18's harness ported to `test/visual/admin_*.mjs`, and **open item 1's real-device pass** before the UI slices harden; open item 4's keel measured
+- [x] 01.8.2-12-PLAN.md — D-18's harness ported to `test/visual/admin_*.mjs`, and **open item 1's real-device pass** before the UI slices harden; open item 4's keel measured
 
 **Wave 7**
 
