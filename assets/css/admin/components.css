@@ -293,3 +293,172 @@
   font-weight: 600;
   color: var(--color-base-content);
 }
+
+/* ============================================================
+   Task 3 — list row, editable-value row, status dot, kind tag, count pill
+   ============================================================ */
+
+.pk-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pk-admin-row__cover {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.pk-admin-row__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pk-admin-row__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  overflow-wrap: break-word;
+}
+
+.pk-admin-row__meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+/* D-19i: a chevron means "this row opens another page", and nothing
+   else — `list_row/1` only renders this element when `opens_page` is
+   true. */
+.pk-admin-row__chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-neutral);
+}
+
+/* D-23: an editable value is a row that opens a sheet — line 1 label
+   (prominent), line 2 value (subordinate, carrying the `--val` tint).
+   No glyph at all: not `›` (D-19i reserves that for "opens a page") and
+   not the `⌄` that briefly replaced it. The tint marks the datum you are
+   about to change, never "this row is tappable" — `.pk-admin-row` above
+   is the contrasting, tappable-but-untinted case. */
+.pk-admin-editable-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pk-admin-editable-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-editable-row__value {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--val);
+}
+
+/* D-19h: a status is an 8px dot in the status colour before the word,
+   never a pill. The dot is decorative (drawn from `currentColor`); the
+   word is the accessible name. Per-status colour is not pinned by any
+   read_first source for this plan — chosen here from the already-
+   reconciled semantic tokens (`--color-success`/`--warning`/`--error`/
+   `--neutral`), documented so a future pass can retune deliberately
+   rather than rediscover the mapping from scratch. */
+.pk-admin-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-status-dot__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pk-admin-status-dot--draft {
+  color: var(--color-neutral);
+}
+
+.pk-admin-status-dot--published {
+  color: var(--color-success);
+}
+
+.pk-admin-status-dot--retired {
+  color: var(--color-error);
+}
+
+.pk-admin-status-dot--sin_lugar {
+  color: var(--color-warning);
+}
+
+.pk-admin-status-dot--afuera {
+  color: var(--color-neutral);
+}
+
+/* D-19m: a kind is a quiet tag — 18px tall, 11px regular, lowercase, on a
+   hairline `--color-base-300` border (the shipped token
+   `01.8.2-TOKENS.md` maps the sketches' own invented `--color-border`
+   onto), muted text. Never competes with the row name. Not a status, so
+   D-19h's "never a pill" rule does not apply here — a rounded tag shape
+   is fine. */
+.pk-admin-kind-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: lowercase;
+  color: var(--color-neutral);
+}
+
+/* D-19m: a count is a neutral pill on the tile's bottom-right, page-
+   filled with a 1px `--stroke`, 11/600 muted — never the top-right filled
+   primary badge (that means pending work, D-19g). */
+.pk-admin-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  background: var(--color-base-100);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-neutral);
+}

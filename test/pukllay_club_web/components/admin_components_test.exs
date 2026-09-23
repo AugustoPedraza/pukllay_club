@@ -375,4 +375,208 @@ defmodule PukllayClubWeb.AdminComponentsTest do
       assert components_css() =~ "pointer: coarse"
     end
   end
+
+  describe "list_row/1" do
+    test "renders no chevron when opens_page is false (the default)" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row name="Catan" meta="Publicado" />
+        """)
+
+      refute html =~ "pk-admin-row__chevron"
+      refute html =~ "›"
+    end
+
+    test "renders a chevron only when opens_page is true" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row name="Catan" opens_page navigate="/admin/juegos/1" />
+        """)
+
+      assert html =~ "pk-admin-row__chevron"
+      assert html =~ "›"
+    end
+
+    test "renders a <.link> when navigate is passed, a <div> otherwise" do
+      assigns = %{}
+
+      linked =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row name="Catan" navigate="/admin/juegos/1" />
+        """)
+
+      plain =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row name="Catan" />
+        """)
+
+      assert linked =~ "<a "
+      refute plain =~ "<a "
+      assert plain =~ "pk-admin-row"
+    end
+
+    test "renders the optional cover and meta line" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row cover="/covers/catan.webp" name="Catan" meta="Publicado" />
+        """)
+
+      assert html =~ "pk-admin-row__cover"
+      assert html =~ "pk-admin-row__meta"
+      assert html =~ "Publicado"
+    end
+
+    test "carries data-pk-pressable" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.list_row name="Catan" />
+        """)
+
+      assert html =~ "data-pk-pressable"
+    end
+  end
+
+  describe "editable_row/1 (D-23 — no glyph at all)" do
+    test "renders the label and value, the value carrying the --val tint class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.editable_row label="Copias" value="3" />
+        """)
+
+      assert html =~ "pk-admin-editable-row__label"
+      assert html =~ "Copias"
+      assert html =~ "pk-admin-editable-row__value"
+      assert html =~ "3"
+    end
+
+    test "renders neither › nor ⌄ — D-23 rules out both by name" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.editable_row label="Copias" value="3" />
+        """)
+
+      refute html =~ "›"
+      refute html =~ "⌄"
+    end
+
+    test "always renders a <button>, never a link" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.editable_row label="Copias" value="3" />
+        """)
+
+      assert html =~ "<button"
+      refute html =~ "<a "
+    end
+  end
+
+  describe "status_dot/1 (D-19h — dot + text, never a pill)" do
+    test "renders the dot element and the Spanish word for :draft" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.status_dot status={:draft} />
+        """)
+
+      assert html =~ "pk-admin-status-dot__dot"
+      assert html =~ "Borrador"
+    end
+
+    test "renders the correct word for every status in the vocabulary" do
+      words = %{
+        draft: "Borrador",
+        published: "Publicado",
+        retired: "Retirado",
+        sin_lugar: "Sin lugar",
+        afuera: "Afuera"
+      }
+
+      for {status, word} <- words do
+        assigns = %{status: status}
+
+        html =
+          rendered_to_string(~H"""
+          <AdminComponents.status_dot status={@status} />
+          """)
+
+        assert html =~ word, "status=#{status} did not render #{word}"
+      end
+    end
+
+    test "renders no class matching pill or badge" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.status_dot status={:draft} />
+        """)
+
+      refute html =~ ~r/pill|badge/
+    end
+  end
+
+  describe "kind_tag/1 (D-19m)" do
+    test "renders the kind-tag class and label" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.kind_tag label="expansión" />
+        """)
+
+      assert html =~ "pk-admin-kind-tag"
+      assert html =~ "expansión"
+    end
+
+    test "components.css declares the kind tag lowercase, 11px regular, on a hairline border" do
+      css = components_css()
+      assert font_size_px!(css, ".pk-admin-kind-tag") == 11
+      assert css =~ ~r/\.pk-admin-kind-tag\s*\{[^}]*text-transform:\s*lowercase/s
+      assert css =~ ~r/\.pk-admin-kind-tag\s*\{[^}]*border:\s*1px solid var\(--color-base-300\)/s
+    end
+  end
+
+  describe "count_pill/1 (D-19m)" do
+    test "renders the count-pill class and the count as text content" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.count_pill count={12} />
+        """)
+
+      assert html =~ "pk-admin-count-pill"
+      assert html =~ "12"
+    end
+
+    test "components.css declares the count pill page-filled with the shared --stroke border, 11/600 muted" do
+      css = components_css()
+      assert font_size_px!(css, ".pk-admin-count-pill") == 11
+      assert css =~ ~r/\.pk-admin-count-pill\s*\{[^}]*border:\s*1px solid var\(--stroke\)/s
+      assert css =~ ~r/\.pk-admin-count-pill\s*\{[^}]*background:\s*var\(--color-base-100\)/s
+    end
+  end
+
+  describe "app.css is untouched by this plan" do
+    test "assets/css/app.css has no pending changes under git" do
+      {output, 0} = System.cmd("git", ["status", "--porcelain", "--", "assets/css/app.css"])
+
+      assert output == ""
+    end
+  end
 end

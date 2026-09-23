@@ -356,4 +356,144 @@ defmodule PukllayClubWeb.AdminComponents do
     <span class="pk-admin-list-section-label">{render_slot(@inner_block)}</span>
     """
   end
+
+  # ============================================================
+  # Task 3 — list row, editable-value row, status dot, kind tag, count pill
+  # ============================================================
+
+  @doc """
+  Renders a 44px-floor list row: an optional 40px `cover`, a wrapping
+  `name` at 14px/600, an optional 13px muted second line (`meta`), and an
+  optional `:trailing` slot for a count pill / kind tag / other trailing
+  content. Renders a trailing chevron **only** when `opens_page={true}`
+  (D-19i — a chevron means "this row opens another page", and nothing
+  else); `opens_page` defaults to `false` so a row that acts in place is
+  the cheap path. Passing `href`/`navigate`/`patch` renders a `<.link>`;
+  otherwise a `<div>` (the caller wires its own `phx-click` via `rest`).
+  """
+  attr :cover, :string, default: nil
+  attr :name, :string, required: true
+  attr :meta, :string, default: nil
+  attr :opens_page, :boolean, default: false
+  attr :class, :any, default: nil
+
+  attr :rest, :global, include: ~w(href navigate patch)
+
+  slot :trailing
+
+  def list_row(assigns) do
+    if assigns.rest[:href] || assigns.rest[:navigate] || assigns.rest[:patch] do
+      ~H"""
+      <.link class={["pk-admin-row", @class]} data-pk-pressable="true" {@rest}>
+        <img :if={@cover} src={@cover} alt="" class="pk-admin-row__cover" />
+        <span class="pk-admin-row__body">
+          <span class="pk-admin-row__name">{@name}</span>
+          <span :if={@meta} class="pk-admin-row__meta">{@meta}</span>
+        </span>
+        {render_slot(@trailing)}
+        <span :if={@opens_page} class="pk-admin-row__chevron" aria-hidden="true">›</span>
+      </.link>
+      """
+    else
+      ~H"""
+      <div class={["pk-admin-row", @class]} data-pk-pressable="true" {@rest}>
+        <img :if={@cover} src={@cover} alt="" class="pk-admin-row__cover" />
+        <span class="pk-admin-row__body">
+          <span class="pk-admin-row__name">{@name}</span>
+          <span :if={@meta} class="pk-admin-row__meta">{@meta}</span>
+        </span>
+        {render_slot(@trailing)}
+        <span :if={@opens_page} class="pk-admin-row__chevron" aria-hidden="true">›</span>
+      </div>
+      """
+    end
+  end
+
+  @doc """
+  Renders D-23's one anatomy for an editable value: a row that opens a
+  sheet, line 1 `label` (prominent, 14px/600), line 2 `value` (subordinate,
+  13px, carrying the `--val` tint). Renders **no glyph at all** — not `›`
+  (D-19i reserves that for "this row opens another page") and not the `⌄`
+  that briefly replaced it. The tint marks the datum you are about to
+  change, never "this row is tappable" — `list_row/1` above is the
+  contrasting, tappable-but-untinted case. Always a `<button>`: an
+  editable value opens a sheet in place, it never navigates.
+  """
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+  attr :class, :any, default: nil
+
+  attr :rest, :global, include: ~w(phx-click type)
+
+  def editable_row(assigns) do
+    ~H"""
+    <button type="button" class={["pk-admin-editable-row", @class]} data-pk-pressable="true" {@rest}>
+      <span class="pk-admin-editable-row__label">{@label}</span>
+      <span class="pk-admin-editable-row__value">{@value}</span>
+    </button>
+    """
+  end
+
+  @status_words %{
+    draft: "Borrador",
+    published: "Publicado",
+    retired: "Retirado",
+    sin_lugar: "Sin lugar",
+    afuera: "Afuera"
+  }
+
+  @doc """
+  Renders D-19h's one status anatomy: an 8px dot in the status colour
+  immediately before the word — **never a pill**. The dot is decorative
+  (drawn with `currentColor`, `aria-hidden`); the word is plain text
+  content, so it is always in the element's accessible name. Every status
+  indicator in the admin renders through this component — tag and filter
+  chips (`kind_tag/1`) are not statuses and are unaffected by D-19h.
+
+  `status` is one of `#{inspect(Map.keys(@status_words))}` — the exact
+  status vocabulary `01.8.2-UI-SPEC.md`'s copywriting contract fixes.
+  """
+  attr :status, :atom, required: true, values: Map.keys(@status_words)
+  attr :class, :any, default: nil
+
+  def status_dot(assigns) do
+    assigns = assign(assigns, :word, Map.fetch!(@status_words, assigns.status))
+
+    ~H"""
+    <span class={["pk-admin-status-dot", "pk-admin-status-dot--#{@status}", @class]}>
+      <span class="pk-admin-status-dot__dot" aria-hidden="true"></span>{@word}
+    </span>
+    """
+  end
+
+  @doc """
+  Renders D-19m's kind tag: 18px tall, 11px regular, lowercase, on a
+  hairline `--color-base-300` border, muted text — never competes with a
+  row name. Not a status, so D-19h's "never a pill" rule does not apply
+  here.
+  """
+  attr :label, :string, required: true
+  attr :class, :any, default: nil
+
+  def kind_tag(assigns) do
+    ~H"""
+    <span class={["pk-admin-kind-tag", @class]}>{@label}</span>
+    """
+  end
+
+  @doc """
+  Renders D-19m's count pill: a neutral, page-filled pill with a 1px
+  `--stroke` border, 11px/600 muted text. Its number is plain text
+  content, so it is always in the element's accessible name — never the
+  top-right filled primary badge (that shape means *pending work*, D-19g,
+  not a count).
+  """
+  attr :count, :integer, required: true
+  attr :class, :any, default: nil
+
+  def count_pill(assigns) do
+    ~H"""
+    <span class={["pk-admin-count-pill", @class]}>{@count}</span>
+    """
+  end
 end
