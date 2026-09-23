@@ -224,6 +224,114 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       assert_receive {:estante_updated, shelf_id}
       assert shelf_id == shelf.id
     end
+
+    # T-01.8.2-71 (plan 01.8.2-16): a move must be one transaction, not
+    # remove-then-place in two steps — asserted here by forcing the
+    # transaction's LAST write (`insert_at`'s final `update_all`) to fail
+    # on a bogus destination `shelf_id` (violates the `copies.shelf_id`
+    # FK, which `update_all` does not pre-validate) and proving the
+    # `vacate/2` step that already ran (removing `a0` from `shelf_a`) was
+    # rolled back with it — the old estante is exactly as it was before
+    # the failed call, never left half-vacated.
+    test "a move that fails mid-transaction leaves the old estante completely unchanged (atomicity, T-01.8.2-71)" do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      a1 = copy_fixture(%{game_id: game_fixture(%{name: "A1"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+      {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
+
+      bogus_shelf_id = -1
+
+      assert_raise Postgrex.Error, fn ->
+        Shelves.place_copy(a0.id, bogus_shelf_id, 0)
+      end
+
+      remaining_a = shelf_a.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert remaining_a == [{a0.id, 0}, {a1.id, 1}]
+    end
+  end
+
+  describe "search_estantes_or_copies/2 (D-00c, T-01.8.2-73)" do
+    test "matches estantes by name, ranked first" do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      assert [{:shelf, ^shelf}] = Shelves.search_estantes_or_copies("norte")
+    end
+
+    test "matches an already-placed copy's game by name, resolving to its shelf" do
+      shelf = shelf_fixture(%{name: "Estante Sur"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      assert [{:copy, found}] = Shelves.search_estantes_or_copies("catan")
+      assert found.id == copy.id
+      assert found.shelf.id == shelf.id
+    end
+
+    test "an unplaced copy's game never appears — only shelved games are neighbourhoods" do
+      copy_fixture(%{game_id: game_fixture(%{name: "Zorblax"}).id})
+
+      assert Shelves.search_estantes_or_copies("zorblax") == []
+    end
+
+    test "excludes the copy being placed/moved via exclude_copy_id" do
+      shelf = shelf_fixture(%{name: "Estante Este"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Dixit"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      assert Shelves.search_estantes_or_copies("dixit", copy.id) == []
+    end
+
+    test "returns [] for a blank query" do
+      assert Shelves.search_estantes_or_copies("") == []
+    end
+
+    test "estantes come before copies for the same query" do
+      shelf = shelf_fixture(%{name: "Alfa"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Alfa Quest"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      assert [{:shelf, _}, {:copy, _}] = Shelves.search_estantes_or_copies("alfa")
+    end
+  end
+
+  describe "restore_position/3 (D-00c Deshacer)" do
+    test "restores a copy that was unplaced before the write it undoes" do
+      shelf = shelf_fixture()
+      copy = copy_fixture(%{game_id: game_fixture().id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      assert {:ok, restored} = Shelves.restore_position(copy.id, nil, nil)
+      assert restored.shelf_id == nil
+      assert restored.position == nil
+    end
+
+    test "restores a copy to its previous estante and position, reindexing around it" do
+      shelf_a = shelf_fixture(%{name: "A"})
+      shelf_b = shelf_fixture(%{name: "B"})
+
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      a1 = copy_fixture(%{game_id: game_fixture(%{name: "A1"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+      {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
+
+      # a0 moves to shelf_b, so its old position (0) is snapshotted before
+      # the move for the undo below.
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_b.id, 0)
+
+      # A third copy lands in a0's old slot on shelf_a while a0 is away —
+      # this is the "neighbours may have shifted" case the restore
+      # function exists for.
+      a2 = copy_fixture(%{game_id: game_fixture(%{name: "A2"}).id})
+      {:ok, _} = Shelves.place_copy(a2.id, shelf_a.id, 0)
+
+      assert {:ok, restored} = Shelves.restore_position(a0.id, shelf_a.id, 0)
+      assert restored.shelf_id == shelf_a.id
+      assert restored.position == 0
+
+      positions = shelf_a.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a0.id, 0}, {a2.id, 1}, {a1.id, 2}]
+    end
   end
 
   describe "remove_copy_from_shelf/1 (D-11)" do
