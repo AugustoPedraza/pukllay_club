@@ -127,7 +127,12 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
       # freshly-added draft's `is_expansion` (D-07: only while the game's
       # name is still the placeholder).
       type: ~x"./@type"s,
-      name: ~x".//name[@type='primary']/@value"so,
+      # Direct child, not `.//name` — before this fix, `.//name` matched
+      # `name` under any nested `<versions>/<item>` too, and only happened
+      # to resolve correctly because document order puts the item's own
+      # name first and the `s` modifier takes the first match. That was
+      # luck, not scoping.
+      name: ~x"./name[@type='primary']/@value"so,
       year_published: ~x"./yearpublished/@value"io,
       min_players: ~x"./minplayers/@value"io,
       max_players: ~x"./maxplayers/@value"io,
@@ -138,17 +143,28 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
       description: ~x"./description/text()"so,
       image: ~x"./image/text()"so,
       thumbnail: ~x"./thumbnail/text()"so,
-      average_weight: ~x".//statistics/ratings/averageweight/@value"fo,
-      average_rating: ~x".//statistics/ratings/average/@value"fo,
-      rank: ~x".//statistics/ratings/ranks/rank[@name='boardgame']/@value"Io,
-      mechanics: ~x".//link[@type='boardgamemechanic']/@value"sl,
-      categories: ~x".//link[@type='boardgamecategory']/@value"sl,
-      designers: ~x".//link[@type='boardgamedesigner']/@value"sl,
-      publishers: ~x".//link[@type='boardgamepublisher']/@value"sl,
-      families: ~x".//link[@type='boardgamefamily']/@value"sl,
-      artists: ~x".//link[@type='boardgameartist']/@value"sl,
+      # `statistics` is a direct child of the item — `.//statistics` would
+      # also match a nested version item's own `statistics` block if BGG
+      # ever emits one there.
+      average_weight: ~x"./statistics/ratings/averageweight/@value"fo,
+      average_rating: ~x"./statistics/ratings/average/@value"fo,
+      rank: ~x"./statistics/ratings/ranks/rank[@name='boardgame']/@value"Io,
+      # The six link extractions below select only the top-level item's own
+      # `<link>` children (`./link`, not `.//link`). Before this fix, a
+      # nested `<versions>/<item type="boardgameversion">`'s own `<link>`
+      # elements were folded into these lists — e.g. a game with N versions
+      # would get every version's publishers/artists appended to its own,
+      # producing publisher/artist lists well over 100 entries for
+      # heavily-localized games. See `dedup_artists/1`'s doc for the
+      # artist-specific history of this bug.
+      mechanics: ~x"./link[@type='boardgamemechanic']/@value"sl,
+      categories: ~x"./link[@type='boardgamecategory']/@value"sl,
+      designers: ~x"./link[@type='boardgamedesigner']/@value"sl,
+      publishers: ~x"./link[@type='boardgamepublisher']/@value"sl,
+      families: ~x"./link[@type='boardgamefamily']/@value"sl,
+      artists: ~x"./link[@type='boardgameartist']/@value"sl,
       versions: [
-        ~x".//versions/item[@type='boardgameversion']"l,
+        ~x"./versions/item[@type='boardgameversion']"l,
         name: ~x"./name[@type='primary']/@value"so,
         image: ~x"./image/text()"so,
         thumbnail: ~x"./thumbnail/text()"so,
@@ -176,11 +192,26 @@ defmodule PukllayClub.Catalog.Seed.BggClient do
   Public on purpose: `Mix.Tasks.Catalog.BackfillArtists` must apply this
   byte-identical rule to `artists` values already sitting in stored
   `bgg_payload` rows, so both call sites can never drift apart. 368 of the
-  377 enriched games in the dev database carry duplicated artist entries
-  (worst observed: 367 raw entries for 15 real names), while the sibling
-  `designers` extraction — using the exact same xpath shape — has zero
-  duplicates. This is a property of BGG's artist link data, not an
-  xpath-scoping bug.
+  377 enriched games in the dev database carried duplicated artist entries
+  (worst observed: 367 raw entries for 15 real names) — this WAS an
+  xpath-scoping bug, not a property of BGG's artist data: `parse_items/1`'s
+  link selectors used `.//link[...]` (descendant-of-item), which also
+  matched every `<link>` inside a nested `<versions>/<item
+  type="boardgameversion">`. A game with many localized versions folded
+  each version's own artist/publisher links into the top-level item's
+  lists, duplicating names once per version. The sibling `designers`
+  extraction used the exact same unscoped shape and still came back
+  clean — not because its xpath was sound, but because BGG's version items
+  never carry a `boardgamedesigner` link (only `boardgameartist`,
+  `boardgamepublisher` and `language`), so `designers` never collided.
+
+  The extraction layer now scopes all six link selectors to `./link`
+  (direct children only), so a freshly-fetched payload never produces
+  duplicates in the first place. `dedup_artists/1` stays public and is
+  still called from `normalize_item/1` and
+  `StatsEnricher.backfill_artists_from_payload/1` — it is a harmless no-op
+  on fresh payloads, and remains the correct repair path for legacy
+  `bgg_payload` rows written before this fix.
   """
   @spec dedup_artists(list()) :: [String.t()]
   def dedup_artists(artists) do

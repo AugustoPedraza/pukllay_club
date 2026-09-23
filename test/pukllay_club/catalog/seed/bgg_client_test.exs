@@ -6,6 +6,7 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
 
   @fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
   @unranked_fixture File.read!("test/support/fixtures/bgg_unranked_item.xml")
+  @with_versions_fixture File.read!("test/support/fixtures/bgg_thing_with_versions.xml")
 
   setup do
     {:ok, credentials} = Credentials.fetch()
@@ -144,6 +145,50 @@ defmodule PukllayClub.Catalog.Seed.BggClientTest do
       assert {:ok, [item]} = BggClient.fetch_batch([290_837], credentials)
       assert item.bgg_id == 290_837
       assert item.type == "boardgameexpansion"
+    end
+
+    test "scopes top-level link/name/statistics extraction to the item's own children, excluding nested boardgameversion items (xpath scoping bug)",
+         %{credentials: credentials} do
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @with_versions_fixture)
+      end)
+
+      assert {:ok, [item]} = BggClient.fetch_batch([198_454], credentials)
+
+      # Test 1: publishers is exactly the top-level item's own publisher
+      # links, in document order — none of the version-only publishers
+      # ("GoKids 玩樂小子", "ADC Blackfire Entertainment") leak in.
+      assert item.publishers == ["Drawlab Entertainment", "Repos Production"]
+
+      # Test 2: artists is exactly the top-level item's own artist links —
+      # the version-only box artist ("Régis Torres") is excluded.
+      assert item.artists == ["Jonathan Aucomte", "Vincent Dutrait"]
+
+      # Test 3: name is the top-level item's own primary name, not either
+      # version's distinct primary name ("Chinese edition"/"Czech edition").
+      assert item.name == "When I Dream"
+
+      # Test 4: versions still parses correctly — the over-scoping guard.
+      assert length(item.versions) == 2
+      [chinese, czech] = item.versions
+      assert chinese.name == "Chinese edition"
+      assert chinese.image =~ "pic4229314"
+      assert chinese.languages == ["Chinese"]
+      assert czech.name == "Czech edition"
+      assert czech.languages == ["Czech"]
+
+      # Test 5: designers/mechanics were never colliding — prove the fix
+      # does not disturb them.
+      assert item.designers == ["Chris Darsaklis"]
+      assert item.mechanics == ["Communication Limits", "Hidden Roles"]
+
+      # Statistics selectors were widened by the same fix — confirm they
+      # still resolve to the item's own (only) statistics block.
+      assert item.average_weight == 1.1915
+      assert item.average_rating == 6.92122
+      assert item.rank == 1363
     end
 
     test "retries a 429 response and succeeds on the next attempt", %{credentials: credentials} do
