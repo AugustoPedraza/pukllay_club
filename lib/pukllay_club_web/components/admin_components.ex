@@ -711,4 +711,117 @@ defmodule PukllayClubWeb.AdminComponents do
     </div>
     """
   end
+
+  # ============================================================
+  # Plan 01.8.2-08, Task 3 — the fixed foot save bar, the back row and the
+  # pinned page bar (D-28, D-19n)
+  # ============================================================
+
+  @doc """
+  Renders D-28's fixed foot save bar: fixed at the foot, **always
+  present** at 77px, page-coloured (the page ground, `--color-base-100`) so
+  the only thing it draws is its 1px top line. The action is `action/1`
+  `anatomy="a1"` `role="principal"` `commit={true}` — natural width,
+  right-aligned on the keel, never full-width, never filled — disabled
+  exactly when `dirty` is false (the one place D-24 permits a disabled
+  control). The left half carries only the transient save state —
+  `● Sin guardar` in `--color-warning` — while `dirty`; nothing renders
+  there when clean.
+
+  The 77px height is declared **once**, in the `--pk-save-bar-h` custom
+  property, and both this rule's own `min-height` and the body's bottom
+  clearance (`.pk-admin-has-save-bar`, a `calc()` off that same property)
+  read from it — never two independently-typed literals that could drift
+  apart (D-28's own stated reason: "an estimate hides the last block under
+  a few pixels and no check notices"). The real pixel measurement against
+  a live save bar is plan 01.8.2-12's CDP harness; this plan's job is the
+  single-source structural contract only.
+  """
+  attr :dirty, :boolean, default: false
+  attr :on_save, JS, required: true
+  attr :status_text, :string, default: "Sin guardar"
+  attr :class, :any, default: nil
+
+  def save_bar(assigns) do
+    ~H"""
+    <div class={["pk-admin-save-bar", @class]} data-pk-save-bar>
+      <span :if={@dirty} class="pk-admin-save-bar__status">
+        <span class="pk-admin-save-bar__dot" aria-hidden="true"></span>{@status_text}
+      </span>
+      <.action
+        anatomy="a1"
+        role="principal"
+        commit
+        disabled={!@dirty}
+        phx-click={@on_save}
+        class="pk-admin-save-bar__action"
+      >
+        Guardar
+      </.action>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the in-page back control — one 44px row, D1/D2/D3's page-head
+  rhythm (the same anatomy `page_bar/1`'s own back link uses, so the two
+  are visually and structurally interchangeable, never two independently-
+  declared "back" shapes). Pass `inert={true}` when `page_bar/1` alongside
+  it is the currently-visible back control (D-19n — exactly one of the two
+  is ever focusable at a time).
+  """
+  attr :to, :string, required: true
+  attr :label, :string, default: "Volver"
+  attr :id, :string, default: nil
+  attr :inert, :boolean, default: false
+  attr :class, :any, default: nil
+
+  def back_row(assigns) do
+    ~H"""
+    <.link
+      id={@id}
+      navigate={@to}
+      class={["pk-admin-back-row", @class]}
+      data-pk-pressable="true"
+      inert={@inert}
+    >
+      <CoreComponents.icon name="hero-chevron-left-mini" class="size-5" />
+      <span>{@label}</span>
+    </.link>
+    """
+  end
+
+  @doc """
+  Renders D-19n's pinned page bar: a 44px `‹ back` + `title` (17/600) that
+  pins at the top of a long list's scroller once the in-page title row has
+  gone behind it. Rendered as an **absolute overlay, not a sticky child**
+  (`position: absolute` in `components.css`) — this is what gives it zero
+  layout cost at rest: an absolutely-positioned element is removed from
+  normal flow regardless of its `visible` state, so there is no toggled
+  `display:none`/`display:block` step that could ever leave a layout gap
+  or a jump. `visible` toggles `inert` on this bar's own back link —
+  `back_row/1` alongside it should pass the OPPOSITE of this attr's value
+  so exactly one back control is ever focusable (D-19n).
+  """
+  attr :title, :string, required: true
+  attr :back_to, :string, required: true
+  attr :visible, :boolean, default: false
+  attr :class, :any, default: nil
+
+  def page_bar(assigns) do
+    ~H"""
+    <div class={["pk-admin-page-bar", @visible && "pk-admin-page-bar--visible", @class]}>
+      <.link
+        navigate={@back_to}
+        class="pk-admin-page-bar__back"
+        aria-label="Volver"
+        data-pk-pressable="true"
+        inert={!@visible}
+      >
+        <CoreComponents.icon name="hero-chevron-left-mini" class="size-5" />
+      </.link>
+      <span class="pk-admin-page-bar__title">{@title}</span>
+    </div>
+    """
+  end
 end

@@ -877,4 +877,175 @@ defmodule PukllayClubWeb.AdminComponentsTest do
       assert css =~ ~r/\.pk-admin-snackbar\s*\{[^}]*color:\s*var\(--color-base-100\)/s
     end
   end
+
+  # ============================================================
+  # Plan 01.8.2-08 Task 3 — save_bar/1, back_row/1, page_bar/1 (D-28, D-19n)
+  # ============================================================
+
+  describe "save_bar/1 (D-28)" do
+    test "always renders, calling action/1 with anatomy=a1 and commit={true}" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.save_bar on_save={Phoenix.LiveView.JS.push("save")} />
+        """)
+
+      assert html =~ "pk-admin-save-bar"
+      assert html =~ "pk-admin-action--a1"
+      assert html =~ "pk-admin-action--principal"
+    end
+
+    test "dirty: false produces a disabled action with no opacity and no filled class" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.save_bar on_save={Phoenix.LiveView.JS.push("save")} dirty={false} />
+        """)
+
+      assert html =~ "disabled"
+      assert html =~ "pk-admin-action--disabled"
+      refute html =~ "opacity"
+      refute html =~ ~r/btn-primary|btn-outline|btn-ghost|btn-error/
+    end
+
+    test "dirty: true renders an enabled action and the Sin guardar status with its dot" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.save_bar on_save={Phoenix.LiveView.JS.push("save")} dirty />
+        """)
+
+      refute html =~ "pk-admin-action--disabled"
+      assert html =~ "Sin guardar"
+      assert html =~ "pk-admin-save-bar__dot"
+    end
+
+    test "dirty: false renders no status text at all" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.save_bar on_save={Phoenix.LiveView.JS.push("save")} dirty={false} />
+        """)
+
+      refute html =~ "Sin guardar"
+    end
+  end
+
+  describe "components.css — save bar geometry and paint" do
+    test "declares the 77px fixed height once, via --pk-save-bar-h" do
+      css = components_css()
+      assert css =~ ~r/--pk-save-bar-h:\s*77px/
+      assert css =~ ~r/\.pk-admin-save-bar\s*\{[^}]*min-height:\s*var\(--pk-save-bar-h\)/s
+    end
+
+    test "the body clearance derives from calc() off the same property, no literal pixel value" do
+      css = components_css()
+      [_, rule] = Regex.run(~r/\.pk-admin-has-save-bar\s*\{([^}]*)\}/s, css)
+      assert rule =~ "calc(var(--pk-save-bar-h)"
+      refute rule =~ ~r/padding-bottom:\s*\d/
+    end
+
+    test "the status dot uses var(--color-warning)" do
+      assert components_css() =~
+               ~r/\.pk-admin-save-bar__dot\s*\{[^}]*background:\s*var\(--color-warning\)/s
+    end
+  end
+
+  describe "back_row/1" do
+    test "renders a 44px in-page back link" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.back_row to="/admin/juegos" />
+        """)
+
+      assert html =~ "pk-admin-back-row"
+      assert html =~ "Volver"
+      assert html =~ ~s(href="/admin/juegos")
+    end
+
+    test "inert renders the inert attribute" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.back_row to="/admin/juegos" inert />
+        """)
+
+      assert html =~ "inert"
+    end
+  end
+
+  describe "page_bar/1 (D-19n)" do
+    test "renders as an absolute overlay costing zero layout at rest" do
+      css = components_css()
+      assert css =~ ~r/\.pk-admin-page-bar\s*\{[^}]*position:\s*absolute/s
+      refute css =~ ~r/\.pk-admin-page-bar\s*\{[^}]*position:\s*sticky/s
+    end
+
+    test "visible: false carries inert on its own back link" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.page_bar title="Catan" back_to="/admin/juegos" visible={false} />
+        """)
+
+      assert html =~ "inert"
+      refute html =~ "pk-admin-page-bar--visible"
+    end
+
+    test "visible: true does not carry inert on its own back link" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.page_bar title="Catan" back_to="/admin/juegos" visible />
+        """)
+
+      refute html =~ "inert"
+      assert html =~ "pk-admin-page-bar--visible"
+    end
+  end
+
+  describe "page_bar/1 alongside back_row/1 — exactly one focusable back control (D-19n)" do
+    test "page_bar visible: back_row is inert, page_bar's back link is not" do
+      assigns = %{}
+
+      page_bar_html =
+        rendered_to_string(~H"""
+        <AdminComponents.page_bar title="Catan" back_to="/admin/juegos" visible />
+        """)
+
+      back_row_html =
+        rendered_to_string(~H"""
+        <AdminComponents.back_row to="/admin/juegos" inert />
+        """)
+
+      refute page_bar_html =~ "inert"
+      assert back_row_html =~ "inert"
+    end
+
+    test "page_bar hidden: page_bar's back link is inert, back_row is not" do
+      assigns = %{}
+
+      page_bar_html =
+        rendered_to_string(~H"""
+        <AdminComponents.page_bar title="Catan" back_to="/admin/juegos" visible={false} />
+        """)
+
+      back_row_html =
+        rendered_to_string(~H"""
+        <AdminComponents.back_row to="/admin/juegos" inert={false} />
+        """)
+
+      assert page_bar_html =~ "inert"
+      refute back_row_html =~ "inert"
+    end
+  end
 end

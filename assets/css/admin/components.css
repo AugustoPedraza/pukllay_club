@@ -651,3 +651,145 @@
 .pk-admin-snackbar .pk-admin-action {
   color: inherit;
 }
+
+/* ============================================================
+   Plan 01.8.2-08 Task 3 — the fixed foot save bar, the back row and the
+   pinned page bar (D-28, D-19n).
+   ============================================================ */
+
+/* D-28's 77px is declared ONCE here — `.pk-admin-save-bar`'s own height
+   and `.pk-admin-has-save-bar`'s body clearance both `calc()` off this
+   SAME property, so the two can never independently drift (the exact
+   failure D-28 names: "an estimate hides the last block under a few
+   pixels and no check notices"). */
+:root {
+  --pk-save-bar-h: 77px;
+}
+
+/* Copies `.pk-mobile-cta-bar`'s geometry (`app.css:5375`) — fixed at the
+   foot, full width — but PAGE-coloured (`--color-base-100`, D-28), not
+   `.pk-mobile-cta-bar`'s tonal `--color-base-200`: D-28 measured that a
+   tonal bar gives a disabled button 1:1 (invisible) contrast against it,
+   so the bar's ground must match the disabled button's own ground. Opaque
+   with only a 1px top line — never a tonal band (sketch 080's negative
+   test 25, ported forward). */
+.pk-admin-save-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--pk-save-bar-h);
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--stroke);
+}
+
+.pk-admin-save-bar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-save-bar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  flex-shrink: 0;
+}
+
+/* The action is A1 exactly (natural width, outline, never filled — that's
+   `action/1`'s own anatomy, reused verbatim) — this rule only pushes it to
+   the bar's right edge ("right-aligned on the keel", D-28). Deliberately
+   NO `width: 100%`/`flex: 1` here: sketch 080's negative test 23 (the
+   button must stay at its natural width, never stretch to fill the bar)
+   is exactly what a full-width rule here would violate. */
+.pk-admin-save-bar__action {
+  margin-left: auto;
+}
+
+/* Body clearance: the ONLY consumer of `--pk-save-bar-h` outside the bar
+   itself. A page rendering `save_bar/1` adds this class to its scroll
+   container so the last block is never hidden underneath the fixed bar —
+   derived via `calc()`, never a second literal pixel figure. */
+.pk-admin-has-save-bar {
+  padding-bottom: calc(var(--pk-save-bar-h) + 0px);
+}
+
+/* Back row: the in-page back control, D1/D2/D3's page-head rhythm — one
+   44px row, shared visual anatomy with `.pk-admin-page-bar__back` below so
+   the two read as the same control, never two independently-styled
+   "back" shapes. */
+.pk-admin-back-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  text-decoration: none;
+}
+
+/* Page bar (D-19n): an ABSOLUTE overlay, never `position: sticky` — this
+   is the mechanism that gives it zero layout cost at rest. An absolutely
+   positioned element is taken out of normal document flow unconditionally
+   (whether or not `--visible` is set), so there is no `display` toggle
+   step that could ever reserve or release layout height; a sticky child
+   would still occupy its slot in flow even while visually "at rest". */
+.pk-admin-page-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--stroke);
+  /* `visibility`, never `opacity` — this module never declares a bare
+     `opacity` property anywhere (D-24's rule, generalised: opacity dims
+     content instead of cleanly presenting/absenting it). `visibility`
+     does not affect box generation for an absolutely-positioned element,
+     so this toggle still costs zero layout at rest either way. */
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.pk-admin-page-bar--visible {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.pk-admin-page-bar__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin-left: -12px;
+  color: var(--color-base-content);
+}
+
+.pk-admin-page-bar__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
