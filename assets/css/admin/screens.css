@@ -260,10 +260,20 @@
   gap: 4px;
 }
 
-/* One row = the (link-mode) `list_row/1` plus its ↑/↓ actions as true DOM
-   SIBLINGS, never nested inside the row's own `<.link>` — an anchor
-   cannot legally contain interactive content, and a click on a nested
-   button would also bubble to the link's own navigation. */
+/* Holds EITHER the resting `list_section_label/1` + Ordenar icon OR
+   `reorder_header/1`'s title + Listo — never both (062-B, plan
+   01.8.2-15 Task 2). */
+.pk-admin-web-otras-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* At rest, a row is just the (link-mode) `list_row/1` — no reorder
+   control (T-01.8.2-68's own resting-state assertion). Task 1's sibling-
+   arrows shape is retired by this plan's Task 2: the Ordenar→Listo mode
+   below is the only surviving reorder path. */
 .pk-admin-web-otras-row {
   display: flex;
   align-items: center;

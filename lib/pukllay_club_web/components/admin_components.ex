@@ -875,4 +875,95 @@ defmodule PukllayClubWeb.AdminComponents do
     </div>
     """
   end
+
+  # ============================================================
+  # Plan 01.8.2-15, Task 2 — the Ordenar→Listo mode (062-B, R7 #4). The
+  # SECOND consumer is plan 01.8.2-18's Administrar estantes — R7 #4's
+  # whole point is that every ↑/↓-carrying admin screen moves to this one
+  # shape together, so the mode's own markup lives here rather than being
+  # forked into `section_live/index.ex`/`edit.ex`.
+  # ============================================================
+
+  @doc """
+  Renders the Ordenar-mode header swap: the mode's own title (at
+  `page_bar/1`'s 17/600 rank) plus a trailing `action/1` `anatomy="a2"`
+  `role="terciaria"` **Listo**. The caller renders this INSTEAD of its
+  normal heading while its own `reorder_mode` assign is true — never
+  alongside it (two headers fighting for one slot is exactly what this
+  atom exists to prevent).
+  """
+  attr :title, :string, default: "Ordenar"
+  attr :on_done, JS, required: true
+  attr :class, :any, default: nil
+
+  def reorder_header(assigns) do
+    ~H"""
+    <div class={["pk-admin-reorder-header", @class]}>
+      <span class="pk-admin-reorder-header__title">{@title}</span>
+      <.action anatomy="a2" role="terciaria" phx-click={@on_done}>Listo</.action>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders one row of the Ordenar→Listo mode: a 44px drag-handle glyph
+  that, on TAP, reveals ↑/↓ on this row only — the WCAG 2.5.7 non-drag
+  fallback this whole mode is built around (T-01.8.2-68: there is no
+  drag-and-drop precedent anywhere in this codebase, so the tap-reveal
+  path is the one this plan wires and tests; native pointer-drag
+  reordering is a later, additive enhancement over this same markup, not
+  shipped here — the handle renders no `draggable` attribute, since a
+  `draggable` element with no drop handler would be a dead affordance).
+
+  `revealed` gates the ↑/↓ pair for THIS row alone — the caller is
+  responsible for tracking which single row (if any) is revealed, so
+  tapping one row's handle never reveals a second row's arrows.
+  """
+  attr :id, :string, required: true
+  attr :revealed, :boolean, default: false
+  attr :on_reveal, JS, required: true
+  attr :on_up, JS, required: true
+  attr :on_down, JS, required: true
+  attr :up_label, :string, required: true
+  attr :down_label, :string, required: true
+  attr :class, :any, default: nil
+
+  slot :inner_block, required: true
+
+  def reorder_row(assigns) do
+    ~H"""
+    <div id={@id} class={["pk-admin-reorder-row", @class]} data-pk-reorder-row>
+      <button
+        type="button"
+        class="pk-admin-reorder-row__handle"
+        data-pk-pressable="true"
+        aria-label="Reordenar"
+        phx-click={@on_reveal}
+      >
+        <CoreComponents.icon name="hero-bars-3" class="size-5" />
+      </button>
+      <div class="pk-admin-reorder-row__content">{render_slot(@inner_block)}</div>
+      <div :if={@revealed} class="pk-admin-reorder-row__arrows" role="group" aria-label="Orden">
+        <button
+          type="button"
+          class="pk-admin-reorder-row__arrow"
+          data-pk-pressable="true"
+          aria-label={@up_label}
+          phx-click={@on_up}
+        >
+          <CoreComponents.icon name="hero-arrow-up" class="size-4" />
+        </button>
+        <button
+          type="button"
+          class="pk-admin-reorder-row__arrow"
+          data-pk-pressable="true"
+          aria-label={@down_label}
+          phx-click={@on_down}
+        >
+          <CoreComponents.icon name="hero-arrow-down" class="size-4" />
+        </button>
+      </div>
+    </div>
+    """
+  end
 end

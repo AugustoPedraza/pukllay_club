@@ -849,3 +849,76 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ============================================================
+   Plan 01.8.2-15, Task 2 — the Ordenar→Listo mode (062-B; second
+   consumer is plan 01.8.2-18's Administrar estantes, per R7 #4: all
+   three ↑/↓-carrying screens move to this one shape together).
+   ============================================================ */
+
+/* Replaces whatever heading sits in this slot while the mode is active —
+   title at `page_bar/1`'s own 17/600 rank, so a mode header and a pinned
+   page bar title read as the same weight. */
+.pk-admin-reorder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.pk-admin-reorder-header__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* One row: a 44px drag handle (the WCAG 2.5.7 non-drag fallback — tapping
+   it reveals ↑/↓ on THIS row only), the caller's own content, and the
+   revealed arrow pair. No `[data-pk-pressable]` on the row itself — only
+   the handle and the two arrow buttons are pressable surfaces here. */
+.pk-admin-reorder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+}
+
+.pk-admin-reorder-row__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin-left: -12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+}
+
+.pk-admin-reorder-row__content {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--color-base-content);
+}
+
+.pk-admin-reorder-row__arrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pk-admin-reorder-row__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+}

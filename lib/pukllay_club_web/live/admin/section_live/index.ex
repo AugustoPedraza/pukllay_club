@@ -48,6 +48,10 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> assign(:add_error, nil)
      |> assign(:selected_member, nil)
      |> assign(:removed, nil)
+     |> assign(:reorder_mode, false)
+     |> assign(:revealed_section_id, nil)
+     |> assign(:reorder_snapshot, nil)
+     |> assign(:undo_snapshot, nil)
      |> load_sections()}
   end
 
@@ -184,14 +188,62 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     {:noreply, assign(socket, :removed, nil)}
   end
 
+  @impl true
+  def handle_event("start-reorder", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:reorder_mode, true)
+     |> assign(:revealed_section_id, nil)
+     |> assign(:reorder_snapshot, Enum.map(socket.assigns.other_sections, & &1.id))}
+  end
+
+  @impl true
+  def handle_event("done-reorder", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:reorder_mode, false)
+     |> assign(:revealed_section_id, nil)
+     |> assign(:undo_snapshot, socket.assigns.reorder_snapshot)
+     |> assign(:reorder_snapshot, nil)}
+  end
+
+  @impl true
+  def handle_event("undo-reorder", _params, socket) do
+    case socket.assigns.undo_snapshot do
+      nil ->
+        {:noreply, socket}
+
+      snapshot ->
+        restore_section_order(snapshot)
+        {:noreply, socket |> assign(:undo_snapshot, nil) |> load_sections()}
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss-reorder-snackbar", _params, socket) do
+    {:noreply, assign(socket, :undo_snapshot, nil)}
+  end
+
+  @impl true
+  def handle_event("reveal-section", %{"id" => id}, socket) do
+    case parse_id(id) do
+      nil -> {:noreply, socket}
+      int_id -> {:noreply, assign(socket, :revealed_section_id, int_id)}
+    end
+  end
+
+  # `id` arrives as a string from the always-visible-arrows era's
+  # `phx-value-section-id` HTML attribute, OR as an already-decoded
+  # integer from `reorder_row/1`'s `JS.push(..., value: %{"section-id" =>
+  # section.id})` — `parse_id/1` accepts both.
   defp move(socket, id, direction) do
-    case Integer.parse(id) do
-      {int_id, ""} ->
+    case parse_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      int_id ->
         {:ok, _section} = int_id |> Sections.get_section!() |> Sections.move_section(direction)
         {:noreply, load_sections(socket)}
-
-      _not_an_integer ->
-        {:noreply, socket}
     end
   end
 
@@ -208,6 +260,44 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   end
 
   defp normalize_ajustes_params(params), do: params
+
+  # `JS.push(..., value: %{"id" => section.id})` round-trips the id as a
+  # JSON number, not a string — `phx-value-*` HTML attributes always
+  # arrive as strings. Accept both rather than assuming one shape.
+  defp parse_id(id) when is_integer(id), do: id
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int_id, ""} -> int_id
+      _not_an_integer -> nil
+    end
+  end
+
+  defp parse_id(_other), do: nil
+
+  # Restores `@other_sections` to `target_ids`' order using ONLY
+  # `Sections.move_section/2`'s existing adjacent-swap primitive (no new
+  # `Sections` function, per this plan's own scope) — a classic
+  # selection-sort-by-adjacent-transposition: for each target position in
+  # turn, bubble the wanted section up to it one swap at a time.
+  defp restore_section_order(target_ids) do
+    Enum.reduce(0..(length(target_ids) - 1), :ok, fn index, :ok ->
+      wanted_id = Enum.at(target_ids, index)
+      bubble_section_to(wanted_id, index)
+    end)
+  end
+
+  defp bubble_section_to(section_id, target_index) do
+    current_ids = Sections.list_sections() |> Enum.reject(& &1.featured) |> Enum.map(& &1.id)
+    current_index = Enum.find_index(current_ids, &(&1 == section_id))
+
+    if current_index && current_index > target_index do
+      {:ok, _section} = section_id |> Sections.get_section!() |> Sections.move_section(:up)
+      bubble_section_to(section_id, target_index)
+    else
+      :ok
+    end
+  end
 
   defp search_candidates(socket, q) do
     member_game_ids = Enum.map(socket.assigns.featured_members, & &1.game_id)
@@ -332,43 +422,60 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
         </div>
 
         <section :if={@other_sections != []} id="web-otras-filas" class="pk-admin-web-otras">
-          <AdminComponents.list_section_label>Otras filas</AdminComponents.list_section_label>
+          <div class="pk-admin-web-otras-header">
+            <AdminComponents.reorder_header
+              :if={@reorder_mode}
+              title="Ordenar filas"
+              on_done={JS.push("done-reorder")}
+            />
+            <AdminComponents.list_section_label :if={!@reorder_mode}>
+              Otras filas
+            </AdminComponents.list_section_label>
+            <AdminComponents.action
+              :if={!@reorder_mode}
+              anatomy="a3"
+              role="terciaria"
+              aria-label="Ordenar filas"
+              phx-click="start-reorder"
+            >
+              <.icon name="hero-arrows-up-down" class="size-5" />
+            </AdminComponents.action>
+          </div>
 
-          <div :for={section <- @other_sections} class="pk-admin-web-otras-row">
-            <AdminComponents.list_row
-              id={"other-section-#{section.id}"}
-              class="pk-admin-web-otras-row__row"
-              name={section.name}
-              meta={other_section_meta(section)}
-              navigate={~p"/admin/secciones/#{section.id}"}
-              opens_page
+          <div :if={!@reorder_mode}>
+            <div :for={section <- @other_sections} class="pk-admin-web-otras-row">
+              <AdminComponents.list_row
+                id={"other-section-#{section.id}"}
+                class="pk-admin-web-otras-row__row"
+                name={section.name}
+                meta={other_section_meta(section)}
+                navigate={~p"/admin/secciones/#{section.id}"}
+                opens_page
+              >
+                <:trailing>
+                  <AdminComponents.kind_tag label={kind_tag_label(section.kind)} />
+                  <AdminComponents.count_pill
+                    :if={other_section_count(section)}
+                    count={other_section_count(section)}
+                  />
+                </:trailing>
+              </AdminComponents.list_row>
+            </div>
+          </div>
+
+          <div :if={@reorder_mode} id="web-otras-reorder">
+            <AdminComponents.reorder_row
+              :for={section <- @other_sections}
+              id={"reorder-section-#{section.id}"}
+              revealed={@revealed_section_id == section.id}
+              on_reveal={JS.push("reveal-section", value: %{"id" => section.id})}
+              on_up={JS.push("move-up", value: %{"section-id" => section.id})}
+              on_down={JS.push("move-down", value: %{"section-id" => section.id})}
+              up_label={"Subir #{section.name}"}
+              down_label={"Bajar #{section.name}"}
             >
-              <:trailing>
-                <AdminComponents.kind_tag label={kind_tag_label(section.kind)} />
-                <AdminComponents.count_pill
-                  :if={other_section_count(section)}
-                  count={other_section_count(section)}
-                />
-              </:trailing>
-            </AdminComponents.list_row>
-            <AdminComponents.action
-              anatomy="a3"
-              role="terciaria"
-              aria-label={"Subir #{section.name}"}
-              phx-click="move-up"
-              phx-value-section-id={section.id}
-            >
-              <.icon name="hero-arrow-up" class="size-5" />
-            </AdminComponents.action>
-            <AdminComponents.action
-              anatomy="a3"
-              role="terciaria"
-              aria-label={"Bajar #{section.name}"}
-              phx-click="move-down"
-              phx-value-section-id={section.id}
-            >
-              <.icon name="hero-arrow-down" class="size-5" />
-            </AdminComponents.action>
+              {section.name}
+            </AdminComponents.reorder_row>
           </div>
         </section>
 
@@ -414,6 +521,14 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
         message={"«#{@removed.name}» quitado de la fila."}
         action={%{label: "Deshacer", event: "undo-remove"}}
         on_close={JS.push("dismiss-remove-snackbar")}
+      />
+
+      <AdminComponents.snackbar
+        :if={@undo_snapshot}
+        id="web-reorder-snackbar"
+        message="Orden guardado"
+        action={%{label: "Deshacer", event: "undo-reorder"}}
+        on_close={JS.push("dismiss-reorder-snackbar")}
       />
     </Layouts.app>
     """

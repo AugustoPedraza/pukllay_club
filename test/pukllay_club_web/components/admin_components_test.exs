@@ -1058,4 +1058,99 @@ defmodule PukllayClubWeb.AdminComponentsTest do
       refute back_row_html =~ "inert"
     end
   end
+
+  describe "reorder_header/1 — the Ordenar-mode header swap (062-B, R7 #4)" do
+    test "renders the mode title and a Listo action" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.reorder_header title="Ordenar filas" on_done={Phoenix.LiveView.JS.push("done")} />
+        """)
+
+      assert html =~ "Ordenar filas"
+      assert html =~ "Listo"
+      assert html =~ "pk-admin-action--a2"
+      assert html =~ "pk-admin-action--terciaria"
+    end
+
+    test "defaults the title to Ordenar" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.reorder_header on_done={Phoenix.LiveView.JS.push("done")} />
+        """)
+
+      assert html =~ "Ordenar"
+    end
+  end
+
+  describe "reorder_row/1 — the drag-handle / ↑/↓-reveal row (062-B, T-01.8.2-68)" do
+    test "at rest renders the handle and the caller's content, but no arrows" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.reorder_row
+          id="reorder-1"
+          on_reveal={Phoenix.LiveView.JS.push("reveal")}
+          on_up={Phoenix.LiveView.JS.push("up")}
+          on_down={Phoenix.LiveView.JS.push("down")}
+          up_label="Subir Catán"
+          down_label="Bajar Catán"
+        >
+          Catán
+        </AdminComponents.reorder_row>
+        """)
+
+      assert html =~ "Catán"
+      assert html =~ "Reordenar"
+      refute html =~ "pk-admin-reorder-row__arrows"
+      refute html =~ "Subir Catán"
+    end
+
+    test "revealed renders the ↑/↓ pair with the caller's own accessible labels" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.reorder_row
+          id="reorder-1"
+          revealed
+          on_reveal={Phoenix.LiveView.JS.push("reveal")}
+          on_up={Phoenix.LiveView.JS.push("up")}
+          on_down={Phoenix.LiveView.JS.push("down")}
+          up_label="Subir Catán"
+          down_label="Bajar Catán"
+        >
+          Catán
+        </AdminComponents.reorder_row>
+        """)
+
+      assert html =~ "pk-admin-reorder-row__arrows"
+      assert html =~ "Subir Catán"
+      assert html =~ "Bajar Catán"
+    end
+
+    test "renders no draggable attribute — the handle wires only its tap-reveal path" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.reorder_row
+          id="reorder-1"
+          on_reveal={Phoenix.LiveView.JS.push("reveal")}
+          on_up={Phoenix.LiveView.JS.push("up")}
+          on_down={Phoenix.LiveView.JS.push("down")}
+          up_label="Subir"
+          down_label="Bajar"
+        >
+          Catán
+        </AdminComponents.reorder_row>
+        """)
+
+      refute html =~ "draggable"
+    end
+  end
 end

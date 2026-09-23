@@ -82,31 +82,60 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
-  describe "SectionLive.Index — reorder (D-18, D-19, UI-SPEC Visual Hierarchy)" do
+  describe "SectionLive.Index — Ordenar→Listo mode (062-B, R7 #4, T-01.8.2-68)" do
     setup :register_and_log_in_staff
 
-    test "the featured row has no ↑/↓ controls in Otras filas; a non-featured row does", %{conn: conn} do
-      featured = featured_section()
+    test "at rest no Otras fila row shows a reorder control", %{conn: conn} do
       section_fixture(%{name: "Movible"})
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
 
-      refute has_element?(lv, "button[aria-label='Subir #{featured.name}']")
-      refute has_element?(lv, "button[aria-label='Bajar #{featured.name}']")
-      assert has_element?(lv, "button[aria-label='Subir Movible']")
-      assert has_element?(lv, "button[aria-label='Bajar Movible']")
+      refute has_element?(lv, "#web-otras-reorder")
+      refute has_element?(lv, "button[aria-label='Reordenar']")
     end
 
-    test "pressing ↓ reorders the admin list and the home page's own order", %{conn: conn} do
+    test "Ordenar filas enters the mode: a drag handle per row and Listo in the header", %{conn: conn} do
+      section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      assert has_element?(lv, "#web-otras-reorder")
+      assert has_element?(lv, "#web-otras-reorder button[aria-label='Reordenar']")
+      assert has_element?(lv, "button", "Listo")
+      # the mode replaces the resting header — Otras filas and its own
+      # icon are gone while active
+      refute has_element?(lv, "button[aria-label='Ordenar filas']")
+    end
+
+    test "tapping a handle reveals ↑/↓ on that row only", %{conn: conn} do
+      a = section_fixture(%{name: "Sección A"})
+      b = section_fixture(%{name: "Sección B"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
+
+      assert has_element?(lv, "button[aria-label='Subir #{a.name}']")
+      assert has_element?(lv, "button[aria-label='Bajar #{a.name}']")
+      refute has_element?(lv, "button[aria-label='Subir #{b.name}']")
+      refute has_element?(lv, "button[aria-label='Bajar #{b.name}']")
+    end
+
+    test "↓ reorders the admin list and the home page's own order", %{conn: conn} do
       a = section_fixture(%{name: "Sección A", position: 500})
       b = section_fixture(%{name: "Sección B", position: 501})
       add_game_to_section(a, game_fixture(%{name: "Juego A"}))
       add_game_to_section(b, game_fixture(%{name: "Juego B"}))
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
 
       lv
-      |> element("button[phx-value-section-id='#{a.id}'][phx-click='move-down']")
+      |> element("button[aria-label='Bajar #{a.name}']")
       |> render_click()
 
       assert Repo.get!(Section, a.id).position == 501
@@ -118,6 +147,40 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
         |> Enum.map(& &1.title)
 
       assert home_titles == ["Sección B", "Sección A"]
+    end
+
+    test "Listo exits the mode and shows Orden guardado with a Deshacer snackbar", %{conn: conn} do
+      section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+
+      refute has_element?(lv, "#web-otras-reorder")
+      assert html =~ "Orden guardado"
+      assert html =~ ~s(data-timeout="10000")
+    end
+
+    test "Deshacer restores the order in effect when Ordenar filas was entered", %{conn: conn} do
+      a = section_fixture(%{name: "Sección A", position: 500})
+      b = section_fixture(%{name: "Sección B", position: 501})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
+
+      lv
+      |> element("button[aria-label='Bajar #{a.name}']")
+      |> render_click()
+
+      assert Repo.get!(Section, a.id).position == b.position
+
+      lv |> element("button", "Listo") |> render_click()
+      lv |> element("button[phx-click='undo-reorder']") |> render_click()
+
+      assert Repo.get!(Section, a.id).position == 500
+      assert Repo.get!(Section, b.id).position == 501
     end
   end
 
@@ -419,26 +482,61 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert html =~ "Carcassonne"
     end
 
-    test "a member row shows ↑/↓ when sort is manual", %{conn: conn} do
+    test "at rest a member row shows no reorder control; Ordenar juegos enters the mode when sort is manual",
+         %{conn: conn} do
       section = section_fixture(%{kind: :manual, sort: :manual})
       game = game_fixture(%{name: "Catán"})
       add_game_to_section(section, game)
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
+      refute has_element?(lv, "#section-members-reorder")
+      assert has_element?(lv, "button[aria-label='Ordenar juegos']")
+
+      lv |> element("button[aria-label='Ordenar juegos']") |> render_click()
+      lv |> element("#reorder-member-#{game.id} button[aria-label='Reordenar']") |> render_click()
+
       assert has_element?(lv, "button[aria-label='Subir Catán']")
       assert has_element?(lv, "button[aria-label='Bajar Catán']")
     end
 
-    test "a member row hides ↑/↓ when sort is not manual", %{conn: conn} do
+    test "no Ordenar juegos icon when sort is not manual", %{conn: conn} do
       section = section_fixture(%{kind: :manual, sort: :name})
       game = game_fixture(%{name: "Catán"})
       add_game_to_section(section, game)
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
-      refute has_element?(lv, "button[aria-label='Subir Catán']")
-      refute has_element?(lv, "button[aria-label='Bajar Catán']")
+      refute has_element?(lv, "button[aria-label='Ordenar juegos']")
+    end
+
+    test "Listo exits the mode and Deshacer restores the prior order", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      first = game_fixture(%{name: "Primero"})
+      second = game_fixture(%{name: "Segundo"})
+      add_game_to_section(section, first, 1)
+      add_game_to_section(section, second, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+      lv |> element("button[aria-label='Ordenar juegos']") |> render_click()
+      lv |> element("#reorder-member-#{first.id} button[aria-label='Reordenar']") |> render_click()
+
+      lv
+      |> element("button[aria-label='Bajar Primero']")
+      |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+
+      refute has_element?(lv, "#section-members-reorder")
+      assert html =~ "Orden guardado"
+
+      order_after_move = Enum.map(Sections.section_members(section), & &1.game_id)
+      assert order_after_move == [second.id, first.id]
+
+      lv |> element("button[phx-click='undo-reorder']") |> render_click()
+
+      order_after_undo = Enum.map(Sections.section_members(section), & &1.game_id)
+      assert order_after_undo == [first.id, second.id]
     end
 
     test "Quitar de la fila removes at once, with a Deshacer snackbar and no dialog", %{conn: conn} do
