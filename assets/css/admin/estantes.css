@@ -1,0 +1,173 @@
+/* Estantes (plan 01.8.2-13, D-08, D-19g, D-19j) — the search-first "find a
+   box" screen. This slice (Task 1 of 3) covers only the idle state and
+   the search dropdown; the answered-state rail and D-19n's pinned-search
+   behaviour are Task 2's own addition to this same file.
+
+   Idle: prompt + 48px field at the optical centre (2:3 top:bottom split —
+   069's own `.sp-top`/`.sp-bot` ratio, measured as reading better than a
+   geometric 1:1 centre).
+
+   Wired into the build via a direct `@import "./admin/estantes.css";`
+   appended to `app.css`'s existing admin-import block (sibling to
+   `tokens.css`/`chrome.css`/`screens.css`) — unlike plan 01.8.2-07's
+   `components.css`, nothing in this plan's `<verify>` forbids touching
+   `app.css` directly, so no nested-import workaround is needed here.
+   Proven reaching `priv/static/assets/css/app.css` after `mix
+   assets.build` — see this plan's SUMMARY for the grep proof. */
+
+.pk-estantes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pk-estantes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Mirrors `chrome.css`'s `.pk-admin-tab-badge` D-19g visual contract
+   (18px, primary fill, "99+" above 99, absent at 0) at a different
+   anchor — a 44px A3 icon button in a page header, not the tab bar's own
+   56x30 icon wrapper. Declared separately rather than reusing
+   `.pk-admin-tab-badge` directly, since that class's `top`/`right` offsets
+   are tuned to the tab bar's own icon geometry, not this one. */
+.pk-estantes-icon-badge {
+  position: relative;
+  display: inline-flex;
+}
+
+.pk-estantes-icon-badge__count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Idle hero (D-08, decision 58): the prompt sits above the field, and
+   "nothing below it may look heavier than the field" — there is nothing
+   else in this block on purpose. */
+.pk-estantes {
+  display: flex;
+  flex-direction: column;
+  /* Room to distribute the 2:3 idle split into — flex-grow has nothing to
+     divide without it. A rough allowance for the page header above this
+     block. */
+  min-height: calc(100dvh - 140px);
+}
+
+.pk-estantes-hero {
+  display: flex;
+  flex: 2 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 16px;
+  text-align: center;
+}
+
+.pk-estantes-prompt {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* the optical-centre bottom half (decision 61's `.sp-bot`, flex: 3): an
+   idle-only spacer so the hero+field group sits at 2:3, not a geometric
+   1:1 centre — measured in 069 as reading "sunk" at 1:1. */
+.pk-estantes-spacer-bottom {
+  flex: 3 1 0;
+}
+
+.pk-estantes-search-wrap {
+  background: var(--color-base-100);
+}
+
+.pk-estantes-search {
+  position: relative;
+}
+
+#estantes-search-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 48px 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+#estantes-search-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.pk-estantes-search__clear {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+  cursor: pointer;
+}
+
+/* D-08 decision 12: "the dropdown falls OVER the page" — an absolutely
+   positioned overlay, not a block that pushes content below it down.
+   Shown only while the field (or a row inside the dropdown) has focus —
+   `:focus-within` on the wrapping form, so no server round trip is
+   needed just to open/close it, and clicking a row never races a blur
+   close (the click target is still inside the focus-within subtree at
+   the moment of mousedown). */
+.pk-estantes-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  border: 1px solid var(--color-base-300);
+  border-radius: 12px;
+  background: var(--color-base-100);
+  box-shadow: 0 10px 30px -6px color-mix(in srgb, var(--color-base-content) 25%, transparent);
+  padding: 4px 0;
+  max-height: 264px;
+  overflow-y: auto;
+  z-index: 16;
+}
+
+.pk-estantes-search:not(:focus-within) .pk-estantes-dropdown {
+  display: none;
+}
+
+.pk-estantes-no-match {
+  padding: 4px 0 8px;
+}
+
+.pk-estantes-no-match__hint,
+.pk-estantes-no-recent {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--color-neutral);
+}
+
+.pk-estantes-row-meta {
+  font-size: 13px;
+  color: var(--color-neutral);
+}

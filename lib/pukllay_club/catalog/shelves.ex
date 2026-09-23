@@ -47,6 +47,15 @@ defmodule PukllayClub.Catalog.Shelves do
   # `shelf_id`.
   @estante_lock_namespace 8_811_016
 
+  # T-01.8.2-55/56 (plan 01.8.2-13): `search_copies/1`'s two bounds, mirroring
+  # `CatalogFilters`' own established 20x120 ceiling for open-text admin
+  # params (`@max_name_length`, `parse_list_param/2`'s `Enum.take(20)`) — the
+  # query string is capped BEFORE it ever reaches `ilike/2`, and the result
+  # set is capped so a broad match (e.g. a single common letter) can never
+  # return more than a short, scannable suggestion list.
+  @max_search_query_length 120
+  @max_search_results 20
+
   @doc "Shelves in walking order (ascending `position`, `:id` tiebreak)."
   def list_shelves do
     Repo.all(from s in Shelf, order_by: [asc: s.position, asc: s.id])
@@ -204,6 +213,38 @@ defmodule PukllayClub.Catalog.Shelves do
     |> String.replace("%", "\\%")
     |> String.replace("_", "\\_")
   end
+
+  @doc """
+  Type-ahead suggestion query across every non-retired game's copies (D-08,
+  plan 01.8.2-13 — supersedes `search_games/1` above as the Estantes
+  screen's own suggestion source, since that function reads the dead
+  `games.shelf_id` column per its own moduledoc flag). Bound by query
+  length (#{@max_search_query_length} chars) and result count
+  (#{@max_search_results}) — T-01.8.2-55/56, mirroring `CatalogFilters`'
+  20x120 open-text ceiling; never `String.to_atom/1` on the input. Matches
+  by game name (same escaped-ILIKE convention as `search_games/1`), across
+  BOTH placed and unplaced copies — D-08's suggestion row renders either the
+  estante name or the `Sin lugar` marker, so an unplaced copy must be
+  reachable here too. Preloads `:game` and `:shelf` (the latter `nil` for
+  an unplaced copy) so a caller never has to follow up with a second query
+  per row.
+  """
+  @spec search_copies(String.t()) :: [Copy.t()]
+  def search_copies(q) when is_binary(q) and q != "" do
+    escaped = q |> String.slice(0, @max_search_query_length) |> escape_ilike()
+    pattern = "%" <> escaped <> "%"
+
+    Copy
+    |> join(:inner, [c], g in assoc(c, :game))
+    |> where([c, g], g.status != :retired)
+    |> where([c, g], ilike(g.name, ^pattern))
+    |> order_by([c, g], asc: g.name, asc: g.id)
+    |> limit(^@max_search_results)
+    |> Repo.all()
+    |> Repo.preload([:game, :shelf])
+  end
+
+  def search_copies(_blank), do: []
 
   @doc """
   Copies on `shelf_id`, in real left-to-right `position` order (D-04/D-08

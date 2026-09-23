@@ -1,9 +1,11 @@
 defmodule PukllayClubWeb.Admin.EstanteLiveTest do
   @moduledoc """
-  Proves the phase tracer end to end (01.8.2-01, D-01..D-04, D-08): a
-  copy placed at a chosen position renders at that position on
-  `/admin/estantes`, staff-only gating holds, and the superseded Asignar
-  screen no longer routes.
+  D-08's search-first Estantes screen (plan 01.8.2-13, rebuilding the
+  01.8.2-01 tracer this replaces). This slice (Task 1 of 3) covers the
+  idle prompt+field at rest and the search dropdown (recent/suggestions/
+  no-match). The answered state's rail (D-03/D-04's accessible-name
+  contract) and D-11's live-update behaviour are Task 2 and Task 3's own
+  additions to this same file.
   """
   use PukllayClubWeb.ConnCase, async: true
 
@@ -21,101 +23,109 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
     end
   end
 
-  describe "GET /admin/estantes — staff (T-01.8.2-03)" do
-    setup :register_and_log_in_staff
-
-    test "a staff user can reach the page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
-      assert html =~ "Estantes"
+  describe "GET /admin/estantes/1/asignar — superseded route (D-08)" do
+    test "returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/1/asignar")
     end
   end
 
-  describe "the rail renders copies in position order (D-04/D-08)" do
+  describe "the idle state (D-08, D-19j)" do
     setup :register_and_log_in_staff
 
-    test "covers render in position order and the third cover's accessible name contains 'caja 3 de'",
-         %{conn: conn} do
-      shelf = shelf_fixture(%{name: "Estante Norte"})
-
-      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Primero"}).id})
-      c1 = copy_fixture(%{game_id: game_fixture(%{name: "Segundo"}).id})
-      c2 = copy_fixture(%{game_id: game_fixture(%{name: "Tercero"}).id})
-
-      {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
-      {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
-      {:ok, _} = Shelves.place_copy(c2.id, shelf.id, 2)
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?estante=#{shelf.id}")
-
-      assert html =~ "Estante Norte"
-      assert html =~ ~s(id="estante-copy-#{c0.id}")
-      assert html =~ ~s(id="estante-copy-#{c1.id}")
-      assert html =~ ~s(id="estante-copy-#{c2.id}")
-
-      # DOM order proves position order: c0's markup precedes c1's, which
-      # precedes c2's.
-      i0 = html |> :binary.match("estante-copy-#{c0.id}") |> elem(0)
-      i1 = html |> :binary.match("estante-copy-#{c1.id}") |> elem(0)
-      i2 = html |> :binary.match("estante-copy-#{c2.id}") |> elem(0)
-      assert i0 < i1
-      assert i1 < i2
-
-      assert html =~ "Tercero, caja 3 de 3"
-    end
-
-    test "selects the first estante by default and re-selects it on ?estante=", %{conn: conn} do
-      _norte = shelf_fixture(%{name: "Estante Norte"})
-      sur = shelf_fixture(%{name: "Estante Sur"})
-
+    test "renders the prompt and the field, and nothing else below (D-19j)", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
-      assert html =~ ">Estante Norte<"
-      refute html =~ ">Estante Sur<"
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?estante=#{sur.id}")
-      assert html =~ ">Estante Sur<"
-      refute html =~ ">Estante Norte<"
+      assert html =~ "¿Qué juego buscás?"
+      assert html =~ "Buscá un juego"
+      assert html =~ "Todavía no buscaste ningún juego."
+
+      refute html =~ "pk-rail\""
+      refute html =~ "estante-copy-"
+      refute html =~ "estantes-suggestions"
     end
 
-    test "an empty estante shows the empty-shelf message", %{conn: conn} do
+    test "renders no estante list and no pending-game list", %{conn: conn} do
       shelf_fixture(%{name: "Estante Norte"})
+      copy_fixture(%{game_id: game_fixture(%{name: "Sin lugar aún"}).id})
+
       {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
-      assert html =~ "Este estante todavía no tiene juegos."
+
+      refute html =~ "Estante Norte"
+      refute html =~ "Sin lugar aún"
     end
 
-    test "no estantes at all shows the empty-catalog message", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
-      assert html =~ "Todavía no hay estantes"
-    end
-
-    test "a nonsense ?estante= value falls back to the first estante rather than crashing",
+    test "the header renders the Pendientes A3 icon before the gear icon, with no badge at 0",
          %{conn: conn} do
-      shelf_fixture(%{name: "Estante Norte"})
-      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?estante=not-an-id")
-      assert html =~ ">Estante Norte<"
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      pendientes_at = html |> :binary.match("Pendientes") |> elem(0)
+      gear_at = html |> :binary.match("Administrar estantes") |> elem(0)
+      assert pendientes_at < gear_at
+
+      refute html =~ "pk-estantes-icon-badge__count"
     end
 
-    test "live re-reads the rail on an {:estante_updated, _} broadcast", %{conn: conn} do
+    test "the Pendientes badge count is Shelves.unplaced_copies/0's length", %{conn: conn} do
+      copy_fixture(%{game_id: game_fixture(%{name: "Uno"}).id})
+      copy_fixture(%{game_id: game_fixture(%{name: "Dos"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      assert length(Shelves.unplaced_copies()) == 2
+      assert html =~ "pk-estantes-icon-badge__count"
+      assert html =~ ~r/pk-estantes-icon-badge__count[^<]*>\s*2\s*</
+    end
+  end
+
+  describe "typing shows suggestions (D-08)" do
+    setup :register_and_log_in_staff
+
+    test "a match renders cover, name and the estante name", %{conn: conn} do
       shelf = shelf_fixture(%{name: "Estante Norte"})
-      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recien llegado"}).id})
-
-      {:ok, lv, html} = live(conn, ~p"/admin/estantes?estante=#{shelf.id}")
-      assert html =~ "Este estante todavía no tiene juegos."
-
+      game = game_fixture(%{name: "Catán"})
+      copy = copy_fixture(%{game_id: game.id})
       {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
 
-      assert render(lv) =~ ~s(id="estante-copy-#{copy.id}")
-    end
-  end
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "cat"})
 
-  describe "the superseded Asignar screen is gone (D-08)" do
-    # This app's router raises Phoenix.Router.NoRouteError for an unmatched
-    # path, which its own custom ErrorHTML (01.1-07's branded 404 template)
-    # renders as a normal 404 response rather than surfacing as an
-    # `assert_error_sent`/`assert_raise`-visible exception — asserting on
-    # `conn.status` directly is the correct check here (mirrors
-    # `admin_routes_test.exs`'s own convention).
-    test "GET /admin/estantes/1/asignar returns 404", %{conn: conn} do
-      assert %{status: 404} = get(conn, "/admin/estantes/1/asignar")
+      assert html =~ "Catán"
+      assert html =~ "Estante Norte"
+    end
+
+    test "an unplaced match renders the Sin lugar status dot, never a pill", %{conn: conn} do
+      game = game_fixture(%{name: "Dixit"})
+      copy_fixture(%{game_id: game.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "dix"})
+
+      assert html =~ "Dixit"
+      assert html =~ "pk-admin-status-dot--sin_lugar"
+      assert html =~ "Sin lugar"
+
+      # D-19h: never a pill for a status.
+      refute html =~ "pk-admin-pending-pill"
+      refute html =~ "pk-admin-count-pill"
+    end
+
+    test "a query with no match renders exactly one Crear « row", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "zzzznomatch"})
+
+      assert html =~ "Ningún juego se llama así."
+      assert html |> String.split("Crear «") |> length() == 2
+      assert html =~ "Crear «zzzznomatch»"
+    end
+
+    test "the suggestion query is capped at 120 characters and never crashes on a long input",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      long_query = String.duplicate("a", 500)
+
+      html = render_change(lv, "search", %{"q" => long_query})
+
+      assert html =~ "Ningún juego se llama así."
     end
   end
 end
