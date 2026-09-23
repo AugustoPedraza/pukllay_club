@@ -3056,7 +3056,18 @@ body.pk-sheet-open {
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
-.pk-drawer-backdrop.is-open {
+/* Task 1 (01.8.2-09, D-12/G-01.8.1-1b): the backdrop's open state is now
+   driven by :has(), not its own `.is-open` class. The drawer's open/close
+   state moved server-side into PukllayClubWeb.Layouts.NavDrawer (a stateful
+   LiveComponent) so it works identically on every page regardless of
+   whether that page's header is sticky — but the backdrop stays a plain,
+   stateless sibling div (moving it inside the component would break the
+   WINDOWS #4 "backdrop is a direct child of body" contract
+   nav_drawer_stacking_test.exs pins). :has() lets it react to the drawer
+   panel's own class without needing a copy of the state — same idiom this
+   file already uses for `body:has(#about-hero.is-docked)` and
+   `body:has(#about-hero[data-morph-armed])`, Baseline-2023. */
+body:has(#pk-nav-drawer.is-open) .pk-drawer-backdrop {
   opacity: 1;
   pointer-events: auto;
 }

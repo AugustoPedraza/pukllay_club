@@ -572,11 +572,17 @@ defmodule PukllayClubWeb.AdminComponentsTest do
     end
   end
 
-  describe "app.css is untouched by this plan" do
-    test "assets/css/app.css has no pending changes under git" do
-      {output, 0} = System.cmd("git", ["status", "--porcelain", "--", "assets/css/app.css"])
-
-      assert output == ""
-    end
-  end
+  # The "app.css is untouched by this plan" guard (plan 01.8.2-07's own
+  # Task 3 verify) is deliberately removed here, not merely updated: it
+  # asserted a per-PLAN invariant ("this plan doesn't touch app.css") that
+  # already stopped being true the moment a later plan legitimately needed
+  # to edit app.css — plan 01.8.2-09 Task 1 (D-12/G-01.8.1-1b) does exactly
+  # that (the drawer backdrop's `:has()` rule), and Task 2 (D-19d, moving
+  # the drawer left) must edit far more of it. A `git status --porcelain`
+  # assertion has no way to scope itself to "changes plan 07 introduced" —
+  # it would fail on ANY uncommitted app.css change regardless of which
+  # plan made it, permanently blocking every future CSS-touching plan's
+  # `mix test`. Removed rather than loosened: there is no invariant left
+  # here worth re-asserting once app.css is legitimately owned by more than
+  # one plan.
 end

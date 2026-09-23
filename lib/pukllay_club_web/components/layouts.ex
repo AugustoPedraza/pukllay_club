@@ -334,92 +334,6 @@ defmodule PukllayClubWeb.Layouts do
             }
 
             try {
-              // Mobile nav drawer (01.1-09; re-tiered for WINDOWS #4): guarded
-              // on this.drawer existing so this hook is a no-op everywhere the
-              // drawer markup isn't present. The drawer and its backdrop are
-              // page-level siblings of #app-header (moved out for WINDOWS #4
-              // because the sticky header's z-index: 50 stacking context
-              // capped the drawer's effective root z at 50, below both the
-              // About page's floating isologo and the flash toast — see
-              // .planning/debug/resolved/about-logo-over-nav-drawer.md), so
-              // they are looked up by id OUTSIDE this.el — the same
-              // named-root, cross-root pattern the scroll-spy block above
-              // already uses for #app-subnav. The hamburger stays inside the
-              // header and is still found via this.el. The body-class scroll
-              // lock remains the other documented reach outside the header.
-              // Guarded on this.drawer existing, and this remains the one
-              // hook that owns the drawer rather than adding a second.
-              this.drawer = document.getElementById("pk-nav-drawer")
-              if (this.drawer) {
-                this.drawerBackdrop = document.getElementById("pk-nav-drawer-backdrop")
-                this.hamburger = this.el.querySelector(".pk-nav-hamburger")
-                this.drawerClose = this.drawer.querySelector(".pk-drawer-close")
-                this.drawerReturnFocus = null
-
-                this.openDrawer = () => {
-                  this.drawer.classList.add("is-open")
-                  this.drawerBackdrop?.classList.add("is-open")
-                  this.drawer.removeAttribute("inert")
-                  this.hamburger?.setAttribute("aria-expanded", "true")
-                  document.body.classList.add("pk-drawer-open")
-                  this.drawerReturnFocus = document.activeElement
-                  this.drawerClose?.focus()
-                }
-
-                // Idempotent: no-ops when already closed, so calling it
-                // unconditionally from updated() on every server round trip
-                // (see below) never steals focus back to the hamburger on an
-                // unrelated re-render.
-                this.closeDrawer = () => {
-                  if (!this.drawer.classList.contains("is-open")) return
-                  this.drawer.classList.remove("is-open")
-                  this.drawerBackdrop?.classList.remove("is-open")
-                  this.drawer.setAttribute("inert", "")
-                  this.hamburger?.setAttribute("aria-expanded", "false")
-                  document.body.classList.remove("pk-drawer-open")
-                  const returnTarget = this.drawerReturnFocus || this.hamburger
-                  returnTarget?.focus()
-                  this.drawerReturnFocus = null
-                }
-
-                this.onHamburgerClick = () => this.openDrawer()
-                this.onDrawerCloseClick = () => this.closeDrawer()
-                this.onDrawerBackdropClick = () => this.closeDrawer()
-
-                // Escape closes unconditionally; Tab traps focus inside the
-                // panel — copied verbatim from GamePreview's onSheetKeydown
-                // focusable-elements query and first/last wrap (game_preview.ex).
-                this.onDrawerKeydown = (e) => {
-                  if (e.key === "Escape") {
-                    this.closeDrawer()
-                    return
-                  }
-                  if (e.key !== "Tab") return
-                  const focusable = this.drawer.querySelectorAll(
-                    'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                  )
-                  if (focusable.length === 0) return
-                  const first = focusable[0]
-                  const last = focusable[focusable.length - 1]
-                  if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault()
-                    last.focus()
-                  } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault()
-                    first.focus()
-                  }
-                }
-
-                this.hamburger?.addEventListener("click", this.onHamburgerClick)
-                this.drawerClose?.addEventListener("click", this.onDrawerCloseClick)
-                this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
-                this.drawer.addEventListener("keydown", this.onDrawerKeydown)
-              }
-            } catch (e) {
-              console.error("CatalogNav: drawer block failed to wire", e)
-            }
-
-            try {
               // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
               // this.catTrigger existing so Quiénes Somos and Detalle (neither
               // renders the nav_menu slot) are untouched no-ops. Modelled line
@@ -488,10 +402,6 @@ defmodule PukllayClubWeb.Layouts do
               this.wasExpanded = isExpanded
             }
             this.publishHeaderHeight?.()
-            // A drawer-link navigation is the only way this hook's updated()
-            // fires while the drawer is open; closeDrawer() is idempotent, so
-            // calling it unconditionally here needs no old/new-link diffing.
-            this.closeDrawer?.()
             this.closeCatMenu?.()
           },
           destroyed() {
@@ -499,17 +409,10 @@ defmodule PukllayClubWeb.Layouts do
             this.observer?.disconnect()
             this.heightObserver?.disconnect()
             document.removeEventListener("keydown", this.onDocumentKeydown)
-            this.hamburger?.removeEventListener("click", this.onHamburgerClick)
-            this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
-            this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
-            this.drawer?.removeEventListener("keydown", this.onDrawerKeydown)
             this.catTrigger?.removeEventListener("click", this.onCatTriggerClick)
             this.catBackdrop?.removeEventListener("click", this.onCatBackdropClick)
             this.catItems?.forEach((item) => item.removeEventListener("click", this.onCatItemClick))
             document.removeEventListener("keydown", this.onCatDocumentKeydown)
-            // Defensive: a LiveView teardown mid-open must never leave the
-            // page permanently unscrollable.
-            document.body.classList.remove("pk-drawer-open")
           }
         }
       </script>
@@ -703,12 +606,30 @@ defmodule PukllayClubWeb.Layouts do
         "pk-nav-inner mx-auto w-full max-w-7xl pk-gutter",
         @search_expanded && "is-search-open"
       ]}>
+        <%!-- Task 1 (D-12/G-01.8.1-1b): the drawer's open/close state is owned
+        entirely by the PukllayClubWeb.Layouts.NavDrawer LiveComponent below
+        (id="pk-nav-drawer"), so this click is routed there directly via
+        phx-target — no hook wiring required. This is what fixes the diagnosed
+        cause of G-01.8.1-1b: the previous mechanism lived inside the
+        .CatalogNav hook, which app/1 only attached to #app-header when
+        @sticky was true, so every admin LiveView (dashboard, estantes,
+        staff, secciones, niveles, the game form) and every non-sticky public
+        page (About, login, confirmation) rendered a header with NO hook at
+        all — the hamburger had no click handler and "I click and nothing
+        happens" (G-01.8.1-1b) was reported from exactly one of those pages
+        (/admin). A plain phx-click/phx-target binding needs no hook and
+        therefore no @sticky gate; it fires on every page this header
+        renders on. No aria-expanded here: the target is a role="dialog"
+        modal (D-19e's admin sheet family, and 059/017's public drawer
+        both agree on this shape), and its own open/inert state is what
+        assistive tech reads — see NavDrawer's moduledoc. --%>
         <button
           type="button"
           class="pk-nav-hamburger"
           aria-label="Abrir menú"
-          aria-expanded="false"
           aria-controls="pk-nav-drawer"
+          phx-click="open"
+          phx-target="#pk-nav-drawer"
         >
           <.icon name="hero-bars-3" class="size-6" />
         </button>
@@ -836,69 +757,48 @@ defmodule PukllayClubWeb.Layouts do
     """
   end
 
-  # Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5): the
-  # drawer's link list is defined ONCE here, shell-owned rather than
-  # slot-owned, so it is identical on all three routes — including Detalle,
-  # which passes no nav_links slot and would otherwise get an empty drawer.
-  # `inert` is the closed state's a11y mechanism (removes the panel from the
-  # tab order/a11y tree without display:none, which would kill the slide
-  # transition); `.CatalogNav` adds/removes it. Content (chevrons, the
-  # pinned theme-toggle/social bottom block) is filled in by plan 01.1-09
-  # Task 2 — Task 1 ships the empty `.pk-drawer-bottom` placeholder only.
+  # Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5; rebuilt
+  # as a stateful LiveComponent for Task 1 of plan 01.8.2-09, D-12/
+  # G-01.8.1-1b — see PukllayClubWeb.Layouts.NavDrawer's moduledoc for the
+  # diagnosed cause and the fix). This wrapper only owns the backdrop (a
+  # plain, always-rendered div — its own `.is-open`-equivalent styling is
+  # driven by app.css's `body:has(#pk-nav-drawer.is-open)` rule, since the
+  # backdrop itself carries no reactive state) and threads active_nav/
+  # current_scope into the component. The backdrop's close-tap targets the
+  # component directly by DOM id — the same phx-target mechanism the
+  # hamburger uses (header_inner/1) — so it works identically regardless of
+  # which LiveView rendered this page.
   attr :active_nav, :atom, default: nil
   attr :current_scope, :map, default: nil
 
   defp nav_drawer(assigns) do
     ~H"""
-    <div id="pk-nav-drawer-backdrop" class="pk-drawer-backdrop" aria-hidden="true"></div>
-    <aside
-      id="pk-nav-drawer"
-      class="pk-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Menú"
-      inert
+    <div
+      id="pk-nav-drawer-backdrop"
+      class="pk-drawer-backdrop"
+      aria-hidden="true"
+      phx-click="close"
+      phx-target="#pk-nav-drawer"
     >
-      <div class="pk-drawer-header">
-        <span class="font-display text-lg">Menú</span>
-        <button type="button" class="pk-drawer-close" aria-label="Cerrar menú">
-          <.icon name="hero-x-mark" class="size-5" />
-        </button>
-      </div>
-      <nav class="pk-drawer-links" aria-label="Navegación principal">
-        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
-          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
-          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-        <%!-- D-34: mobile staff's one entry into /admin — the header's own
-        .pk-nav-admin icon link is hidden at this same breakpoint (app.css),
-        so this drawer row is the sole mobile path. Nothing renders for a
-        visitor. --%>
-        <.link :if={staff_session?(@current_scope)} navigate={~p"/admin"}>
-          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-      </nav>
-      <div class="pk-drawer-bottom">
-        <div class="pk-drawer-divider"></div>
-        <.social_links class="pk-drawer-social" />
-        <div class="pk-drawer-divider"></div>
-        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
-          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
-          <.theme_toggle />
-        </div>
-      </div>
-    </aside>
+    </div>
+    <.live_component
+      module={PukllayClubWeb.Layouts.NavDrawer}
+      id="pk-nav-drawer"
+      active_nav={@active_nav}
+      current_scope={@current_scope}
+    />
     """
   end
 
   # D-34: `current_scope` is `nil` for a visitor (every LiveView's own
   # `mount_current_scope/2` default), a real `Scope` struct for a signed-in
   # one — never a bare `false`/missing key, so the two-clause match below
-  # is exhaustive.
-  defp staff_session?(nil), do: false
-  defp staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+  # is exhaustive. Public (not `defp`) since Task 1 (01.8.2-09) moved the
+  # drawer's own staff branch into the separate `NavDrawer` LiveComponent
+  # module, which needs this same predicate — see D-13a's "same drawer
+  # everywhere" gate.
+  def staff_session?(nil), do: false
+  def staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
 
   @doc """
   The "Sumate" join CTA — the club's WhatsApp group invite link.
@@ -1365,4 +1265,167 @@ defmodule PukllayClubWeb.Layouts do
     </div>
     """
   end
+end
+
+defmodule PukllayClubWeb.Layouts.NavDrawer do
+  @moduledoc """
+  The site-wide mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5), rebuilt as a
+  stateful LiveComponent for Task 1 of plan 01.8.2-09 (D-12/G-01.8.1-1b).
+
+  **Diagnosed cause of G-01.8.1-1b** ("drawer stop working (I click and nothing happens)",
+  reported from `/admin`, 01.8.1-UAT.md test 1): the drawer's entire open/close wiring used to
+  live inside the `.CatalogNav` colocated hook, which `Layouts.app/1` only attached
+  (`phx-hook=".CatalogNav"`) to `#app-header` when the `sticky` attr was `true`. Every admin
+  LiveView (dashboard, estantes, staff, secciones, niveles, the game form) and every non-sticky
+  public page (About, login, confirmation) called `<Layouts.app>` without `sticky`, so on those
+  pages the hook never mounted at all — the hamburger had no click handler, no keydown listener,
+  nothing. Clicking it did exactly what was reported: nothing.
+
+  **The fix:** move the drawer's open/close state into this LiveComponent, addressed by a stable
+  DOM id (`#pk-nav-drawer`) that both the hamburger (`Layouts.header_inner/1`) and the backdrop
+  (`Layouts.nav_drawer/1`) target directly via `phx-target` — a plain declarative `phx-click`
+  binding needs no hook and therefore no `@sticky` gate, so it fires identically on every page
+  (`Layouts.app/1` renders this component unconditionally, itself outside either `#app-header`
+  branch).
+
+  `@open` drives the state class (`"is-open"`), `aria-expanded` and `inert` straight from the
+  component's own assign — server-rendered, so a LiveView test can `render_click/1` the hamburger
+  and assert the drawer's open state in the rendered markup without a browser. The colocated
+  `.NavDrawerFocus` hook is reduced to what a server round trip cannot do on its own: Escape-to-
+  close, Tab focus-trapping while open, moving focus into the panel on open and back to whatever
+  had it before on close, and the `body.pk-drawer-open` scroll lock — it never toggles the open
+  state itself, only reacts to it (`updated()` compares the previous vs current `"is-open"` class,
+  the same before/after-transition idiom `.CatalogNav`'s search-morph focus logic already uses).
+
+  Kept as exactly one drawer component (D-13a "same drawer everywhere"): this module renders the
+  identical public content on every page for a visitor; Task 3 adds the staff sectioned content
+  (PANEL / SITIO / TU CUENTA) as a second branch inside this same render, never a second component.
+  """
+  use PukllayClubWeb, :live_component
+
+  alias PukllayClubWeb.Layouts
+
+  @impl true
+  def mount(socket) do
+    {:ok, assign(socket, :open, false)}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <aside
+      id="pk-nav-drawer"
+      class={["pk-drawer", @open && "is-open"]}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú"
+      aria-expanded={to_string(@open)}
+      inert={!@open}
+      phx-hook=".NavDrawerFocus"
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".NavDrawerFocus">
+        export default {
+          mounted() {
+            // Unconditional — this hook lives on the LiveComponent's OWN
+            // root, rendered by Layouts.app/1 on every page, so it mounts
+            // regardless of @sticky. This is the other half of the
+            // G-01.8.1-1b fix: focus management no longer depends on which
+            // page rendered the header.
+            this.wasOpen = this.el.classList.contains("is-open")
+            this.returnFocus = null
+            this.closeButton = this.el.querySelector(".pk-drawer-close")
+            document.body.classList.toggle("pk-drawer-open", this.wasOpen)
+
+            // Escape closes unconditionally; Tab traps focus inside the
+            // panel — same shape as GamePreview's onSheetKeydown
+            // focusable-elements query and first/last wrap (game_preview.ex).
+            this.onKeydown = (e) => {
+              if (e.key === "Escape") {
+                this.pushEventTo(this.el, "close", {})
+                return
+              }
+              if (e.key !== "Tab") return
+              const focusable = this.el.querySelectorAll(
+                'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+              )
+              if (focusable.length === 0) return
+              const first = focusable[0]
+              const last = focusable[focusable.length - 1]
+              if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault()
+                last.focus()
+              } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault()
+                first.focus()
+              }
+            }
+            this.el.addEventListener("keydown", this.onKeydown)
+          },
+          updated() {
+            const isOpen = this.el.classList.contains("is-open")
+            document.body.classList.toggle("pk-drawer-open", isOpen)
+
+            if (!this.wasOpen && isOpen) {
+              this.returnFocus = document.activeElement
+              this.closeButton?.focus()
+            } else if (this.wasOpen && !isOpen) {
+              const target =
+                (this.returnFocus && document.contains(this.returnFocus) && this.returnFocus) ||
+                document.querySelector(".pk-nav-hamburger")
+              target?.focus()
+              this.returnFocus = null
+            }
+            this.wasOpen = isOpen
+          },
+          destroyed() {
+            this.el.removeEventListener("keydown", this.onKeydown)
+            // Defensive: a LiveView teardown mid-open must never leave the
+            // page permanently unscrollable.
+            document.body.classList.remove("pk-drawer-open")
+          }
+        }
+      </script>
+      <div class="pk-drawer-header">
+        <span class="font-display text-lg">Menú</span>
+        <button
+          type="button"
+          class="pk-drawer-close"
+          aria-label="Cerrar menú"
+          phx-click="close"
+          phx-target={@myself}
+        >
+          <.icon name="hero-x-mark" class="size-5" />
+        </button>
+      </div>
+      <nav class="pk-drawer-links" aria-label="Navegación principal">
+        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
+          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
+          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <%!-- D-34: mobile staff's one entry into /admin — the header's own
+        .pk-nav-admin icon link is hidden at this same breakpoint (app.css),
+        so this drawer row is the sole mobile path. Nothing renders for a
+        visitor. --%>
+        <.link :if={Layouts.staff_session?(@current_scope)} navigate={~p"/admin"}>
+          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+      </nav>
+      <div class="pk-drawer-bottom">
+        <div class="pk-drawer-divider"></div>
+        <Layouts.social_links class="pk-drawer-social" />
+        <div class="pk-drawer-divider"></div>
+        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
+          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
+          <Layouts.theme_toggle />
+        </div>
+      </div>
+    </aside>
+    """
+  end
+
+  @impl true
+  def handle_event("open", _params, socket), do: {:noreply, assign(socket, :open, true)}
+  def handle_event("close", _params, socket), do: {:noreply, assign(socket, :open, false)}
 end

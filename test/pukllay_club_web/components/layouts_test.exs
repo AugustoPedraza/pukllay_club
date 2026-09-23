@@ -244,7 +244,20 @@ defmodule PukllayClubWeb.LayoutsTest do
     test "emits no nav-hook attribute value when sticky is not passed (01-12)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      refute html =~ "phx-hook"
+      # Scoped to #app-header (not the whole page, per 01.8.2-09 Task 1):
+      # PukllayClubWeb.Layouts.NavDrawer, the drawer's own LiveComponent,
+      # renders an unconditional colocated hook (.NavDrawerFocus) OUTSIDE
+      # #app-header regardless of @sticky — that unconditional presence is
+      # exactly the G-01.8.1-1b fix (the drawer used to only work on pages
+      # whose header carried .CatalogNav). .CatalogNav itself stays
+      # genuinely conditional on @sticky.
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      refute header_html =~ "phx-hook"
       refute html =~ "CatalogNav"
     end
 
@@ -1311,6 +1324,109 @@ defmodule PukllayClubWeb.LayoutsTest do
       assert utility_html |> String.split("min-h-11") |> length() |> Kernel.-(1) == 3
       assert utility_html |> String.split("min-w-11") |> length() |> Kernel.-(1) == 3
     end
+  end
+
+  # Task 1, plan 01.8.2-09 (D-12/G-01.8.1-1b): the drawer's open/close state
+  # moved server-side into PukllayClubWeb.Layouts.NavDrawer, a stateful
+  # LiveComponent addressed by DOM id (#pk-nav-drawer) rather than the old
+  # .CatalogNav-hook mechanism that only mounted when @sticky was true. These
+  # tests hit REAL routes (not render_component/2) so render_click/1 can
+  # simulate an actual click through the component's own handle_event/3 —
+  # exactly what G-01.8.1-1b's "I click and nothing happens" report needs
+  # covered on both a public page and an admin page (neither of Show/About
+  # nor any admin LiveView passes `sticky`, so this is precisely the
+  # previously-broken path).
+  describe "app/1 mobile nav drawer — server-rendered open state (01.8.2-09 Task 1, D-12/G-01.8.1-1b)" do
+    test "the hamburger opens the drawer on a public page (/)", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/")
+
+      # At rest: closed, inert, aria-expanded false — the same server-
+      # rendered signal a browser-less test can assert on.
+      assert html =~ ~s(id="pk-nav-drawer")
+      refute html =~ ~s(class="pk-drawer is-open")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ "inert"
+
+      opened_html = view |> element(".pk-nav-hamburger") |> render_click()
+
+      assert opened_html =~ ~s(class="pk-drawer is-open")
+      assert opened_html =~ ~s(aria-expanded="true")
+
+      drawer_html =
+        opened_html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      refute drawer_html =~ "inert",
+             "inert must be absent once the drawer is open — inert={!@open} renders the bare " <>
+               "boolean attribute only when @open is false"
+    end
+
+    test "the hamburger opens the drawer on an admin page (/admin), the page G-01.8.1-1b was reported from" do
+      %{conn: conn} = register_and_log_in_staff(%{conn: conn()})
+
+      {:ok, view, html} = live(conn, ~p"/admin")
+
+      refute html =~ ~s(class="pk-drawer is-open")
+      assert html =~ ~s(aria-expanded="false")
+
+      opened_html = view |> element(".pk-nav-hamburger") |> render_click()
+
+      assert opened_html =~ ~s(class="pk-drawer is-open")
+      assert opened_html =~ ~s(aria-expanded="true")
+    end
+
+    test "the close button (inside the component) closes the drawer again, toggling aria-expanded back" do
+      {:ok, view, _html} = live(conn(), ~p"/")
+
+      view |> element(".pk-nav-hamburger") |> render_click()
+      closed_html = view |> element(".pk-drawer-close") |> render_click()
+
+      refute closed_html =~ ~s(class="pk-drawer is-open")
+      assert closed_html =~ ~s(aria-expanded="false")
+      assert closed_html =~ "inert"
+    end
+
+    test "the backdrop (a plain sibling div outside the component) also closes the drawer, via phx-target" do
+      {:ok, view, _html} = live(conn(), ~p"/")
+
+      view |> element(".pk-nav-hamburger") |> render_click()
+      closed_html = view |> element("#pk-nav-drawer-backdrop") |> render_click()
+
+      refute closed_html =~ ~s(class="pk-drawer is-open")
+      assert closed_html =~ ~s(aria-expanded="false")
+    end
+
+    test "the hamburger and the backdrop both target #pk-nav-drawer directly — no shared hook required" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      hamburger_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-hamburger") |> LazyHTML.to_html()
+
+      backdrop_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#pk-nav-drawer-backdrop")
+        |> LazyHTML.to_html()
+
+      assert hamburger_html =~ ~s(phx-click="open")
+      assert hamburger_html =~ ~s(phx-target="#pk-nav-drawer")
+      assert backdrop_html =~ ~s(phx-click="close")
+      assert backdrop_html =~ ~s(phx-target="#pk-nav-drawer")
+    end
+
+    test "the drawer's own colocated hook (.NavDrawerFocus) renders unconditionally, regardless of @sticky" do
+      non_sticky = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      sticky = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], sticky: true})
+
+      for html <- [non_sticky, sticky] do
+        drawer_html =
+          html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+        assert drawer_html =~ "phx-hook"
+        assert drawer_html =~ "NavDrawerFocus"
+      end
+    end
+
+    defp conn, do: Phoenix.ConnTest.build_conn()
   end
 
   # social_links/1 is now a PUBLIC component (promoted in plan 01.4-02

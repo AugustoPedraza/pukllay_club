@@ -3465,6 +3465,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   # time and so never appear in the rendered HTML.
   describe "every event the detail page can dispatch is handled (catalog-show-no-clause class guard)" do
     @event_attr_pattern ~r/phx-(?:click|blur|submit|change|keydown|keyup|focus)="([^"]*)"/
+    # Task 1 (01.8.2-09, D-12/G-01.8.1-1b): a start tag is scanned WHOLE, not
+    # via one flat regex over the whole document, so an explicit phx-target
+    # on the SAME tag can exclude it — an event bound with phx-target is, by
+    # construction, routed to that target (a LiveComponent's own
+    # handle_event/3), never to CatalogLive.Show's. The shared chrome's
+    # drawer (Layouts.NavDrawer, PukllayClubWeb.Layouts.NavDrawer) is the
+    # concrete case this guards: its hamburger/close/backdrop all carry
+    # phx-target (either "#pk-nav-drawer" or @myself's numeric CID) and are
+    # therefore out of THIS page's dispatchable set, not an oversight.
+    @start_tag_pattern ~r/<[a-zA-Z][^>]*>/
+
+    defp dispatchable_events_from_markup(html) do
+      @start_tag_pattern
+      |> Regex.scan(html)
+      |> List.flatten()
+      |> Enum.reject(&(&1 =~ ~r/phx-target="[^"]*"/))
+      |> Enum.flat_map(fn tag ->
+        @event_attr_pattern
+        |> Regex.scan(tag)
+        |> Enum.map(&List.last/1)
+      end)
+      # JS-command bindings (e.g. the theme switcher's JS.dispatch) render as
+      # a JSON array, not an event name — they never reach handle_event/3.
+      |> Enum.reject(&String.starts_with?(&1, "["))
+    end
+
     # Show's own module, plus the two other modules whose colocated hooks run
     # on a rendered detail page (Layouts.app's header and the Juegos similares
     # shelf). A hook push is invisible to any markup scan.
@@ -3487,13 +3513,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # Open the reservation modal so its own subtree is in the scanned markup.
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
-      from_markup =
-        @event_attr_pattern
-        |> Regex.scan(html)
-        |> Enum.map(&List.last/1)
-        # JS-command bindings (e.g. the theme switcher's JS.dispatch) render as
-        # a JSON array, not an event name — they never reach handle_event/3.
-        |> Enum.reject(&String.starts_with?(&1, "["))
+      from_markup = dispatchable_events_from_markup(html)
 
       from_hooks =
         Enum.flat_map(@hook_push_sources, fn path ->
