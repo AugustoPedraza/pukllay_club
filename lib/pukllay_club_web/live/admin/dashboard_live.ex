@@ -21,7 +21,13 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
+    <Layouts.app
+      flash={@flash}
+      current_scope={@current_scope}
+      bottom_collapse
+      admin_chrome
+      active_tab={:admin}
+    >
       <div class="mx-auto w-full max-w-3xl space-y-6">
         <.header>Panel</.header>
         <div id="admin-cards" class="grid grid-cols-1 gap-4 sm:grid-cols-2">

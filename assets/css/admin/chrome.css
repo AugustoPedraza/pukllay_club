@@ -91,3 +91,152 @@
   color: var(--color-neutral);
   overflow-wrap: anywhere;
 }
+
+/* ============================================================
+   Plan 01.8.2-10 — the 5-tab admin bar (D-13b).
+
+   Renders for a signed-in staff member on EVERY page Layouts.app/1
+   wraps — admin and public alike (D-13b) — never gated on @admin_chrome
+   or any route signal, which is exactly why this genuinely admin/staff-
+   only chrome belongs here rather than in a page-scoped file: it is
+   content that never renders for an anonymous visitor and never depends
+   on which page it happens to sit under.
+   ============================================================ */
+
+/* Declared ONCE — this bar's own `min-height`, `AdminComponents.snackbar`'s
+   bottom offset (components.css:623, already written against this exact
+   property with a 0px fallback) and `.pk-admin-has-tab-bar` below all
+   `calc()` off this SAME custom property, mirroring `--pk-save-bar-h`'s
+   single-source pattern (D-28, components.css:665-667) — never two
+   independently drifting pixel figures. BENCHMARK's measured 67px, taken
+   verbatim. */
+:root {
+  --pk-tab-bar-h: 67px;
+}
+
+.pk-admin-tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  min-height: var(--pk-tab-bar-h);
+  padding: 4px 4px max(4px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--stroke);
+}
+
+.pk-admin-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* 56x30 pill indicator behind the active icon (BENCHMARK's Tab bar row,
+   matched to M3). `--color-accent`/`--color-accent-content` — a real
+   shipped pastel pair already used elsewhere in app.css for a soft "this
+   is selected" fill (`.pk-pill-accent`, app.css:4008-4027) — not the
+   sketch-local `--color-accent-bg` 01.8.2-TOKENS.md's D-34 pass marked
+   DISCARD (never existed upstream). */
+.pk-admin-tab-icon {
+  position: relative;
+  width: 56px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+}
+
+.pk-admin-tab.is-active {
+  color: var(--color-primary);
+}
+
+.pk-admin-tab.is-active .pk-admin-tab-icon {
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+}
+
+/* inactive stays 400 — the pair must not collapse (admin-shell-
+   navigation.md's own recorded font-weight trap). */
+.pk-admin-tab.is-active .pk-admin-tab-label {
+  font-weight: 600;
+}
+
+/* Perfil, the avatar tab (BENCHMARK's "Perfil = avatar tab" requirement):
+   no `/admin/perfil` page or account sheet exists yet (01.8.2-09's own
+   recorded scope boundary), so this opens the nav drawer's already-
+   shipped `Tu cuenta` section instead of navigating anywhere. */
+.pk-admin-tab-avatar-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-2);
+  color: var(--color-base-content);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* D-19g's pending-work badge: 18px, primary fill — the SAME shape D-19g
+   reserves for "pending work", never D-19m's neutral count pill. */
+.pk-admin-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Body clearance: the ONLY consumer of --pk-tab-bar-h outside the bar
+   itself and the snackbar (which already reads it via its own 0px
+   fallback). Applied by whichever page needs its last block cleared of
+   the fixed bar — mirrors `.pk-admin-has-save-bar`'s identical role for
+   `--pk-save-bar-h` (components.css:724-726). */
+.pk-admin-has-tab-bar {
+  padding-bottom: calc(var(--pk-tab-bar-h) + 0px);
+}
+
+/* Retires `.pk-nav-admin` (the header gear link to /admin, app.css:3042)
+   for a signed-in staff member: the Admin tab now supersedes it at every
+   viewport this bar renders at, and D-13b's own action text says so in
+   as many words ("so staff do not have two entry points to /admin in one
+   viewport"). Higher specificity (0-2-0 via the real `.pk-nav-inner`
+   ancestor) rather than editing app.css's own rule directly — app.css's
+   `@import` for this file is hoisted ABOVE app.css's own body (see this
+   file's own header comment), so a same-specificity override placed here
+   would lose to source order, not win by it. The link stays IN THE DOM
+   (not removed from header_inner/1) so it stays out of the keyboard/
+   focus order via `display: none` without touching the existing staff
+   pk-nav-admin substring assertions this markup change would otherwise
+   have to rewrite. */
+.pk-nav-inner .pk-nav-admin {
+  display: none;
+}

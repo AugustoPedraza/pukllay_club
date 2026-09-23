@@ -177,6 +177,23 @@ defmodule PukllayClubWeb.Layouts do
         "(the drawer's link list is shell-owned, not slot-owned, so Detalle — which passes no " <>
         "nav_links slot — still gets a real menu)."
 
+  attr :active_tab, :atom,
+    default: nil,
+    doc:
+      "Plan 01.8.2-10 (D-13b): which of the tab bar's five destinations is current — " <>
+        ":admin, :juegos, :estantes, :web, or nil. Mirrors `active_nav`'s own contract: the " <>
+        "caller states its own position explicitly (never derived from the request path — " <>
+        "T-01.8.2-45 forbids a URL-string admin predicate anywhere in this module). A page " <>
+        "outside the five destinations (Revisar niveles, Staff — admin-shell-navigation.md's " <>
+        "documented 'overflow' sections) passes nil; no tab lights."
+
+  attr :badges, :map,
+    default: %{},
+    doc:
+      "Plan 01.8.2-10 (D-19g): %{tab_atom => pending_count} for the tab bar's badges. " <>
+        "Defaults to %{} — no admin LiveView computes a real count yet (D-19's 'one derived " <>
+        "counter source' is future work); this attr ships the component's contract."
+
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
 
   slot :nav_search,
@@ -609,6 +626,13 @@ defmodule PukllayClubWeb.Layouts do
     above for why this is not a URL string match). --%>
     <.footer :if={!@admin_chrome} />
 
+    <%!-- D-13b (plan 01.8.2-10): the 5-tab admin bar renders for a
+    signed-in staff member on EVERY page this layout renders — admin and
+    public alike, never gated on @admin_chrome or any other route signal.
+    tab_bar/1's own :if guards staff_session?(@current_scope) so an
+    anonymous visitor's markup carries none of it. --%>
+    <.tab_bar current_scope={@current_scope} active_tab={@active_tab} badges={@badges} />
+
     <%!-- D-19c (plan 01.8.2-08 Task 2): the admin has exactly ONE feedback
     component, the bottom snackbar — the top toast (`flash_group/1` ->
     `CoreComponents.flash/1`'s `.toast.toast-top`) is deleted for every
@@ -852,6 +876,125 @@ defmodule PukllayClubWeb.Layouts do
   # everywhere" gate.
   def staff_session?(nil), do: false
   def staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+
+  @doc """
+  Renders D-13b's 5-destination admin tab bar (Admin · Juegos · Estantes · Web · Perfil), fixed
+  at the screen's bottom for a signed-in staff member on EVERY page this app renders — admin
+  and public alike, never gated on the current route (D-13b; T-01.8.2-45's structural-predicate
+  requirement bans any URL-string admin classification anywhere in this module, and Task 3's own
+  `<verify>` greps for it).
+
+  Geometry is `01.8.2-BENCHMARK.md`'s measured Tab bar row, taken verbatim: 67px tall, a 56×30
+  pill indicator behind the active icon, 11px/600 labels. `Perfil` renders as the avatar tab
+  the BENCHMARK requires — tapping it opens the nav drawer's already-shipped account section
+  (`NavDrawer`'s `Tu cuenta` group, plan 01.8.2-09) rather than a dedicated account sheet, since
+  no `/admin/perfil` page or account sheet exists yet in this phase's scope (01.8.2-09's own
+  recorded boundary) and building one is not this plan's job.
+
+  `active_tab` is passed explicitly by the LiveView rendering `Layouts.app/1` — the same
+  "caller states its own nav position" contract `active_nav` already uses for the public
+  header, chosen specifically so this component never has to read the request path itself. A
+  page outside the five destinations (`Revisar niveles`, `Staff` — `admin-shell-navigation.md`'s
+  documented "overflow" sections) passes no `active_tab`; no tab lights, matching the design
+  source of truth.
+
+  `badges` (`%{tab_atom => pending_count}`) renders D-19g's pending-work badge: 18px, primary
+  fill, `99+` above 99, absent at a count of 0, and the count folded into the destination's
+  accessible name via `aria-label` — never the top-right filled shape doubling as D-19m's
+  neutral count pill (that shape means pending work here, and only here).
+
+  The bar's own height is declared **once**, as `--pk-tab-bar-h` (`assets/css/admin/chrome.css`),
+  mirroring `--pk-save-bar-h`'s single-source pattern (D-28): `AdminComponents.snackbar/1`
+  already reads it (0px fallback, plan 01.8.2-08) for its bottom offset, and
+  `.pk-admin-has-tab-bar` derives a page's own bottom clearance from the same property — never a
+  second, independently typed pixel figure.
+  """
+  attr :current_scope, :map, default: nil
+  attr :active_tab, :atom, default: nil
+  attr :badges, :map, default: %{}
+
+  def tab_bar(assigns) do
+    ~H"""
+    <nav :if={staff_session?(@current_scope)} class="pk-admin-tab-bar" aria-label="Secciones de Admin">
+      <.tab_bar_link to={~p"/admin"} active={@active_tab == :admin} icon="hero-home" label="Admin" />
+      <.tab_bar_link
+        to={~p"/admin/juegos"}
+        active={@active_tab == :juegos}
+        icon="hero-puzzle-piece"
+        label="Juegos"
+        count={Map.get(@badges, :juegos, 0)}
+      />
+      <.tab_bar_link
+        to={~p"/admin/estantes"}
+        active={@active_tab == :estantes}
+        icon="hero-archive-box"
+        label="Estantes"
+        count={Map.get(@badges, :estantes, 0)}
+      />
+      <.tab_bar_link
+        to={~p"/admin/secciones"}
+        active={@active_tab == :web}
+        icon="hero-globe-alt"
+        label="Web"
+        count={Map.get(@badges, :web, 0)}
+      />
+      <button
+        type="button"
+        class="pk-admin-tab pk-admin-tab--avatar"
+        data-pk-pressable="true"
+        aria-label="Tu perfil"
+        aria-haspopup="dialog"
+        aria-controls="pk-nav-drawer"
+        phx-click="open"
+        phx-target="#pk-nav-drawer"
+      >
+        <span class="pk-admin-tab-icon">
+          <span class="pk-admin-tab-avatar-mark" aria-hidden="true">{tab_bar_avatar_initial(
+            @current_scope
+          )}</span>
+        </span>
+        <span class="pk-admin-tab-label">Perfil</span>
+      </button>
+    </nav>
+    """
+  end
+
+  attr :to, :string, required: true
+  attr :active, :boolean, required: true
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :count, :integer, default: 0
+
+  defp tab_bar_link(assigns) do
+    ~H"""
+    <.link
+      navigate={@to}
+      class={["pk-admin-tab", @active && "is-active"]}
+      aria-current={@active && "page"}
+      aria-label={@count > 0 && tab_bar_badge_aria_label(@label, @count)}
+      data-pk-pressable="true"
+    >
+      <span class="pk-admin-tab-icon">
+        <.icon name={@icon} class="size-6" />
+        <span :if={@count > 0} class="pk-admin-tab-badge" aria-hidden="true">
+          {tab_bar_badge_text(@count)}
+        </span>
+      </span>
+      <span class="pk-admin-tab-label">{@label}</span>
+    </.link>
+    """
+  end
+
+  defp tab_bar_badge_text(count) when count > 99, do: "99+"
+  defp tab_bar_badge_text(count), do: Integer.to_string(count)
+
+  defp tab_bar_badge_aria_label(label, count), do: "#{label}, #{count} pendientes"
+
+  defp tab_bar_avatar_initial(%{user: %{email: email}}) when is_binary(email) and email != "" do
+    email |> String.slice(0, 1) |> String.upcase()
+  end
+
+  defp tab_bar_avatar_initial(_), do: "?"
 
   @doc """
   The "Sumate" join CTA — the club's WhatsApp group invite link.

@@ -1640,6 +1640,109 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  describe "tab_bar/1, the 5-tab admin bar (01.8.2-10 Task 1, D-13b)" do
+    test "a signed-in staff member sees five destinations on /admin, and the active one carries the indicator" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/admin")
+
+      tab_bar_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-admin-tab-bar")
+        |> LazyHTML.to_html()
+
+      assert tab_bar_html =~ "Admin"
+      assert tab_bar_html =~ "Juegos"
+      assert tab_bar_html =~ "Estantes"
+      assert tab_bar_html =~ "Web"
+      assert tab_bar_html =~ "Perfil"
+
+      [admin_link] = Regex.run(~r/<a[^>]*href="\/admin"[^>]*>/, tab_bar_html)
+      assert admin_link =~ "is-active"
+      assert admin_link =~ ~s(aria-current="page")
+
+      [juegos_link] = Regex.run(~r/<a[^>]*href="\/admin\/juegos"[^>]*>/, tab_bar_html)
+      refute juegos_link =~ "is-active"
+      refute juegos_link =~ "aria-current"
+    end
+
+    test "an anonymous visitor's / markup contains no tab bar" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      refute html =~ "pk-admin-tab-bar"
+    end
+
+    test "the tab bar's own height is declared once and consumed by the snackbar offset and page clearance via calc()" do
+      chrome_css =
+        File.read!(Path.expand("../../../assets/css/admin/chrome.css", __DIR__))
+
+      components_css =
+        File.read!(Path.expand("../../../assets/css/admin/components.css", __DIR__))
+
+      assert chrome_css =~ ~r/--pk-tab-bar-h:\s*67px;/
+      assert components_css =~ ~r/bottom:\s*calc\(var\(--pk-tab-bar-h,\s*0px\)/
+      assert chrome_css =~ ~r/\.pk-admin-has-tab-bar\s*\{\s*padding-bottom:\s*calc\(var\(--pk-tab-bar-h\)/
+    end
+
+    test "a badge of 0 renders no badge element" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html =
+        render_component(&Layouts.tab_bar/1, %{
+          current_scope: scope,
+          active_tab: :admin,
+          badges: %{juegos: 0}
+        })
+
+      refute html =~ "pk-admin-tab-badge"
+    end
+
+    test "a badge of 150 renders 99+ visually and puts 150 in the accessible name" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html =
+        render_component(&Layouts.tab_bar/1, %{
+          current_scope: scope,
+          active_tab: :admin,
+          badges: %{juegos: 150}
+        })
+
+      assert html =~ "pk-admin-tab-badge"
+      assert html =~ "99+"
+      refute html =~ ">150<"
+      assert html =~ ~s(aria-label="Juegos, 150 pendientes")
+    end
+
+    test "Perfil renders as an avatar tab that opens the nav drawer, not a navigate link" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html = render_component(&Layouts.tab_bar/1, %{current_scope: scope})
+
+      perfil_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-admin-tab--avatar")
+        |> LazyHTML.to_html()
+
+      assert perfil_html =~ "Perfil"
+      assert perfil_html =~ ~s(phx-click="open")
+      assert perfil_html =~ ~s(phx-target="#pk-nav-drawer")
+      refute perfil_html =~ "navigate"
+    end
+
+    test ".pk-nav-admin is retired (display: none) now that the tab bar supersedes it" do
+      chrome_css =
+        File.read!(Path.expand("../../../assets/css/admin/chrome.css", __DIR__))
+
+      assert chrome_css =~ ~r/\.pk-nav-inner \.pk-nav-admin\s*\{\s*display:\s*none;/
+    end
+  end
+
   # social_links/1 is now a PUBLIC component (promoted in plan 01.4-02
   # Task 3) with three real call sites: the footer (.pk-footer-social), the
   # mobile drawer (.pk-drawer-social), and the About page's Contacto card
