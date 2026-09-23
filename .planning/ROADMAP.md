@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 9/22 plans executed
+**Plans:** 10/22 plans executed
 
 Plans:
 
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 01.8.2-10-PLAN.md — D-13b's 5-tab bar on public pages, with open item 2 (D-14) decided by measurement and D-15's line guarded
+- [x] 01.8.2-10-PLAN.md — D-13b's 5-tab bar on public pages, with open item 2 (D-14) decided by measurement and D-15's line guarded
 
 **Wave 5**
 
