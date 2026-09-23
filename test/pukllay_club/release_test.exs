@@ -89,7 +89,7 @@ defmodule PukllayClub.ReleaseTest do
 
   describe "ensure_live_node!/1" do
     test "refuses a node that is missing a required process" do
-      assert_raise RuntimeError, ~r/rpc/, fn ->
+      assert_raise RuntimeError, ~r/ensure_all_started/, fn ->
         Release.ensure_live_node!([:gsd_no_such_process])
       end
 

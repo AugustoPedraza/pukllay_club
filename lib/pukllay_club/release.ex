@@ -13,9 +13,18 @@ defmodule PukllayClub.Release do
 
   # Registered process names a live node must have for `enrich_bgg_stats/1`
   # to run safely (F1-F4, quick task 260922-veq): the app Repo (so writes
-  # land) and Req's HTTP pool (so BGG requests can even be attempted). Both
-  # are started by `PukllayClub.Application`'s supervision tree, which an
-  # `eval` node never boots — only an `rpc` node does.
+  # land) and Req's HTTP pool (so BGG requests can even be attempted).
+  # `PukllayClub.Repo` is started either by `PukllayClub.Application`'s
+  # supervision tree on a booted node, or by an explicit
+  # `PukllayClub.Repo.start_link()` under `eval` (see
+  # `docs/runbooks/production-bgg-reenrichment.md`). `Req.Finch` is NOT in
+  # this app's children list at all — it is the default Finch pool started
+  # by the `:req` application itself, via
+  # `Application.ensure_all_started(:req)`. This guard inspects registered
+  # process names only, so it cannot detect the invocation mode: an `eval`
+  # that starts these processes itself satisfies it legitimately, and a
+  # bare `eval` that started nothing still gets a clean refusal instead of
+  # a half-run.
   @required_processes [PukllayClub.Repo, Req.Finch]
 
   def createdb do
@@ -84,10 +93,18 @@ defmodule PukllayClub.Release do
       raise """
       Missing required process(es): #{Enum.map_join(missing, ", ", &inspect/1)}.
 
-      This entry point must be invoked through the release's `rpc` command against \
-      the running node (e.g. `bin/pukllay_club rpc '...'`), never through `eval`. An \
-      `eval` node starts no supervision tree, so Req's HTTP pool (`Req.Finch`) does \
-      not exist there and every BGG request would fail.
+      Start the required processes first, in the same `eval` expression, in \
+      this order:
+
+          {:ok, _} = Application.ensure_all_started(:req)
+          {:ok, _} = Application.ensure_all_started(:ecto_sql)
+          {:ok, _} = PukllayClub.Repo.start_link()
+
+      The `:ecto_sql` step is not optional: without it, \
+      `PukllayClub.Repo.start_link()` fails on a missing `DBConnection.Watcher` \
+      process, because `:db_connection`'s supervision tree is not running. See \
+      `docs/runbooks/production-bgg-reenrichment.md` for the full, verified \
+      production invocation.
       """
     end
   end
@@ -100,16 +117,27 @@ defmodule PukllayClub.Release do
   implementation of the enrichment lives here.
 
       # dry run (no writes)
-      bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats(dry_run: true)'
+      bin/pukllay_club eval '
+      {:ok, _} = Application.ensure_all_started(:req)
+      {:ok, _} = Application.ensure_all_started(:ecto_sql)
+      {:ok, _} = PukllayClub.Repo.start_link()
+      PukllayClub.Release.enrich_bgg_stats(dry_run: true)
+      '
 
       # live run
-      bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats()'
+      bin/pukllay_club eval '
+      {:ok, _} = Application.ensure_all_started(:req)
+      {:ok, _} = Application.ensure_all_started(:ecto_sql)
+      {:ok, _} = PukllayClub.Repo.start_link()
+      PukllayClub.Release.enrich_bgg_stats()
+      '
 
-  Must be invoked via `rpc`, never `eval` — see `ensure_live_node!/1`. Takes
-  ~60-90s for the full ~400-game catalog (about 20 batches of 20 at the
-  enricher's 1500ms default spacing); there is no caller-side `rpc` timeout
-  (`:erpc.call/4`'s 4-arity form defaults to `:infinity`), so the operator's
-  session can safely stay in the foreground for the whole run.
+  Must be invoked with the required processes running — see
+  `ensure_live_node!/1` and `docs/runbooks/production-bgg-reenrichment.md`
+  for the verified production invocation. Takes ~60-90s for the full
+  ~400-game catalog (about 20 batches of 20 at the enricher's 1500ms default
+  spacing) and runs to completion in the invoking node's own foreground, so
+  the operator's session stays attached for the whole run.
 
   Deliberately carries no `:limit` batching, offset paging or resumability:
   the whole catalog fits in one ~90s pass, and the enricher's candidate
@@ -118,10 +146,10 @@ defmodule PukllayClub.Release do
 
   Accepts `:limit`, `:dry_run`, `:batch_size` and `:delay_ms` — passed
   through to `StatsEnricher.enrich_from_bgg/2` unchanged (any other key is
-  dropped). Prints one JSON line to stdout (the release `rpc` command
-  discards return values — see `ensure_live_node!/1`'s doc) and emits the
-  same payload via `Logger.info` (so `kamal app logs` and Sentry hold a
-  copy). Writes no file anywhere. Returns the raw summary map.
+  dropped). Prints one JSON line to stdout — the operator reads the payload
+  from there — and emits the same payload via `Logger.info`, so
+  `kamal app logs` and Sentry hold a copy. Writes no file anywhere. Returns
+  the raw summary map.
   """
   @spec enrich_bgg_stats(keyword()) :: map()
   def enrich_bgg_stats(opts \\ []) do
@@ -165,14 +193,19 @@ defmodule PukllayClub.Release do
   entirely to `PukllayClub.Catalog.Seed.StatsAudit.report/0` and performs
   no write of any kind.
 
-      bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'
+      bin/pukllay_club eval '
+      {:ok, _} = Application.ensure_all_started(:req)
+      {:ok, _} = Application.ensure_all_started(:ecto_sql)
+      {:ok, _} = PukllayClub.Repo.start_link()
+      PukllayClub.Release.bgg_stats_report()
+      '
 
   Requires only the app `Repo` to be running — narrower than
-  `enrich_bgg_stats/1`'s guard, which also requires `Req.Finch` — but is
-  still `rpc`-only rather than `eval`-capable: an `eval` node has no
-  started `Repo` either, and the `Ecto.Migrator.with_repo/2` wrapper that
-  would start one carries the same live-connection-pool teardown hazard
-  documented on `enrich_bgg_stats/1` (F4).
+  `enrich_bgg_stats/1`'s guard, which also requires `Req.Finch`. The
+  runbook's preamble starts both regardless, so the `:req` expression above
+  is a harmless superset for this function; the `:ecto_sql` expression is
+  still required, since `PukllayClub.Repo.start_link()` fails on a missing
+  `DBConnection.Watcher` process without it.
 
   Prints one JSON line to stdout and emits the same payload via
   `Logger.info`, then returns the report map.
