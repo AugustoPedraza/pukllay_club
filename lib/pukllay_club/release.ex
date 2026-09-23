@@ -4,6 +4,7 @@ defmodule PukllayClub.Release do
   installed.
   """
   alias PukllayClub.Catalog.Seed.Credentials
+  alias PukllayClub.Catalog.Seed.StatsAudit
   alias PukllayClub.Catalog.Seed.StatsEnricher
 
   require Logger
@@ -158,6 +159,36 @@ defmodule PukllayClub.Release do
   end
 
   defp failed_batch_to_map({ids, reason}), do: %{ids: ids, reason: inspect(reason)}
+
+  @doc """
+  Read-only before/after measurement for `enrich_bgg_stats/1` — delegates
+  entirely to `PukllayClub.Catalog.Seed.StatsAudit.report/0` and performs
+  no write of any kind.
+
+      bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'
+
+  Requires only the app `Repo` to be running — narrower than
+  `enrich_bgg_stats/1`'s guard, which also requires `Req.Finch` — but is
+  still `rpc`-only rather than `eval`-capable: an `eval` node has no
+  started `Repo` either, and the `Ecto.Migrator.with_repo/2` wrapper that
+  would start one carries the same live-connection-pool teardown hazard
+  documented on `enrich_bgg_stats/1` (F4).
+
+  Prints one JSON line to stdout and emits the same payload via
+  `Logger.info`, then returns the report map.
+  """
+  @spec bgg_stats_report() :: map()
+  def bgg_stats_report do
+    :ok = ensure_live_node!([PukllayClub.Repo])
+
+    report = StatsAudit.report()
+
+    json = Jason.encode!(report)
+    IO.puts(json)
+    Logger.info(json)
+
+    report
+  end
 
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)

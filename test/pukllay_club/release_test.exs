@@ -108,4 +108,21 @@ defmodule PukllayClub.ReleaseTest do
       assert Release.ensure_live_node!() == :ok
     end
   end
+
+  describe "bgg_stats_report/0" do
+    test "prints one decodable JSON line and returns the same map" do
+      game_fixture(%{bgg_id: 13, publishers: ["Devir", "Devir"]})
+
+      out = capture_io(fn -> Release.bgg_stats_report() end)
+
+      payload = Jason.decode!(String.trim(out))
+      assert payload["total_games"] == 1
+      assert payload["games_with_bgg_id"] == 1
+      assert is_binary(payload["run_at"])
+
+      for column <- ["publishers", "artists", "mechanics", "designers"] do
+        assert is_map(payload[column])
+      end
+    end
+  end
 end
