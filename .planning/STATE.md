@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-17-PLAN.md
-last_updated: "2026-09-23T22:18:07.784Z"
+stopped_at: Completed 01.8.2-16-PLAN.md
+last_updated: "2026-09-23T22:54:51.803Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: c37834901741c187ff22fef79669a950fc89336b
+state_head: 43425d3f5942eb4cadc422238009860755e0bf38
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 43
+  completed_plans: 44
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 17 of 22
+Plan: 18 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -148,6 +148,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P14 | ~100min | 3 tasks | 13 files |
 | Phase 01.8.2 P15 | ~140min | 3 tasks | 12 files |
 | Phase 01.8.2 P17 | ~100min | 3 tasks | 9 files |
+| Phase 01.8.2 P16 | 173min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -313,6 +314,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-17: Nivel (weight_band) is edited via the top pills row, not the divider trio -- resolves an ambiguity between D-26's abbreviated order text and the packaged design doc by cross-checking sketch 072's own concrete markup (weight_band/units/shelf_id/is_expansion), giving exactly seven editable blocks
 - [Phase 01.8.2]: 01.8.2-17: The D-29 franja is fixed directly under the top bar (top: 56px), per CONTEXT.md's own text closing 080's open item 4 -- not the later-superseded in-body/scrolling placement an earlier mid-lineage note in the packaged reference doc still describes
 - [Phase 01.8.2]: 01.8.2-17: The editor's Secciones checkbox fieldset is removed outright, not relocated -- D-26 renders the chip de seccion read-only and section_live/edit.ex (plan 15) already owns add_game/remove_game exclusively
+- [Phase 01.8.2]: Task 2 and Task 3 built holistically with Task 1 in one implementation commit; tested independently per task afterward — All three tasks share one rail, one commit_placement/4 write path, and one Deshacer mechanism -- splitting into three disableable slices would have meant commenting out working code mid-plan. Each task's own acceptance criteria still independently verified before that task's commit landed.
 
 ### Pending Todos
 
@@ -456,8 +458,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T22:18:07.647Z
-Stopped at: Completed 01.8.2-17-PLAN.md
+Last session: 2026-09-23T22:54:51.666Z
+Stopped at: Completed 01.8.2-16-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
