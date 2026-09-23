@@ -94,6 +94,19 @@ const THEMES = ["light", "dark"]
 // no other change to this file is needed.
 const PAGES = ["/admin", "/admin/staff", "/admin/estantes", "/admin/juegos", "/admin/secciones", "/admin/niveles"]
 
+// Plan 01.8.2-17: the game editor is NOT appended to `PAGES` above — its
+// content wrapper (`.pk-editor-body`, a 16px keel `<div>`, not the shared
+// `main .mx-auto.w-full.max-w-3xl` shape) and its title
+// (`.pk-editor-topbar__title`, not `.pk-admin-page-title`) are a
+// deliberately different shell per D-27/D-30 ("the ONE documented
+// exception to..."), so folding it into the cross-page D1/D2/D3
+// consistency checks above would compare two intentionally different
+// shells against each other. It IS swept through `runPageCase`/`CHECKS`
+// (the anatomy/padding/44px-floor/contrast/no-daisy-button assertions,
+// which apply to every `.pk-admin-action`/`.pk-admin-editable-row`
+// regardless of which page shell renders them) via its own dedicated block
+// in `main()`, `resolveEditorUrl`/`runEditorPageChecks` below.
+
 function log(...args) {
   console.log(...args)
 }
@@ -1197,6 +1210,55 @@ async function runInteractiveSheetChecks({ client, baseUrl }) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.2-17: the game editor, swept separately from `PAGES` (see that
+// array's own comment on why). Resolves a real published game's editor URL
+// off the live /admin/juegos list — never a hardcoded id.
+// ---------------------------------------------------------------------------
+async function resolveEditorUrl(client, baseUrl) {
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  const href = await evalJS(
+    client,
+    `
+    (() => {
+      const a = document.querySelector('a[href^="/admin/juegos/"][href$="/editar"]');
+      return a ? a.getAttribute('href') : null;
+    })()
+  `,
+  )
+  return href
+}
+
+async function runEditorPageChecks({ client, baseUrl }) {
+  const failures = []
+  let cases = 0
+
+  const editorUrl = await resolveEditorUrl(client, baseUrl)
+  if (!editorUrl) {
+    failures.push("editor sweep: could not resolve a real game editor URL off /admin/juegos — is the dev catalog empty?")
+    return { failures, cases }
+  }
+  log(`editor sweep: resolved ${editorUrl}`)
+
+  for (const viewport of VIEWPORTS) {
+    for (const theme of THEMES) {
+      const ctx = { page: editorUrl, viewport, theme }
+      try {
+        const measured = await runPageCase({ client, baseUrl, page: editorUrl, viewport, theme })
+        cases++
+        log(`${label(ctx)} actions=${measured.actions.length} fields=${measured.fields.length} tappables=${measured.tappables.length}`)
+        for (const check of CHECKS) {
+          for (const f of check(measured, ctx)) failures.push(f)
+        }
+      } catch (err) {
+        failures.push(`${label(ctx)} FAIL: ${err.message}`)
+      }
+    }
+  }
+
+  return { failures, cases }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -1205,6 +1267,7 @@ async function main() {
 
   let exitCode = 0
   let casesRun = 0
+  let editorCasesRun = 0
   const titleSignatures = []
   const backTops = []
   const headToBodyGaps = []
@@ -1314,12 +1377,24 @@ async function main() {
       exitCode = 1
     }
     casesRun++
+
+    // Plan 01.8.2-17: the game editor, swept separately from PAGES (see
+    // that array's own comment on why) through the same anatomy/padding/
+    // 44px-floor/contrast/no-daisy-button CHECKS every other page runs.
+    log("Running the anatomy/44px-floor/contrast sweep against the game editor...")
+    const editorResult = await runEditorPageChecks({ client, baseUrl })
+    for (const f of editorResult.failures) {
+      log(`FAIL: ${f}`)
+      exitCode = 1
+    }
+    editorCasesRun = editorResult.cases
   } finally {
     await stopChrome(chrome)
     await stopDevServer(serverProc)
   }
 
-  const expectedCases = PAGES.length * VIEWPORTS.length * THEMES.length + 2 // +K1, +interactive
+  const expectedCases = PAGES.length * VIEWPORTS.length * THEMES.length + 2 + VIEWPORTS.length * THEMES.length // +K1, +interactive, +editor
+  casesRun += editorCasesRun
   if (casesRun !== expectedCases) {
     log(`FAIL: expected ${expectedCases} case blocks, only ${casesRun} completed far enough to be reported.`)
     exitCode = 1
