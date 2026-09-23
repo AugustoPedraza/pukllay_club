@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8.2 — Admin UI/UX Redesign
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-22 — Completed quick task 260922-pni (og-fallback.webp re-baked at #4A187F and verified live in production via PR #64)
+Last activity: 2026-09-22 — Completed quick task 260922-tum (BGG xpath scoping fix + dev re-enrich; production repair still outstanding)
 
 ## Performance Metrics
 
@@ -353,6 +353,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 26 | Document pukllay.club registrar (Spaceship) and DNS runbook | 2026-09-14 | 0576dfe | — | — |
 | 27 | Deploy uses catalog-scoped R2 token; production secrets runbook | 2026-09-14 | fad0886 | — | — |
 | 260922-pni | Re-bake og-fallback.webp at the current ramp (bg #551670→#4A187F, tagline #E3D3F0→#DED4F3, stale since sketch 058's H313.1→H300 rotation); committed re-runnable Pillow generator at tools/og-fallback/ that parses app.css at run time, lossless WebP so colours are exactly assertable, + 2 ExUnit pixel gates binding the shipped asset to app.css. Shipped to production via PR #64 (squash `8078a53`); live asset verified sha256-identical to the committed file, 1200×630, zero pixels of either retired colour. Carried an unrelated mint 1.10.0→1.10.1 bump (EEF-CVE-2026-82672) that was blocking CI for every PR | 2026-09-22 | 8078a53 | complete | [260922-pni-regenerar-og-fallback-webp-en-4a187f-que](./quick/260922-pni-regenerar-og-fallback-webp-en-4a187f-que/) |
+| 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
 
 ### Roadmap Evolution
 
