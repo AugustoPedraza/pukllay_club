@@ -191,13 +191,13 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 22 plans
+**Plans:** 1/22 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 01.8.2-01-PLAN.md — TRACER: the copies table, per-copy position, the per-estante advisory lock and a rail that renders real left-to-right order (D-01..D-04, D-11); Asignar deleted
+- [x] 01.8.2-01-PLAN.md — TRACER: the copies table, per-copy position, the per-estante advisory lock and a rail that renders real left-to-right order (D-01..D-04, D-11); Asignar deleted
 - [ ] 01.8.2-02-PLAN.md — D-34 token reconciliation: `--val` gets its own ramp stop (D-33), the press state lands (D-19o), and one table the UI slices read from
 - [ ] 01.8.2-03-PLAN.md — D-17 `ui-design-system` two-scope rewrite, a fresh `01.8.2-UI-SPEC.md`, and the open-item-5 copy decisions
 - [ ] 01.8.2-04-PLAN.md — D-37's three gates move into the functions, plus D-36's re-measured, reversible unpublish migration

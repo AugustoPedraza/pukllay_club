@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
-last_updated: "2026-09-23T04:07:09.715Z"
+stopped_at: Completed 01.8.2-01-PLAN.md
+last_updated: "2026-09-23T11:02:23.243Z"
 last_activity: 2026-09-23
-last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
-state_head: "0b18ec640016ee5e23350c317cf613a8ada4b766"
+last_activity_desc: Phase 01.8.2 execution started
+state_head: fc8f31a8991df484f079b87fecf40327a96e2444
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 Total Phases: 9
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.1 — Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+**Current focus:** Phase 01.8.2 — Admin UI/UX Redesign (INSERTED)
 (production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
 ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — READY TO EXECUTE
-Plan: Not started
+Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
+Plan: 2 of 22
 Status: Ready to execute
-Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-run): publishers.max 178→45, rows-with-duplicates 385→0, controls unmoved; prod report now matches dev field-for-field. Catalog data repair closed.
+Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
 ## Performance Metrics
 
@@ -132,6 +132,7 @@ Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-ru
 | Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
 | Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
 | Phase quick-260922-veq P01 | 15min | 3 tasks | 6 files |
+| Phase 01.8.2 P01 | 90min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -264,6 +265,9 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 260922-veq: ensure_live_node!/1 takes its process-name list as an argument (not hardcoded) so the raise branch is testable and the real required-process list is itself asserted satisfiable
 - [Phase 01.8.2]: 260922-veq: Release.enrich_bgg_stats/1 and Release.bgg_stats_report/0 print one JSON line via IO.puts + Logger.info and write no file under priv/ (discarded on every deploy) — repair still pending a human-authorized production run per docs/runbooks/production-bgg-reenrichment.md
 - [Phase 01.8.2]: Quick task 260922-w5o: corrected the production invocation rule from rpc to eval across release.ex, release_test.exs, the runbook, and AGENTS.md (rpc verified unavailable on the production container 2026-09-22, :noconnection, root cause not established; eval + three-expression preamble is proven); Credentials.fetch() also proven resolving on production
+- [Phase 01.8.2]: 01.8.2-01: place_copy/3 handles first placement, cross-estante move, and same-estante reorder with one algorithm — vacate the copy's own position first (removing it from the position space entirely), then insert with a descending-order shift; avoids a transient collision on the NOT DEFERRABLE copies_shelf_position_unique index.
+- [Phase 01.8.2]: 01.8.2-01: the old game-level ShelfLive.Index/Assign screens and their router lines were deleted in Task 2 (not Task 3) because Task 2's own strict verify grep for zero surviving assign_game/unassign_game/games_on_shelf/pick_list references is unsatisfiable while those screens' only remaining callers still exist.
+- [Phase 01.8.2]: 01.8.2-01: @estante_lock_namespace = 8_811_016, distinct from catalog.ex's @bgg_id_lock_namespace (8_811_015) — same two-int4 pg_advisory_xact_lock form, separate pg_locks.objsubid key space.
 
 ### Pending Todos
 
@@ -407,8 +411,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T02:29:20.565Z
-Stopped at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
+Last session: 2026-09-23T11:02:23.133Z
+Stopped at: Completed 01.8.2-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
