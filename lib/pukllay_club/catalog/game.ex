@@ -179,8 +179,8 @@ defmodule PukllayClub.Catalog.Game do
   draft stays a draft until staff publish it.
   """
   def enrichment_changeset(game, attrs) do
-    cast(
-      game,
+    game
+    |> cast(
       attrs,
       [
         :year_published,
@@ -208,6 +208,7 @@ defmodule PukllayClub.Catalog.Game do
         :is_expansion
       ]
     )
+    |> validate_inclusion(:enrichment_status, @enrichment_statuses)
   end
 
   @doc """

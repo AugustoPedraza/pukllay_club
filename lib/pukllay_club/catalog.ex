@@ -855,8 +855,15 @@ defmodule PukllayClub.Catalog do
     )
   end
 
+  # D-37 gate 2: excludes expansions, mirroring the `:recent` clause below
+  # — this was masked only because every one of the catalog's 26
+  # expansions carries a NULL `weight_band` today, and D-30's editor flow
+  # (01.8.2) puts staff in front of that field for the first time.
   defp section_query(%Section{kind: :weight_band, rule_value: band, sort: sort}) do
-    automatic_order_by(from(g in Game, where: g.weight_band == ^band and g.status == :published), sort)
+    automatic_order_by(
+      from(g in Game, where: g.weight_band == ^band and g.status == :published and g.is_expansion == false),
+      sort
+    )
   end
 
   defp section_query(%Section{kind: :recent, sort: sort}) do

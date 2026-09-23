@@ -208,6 +208,34 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
+  describe "enrichment_status validation (D-37 gate 3)" do
+    test "Game.enrichment_changeset/2 rejects an unknown enrichment_status" do
+      game = game_fixture(%{name: "Estado desconocido"})
+
+      changeset = Game.enrichment_changeset(game, %{enrichment_status: "nonsense"})
+
+      refute changeset.valid?
+      assert %{enrichment_status: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "Game.enrichment_changeset/2 accepts every known enrichment_status" do
+      game = game_fixture(%{name: "Estado conocido"})
+
+      for status <- ~w(pending enriched no_bgg_id bgg_missing failed) do
+        changeset = Game.enrichment_changeset(game, %{enrichment_status: status})
+        assert changeset.valid?, "expected #{status} to be valid: #{inspect(errors_on(changeset))}"
+      end
+    end
+
+    test "a raw SQL write of an unknown enrichment_status is rejected by the database CHECK constraint" do
+      game = game_fixture(%{name: "SQL directo"})
+
+      assert_raise Postgrex.Error, fn ->
+        Repo.query!("UPDATE games SET enrichment_status = 'nonsense' WHERE id = $1", [game.id])
+      end
+    end
+  end
+
   describe "filter_games/1 — no options" do
     test "returns games ordered by name, limited to the default page size" do
       game_fixture(%{name: "Zeta"})
@@ -688,7 +716,9 @@ defmodule PukllayClub.CatalogTest do
       assert Enum.all?(recent.games, &(&1.is_expansion == false))
     end
 
-    test "weight-band sections are unaffected by is_expansion" do
+    test "weight-band sections exclude expansions, even with a matching band (D-37 gate 2)" do
+      base = game_fixture(%{name: "Base Band Game", is_expansion: false, weight_band: "nivel_experto"})
+
       game_fixture(%{
         name: "Expansion Band Game(expa)",
         is_expansion: true,
@@ -696,7 +726,10 @@ defmodule PukllayClub.CatalogTest do
       })
 
       band_row = Enum.find(Catalog.list_home_sections(), &(&1.title == "Nivel experto"))
-      assert Enum.any?(band_row.games, &(&1.name == "Expansion Band Game(expa)"))
+      names = Enum.map(band_row.games, & &1.name)
+
+      assert base.name in names
+      refute "Expansion Band Game(expa)" in names
     end
   end
 
@@ -850,6 +883,20 @@ defmodule PukllayClub.CatalogTest do
 
       assert hobby_game.id in ids
       assert Enum.all?(games, &(&1.weight_band == "descubre_el_hobby"))
+    end
+
+    test "a weight_band section never contains an expansion, even with a matching band (D-37 gate 2)" do
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
+      base = game_fixture(%{name: "Hobby Base", weight_band: "descubre_el_hobby", is_expansion: false})
+
+      expansion =
+        game_fixture(%{name: "Hobby Expansion(expa)", weight_band: "descubre_el_hobby", is_expansion: true})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{hobby_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert base.id in ids
+      refute expansion.id in ids
     end
 
     test "the recent section never contains an expansion" do
