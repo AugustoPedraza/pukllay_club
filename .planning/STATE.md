@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-02-PLAN.md
-last_updated: "2026-09-23T11:19:14.918Z"
+stopped_at: Completed 01.8.2-03-PLAN.md
+last_updated: "2026-09-23T13:09:00.822Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: df282347f3b9d13be440d4a3a064e83a54492615
+state_head: e04b73424a073f458112658040eb2ac26e133f1b
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 29
+  completed_plans: 30
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 3 of 22
+Plan: 4 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -134,6 +134,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase quick-260922-veq P01 | 15min | 3 tasks | 6 files |
 | Phase 01.8.2 P01 | 90min | 3 tasks | 16 files |
 | Phase 01.8.2 P02 | 25min | 3 tasks | 4 files |
+| Phase 01.8.2 P03 | 40min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -271,6 +272,9 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-01: @estante_lock_namespace = 8_811_016, distinct from catalog.ex's @bgg_id_lock_namespace (8_811_015) — same two-int4 pg_advisory_xact_lock form, separate pg_locks.objsubid key space.
 - [Phase 01.8.2]: 01.8.2-02: D-33 --val lands on --pk-ramp-400 dark / --pk-ramp-700 light, distinct from --color-primary's own ramp stop in each theme, measured 6.52:1 in dark (beats the 4.83:1 floor)
 - [Phase 01.8.2]: 01.8.2-02: D-34 token reconciliation table (01.8.2-TOKENS.md) fates all 24 admin-sketch custom properties; --color-accent-bg/--color-accent-text confirmed DISCARD, Sin guardar dot resolves to --color-warning
+- [Phase 01.8.2]: 01.8.2-03: ui-design-system rewritten with two explicit scopes (D-17) — Scope A admin (/admin + shared staff chrome, S3 Contorno outline-only, no filled button), Scope B unchanged daisyUI/font-display for public catalog content
+- [Phase 01.8.2]: 01.8.2-03: fresh 01.8.2-UI-SPEC.md supersedes 01.8.1-UI-SPEC.md wholesale except the surviving fraction (voseo, BGG/edition copy, destructive-confirmation copy, undo-toast shape, 40-char caps, E7, 44px floor); banner prepended to the 01.8.1 file naming its successor
+- [Phase 01.8.2]: 01.8.2-03: open item 5 resolved by developer — 'agregado' split into Borrador creado (creation) vs Agregado al club (arrival); enrichment-completion toast action is Editar not Ver; editor save bar is one-word Guardar, superseding 01.8.1's Guardar cambios
 
 ### Pending Todos
 
@@ -414,8 +418,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T11:19:14.808Z
-Stopped at: Completed 01.8.2-02-PLAN.md
+Last session: 2026-09-23T13:09:00.704Z
+Stopped at: Completed 01.8.2-03-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
