@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 13/22 plans executed
+**Plans:** 14/22 plans executed
 
 Plans:
 
@@ -228,7 +228,7 @@ Plans:
 **Wave 7**
 
 - [x] 01.8.2-13-PLAN.md — Estantes search-first: idle prompt, suggestions, the rail opened at the game, Pendientes behind a badge (D-08, D-19g, D-19n)
-- [ ] 01.8.2-14-PLAN.md — Juegos grouped by `status` (D-25), one section anatomy with collapsed exceptions (D-19g-bis), two pinned tiers (D-19n)
+- [x] 01.8.2-14-PLAN.md — Juegos grouped by `status` (D-25), one section anatomy with collapsed exceptions (D-19g-bis), two pinned tiers (D-19n)
 - [ ] 01.8.2-15-PLAN.md — Web (Secciones) and Niveles rebuilt: the destacada rail, «Quitar de la fila» with Deshacer, one Ordenar mode, «Pasar a …»
 
 **Wave 8**
