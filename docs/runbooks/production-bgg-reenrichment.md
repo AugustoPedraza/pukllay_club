@@ -2,7 +2,10 @@
 
 **This is an operator-run runbook.** The code it invokes shipped in quick task 260922-veq; running
 the steps below is a separate, human-authorized action that happens after that plan merges and
-deploys — no command here was executed by that plan.
+deploys — no command here was executed by that plan. Quick task 260922-w5o (2026-09-22) corrected
+this runbook's invocation after the `rpc` command was found unavailable on the production
+container — the original version of this document told operators to use `rpc`, which does not
+work on this deployment; see the "Why not `rpc`" subsection below for what was observed.
 
 ## Context
 
@@ -28,45 +31,127 @@ replacement.
 - The `BggClient` scoping fix is live on the currently-deployed image (confirmed above).
 - `BGG_API_TOKEN` is present in Kamal `env.secret` — it already is, added in 01.8.1-08, and kept in
   sync by `test/pukllay_club/deploy_secrets_contract_test.exs`.
+- **Proven on the production host, 2026-09-22:** `PukllayClub.Catalog.Seed.Credentials.fetch()`,
+  run through `eval` with the preamble below, returned `{:ok, _}`. `BGG_API_TOKEN` demonstrably
+  resolves in-process from Kamal's `env.secret` on the live host — this closes one of
+  260922-veq's SUMMARY items that was previously only "provable by the operator at invocation
+  time." The other two items in that list (the real before/after enrichment numbers, and whether
+  the `kamal app exec --reuse` form reaches the running container) remain unproven; do not treat
+  this precondition as covering those.
 - A recent nightly `pg_dump` exists in R2 and you have confirmed its date — that dump is this
   runbook's rollback.
 
-## The one hard rule: `rpc`, never `eval`
+## Invocation: `eval` with the required-processes preamble
 
-Both `enrich_bgg_stats/1` and `bgg_stats_report/0` **must** be invoked with the release's `rpc`
-command against the running node — never `eval`. An `eval` node starts no supervision tree, so
-Req's HTTP pool (`Req.Finch`) does not exist there and every BGG request would fail; for
-`enrich_bgg_stats/1` this would be a half-run, not a clean refusal, if the code didn't guard
-against it. It does: `PukllayClub.Release.ensure_live_node!/1` checks for the required processes
-first and raises an actionable error naming the `rpc` form instead.
+Both `enrich_bgg_stats/1` and `bgg_stats_report/0` are invoked with the release's `eval` command,
+carrying a preamble that starts exactly the processes `ensure_live_node!/1` requires:
 
-Invocation shape, via Kamal:
-
-```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'"
+```elixir
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
 ```
 
-Or, as a fallback when Kamal itself is unavailable, `ssh` directly to the host and run the same
-`rpc` command inside the running container via `docker exec`:
+The first line starts `Req.Finch`, the `:req` application's default Finch pool — it is not
+started by this app's own supervision tree. The **`:ecto_sql` line is not optional, and is the
+easiest thing to get wrong**: skip it and `PukllayClub.Repo.start_link()` fails with a missing
+`DBConnection.Watcher` process, because `:db_connection`'s supervision tree is not running.
+Every invocation below carries all three expressions — never copy a shorter form.
+
+**The guard is a safety net, not an obstacle.** `ensure_live_node!/1` checks for the *registered
+processes* `PukllayClub.Repo` and `Req.Finch` — it cannot see which command started them. An
+`eval` that runs the preamble above satisfies the guard exactly as legitimately as a booted node
+would, and an `eval` that forgot the preamble still gets a clean refusal instead of a half-run
+that fails mid-batch on a missing HTTP pool.
+
+**Why this shape is also better**, not merely a fallback: it runs the ~90s job in its own
+short-lived node rather than inside the live web node on a 1 GB host, so it never competes with
+request serving.
+
+### Why not `rpc`
+
+On 2026-09-22 the release's `rpc` command, run against the running production container, returned:
+
+```
+--rpc-eval : RPC failed with reason :noconnection
+```
+
+The following was ruled out on that host, as observations only:
+
+- EPMD was up and the node WAS registered (`epmd -names` reported `name pukllay_club at port
+  36929`)
+- Distribution WAS enabled (PID 1's cmdline carried `-sname` and `-setcookie`)
+- The cookie was NOT mismatched — sha256 of the `-setcookie` cmdline value,
+  `/app/releases/COOKIE`, and PID 1's `RELEASE_COOKIE` env were all identical
+- The short hostname WAS resolvable — `/etc/hosts` mapped both the full container hostname suffix
+  and its truncated short form to the container's own address
+- `Node.ping/1` from a probe node inside the same container still returned `:pang`
+
+**The root cause is NOT established.** Every plausible mechanism above was checked and came back
+healthy — do not assume one anyway, and do not "fix" distribution on this host based on a guess.
+The operational fact is simply that `rpc` is unavailable on this deployment; `eval` is proven to
+work and is what every diagnostic above was itself run through.
+
+## Invocation shape
+
+The proven path: `ssh` to the host, discover the running web container, then run the release
+binary's `eval` command inside it via `docker exec`. No `-t` anywhere in this runbook — every
+command here is non-interactive, and a TTY injects carriage returns into the JSON captures Steps 1
+and 4 redirect to files.
 
 ```bash
 ssh deploy@34.41.63.138
-docker exec -it pukllay_club-web-<container-suffix> bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'
+docker ps   # find the running pukllay_club-web-<suffix> container; don't hardcode the suffix
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+'
+```
+
+The equivalent alternative via Kamal, carrying the same `eval` expression:
+
+```bash
+kamal app exec --reuse "bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+'"
 ```
 
 **Confirm the exact `kamal app exec` flags with `kamal help app exec` before running anything** —
 flag spellings differ across Kamal 2 minors; don't trust the spelling in this document blindly.
+This exact Kamal form has not been exercised on this host — 260922-veq's SUMMARY already lists it
+as operator-provable only, and this correction does not upgrade that status.
+
+To keep each step below short, you may define the preamble once as a shell variable in your own
+session and reference it in every step — for example:
+
+```bash
+PREAMBLE='{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()'
+```
+
+If you do, still write out the fully expanded form at least once so an operator in a fresh shell
+can reconstruct it from this document alone — every step below shows the expanded form.
 
 ## Capturing output
 
-The release `rpc` command discards the evaluated expression's return value — both functions print
-their JSON payload to stdout instead (`IO.puts`), so the operator captures it by redirecting.
-`kamal app exec` also interleaves its own progress lines with the container's stdout, so filter to
-just the JSON line (it's the only line starting with `{`) before redirecting:
+Both functions print their JSON payload to stdout (`IO.puts`) rather than relying on `eval`'s
+return value, so the operator captures it by redirecting. `docker exec`/`kamal app exec` may
+interleave their own progress lines with the container's stdout, so filter to just the JSON line
+(it's the only line starting with `{`) before redirecting — this holds for either invocation form:
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'" \
-  | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-before.json
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+' | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-before.json
 ```
 
 Name the two capture files exactly:
@@ -81,8 +166,12 @@ Both functions also emit the same payload via `Logger.info`, so the same JSON is
 ## Step 1 — BEFORE measurement
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'" \
-  | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-before.json
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+' | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-before.json
 ```
 
 Read the file back and confirm it is non-degenerate: `total_games` should be in the expected
@@ -93,14 +182,24 @@ investigate before running anything else in this runbook.**
 ## Step 2 — DRY RUN
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats(dry_run: true)'"
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.enrich_bgg_stats(dry_run: true)
+'
 ```
 
 Expect `updated` close to `candidates` and `failed_batches` empty (or very small — a transient BGG
 5xx is possible and does not indicate a problem with this code). Then re-run the report:
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'" | grep '^{'
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+' | grep '^{'
 ```
 
 **This is the real gate.** Confirm the fresh report matches `prod-bgg-stats-before.json` on every
@@ -110,19 +209,28 @@ trusted to.
 ## Step 3 — LIVE RUN
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats()'"
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.enrich_bgg_stats()
+'
 ```
 
 Expect roughly 60-90 seconds for the full catalog (about 20 batches of 20 at the enricher's
-1500ms default spacing). Keep the session in the foreground — there is no caller-side `rpc`
-timeout (`:erpc.call/4`'s 4-arity form defaults to `:infinity`), so waiting for it to finish is
-correct, not a sign anything hung. Save the printed summary alongside the before/after snapshots.
+1500ms default spacing). The work runs in the foreground of the invoking node itself, so waiting
+60-90 seconds is expected and is not a sign anything hung — do not detach the session. Save the
+printed summary alongside the before/after snapshots.
 
 ## Step 4 — AFTER measurement
 
 ```bash
-kamal app exec --reuse "bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'" \
-  | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-after.json
+docker exec pukllay_club-web-<container-suffix> bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+' | grep '^{' > .planning/quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/prod-bgg-stats-after.json
 ```
 
 ## Step 5 — COMPARE (the acceptance gate)
