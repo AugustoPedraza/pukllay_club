@@ -37,12 +37,18 @@ import AdminSheet from "./hooks/admin_sheet"
 // across two different subtrees (the search field, the rail) from one
 // mount point on the page's own stable wrapper.
 import AdminRail from "./hooks/admin_rail"
+// AdminList (plan 01.8.2-14, D-19g-bis/D-19n): expand-keeps-position for
+// Juegos' collapsible sections, the pinned section-caption IntersectionObserver,
+// the pinned page bar's scroll toggle, and the fresh-row scroll-into-view —
+// same non-colocated, mount-once-on-the-page's-own-wrapper convention as
+// AdminSheet/AdminRail above.
+import AdminList from "./hooks/admin_list"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AdminSheet, AdminRail},
+  hooks: {...colocatedHooks, AdminSheet, AdminRail, AdminList},
 })
 
 // Show progress bar on live navigation and form submits, and on any

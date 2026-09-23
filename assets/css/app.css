@@ -7,6 +7,7 @@
 @import "./admin/chrome.css";
 @import "./admin/screens.css";
 @import "./admin/estantes.css";
+@import "./admin/juegos.css";
 @source "../css";
 @source "../js";
 @source "../../lib/pukllay_club_web";
