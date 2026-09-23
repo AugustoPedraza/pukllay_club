@@ -1,0 +1,180 @@
+/* Admin component system (D-18) — the atoms every /admin screen composes
+   from. This file grows across plans 01.8.2-07 (Task 1: the A1-A4 action
+   system) and 01.8.2-08 (the composites: sheet, dialog, save bar,
+   snackbar, back row).
+
+   Every colour reference here resolves through `01.8.2-TOKENS.md`'s
+   reconciled tokens (`--color-surface`, `--color-surface-2`, `--val`,
+   `--stroke`) or a directly shipped `app.css` token (`--color-primary`,
+   `--color-base-content`, `--color-base-300`, `--color-success`,
+   `--color-warning`, `--color-error`, `--color-neutral`, `--pk-ramp-*`) —
+   never a literal hex. Geometry is `01.8.2-BENCHMARK.md`'s measured table,
+   verbatim.
+
+   Deliberately unlayered (no `@layer` wrapper), matching `admin/tokens.css`'s
+   own convention and `app.css`'s CASCADE-LAYER HAZARD note: a layered rule
+   here would silently lose to any unlayered Tailwind/daisyUI rule setting
+   the same property, with no warning and no specificity fight to notice. */
+
+:root {
+  /* Scope A's own radius token (8px) — distinct from daisyUI's
+     `--radius-box`/`--radius-field` (Scope B). Same numeric value as
+     `--radius-box` today is coincidence, not identity: the two scopes
+     never share a token name (`ui-design-system` SKILL.md, "Theme
+     tokens" — "two different radius tokens for two different scopes, not
+     a contradiction"). Not in `01.8.2-TOKENS.md`'s reconciliation table
+     because that table only diffs *colour* custom properties; this is the
+     first Scope A geometry constant to land, carried over verbatim from
+     the sketches' own `sources/themes/default.css`. */
+  --radius-md: 8px;
+}
+
+/* ============================================================
+   Task 1 — the A1-A4 action system (D-18, D-00a, 064 S3 Contorno)
+   One anatomy per context, four roles, paint only ever changes with role.
+   No filled button anywhere in this file (R7b / S3 Contorno) — every
+   anatomy below is outline, text, icon, or a full-bleed sheet row.
+   ============================================================ */
+
+.pk-admin-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  box-sizing: border-box;
+}
+
+.pk-admin-action svg,
+.pk-admin-action [class^="hero-"],
+.pk-admin-action [class*=" hero-"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* A1 — outlined: 44px, 16px side padding, 1px stroke, 8px radius, natural
+   width, inset 0 on both sides (065 R10 rule 7a — an outlined action never
+   pulls). Carries Principal and Secundaria only. */
+.pk-admin-action--a1 {
+  min-height: 44px;
+  width: fit-content;
+  padding: 0 16px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  background: var(--color-base-100);
+}
+
+.pk-admin-action--a1.pk-admin-action--principal {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* dark: --color-primary (#7B2DCE) on --color-base-100 (#2E154E) measures
+   2.33:1, under WCAG 1.4.11's 3:1 floor (admin-button-system.md). D-34
+   flagged this exact substitution as unresolved and delegated it to
+   "whichever slice implements the A1-A4 button system" — this task.
+   `--color-accent-text` never existed upstream (01.8.2-TOKENS.md DISCARD
+   row) so it is not a legal substitute. `--pk-ramp-400` is: it is the same
+   stop `--val` already resolves to in dark, and TOKENS.md's own "--val
+   contrast" section already measured it at 6.52:1 against
+   --color-base-100 — well past the 3:1 floor, on a real shipped token,
+   with no new alias invented. */
+:root[data-theme="dark"] .pk-admin-action--a1.pk-admin-action--principal {
+  border-color: var(--pk-ramp-400);
+  color: var(--pk-ramp-400);
+}
+
+.pk-admin-action--a1.pk-admin-action--secundaria {
+  border-color: var(--stroke);
+  color: var(--color-base-content);
+}
+
+/* A2 — text: 44px, 12px side padding, no stroke, pulled -12px so the
+   *label* lands on the content edge. Carries Terciaria and Peligro. */
+.pk-admin-action--a2 {
+  min-height: 44px;
+  padding: 0 12px;
+  margin-left: -12px;
+  border-radius: var(--radius-md);
+}
+
+.pk-admin-action--a2.pk-admin-action--terciaria {
+  color: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .pk-admin-action--a2.pk-admin-action--terciaria {
+  color: var(--color-neutral);
+}
+
+.pk-admin-action--a2.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* A3 — icon: 44x44 borderless circle, 18px glyph, pulled -12px so the
+   *glyph* lands on the content edge. Carries Terciaria and Peligro. */
+.pk-admin-action--a3 {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pk-admin-action--a3 svg,
+.pk-admin-action--a3 [class^="hero-"],
+.pk-admin-action--a3 [class*=" hero-"] {
+  width: 18px;
+  height: 18px;
+}
+
+.pk-admin-action--a3.pk-admin-action--terciaria {
+  color: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .pk-admin-action--a3.pk-admin-action--terciaria {
+  color: var(--color-neutral);
+}
+
+.pk-admin-action--a3.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* A4 — sheet row: 48px, full-bleed, commit-first. A sheet has no buttons
+   at all (D-19e) — this anatomy is a row, left-aligned, 16px/400. */
+.pk-admin-action--a4 {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 16px;
+  justify-content: flex-start;
+  font-size: 16px;
+  font-weight: 400;
+  border-radius: 0;
+  color: var(--color-base-content);
+}
+
+.pk-admin-action--a4.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* Disabled (D-24): muted stops, NEVER opacity — opacity dims the label,
+   the only thing saying what the control does when it revives. Reachable
+   only through the `commit` gate `AdminComponents.action/1` enforces at
+   render time; there is no CSS-only path to this state. */
+.pk-admin-action[disabled],
+.pk-admin-action--disabled {
+  color: var(--color-neutral);
+  cursor: not-allowed;
+}
+
+.pk-admin-action--a1[disabled],
+.pk-admin-action--a1.pk-admin-action--disabled {
+  border-color: var(--color-neutral);
+  background: var(--color-base-100);
+}

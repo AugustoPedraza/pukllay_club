@@ -12,6 +12,18 @@
    `.pk-*`/admin rule that also sets it, with no warning and no specificity
    fight to notice. */
 
+/* `components.css` (D-18's admin component module CSS) is imported HERE,
+   not from `app.css`, even though `app.css` already imports this file
+   (`admin/tokens.css`) at its own top. Plan 01.8.2-07's own `<verify>`
+   forbids modifying `app.css` at all (`git status --porcelain --
+   assets/css/app.css` must print nothing), so the only legal place to
+   wire a new admin stylesheet in is here — a nested `@import`, resolved
+   the same way Tailwind's standalone CLI (Lightning CSS) already resolves
+   this file's own import from `app.css`. CSS requires `@import` to
+   precede every other rule in the file (comments excepted), so this must
+   stay the first statement below. */
+@import "./components.css";
+
 /* --color-surface / --color-surface-2 (D-34, LAND): admin-scoped alias
    names for the shipped `--color-base-200`/`--color-base-300` stops, so
    admin rules can name "surface" semantically without reaching past the
