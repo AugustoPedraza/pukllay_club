@@ -139,6 +139,19 @@ defmodule PukllayClubWeb.Layouts do
         "subnav slots. false renders no hook attribute at all — the non-sticky path is byte-" <>
         "compatible with pages that don't opt in."
 
+  attr :admin_chrome, :boolean,
+    default: false,
+    doc:
+      "Task 3 (01.8.2-09, D-00b): true for every /admin page — gates <.footer /> off (D-00b: " <>
+        "no footer on /admin). Passed explicitly by each admin LiveView's own <Layouts.app> " <>
+        "call, the same shorthand-boolean pattern already used for `bottom_collapse` — there is " <>
+        "no separate admin layout module in this app, Layouts.app IS the one shared layout for " <>
+        "both scopes, so this is the structural signal the admin routes carry ('an app/1 attr " <>
+        "the admin layout passes', per the plan). Deliberately never derived from a URL string " <>
+        "match: a future admin route prefix would silently break a path-based predicate, while " <>
+        "this one is pinned at the call site of every admin LiveView, verified by an explicit " <>
+        "test per route family (dashboard_live_test.exs) rather than assumed to generalize."
+
   attr :search_expanded, :boolean,
     default: false,
     doc:
@@ -586,7 +599,10 @@ defmodule PukllayClubWeb.Layouts do
       </div>
     </main>
 
-    <.footer />
+    <%!-- D-00b: no footer on /admin. Gated on @admin_chrome (the structural
+    per-call-site attr every admin LiveView passes — see its own attr doc
+    above for why this is not a URL string match). --%>
+    <.footer :if={!@admin_chrome} />
 
     <.flash_group flash={@flash} />
     """
@@ -1303,6 +1319,7 @@ defmodule PukllayClubWeb.Layouts.NavDrawer do
   """
   use PukllayClubWeb, :live_component
 
+  alias PukllayClubWeb.AdminComponents
   alias PukllayClubWeb.Layouts
 
   @impl true
@@ -1397,19 +1414,63 @@ defmodule PukllayClubWeb.Layouts.NavDrawer do
           <.icon name="hero-x-mark" class="size-5" />
         </button>
       </div>
-      <nav class="pk-drawer-links" aria-label="Navegación principal">
+      <%!-- Task 3 (01.8.2-09, D-13a): ONE drawer component, TWO content
+      branches — never a second component. A signed-in staff member gets
+      the sectioned drawer (Panel / Sitio / Tu cuenta) on every page,
+      public or admin; an anonymous visitor keeps today's plain public
+      drawer, byte-identical to before this task (the `else` branch below
+      is untouched from Task 1/2). --%>
+      <nav
+        :if={Layouts.staff_session?(@current_scope)}
+        class="pk-drawer-links pk-drawer-links--staff"
+        aria-label="Navegación principal"
+      >
+        <%!-- Section labels: resolves the BENCHMARK's "noticed on the way"
+        item (11px UPPERCASE drawer labels vs 13px sentence-case page group
+        labels — two looks for one "labelled group" role). Chosen: the
+        13px/600 sentence-case look, routed through plan 01.8.2-07's
+        `form_label/1 rank="group"` so there is one implementation, not
+        two — see the plan SUMMARY for the recorded decision. --%>
+        <AdminComponents.form_label rank="group">Panel</AdminComponents.form_label>
+        <.link navigate={~p"/admin"}>
+          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/admin/secciones"}>
+          Web <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+
+        <AdminComponents.form_label rank="group">Sitio</AdminComponents.form_label>
         <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
           Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
         <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
           Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
-        <%!-- D-34: mobile staff's one entry into /admin — the header's own
-        .pk-nav-admin icon link is hidden at this same breakpoint (app.css),
-        so this drawer row is the sole mobile path. Nothing renders for a
-        visitor. --%>
-        <.link :if={Layouts.staff_session?(@current_scope)} navigate={~p"/admin"}>
-          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+
+        <AdminComponents.form_label rank="group">Tu cuenta</AdminComponents.form_label>
+        <%!-- D-00b: Salir moves here (the drawer's account section) — the
+        loose `Salir` link that used to sit on the dashboard page itself is
+        deleted (dashboard_live.ex). This identity row is static (no href,
+        no chevron — it acts as a label, not a destination), matching
+        admin-shell-navigation.md's account-sheet identity-row anatomy. --%>
+        <div class="pk-drawer-account" aria-label="Perfil">
+          <span class="pk-drawer-account-label">Perfil</span>
+          <span class="pk-drawer-account-email">{@current_scope.user.email}</span>
+        </div>
+        <.link href={~p"/admin/salir"} method="delete">
+          Salir <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+      </nav>
+      <nav
+        :if={!Layouts.staff_session?(@current_scope)}
+        class="pk-drawer-links"
+        aria-label="Navegación principal"
+      >
+        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
+          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
+          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
         </.link>
       </nav>
       <div class="pk-drawer-bottom">

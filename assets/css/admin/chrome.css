@@ -33,3 +33,61 @@
    01.8.2-07's `components.css`, this plan's own `<verify>` does not forbid
    touching `app.css`, so there is no need for tokens.css's nested-import
    workaround here. */
+
+/* ============================================================
+   Task 3 — the staff sectioned drawer (D-13a): Panel / Sitio / Tu cuenta.
+
+   Rows themselves keep app.css's existing `.pk-drawer-links a` recipe
+   (shared with the anonymous-visitor drawer, D-13a's "same drawer
+   everywhere" — the row CSS is not admin-only, only the SECTION grouping
+   around it is). Only the section-label spacing and the static "Perfil"
+   identity row are genuinely staff-only: neither has a counterpart in the
+   plain public drawer, so they belong here rather than in app.css.
+   ============================================================ */
+
+/* AdminComponents.form_label/1 rank="group" (13px/600 sentence case,
+   D-19g-bis's noticed-on-the-way resolution — see layouts.ex's Task 3
+   comment) has no built-in spacing of its own (components.css's
+   .pk-admin-label is `display: block; margin: 0;`) — it is a caption atom
+   meant to be composed into whatever rhythm the composing screen needs.
+   Inside the drawer's full-bleed `.pk-drawer-links` list (margin-inline:
+   -1rem in app.css), give it the same 1rem horizontal inset as every row
+   plus air above so three back-to-back sections don't read as one run of
+   text. The first label needs less top air (nothing precedes it but the
+   drawer header) — :first-child on the drawer's <nav> wrapper, not the
+   label itself, since the label element carries no other distinguishing
+   class of its own. */
+.pk-drawer-links--staff .pk-admin-label--group {
+  padding-inline: 1rem;
+  margin: 1.25rem 0 0.25rem;
+}
+
+.pk-drawer-links--staff .pk-admin-label--group:first-child {
+  margin-top: 0.25rem;
+}
+
+/* The static "Perfil" identity row (D-00b's TU CUENTA section): no href,
+   no chevron — it names the signed-in account, it does not navigate.
+   Matches the row's sibling `.pk-drawer-links a` rows on padding/min-
+   height so the section reads as one list, not two anatomies, even
+   though this one row is a <div> rather than an <a>. */
+.pk-drawer-account {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  justify-content: center;
+}
+
+.pk-drawer-account-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-drawer-account-email {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  overflow-wrap: anywhere;
+}

@@ -229,4 +229,56 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
       refute Accounts.User.staff?(nil)
     end
   end
+
+  # Task 3, plan 01.8.2-09 (D-00b): the footer never renders on /admin — the
+  # positive counterpart (a public page still renders it) lives in
+  # layouts_test.exs, since this file only ever reaches admin routes.
+  describe "no footer on /admin (01.8.2-09 Task 3, D-00b)" do
+    test "GET /admin as staff renders no footer markup" do
+      staff = staff_fixture()
+      conn = log_in_user(build_conn(), staff)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      refute html =~ "<footer"
+      refute html =~ "pk-footer"
+    end
+
+    test "GET /admin/ingresar (the admin login page) also renders no footer markup" do
+      {:ok, _lv, html} = live(build_conn(), ~p"/admin/ingresar")
+
+      refute html =~ "<footer"
+      refute html =~ "pk-footer"
+    end
+  end
+
+  # Task 3 (D-00b): Salir moved into the drawer's account section
+  # (layouts_test.exs covers the drawer side); the loose page-level link
+  # this dashboard used to render is gone.
+  describe "the loose Salir link is gone from the dashboard page (01.8.2-09 Task 3, D-00b)" do
+    test "GET /admin as staff renders no standalone Salir link outside the drawer" do
+      staff = staff_fixture()
+      conn = log_in_user(build_conn(), staff)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      doc = LazyHTML.from_document(html)
+
+      # Scoped to OUTSIDE the drawer component: the drawer itself legitimately
+      # renders a "Salir" link (D-00b's new home for it) — this guard is
+      # against a SECOND, loose copy on the dashboard body itself, the exact
+      # markup Task 3 deleted from dashboard_live.ex.
+      body_without_drawer_html =
+        doc
+        |> LazyHTML.query("main")
+        |> LazyHTML.to_html()
+
+      refute body_without_drawer_html =~ ~s(href="/admin/salir")
+      refute body_without_drawer_html =~ "Salir"
+
+      # The drawer itself still carries exactly one Salir link.
+      drawer_html = doc |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+      assert drawer_html =~ ~s(href="/admin/salir")
+    end
+  end
 end

@@ -128,7 +128,7 @@ defmodule PukllayClubWeb.Admin.StaffLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
       <div class="mx-auto w-full max-w-3xl space-y-6">
         <.header>
           Staff

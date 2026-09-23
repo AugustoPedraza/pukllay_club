@@ -1509,6 +1509,93 @@ defmodule PukllayClubWeb.LayoutsTest do
     end
   end
 
+  # Task 3, plan 01.8.2-09 (D-13a): the staff sectioned drawer. Real routes
+  # (not render_component/2) since staff_session?/1 needs a real
+  # @current_scope from an authenticated conn, and D-00b's footer gate
+  # needs a real admin route too.
+  describe "the staff sectioned drawer, Panel/Sitio/Tu cuenta (01.8.2-09 Task 3, D-13a)" do
+    test "a signed-in staff member sees all three sections on a public page (/)" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "Panel"
+      assert drawer_html =~ "Sitio"
+      assert drawer_html =~ "Tu cuenta"
+      assert drawer_html =~ "Admin"
+      assert drawer_html =~ "Web"
+      assert drawer_html =~ "Perfil"
+      assert drawer_html =~ "Salir"
+      assert drawer_html =~ staff.email
+    end
+
+    test "a signed-in staff member sees the same three sections on an admin page (/admin)" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/admin")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "Panel"
+      assert drawer_html =~ "Sitio"
+      assert drawer_html =~ "Tu cuenta"
+    end
+
+    test "an anonymous visitor's drawer contains none of Panel/Sitio/Tu cuenta" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      refute drawer_html =~ "Panel"
+      refute drawer_html =~ "Sitio"
+      refute drawer_html =~ "Tu cuenta"
+      refute drawer_html =~ "Perfil"
+      refute drawer_html =~ "Salir"
+
+      # The anonymous drawer is otherwise byte-identical to before Task 3:
+      # still exactly the two public rows.
+      assert drawer_html =~ "Inicio"
+      assert drawer_html =~ "Quiénes Somos"
+    end
+
+    test "form_label/1 rank=\"group\" (13px/600 sentence case) drives the section labels, not the old 11px uppercase .group-label look" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "pk-admin-label--group"
+      refute drawer_html =~ "group-label"
+    end
+
+    test "the public GET / still renders its footer for an anonymous visitor (footer gate does not over-apply)" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      assert html =~ "<footer"
+      assert html =~ "pk-footer"
+    end
+
+    test "the public GET / still renders its footer for a signed-in staff member too" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "<footer"
+      assert html =~ "pk-footer"
+    end
+  end
+
   # social_links/1 is now a PUBLIC component (promoted in plan 01.4-02
   # Task 3) with three real call sites: the footer (.pk-footer-social), the
   # mobile drawer (.pk-drawer-social), and the About page's Contacto card

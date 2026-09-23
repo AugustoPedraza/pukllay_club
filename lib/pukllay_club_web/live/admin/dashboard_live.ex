@@ -21,7 +21,7 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
       <div class="mx-auto w-full max-w-3xl space-y-6">
         <.header>Panel</.header>
         <div id="admin-cards" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -66,9 +66,6 @@ defmodule PukllayClubWeb.Admin.DashboardLive do
             <span class="font-display text-xl">Staff</span>
           </.link>
         </div>
-        <.link href={~p"/admin/salir"} method="delete" class="text-sm text-neutral">
-          Salir
-        </.link>
       </div>
     </Layouts.app>
     """
