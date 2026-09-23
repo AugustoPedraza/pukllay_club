@@ -635,4 +635,80 @@ defmodule PukllayClubWeb.AdminComponents do
     </div>
     """
   end
+
+  # ============================================================
+  # Plan 01.8.2-08, Task 2 — the one snackbar, replacing the top toast
+  # (D-19b, D-19c)
+  # ============================================================
+
+  @doc """
+  Renders D-19b/D-19c's one feedback component — the bottom snackbar,
+  replacing every top-positioned toast in the admin (`Layouts.admin_flash/1`
+  routes every `@admin_chrome` flash through this, per D-19c).
+
+  Bottom-anchored, above the tab bar (via `--pk-tab-bar-h`, a custom
+  property the chrome slice — plan 01.8.2-10 — sets; this component only
+  consumes it, with a `0px` fallback until that slice lands), on the
+  **inverse** surface (`--color-base-content` fill / `--color-base-100`
+  text — the theme's own base pair, swapped, so no new token is invented
+  and contrast is guaranteed by construction), 13px text, 8px radius.
+
+  `action` (optional `%{label: string, event: string}`) carries the
+  **duration contract literally in markup** — `data-timeout` is `10000`
+  when an action is present (Deshacer / Reintentar, closing early on
+  replacement or the ✕) and `4000` when it is not (D-19b) — so the
+  duration is assertable from the rendered HTML rather than buried in a
+  JS constant. Without an action, no ✕ renders at all. The message is
+  wrapped in a `role="status"`/`aria-live="polite"` live region so screen
+  readers announce it.
+
+  A caller renders this at a single, stable `id` (see `admin_flash/1`'s
+  own two fixed ids, one per flash kind) — a new snackbar patched into
+  that id by a subsequent LiveView diff replaces the previous one's DOM
+  outright, which is what "closes early on replacement" means at the
+  markup layer; the timer that would otherwise auto-dismiss it is this
+  plan's own scope boundary (deferred to whichever slice wires the
+  runtime dismissal, per this plan's `<read_first>`).
+  """
+  attr :id, :string, required: true
+  attr :message, :string, required: true
+  attr :action, :map, default: nil, doc: "%{label: string, event: string}"
+  attr :on_close, JS, default: %JS{}
+  attr :class, :any, default: nil
+
+  def snackbar(assigns) do
+    # String literals, deliberately not integers: `mix format`/Styler
+    # rewrites a bare integer >= 10_000 with an underscore separator
+    # (`10_000`), which would defeat this plan's own `<verify>` — a literal
+    # `grep -n "10000\|4000"` against this file's source. A string literal
+    # is untouched by that formatter rule, so both D-19b durations stay
+    # grep-visible verbatim AND `mix format --check-formatted` stays green.
+    assigns = assign(assigns, :timeout, if(assigns.action, do: "10000", else: "4000"))
+
+    ~H"""
+    <div
+      id={@id}
+      class={["pk-admin-snackbar", @class]}
+      data-pk-snackbar
+      data-timeout={@timeout}
+      role="status"
+      aria-live="polite"
+    >
+      <span class="pk-admin-snackbar__message">{@message}</span>
+      <div :if={@action} class="pk-admin-snackbar__actions">
+        <.action
+          anatomy="a2"
+          role="terciaria"
+          phx-click={@action.event}
+          class="pk-admin-snackbar__action"
+        >
+          {@action.label}
+        </.action>
+        <.action anatomy="a3" role="terciaria" aria-label="Cerrar" phx-click={@on_close}>
+          <CoreComponents.icon name="hero-x-mark" class="size-5" />
+        </.action>
+      </div>
+    </div>
+    """
+  end
 end

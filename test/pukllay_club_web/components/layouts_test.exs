@@ -275,7 +275,7 @@ defmodule PukllayClubWeb.LayoutsTest do
   # connection-status bar. No pre-existing test in this file ever asserted
   # on either removed id, so there is nothing to delete here — these are all
   # newly authored assertions.
-  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15)" do
+  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15) and admin flash routing (D-19c, plan 01.8.2-08)" do
     test "flash_group/1 renders neither connection-state id nor the stock toast positioning classes" do
       html = render_component(&Layouts.flash_group/1, %{flash: %{}})
 
@@ -293,6 +293,50 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert html =~ "Guardado con éxito"
       assert html =~ "Algo salió mal"
+    end
+
+    test "admin_chrome: true with an :info flash renders the snackbar, never the top toast" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"info" => "Sesión cerrada."},
+          inner_block: [],
+          admin_chrome: true
+        })
+
+      assert html =~ "pk-admin-snackbar"
+      assert html =~ "Sesión cerrada."
+      refute html =~ "toast-top"
+      refute html =~ "toast-end"
+    end
+
+    test "admin_chrome: true with an :error flash renders the snackbar, never the top toast" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"error" => "Error al traer datos de BGG."},
+          inner_block: [],
+          admin_chrome: true
+        })
+
+      assert html =~ "pk-admin-snackbar"
+      assert html =~ "Error al traer datos de BGG."
+      refute html =~ "toast-top"
+    end
+
+    test "admin_chrome: true with no flash present renders no snackbar" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], admin_chrome: true})
+
+      refute html =~ "pk-admin-snackbar"
+    end
+
+    test "admin_chrome: false (default, public pages) still renders the top toast — regression guard" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"info" => "Guardado con éxito"},
+          inner_block: []
+        })
+
+      assert html =~ "toast-top"
+      refute html =~ "pk-admin-snackbar"
     end
 
     test "app/1 renders exactly one connection-status bar carrying hidden, role and both connection bindings" do

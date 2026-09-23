@@ -813,4 +813,68 @@ defmodule PukllayClubWeb.AdminComponentsTest do
       assert js =~ "offsetParent"
     end
   end
+
+  # ============================================================
+  # Plan 01.8.2-08 Task 2 — snackbar/1 (D-19b, D-19c)
+  # ============================================================
+
+  describe "snackbar/1 (D-19b, D-19c)" do
+    test "with an action: renders the action, a 44px close control, and a 10000ms timeout" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.snackbar
+          id="snack-1"
+          message="Juego ubicado"
+          action={%{label: "Deshacer", event: "undo-place"}}
+        />
+        """)
+
+      assert html =~ ~s(data-timeout="10000")
+      assert html =~ "Deshacer"
+      assert html =~ "pk-admin-action--a3"
+      assert html =~ ~s(aria-label="Cerrar")
+    end
+
+    test "without an action: renders no close control and a 4000ms timeout" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.snackbar id="snack-2" message="Sesión cerrada." />
+        """)
+
+      assert html =~ ~s(data-timeout="4000")
+      refute html =~ "pk-admin-action--a3"
+      refute html =~ ~s(aria-label="Cerrar")
+    end
+
+    test "wraps the message in a live region (role=\"status\", aria-live)" do
+      assigns = %{}
+
+      html =
+        rendered_to_string(~H"""
+        <AdminComponents.snackbar id="snack-3" message="Orden guardado" />
+        """)
+
+      assert html =~ ~s(role="status")
+      assert html =~ ~s(aria-live="polite")
+      assert html =~ "Orden guardado"
+    end
+  end
+
+  describe "assets/css/admin/components.css — snackbar geometry and paint" do
+    test "both D-19b durations appear literally in admin_components.ex" do
+      source = File.read!(Path.expand("../../../lib/pukllay_club_web/components/admin_components.ex", __DIR__))
+      assert source =~ "10000"
+      assert source =~ "4000"
+    end
+
+    test "the snackbar sits on the inverse surface (base-content fill, base-100 text)" do
+      css = components_css()
+      assert css =~ ~r/\.pk-admin-snackbar\s*\{[^}]*background:\s*var\(--color-base-content\)/s
+      assert css =~ ~r/\.pk-admin-snackbar\s*\{[^}]*color:\s*var\(--color-base-100\)/s
+    end
+  end
 end

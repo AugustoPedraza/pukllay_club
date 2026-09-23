@@ -608,3 +608,46 @@
   gap: 4px;
   margin-top: 16px;
 }
+
+/* ============================================================
+   Plan 01.8.2-08 Task 2 — the one snackbar (D-19b, D-19c).
+   Bottom-anchored, above the tab bar — `--pk-tab-bar-h` is set by the
+   chrome slice (plan 01.8.2-10); the `0px` fallback keeps this component
+   correct (just flush with the viewport edge) until that slice lands.
+   Inverse surface: the theme's own base pair, swapped — no new token.
+   ============================================================ */
+.pk-admin-snackbar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--pk-tab-bar-h, 0px) + 12px);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  background: var(--color-base-content);
+  color: var(--color-base-100);
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.pk-admin-snackbar__message {
+  flex: 1 1 auto;
+}
+
+.pk-admin-snackbar__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* The action/close controls sit on the snackbar's INVERSE surface, not the
+   page surface `action/1`'s own role colours assume — force both to the
+   snackbar's own foreground so they stay legible regardless of role/theme. */
+.pk-admin-snackbar .pk-admin-action {
+  color: inherit;
+}

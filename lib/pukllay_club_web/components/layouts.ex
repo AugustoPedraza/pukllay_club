@@ -5,6 +5,11 @@ defmodule PukllayClubWeb.Layouts do
   """
   use PukllayClubWeb, :html
 
+  # Plan 01.8.2-08 Task 2 (D-19c): admin_flash/1 below renders every admin
+  # flash through AdminComponents.snackbar/1 instead of flash_group/1's
+  # top toast.
+  alias PukllayClubWeb.AdminComponents
+
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -604,7 +609,39 @@ defmodule PukllayClubWeb.Layouts do
     above for why this is not a URL string match). --%>
     <.footer :if={!@admin_chrome} />
 
-    <.flash_group flash={@flash} />
+    <%!-- D-19c (plan 01.8.2-08 Task 2): the admin has exactly ONE feedback
+    component, the bottom snackbar — the top toast (`flash_group/1` ->
+    `CoreComponents.flash/1`'s `.toast.toast-top`) is deleted for every
+    `@admin_chrome` page and its messages (including `Sesión cerrada.` from
+    `UserSessionController`) route through `admin_flash/1` instead. Scope B
+    (public catalog pages) keeps `flash_group/1` unchanged — D-16 leaves
+    that scope alone. --%>
+    <.admin_flash :if={@admin_chrome} flash={@flash} />
+    <.flash_group :if={!@admin_chrome} flash={@flash} />
+    """
+  end
+
+  # D-19c: renders every present flash (`:info`/`:error`) through
+  # `AdminComponents.snackbar/1` instead of `flash_group/1`'s top toast —
+  # the admin's one feedback component. A plain flash (no undo/retry
+  # action attached) always renders without an action, per D-19c's own
+  # example (`Cerraste sesión`/`Sesión cerrada.`): 4s, no ✕.
+  attr :flash, :map, required: true
+
+  defp admin_flash(assigns) do
+    ~H"""
+    <AdminComponents.snackbar
+      :if={msg = Phoenix.Flash.get(@flash, :info)}
+      id="admin-snackbar-info"
+      message={msg}
+      on_close={JS.push("lv:clear-flash", value: %{key: :info})}
+    />
+    <AdminComponents.snackbar
+      :if={msg = Phoenix.Flash.get(@flash, :error)}
+      id="admin-snackbar-error"
+      message={msg}
+      on_close={JS.push("lv:clear-flash", value: %{key: :error})}
+    />
     """
   end
 
