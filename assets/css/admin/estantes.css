@@ -1,11 +1,19 @@
-/* Estantes (plan 01.8.2-13, D-08, D-19g, D-19j) — the search-first "find a
-   box" screen. This slice (Task 1 of 3) covers only the idle state and
-   the search dropdown; the answered-state rail and D-19n's pinned-search
-   behaviour are Task 2's own addition to this same file.
+/* Estantes (plan 01.8.2-13, D-08, D-19g, D-19j, D-19n) — the search-first
+   "find a box" screen. Idle: prompt + 48px field at the optical centre
+   (2:3 top:bottom split — 069's own `.sp-top`/`.sp-bot` ratio, measured as
+   reading better than a geometric 1:1 centre). Answered: the block rises
+   (title -> field 16px, field -> answer 32px) and the estante renders as
+   context over a rail of covers.
 
-   Idle: prompt + 48px field at the optical centre (2:3 top:bottom split —
-   069's own `.sp-top`/`.sp-bot` ratio, measured as reading better than a
-   geometric 1:1 centre).
+   The rail deliberately reuses `.pk-rail`/`.pk-rail-wrap`/`.pk-poster-card`
+   from `app.css` (065 R9's own pinned card-width/gap/fade geometry,
+   already the catalog rail's own contract) rather than redeclaring a
+   second card/gap/fade set here — this file only adds the cover's own art
+   box, fallback tile and lifted-state paint on top of that shared
+   geometry. Do not add a literal pixel card-width rule anywhere below;
+   this file's own `<verify>` greps for it — the `aspect-ratio` used below
+   is a ratio, not a width, and stays inside whatever width
+   `.pk-poster-card` already sets.
 
    Wired into the build via a direct `@import "./admin/estantes.css";`
    appended to `app.css`'s existing admin-import block (sibling to
@@ -64,9 +72,10 @@
   display: flex;
   flex-direction: column;
   /* Room to distribute the 2:3 idle split into — flex-grow has nothing to
-     divide without it. A rough allowance for the page header above this
-     block. */
-  min-height: calc(100dvh - 140px);
+     divide without it. `--pk-tab-bar-h` (0px fallback until plan
+     01.8.2-10's chrome is on screen for this route) and a rough allowance
+     for the page header above this block. */
+  min-height: calc(100dvh - var(--pk-tab-bar-h, 0px) - 140px);
 }
 
 .pk-estantes-hero {
@@ -91,8 +100,24 @@
   flex: 3 1 0;
 }
 
+/* raised rhythm (decision 61): title -> field 16px */
+.pk-estantes[data-raised="true"] .pk-estantes-search-wrap {
+  margin-top: 16px;
+}
+
 .pk-estantes-search-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   background: var(--color-base-100);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+/* D-19n: the SAME field pins — hides on scroll-down, returns on
+   scroll-up, never while focused, never within 140px of the top
+   (`assets/js/hooks/admin_rail.js` owns the threshold and the toggle). */
+.pk-estantes-search-wrap[data-pinned-hidden] {
+  transform: translateY(-100%);
 }
 
 .pk-estantes-search {
@@ -169,5 +194,61 @@
 
 .pk-estantes-row-meta {
   font-size: 13px;
+  color: var(--color-neutral);
+}
+
+/* answered state (decision 61): field -> answer 32px */
+.pk-estantes-answer {
+  margin-top: 32px;
+}
+
+/* the estante as context, not a heading (decision 63): 18px icon + 14/600
+   muted name, 16px above the rail. */
+.pk-estantes-estante-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral);
+  margin-bottom: 16px;
+}
+
+.pk-estantes-cover__art {
+  aspect-ratio: 96 / 100;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.pk-estantes-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pk-estantes-cover__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-primary);
+}
+
+/* the picked cover is lifted -12px with a shadow (decision 23) */
+.pk-estantes-cover--lifted .pk-estantes-cover__art {
+  transform: translateY(-12px);
+  box-shadow: 0 14px 22px -6px rgba(36, 18, 56, 0.45);
+}
+
+:root[data-theme="dark"] .pk-estantes-cover--lifted .pk-estantes-cover__art {
+  box-shadow: 0 14px 22px -6px rgba(0, 0, 0, 0.8);
+}
+
+.pk-estantes-needs-placement {
+  padding: 24px 16px;
+  text-align: center;
   color: var(--color-neutral);
 }

@@ -246,6 +246,14 @@ defmodule PukllayClub.Catalog.Shelves do
 
   def search_copies(_blank), do: []
 
+  @doc "Fetches a copy by id, game and shelf preloaded, raising `Ecto.NoResultsError` for an unknown id."
+  @spec get_copy!(integer()) :: Copy.t()
+  def get_copy!(id) do
+    Copy
+    |> Repo.get!(id)
+    |> Repo.preload([:game, :shelf])
+  end
+
   @doc """
   Copies on `shelf_id`, in real left-to-right `position` order (D-04/D-08
   — the replacement for the old game-level read's name ordering). Game

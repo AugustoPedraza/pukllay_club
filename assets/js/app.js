@@ -31,12 +31,18 @@ import topbar from "../vendor/topbar"
 // Referenced from admin_components.ex via `phx-hook="AdminSheet"` — no
 // leading dot, since that syntax is reserved for colocated hooks.
 import AdminSheet from "./hooks/admin_sheet"
+// AdminRail (plan 01.8.2-13, D-08/D-19n): scroll-to-selected for the
+// Estantes rail plus the pinned-search hide/return — same non-colocated
+// convention as AdminSheet above, since this one also needs to reach
+// across two different subtrees (the search field, the rail) from one
+// mount point on the page's own stable wrapper.
+import AdminRail from "./hooks/admin_rail"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, AdminSheet},
+  hooks: {...colocatedHooks, AdminSheet, AdminRail},
 })
 
 // Show progress bar on live navigation and form submits, and on any
