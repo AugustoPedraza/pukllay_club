@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-10-PLAN.md
-last_updated: "2026-09-23T17:12:59.562Z"
+stopped_at: Completed 01.8.2-11-PLAN.md
+last_updated: "2026-09-23T17:49:38.163Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: 720955f6ed865b428388445f848d28bec115c52e
+state_head: 7dad6e8800ec05ad612aaa9ae6aa3fde883e1d15
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 37
+  completed_plans: 38
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 11 of 22
+Plan: 12 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -142,6 +142,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P09 | 45min | 3 tasks | 17 files |
 | Phase 01.8.2 P08 | 24min | 3 tasks | 7 files |
 | Phase 01.8.2 P10 | 42min | 3 tasks | 12 files |
+| Phase 01.8.2 P11 | 50min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -295,6 +296,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-09: Layouts.app/1 gained admin_chrome (boolean, passed explicitly by all 10 admin-scoped LiveViews) as D-00b's structural no-footer-on-/admin predicate -- touches 10 LiveView call sites beyond this plan's stated files, documented as necessary since no existing attr reliably distinguished admin routes from two public routes sharing the same call shape
 - [Phase 01.8.2]: 01.8.2-08: sheet/1, dialog/1, snackbar/1 (routed via Layouts.admin_flash/1, deleting the admin top toast), save_bar/1, back_row/1, page_bar/1 land in AdminComponents; admin_sheet.js hand-authored non-colocated hook shared by sheet/dialog; --pk-save-bar-h is the single source for both the 77px bar height and its calc()-derived body clearance
 - [Phase 01.8.2]: 01.8.2-10: D-14 resolved 'suppress' via real-browser measurement — the staff tab bar hides only on the game detail page (full occlusion of the reserve CTA measured), shows everywhere else including the catalog index (measured zero collision) — Mechanism: Layouts.app/1's new suppress_tab_bar call-site attr (mirrors admin_chrome), never a URL-string match; post-fix re-measurement confirmed the tab bar does not render at all on the detail page
+- [Phase 01.8.2]: 01.8.2-11: dashboard rebuilt as 060-B boxes (D-00a renames: Panel->Admin, Secciones->Web) with every count computed once in mount/3 (Shelves.copies_progress/0 added for the Estantes meter, replacing the dead games.shelf_id-based location_progress/0); Staff rebuilt onto list_row+status_dot rows and D-19f's centred Quitar dialog, deleting the shipped modal-open/modal-action footer -- AdminComponents gained pending_pill/1 (D-19g), status_dot/1's vocabulary widened for Staff's own states, field/1's type values gained "email", and action/1's dead type="button" hardcode was fixed to honor a caller's type via rest; admin_composition_test.exs is the new shared D-18 guard, seeded with both screens and structured for a one-line append per later screen plan (01.8.2-13/-14/-15/-18/-19/-20)
 
 ### Pending Todos
 
@@ -438,8 +440,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T17:12:59.443Z
-Stopped at: Completed 01.8.2-10-PLAN.md
+Last session: 2026-09-23T17:49:38.024Z
+Stopped at: Completed 01.8.2-11-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

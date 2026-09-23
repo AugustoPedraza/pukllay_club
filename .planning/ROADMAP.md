@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 10/22 plans executed
+**Plans:** 11/22 plans executed
 
 Plans:
 
@@ -219,7 +219,7 @@ Plans:
 
 **Wave 5**
 
-- [ ] 01.8.2-11-PLAN.md — Dashboard (060-B boxes with real numbers) and Staff rebuilt on the module, plus the composition guard
+- [x] 01.8.2-11-PLAN.md — Dashboard (060-B boxes with real numbers) and Staff rebuilt on the module, plus the composition guard
 
 **Wave 6**
 
