@@ -1415,4 +1415,68 @@ defmodule PukllayClub.CatalogTest do
       assert [limit: 2, offset: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Zeta"]
     end
   end
+
+  describe "list_admin_games_by_status/1 (D-25, plan 01.8.2-14)" do
+    test "returns a map with one key per status, every game in exactly one" do
+      draft = game_fixture(%{name: "Borrador", status: :draft})
+      published = game_fixture(%{name: "Publicado", status: :published})
+      retired = game_fixture(%{name: "Retirado", status: :retired})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert Enum.map(groups.draft, & &1.id) == [draft.id]
+      assert Enum.map(groups.published, & &1.id) == [published.id]
+      assert Enum.map(groups.retired, & &1.id) == [retired.id]
+    end
+
+    test "the partition sums to count_admin_games/1 — assert it, don't assume it" do
+      for n <- 1..5, do: game_fixture(%{name: "D#{n}", status: :draft})
+      for n <- 1..7, do: game_fixture(%{name: "P#{n}", status: :published})
+      for n <- 1..3, do: game_fixture(%{name: "R#{n}", status: :retired})
+
+      groups = Catalog.list_admin_games_by_status()
+      total = length(groups.draft) + length(groups.published) + length(groups.retired)
+
+      assert total == Catalog.count_admin_games()
+      assert total == 15
+    end
+
+    test "an empty status is simply an empty list, not a missing key" do
+      game_fixture(%{status: :published})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert groups.draft == []
+      assert groups.retired == []
+    end
+
+    test "each group is ordered by name then id, matching list_admin_games/1's tie-break" do
+      game_fixture(%{name: "Zeta", status: :draft})
+      game_fixture(%{name: "Alfa", status: :draft})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert Enum.map(groups.draft, & &1.name) == ["Alfa", "Zeta"]
+    end
+
+    test ":q narrows every group by name, case-insensitively" do
+      game_fixture(%{name: "Catán", status: :draft})
+      game_fixture(%{name: "Carcassonne", status: :published})
+
+      groups = Catalog.list_admin_games_by_status(q: "cat")
+
+      assert Enum.map(groups.draft, & &1.name) == ["Catán"]
+      assert groups.published == []
+    end
+
+    test "a :status opt is ignored — the grouping IS the status split" do
+      game_fixture(%{name: "Borrador", status: :draft})
+      game_fixture(%{name: "Publicado", status: :published})
+
+      groups = Catalog.list_admin_games_by_status(status: :draft)
+
+      assert length(groups.draft) == 1
+      assert length(groups.published) == 1
+    end
+  end
 end

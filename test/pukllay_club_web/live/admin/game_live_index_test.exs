@@ -1,0 +1,656 @@
+defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
+  @moduledoc """
+  `Admin.GameLive.Index` (`/admin/juegos`) — split out of the former
+  `game_live_test.exs` by plan 01.8.2-14 (D-25) along the screen boundary:
+  the editor (`GameLive.Form`) keeps its own file for plan 01.8.2-17 to
+  rewrite, this file owns everything the redesigned list screen does.
+
+  async: false (01.8.1-06 Task 2, Rule 3): the add-game/enrichment tests
+  below stub `:catalog_storage`/`:enrichment_translate_call` via global
+  `Application.put_env/3`, the same reason `OGCardBackfillTest` uses
+  `async: false`.
+  """
+  use PukllayClubWeb.ConnCase, async: false
+  use Oban.Testing, repo: PukllayClub.Repo
+
+  import Phoenix.LiveViewTest
+  import PukllayClub.CatalogFixtures
+
+  alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
+  alias PukllayClub.Catalog.Seed.BggClient
+  alias PukllayClub.Catalog.Seed.ImagePipeline
+  alias PukllayClub.Catalog.Seed.TranslatedDescription
+  alias PukllayClub.Repo
+  alias PukllayClub.Workers.EnrichGameWorker
+
+  @bgg_fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
+
+  defmodule FakeStorage do
+    @moduledoc false
+    @behaviour PukllayClub.Catalog.Seed.Storage
+
+    @impl true
+    def put(_credentials, key, binary, _opts) do
+      Process.put({:fake_storage_put, key}, byte_size(binary))
+      {:ok, "https://images.test.invalid/#{key}"}
+    end
+
+    @impl true
+    def list_keys(_credentials, _prefix), do: {:ok, []}
+  end
+
+  setup :register_and_log_in_staff
+
+  describe "GameLive.Index — status groups (D-25)" do
+    test "renders three sections in order when all three statuses have games", %{conn: conn} do
+      game_fixture(%{name: "Un borrador", status: :draft})
+      game_fixture(%{name: "Un publicado", status: :published})
+      game_fixture(%{name: "Un retirado", status: :retired})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "Borradores"
+      assert html =~ "Juegos del club"
+      assert html =~ "Retirados"
+
+      draft_pos = html |> :binary.match("Borradores") |> elem(0)
+      published_pos = html |> :binary.match("Juegos del club") |> elem(0)
+      retired_pos = html |> :binary.match("Retirados") |> elem(0)
+      assert draft_pos < published_pos
+      assert published_pos < retired_pos
+    end
+
+    test "a group with 0 rows is not rendered (no Retirados, no Borradores)", %{conn: conn} do
+      game_fixture(%{name: "Solo este", status: :published})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos")
+
+      refute has_element?(lv, "#juegos-section-retired")
+      refute has_element?(lv, "#juegos-section-draft")
+      assert has_element?(lv, "#juegos-section-published")
+      refute html =~ "Retirados"
+    end
+
+    test "every game appears in exactly one section; the counts sum to count_admin_games/1", %{
+      conn: conn
+    } do
+      game_fixture(%{name: "D1", status: :draft})
+      game_fixture(%{name: "D2", status: :draft})
+      game_fixture(%{name: "P1", status: :published})
+      game_fixture(%{name: "R1", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      # Borradores and Retirados start collapsed (D-19g-bis decision 18) —
+      # open both before counting rendered rows.
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+      render_click(lv, "toggle-section", %{"section-key" => "retired"})
+
+      assert lv |> render() |> extract_count("draft") == 2
+      assert lv |> render() |> extract_count("published") == 1
+      assert lv |> render() |> extract_count("retired") == 1
+      assert 2 + 1 + 1 == Catalog.count_admin_games()
+    end
+
+    test "a row inside Borradores does not render a status-dot repeating its section's state", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Sin publicar", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      assert has_element?(lv, "#game-row-#{game.id}")
+      refute has_element?(lv, "#game-row-#{game.id} .pk-admin-status-dot")
+    end
+
+    test "a draft missing data renders a Sin datos row attribute", %{conn: conn} do
+      game =
+        game_fixture(%{name: "Incompleto", status: :draft, description: nil, cover_url: nil})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      assert has_element?(lv, "#game-row-#{game.id} .pk-admin-kind-tag", "Sin datos")
+    end
+
+    test "a draft with real content renders no Sin datos tag", %{conn: conn} do
+      game = game_fixture(%{name: "Completo", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      assert has_element?(lv, "#game-row-#{game.id}")
+      refute has_element?(lv, "#game-row-#{game.id} .pk-admin-kind-tag", "Sin datos")
+    end
+
+    test "no <.table>, no Cargar más, no draft filter chip survives", %{conn: conn} do
+      game_fixture(%{name: "Cualquiera"})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      refute html =~ "Cargar más"
+      refute html =~ "<table"
+      refute html =~ "Publicados</"
+    end
+
+    test "with 60 games, every one renders at once (no pagination)", %{conn: conn} do
+      for n <- 1..60 do
+        game_fixture(%{name: "Juego #{String.pad_leading(to_string(n), 3, "0")}"})
+      end
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert count_occurrences(html, "id=\"game-row-") >= 60
+    end
+
+    test "typing in the search box narrows by name case-insensitively", %{conn: conn} do
+      game_fixture(%{name: "Catán"})
+      game_fixture(%{name: "Carcassonne"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = lv |> form("#admin-games-search", q: "cat") |> render_change()
+
+      assert html =~ "Catán"
+      refute html =~ "Carcassonne"
+    end
+
+    test "a search with no matches shows the empty state", %{conn: conn} do
+      game_fixture(%{name: "Catán"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = lv |> form("#admin-games-search", q: "zzz-no-match") |> render_change()
+
+      assert html =~ "Ningún juego coincide"
+    end
+
+    test "with zero games at all, shows the empty add-game hint", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "Ningún juego todavía"
+      assert html =~ "Agregá un juego pegando su ID o link de BGG."
+    end
+  end
+
+  describe "GameLive.Index — collapsible sections (D-19g-bis decision 17/18)" do
+    test "Borradores and Retirados start collapsed; Juegos del club is expanded", %{conn: conn} do
+      draft = game_fixture(%{name: "Borrador uno", status: :draft})
+      published = game_fixture(%{name: "Publicado uno", status: :published})
+      retired = game_fixture(%{name: "Retirado uno", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      refute has_element?(lv, "#game-row-#{draft.id}")
+      assert has_element?(lv, "#game-row-#{published.id}")
+      refute has_element?(lv, "#game-row-#{retired.id}")
+    end
+
+    test "toggling Borradores expands it and shows its rows", %{conn: conn} do
+      draft = game_fixture(%{name: "Borrador uno", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      refute has_element?(lv, "#game-row-#{draft.id}")
+
+      html = render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      assert html =~ draft.name
+      assert has_element?(lv, "#game-row-#{draft.id}")
+    end
+
+    test "toggling twice collapses it again", %{conn: conn} do
+      draft = game_fixture(%{name: "Borrador uno", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      refute has_element?(lv, "#game-row-#{draft.id}")
+    end
+
+    test "Juegos del club's header carries no caret and is not a button", %{conn: conn} do
+      game_fixture(%{name: "Publicado uno", status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      refute has_element?(lv, "#juegos-section-toggle-published")
+      assert has_element?(lv, "#juegos-section-published .pk-admin-juegos-section-header")
+
+      refute has_element?(
+               lv,
+               "#juegos-section-published .pk-admin-juegos-section-header--collapsible"
+             )
+    end
+
+    test "a collapsible caption's caret appears after the count in DOM order", %{conn: conn} do
+      game_fixture(%{name: "Borrador uno", status: :draft})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      header = extract_between(html, "juegos-section-toggle-draft", "</button>")
+      count_pos = header |> :binary.match("pk-admin-juegos-count") |> elem(0)
+      caret_pos = header |> :binary.match("pk-admin-juegos-caret") |> elem(0)
+      assert count_pos < caret_pos
+    end
+
+    test "toggle-section ignores an unrecognized section key rather than crashing", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "toggle-section", %{"section-key" => "published"})
+      assert is_binary(html)
+    end
+  end
+
+  describe "GameLive.Index — Copias meta (D-02/D-31), batched" do
+    test "a row's trailing count pill reflects counts_for_games/1, no per-row count query", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Con copias", status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, "#game-row-#{game.id} .pk-admin-count-pill", "0")
+    end
+  end
+
+  describe "GameLive.Index — D-37 gate 4: post-add landing behaviour" do
+    setup do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+      previous_translate_call = Application.get_env(:pukllay_club, :enrichment_translate_call)
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      on_exit(fn ->
+        if previous_storage do
+          Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+        else
+          Application.delete_env(:pukllay_club, :catalog_storage)
+        end
+
+        if previous_translate_call do
+          Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+        else
+          Application.delete_env(:pukllay_club, :enrichment_translate_call)
+        end
+      end)
+
+      :ok
+    end
+
+    test "adding a game opens Borradores and marks the new row fresh", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "184267")
+        |> render_submit()
+
+      game = Repo.get_by!(Game, bgg_id: 184_267)
+      assert has_element?(lv, "#game-row-#{game.id}")
+      assert html =~ "pk-admin-juegos-row--fresh"
+    end
+
+    test "confirming an edition opens Borradores and marks the new row fresh", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+      html = lv |> element("#confirm-edition") |> render_click()
+
+      edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
+      assert has_element?(lv, "#game-row-#{edition.id}")
+      assert html =~ "pk-admin-juegos-row--fresh"
+    end
+  end
+
+  describe "GameLive.Index — add game by BGG id (D-01, 01.8.1-06)" do
+    setup do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+      previous_translate_call = Application.get_env(:pukllay_club, :enrichment_translate_call)
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      on_exit(fn ->
+        if previous_storage do
+          Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+        else
+          Application.delete_env(:pukllay_club, :catalog_storage)
+        end
+
+        if previous_translate_call do
+          Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+        else
+          Application.delete_env(:pukllay_club, :enrichment_translate_call)
+        end
+      end)
+
+      :ok
+    end
+
+    defp stub_bgg_fixture do
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @bgg_fixture)
+      end)
+    end
+
+    defp stub_cover_image do
+      Req.Test.stub(ImagePipeline, fn conn ->
+        png =
+          800
+          |> Image.new!(600, color: [10, 20, 30])
+          |> Image.write!(:memory, suffix: ".png")
+
+        conn
+        |> Plug.Conn.put_resp_content_type("image/png")
+        |> Plug.Conn.send_resp(200, png)
+      end)
+    end
+
+    test "an invalid id shows a field error and adds nothing", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "not-a-number")
+        |> render_submit()
+
+      assert html =~ "Pegá un número de BGG o el link del juego."
+      assert Catalog.count_admin_games() == 0
+    end
+
+    test "a valid id adds a draft row showing the cargando placeholder and a skeleton", %{conn: conn} do
+      stub_bgg_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "184267")
+        |> render_submit()
+
+      assert html =~ "Juego agregado como borrador."
+      assert html =~ "Juego #184267 (cargando…)"
+      assert html =~ "skeleton"
+    end
+
+    test "after perform_job runs the full pipeline, re-rendering shows the BGG name", %{
+      conn: conn
+    } do
+      stub_bgg_fixture()
+      stub_cover_image()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      game = Repo.get_by!(Game, bgg_id: 184_267)
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+
+      assert :ok = perform_job(EnrichGameWorker, %{"game_id" => game.id})
+
+      # A fresh mount starts with Borradores collapsed again (session-local
+      # UI state, never persisted) — open it before checking the row.
+      {:ok, lv2, _html} = live(conn, ~p"/admin/juegos")
+      html = render_click(lv2, "toggle-section", %{"section-key" => "draft"})
+      assert html =~ "On Mars"
+      refute html =~ "cargando"
+    end
+
+    test "a {:game_enriched, id} broadcast updates the open LiveView's row live, no reload", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          enrichment_status: "pending",
+          status: :draft,
+          thumbnail_url: nil,
+          cover_url: nil
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+      assert render(lv) =~ "Juego #184267 (cargando…)"
+
+      game
+      |> Ecto.Changeset.change(name: "On Mars", enrichment_status: "enriched")
+      |> Repo.update!()
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "On Mars"
+      refute html =~ "cargando"
+    end
+  end
+
+  describe "GameLive.Index — known BGG id warns, then allows an edition (D-03 revised)" do
+    test "pasting a known BGG id warns, then Sí, agregar edición adds an edition", %{
+      conn: conn
+    } do
+      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "184267")
+        |> render_submit()
+
+      assert html =~ "Ya tenés Ya en la ludoteca con este BGG ID. ¿Es otra edición?"
+      assert html =~ ~p"/admin/juegos/#{existing.id}/editar"
+      assert Catalog.count_admin_games() == 1
+
+      html = lv |> element("#confirm-edition") |> render_click()
+
+      assert html =~ "Edición agregada como borrador."
+      assert Catalog.count_admin_games() == 2
+    end
+
+    test "pasting a BGG game URL adds a draft (D-01, not only a bare id)", %{conn: conn} do
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      Req.Test.stub(BggClient, fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("text/xml")
+        |> Plug.Conn.send_resp(200, @bgg_fixture)
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "https://boardgamegeek.com/boardgame/184267/on-mars")
+        |> render_submit()
+
+      assert html =~ "Juego agregado como borrador."
+      assert Catalog.count_admin_games() == 1
+    after
+      Application.delete_env(:pukllay_club, :catalog_storage)
+      Application.delete_env(:pukllay_club, :enrichment_translate_call)
+    end
+
+    test "both add buttons carry phx-disable-with (IN-B-02)", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, "#add-game-form button[phx-disable-with]")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#confirm-edition[phx-disable-with]")
+    end
+
+    test "Cancelar removes the prompt without creating anything", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#edition-prompt")
+
+      lv |> element("#cancel-edition") |> render_click()
+
+      refute has_element?(lv, "#edition-prompt")
+      assert Catalog.count_admin_games() == 1
+    end
+
+    test "multi-edition copy joins names naturally (Patchwork y Patchwork Andino)", %{
+      conn: conn
+    } do
+      _patchwork = game_fixture(%{bgg_id: 163_412, name: "Patchwork"})
+      _andino = game_fixture(%{bgg_id: 163_412, name: "Patchwork Andino"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-form", bgg_id: "163412")
+        |> render_submit()
+
+      assert html =~ "Ya tenés Patchwork y Patchwork Andino con este BGG ID. ¿Es otra edición?"
+    end
+
+    test "a double-tap on confirm-edition creates exactly one new game", %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-form", bgg_id: "184267")
+      |> render_submit()
+
+      render_click(lv, "confirm-edition", %{})
+      render_click(lv, "confirm-edition", %{})
+
+      assert Catalog.count_admin_games() == 2
+    end
+
+    test "a stale confirm in a second tab re-warns instead of duplicating", %{conn: conn} do
+      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv1, _html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv2, _html} = live(conn, ~p"/admin/juegos")
+
+      lv1 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+      lv2 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+
+      lv1 |> element("#confirm-edition") |> render_click()
+      assert Catalog.count_admin_games() == 2
+
+      html = lv2 |> element("#confirm-edition") |> render_click()
+      assert Catalog.count_admin_games() == 2
+
+      edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
+      assert html =~ existing.name
+      assert html =~ edition.name
+    end
+  end
+
+  describe "GameLive.Index — failed enrichment retry (D-03)" do
+    test "a failed draft's row shows the error alert and Reintentar button", %{conn: conn} do
+      game_fixture(%{
+        bgg_id: 184_267,
+        name: "Juego #184267",
+        status: :draft,
+        enrichment_status: "failed"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      html = render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      assert html =~ "Error al traer datos de BGG."
+      assert html =~ "Reintentar"
+    end
+
+    test "clicking Reintentar re-enqueues enrichment and the row returns to the cargando state", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      html = render_click(lv, "retry-enrichment", %{"game-id" => to_string(game.id)})
+
+      assert html =~ "Juego #184267 (cargando…)"
+      refute html =~ "Error al traer datos de BGG."
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "an unparseable game-id is ignored rather than raising", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "retry-enrichment", %{"game-id" => "not-a-number"})
+
+      assert is_binary(html)
+    end
+  end
+
+  describe "GameLive.Index — D-19n pinned page bar and back row (T-01.8.2-64)" do
+    test "renders page_bar/1 and back_row/1", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "pk-admin-page-bar"
+      assert html =~ "pk-admin-back-row"
+    end
+
+    test "at rest, the pinned page bar's own back link is inert and the in-page back row is not", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, ".pk-admin-page-bar__back[inert]")
+      refute has_element?(lv, ".pk-admin-back-row[inert]")
+    end
+  end
+
+  defp count_occurrences(text, substring) do
+    text |> String.split(substring) |> length() |> Kernel.-(1)
+  end
+
+  defp extract_count(html, section_key) do
+    section = extract_between(html, "id=\"juegos-section-#{section_key}\"", "</section>")
+    count_occurrences(section, "id=\"game-row-")
+  end
+
+  defp extract_between(html, start_marker, end_marker) do
+    case String.split(html, start_marker, parts: 2) do
+      [_before, rest] ->
+        [between | _] = String.split(rest, end_marker, parts: 2)
+        between
+
+      _ ->
+        ""
+    end
+  end
+end

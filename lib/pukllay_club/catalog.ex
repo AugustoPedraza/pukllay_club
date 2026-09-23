@@ -425,6 +425,51 @@ defmodule PukllayClub.Catalog do
     |> maybe_search_admin_name(Map.get(opts, :q))
   end
 
+  @doc """
+  The admin Juegos list, grouped by `status` (D-25, plan 01.8.2-14) —
+  the partition the redesigned Juegos screen renders three sections from
+  (Borradores/Juegos del club/Retirados). Every game appears in EXACTLY
+  one of the three keys: the partition is guaranteed by the schema
+  (`Game.status` is an `Ecto.Enum` with three mutually exclusive values,
+  D-04) rather than by three independently-ordered predicates, so
+  `length(:draft) + length(:published) + length(:retired) ==
+  count_admin_games(opts)` always holds — assert it, don't just trust it.
+
+  Accepts the same `:q` `list_admin_games/1` does (case-insensitive
+  `ilike` name search, same escaping — T-01-20/T-01.8.1-23). Never accepts
+  `:status`: the whole point of this function is the status split, so a
+  `:status` opt here would fight its own return shape (silently dropped
+  rather than raising, matching `normalize_opts/1`'s permissive style).
+  Never accepts `:limit`/`:offset` either — D-25 replaces `Cargar más`
+  paging with one continuously-scrolled, grouped list; every matching row
+  is returned. Each group is ordered `[asc: g.name, asc: g.id]`, the same
+  tie-break `list_admin_games/1` uses.
+  """
+  @spec list_admin_games_by_status(keyword() | map()) :: %{
+          draft: [Game.t()],
+          published: [Game.t()],
+          retired: [Game.t()]
+        }
+  def list_admin_games_by_status(opts \\ []) do
+    opts =
+      opts
+      |> normalize_opts()
+      |> Map.drop([:status, :limit, :offset])
+
+    grouped =
+      Game
+      |> admin_filtered_query(opts)
+      |> order_by([g], asc: g.name, asc: g.id)
+      |> Repo.all()
+      |> Enum.group_by(& &1.status)
+
+    %{
+      draft: Map.get(grouped, :draft, []),
+      published: Map.get(grouped, :published, []),
+      retired: Map.get(grouped, :retired, [])
+    }
+  end
+
   defp maybe_filter_admin_status(query, nil), do: query
   defp maybe_filter_admin_status(query, status), do: from(g in query, where: g.status == ^status)
 
