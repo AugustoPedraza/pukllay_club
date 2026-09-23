@@ -52,7 +52,8 @@ defmodule PukllayClubWeb.Admin.StaffLiveTest do
       assert redirected_to(invitee_conn) == ~p"/admin"
 
       invitee_conn = get(recycle(invitee_conn), ~p"/admin")
-      assert html_response(invitee_conn, 200) =~ "Panel"
+      # 01.8.2-11 (D-00a): the page title renames Panel -> Admin.
+      assert html_response(invitee_conn, 200) =~ "Admin"
     end
 
     test "a signed-in staff (non-owner) visiting /admin/staff is redirected to /admin", %{conn: conn} do
@@ -104,15 +105,83 @@ defmodule PukllayClubWeb.Admin.StaffLiveTest do
     end
   end
 
-  describe "remove staff (D-33, T-01.8.1-07 Task 2)" do
-    test "Quitar opens a confirmation and Cancelar closes it without deleting", %{conn: conn} do
+  describe "the row, the options sheet and the centred Quitar dialog (D-18, D-19e, D-19f)" do
+    test "a staff row has no chevron and opens an options sheet with no Cancelar row", %{
+      conn: conn
+    } do
+      staff = staff_fixture()
+      conn = log_in_user(conn, owner_fixture())
+      {:ok, lv, html} = live(conn, ~p"/admin/staff")
+
+      doc = LazyHTML.from_document(html)
+      row_html = doc |> LazyHTML.query("#staff-#{staff.id}") |> LazyHTML.to_html()
+      refute row_html =~ "pk-admin-row__chevron"
+      refute row_html =~ "›"
+
+      html = lv |> element("#staff-#{staff.id}") |> render_click()
+
+      assert html =~ "pk-admin-overlay--open"
+      assert html =~ staff.email
+      assert html =~ "Quitar del staff"
+
+      sheet_doc = LazyHTML.from_document(html)
+      sheet_html = sheet_doc |> LazyHTML.query("#staff-options-sheet") |> LazyHTML.to_html()
+      refute sheet_html =~ "Cancelar"
+    end
+
+    test "the owner's own row is not tappable (no removal option exists for the owner)", %{
+      conn: conn
+    } do
+      owner = owner_fixture()
+      conn = log_in_user(conn, owner)
+      {:ok, _lv, html} = live(conn, ~p"/admin/staff")
+
+      doc = LazyHTML.from_document(html)
+
+      assert doc |> LazyHTML.query("#staff-#{owner.id}") |> LazyHTML.attribute("phx-click") == []
+    end
+
+    test "Quitar del staff in the sheet opens the centred dialog, not another sheet", %{
+      conn: conn
+    } do
       staff = staff_fixture()
       conn = log_in_user(conn, owner_fixture())
       {:ok, lv, _html} = live(conn, ~p"/admin/staff")
 
-      html = lv |> element("#staff-#{staff.id} button", "Quitar") |> render_click()
+      lv |> element("#staff-#{staff.id}") |> render_click()
+      html = lv |> element("button", "Quitar del staff") |> render_click()
+
       assert html =~ "¿Quitar a #{staff.email} del staff?"
       assert html =~ "Va a perder acceso al panel de inmediato."
+
+      doc = LazyHTML.from_document(html)
+      # The dialog is open; the options sheet closed when the dialog opened
+      # (T-01.8.2-30's "never nested" mitigation holds structurally too —
+      # AdminComponentsTest asserts that directly at the component level).
+      assert LazyHTML.query(doc, "#confirm-remove-dialog.pk-admin-overlay--open") != []
+      sheet = LazyHTML.query(doc, "#staff-options-sheet")
+
+      refute sheet |> LazyHTML.attribute("class") |> List.first() |> to_string() =~
+               "pk-admin-overlay--open"
+    end
+
+    test "Cancelar in the dialog carries initial focus and closes it without deleting", %{
+      conn: conn
+    } do
+      staff = staff_fixture()
+      conn = log_in_user(conn, owner_fixture())
+      {:ok, lv, _html} = live(conn, ~p"/admin/staff")
+
+      lv |> element("#staff-#{staff.id}") |> render_click()
+      html = lv |> element("button", "Quitar del staff") |> render_click()
+
+      doc = LazyHTML.from_document(html)
+
+      cancel_html =
+        doc |> LazyHTML.query("#confirm-remove-dialog") |> LazyHTML.to_html()
+
+      cancel_button = cancel_html |> String.split("Cancelar") |> List.first()
+      assert cancel_button =~ "autofocus"
 
       html = lv |> element("button", "Cancelar") |> render_click()
       refute html =~ "¿Quitar"
@@ -128,14 +197,52 @@ defmodule PukllayClubWeb.Admin.StaffLiveTest do
       conn = log_in_user(conn, owner_fixture())
       {:ok, lv, _html} = live(conn, ~p"/admin/staff")
 
-      lv |> element("#staff-#{staff.id} button", "Quitar") |> render_click()
-      html = lv |> element("#confirm-remove-btn") |> render_click()
+      lv |> element("#staff-#{staff.id}") |> render_click()
+      lv |> element("button", "Quitar del staff") |> render_click()
+      html = lv |> element("#confirm-remove-dialog button", "Quitar") |> render_click()
 
       assert html =~ "Quitaste a #{staff.email} del staff."
       refute Accounts.get_user_by_email(staff.email)
 
       conn2 = get(staff_conn, ~p"/admin")
       assert redirected_to(conn2) == ~p"/admin/ingresar"
+    end
+
+    test "a simulated invite-delivery failure surfaces in the snackbar (D-19b/D-19c)", %{
+      conn: conn
+    } do
+      conn = log_in_user(conn, owner_fixture())
+      {:ok, lv, _html} = live(conn, ~p"/admin/staff")
+
+      Application.put_env(:pukllay_club, :accounts_notifier, FailingNotifier)
+      on_exit(fn -> Application.delete_env(:pukllay_club, :accounts_notifier) end)
+
+      html =
+        lv
+        |> form("#invite-staff-form", %{email: unique_user_email()})
+        |> render_submit()
+
+      assert html =~ "pk-admin-snackbar"
+      assert html =~ "No pudimos enviarte el email de invitación. Probá de nuevo en unos minutos."
+    end
+  end
+
+  describe "D-18 composition — no hand-rolled chrome" do
+    test "the page contains no modal-open/modal-action/btn- markup", %{conn: conn} do
+      conn = log_in_user(conn, owner_fixture())
+      staff = staff_fixture()
+      {:ok, lv, html} = live(conn, ~p"/admin/staff")
+
+      refute html =~ "modal-open"
+      refute html =~ "modal-action"
+      refute html =~ "btn-error"
+      refute html =~ "btn-ghost"
+      refute html =~ "btn-primary"
+      refute html =~ "btn-outline"
+
+      html = lv |> element("#staff-#{staff.id}") |> render_click()
+      refute html =~ "modal-open"
+      refute html =~ "modal-action"
     end
   end
 end
