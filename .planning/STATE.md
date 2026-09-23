@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.2
-current_phase_name: Admin UI/UX Redesign
-status: planning
+current_phase_name: Admin UI/UX Redesign (INSERTED)
+status: executing
 stopped_at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
-last_updated: "2026-09-23T02:29:25.724Z"
-last_activity: 2026-09-22
+last_updated: "2026-09-23T04:07:09.715Z"
+last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
-state_head: 1e57d6a78e8ce6250cc456c72fb0d25d4b419e03
+state_head: "0b18ec640016ee5e23350c317cf613a8ada4b766"
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 27
+  total_plans: 49
   completed_plans: 27
 ---
 
@@ -33,9 +33,9 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.2 — Admin UI/UX Redesign
+Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-run): publishers.max 178→45, rows-with-duplicates 385→0, controls unmoved; prod report now matches dev field-for-field. Catalog data repair closed.
 
 ## Performance Metrics
