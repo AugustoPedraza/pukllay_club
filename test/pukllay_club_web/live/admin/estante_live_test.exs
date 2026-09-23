@@ -244,10 +244,6 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
 
       refute html =~ "pk-rail-wrap"
       refute html =~ "id=\"estantes-rail\""
-      assert html =~ "no tiene lugar todavía"
-
-      # The event this placeholder wires (plan 01.8.2-16 replaces it).
-      assert lv |> element("#estantes-open-donde-va") |> render_click() =~ "no tiene lugar todavía"
     end
 
     test "the ✕ clears the query and the selection, returning to idle", %{conn: conn} do
@@ -341,6 +337,149 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       html = render(lv)
       assert html =~ "cambió de lugar"
       assert html =~ ~s(data-timeout="4000")
+    end
+  end
+
+  describe "«¿Dónde va?» — placing a copy with no spot (D-00c, plan 01.8.2-16)" do
+    setup :register_and_log_in_staff
+
+    test "selecting a game with no spot opens the sheet directly, with no intermediate control",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Sin lugar todavía"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "sin lugar"})
+      html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "donde-va-sheet"
+      refute html =~ "Elegir dónde va"
+      assert html =~ "O elegí un estante"
+    end
+
+    # D-00c removed the separate Ubicar button on purpose — the plan's own
+    # <verify> greps the compiled source for this literally; this test
+    # pins the same rule at the behavioural level.
+    test "there is no Ubicar control anywhere on the page", %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Cualquiera"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "cualquiera"})
+      html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      refute html =~ ">Ubicar<"
+      refute html =~ "\"Ubicar\""
+    end
+
+    test "choosing an empty estante places the copy at position 0 and shows Juego ubicado",
+         %{conn: conn} do
+      empty_shelf = shelf_fixture(%{name: "Estante Vacío"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recién llegado"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "recién"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element("#donde-va-shelf-#{empty_shelf.id}") |> render_click()
+
+      assert html =~ "Juego ubicado"
+      refute html =~ "donde-va-sheet"
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == empty_shelf.id
+      assert fresh.position == 0
+    end
+
+    test "choosing a non-empty estante renders a + slot before, between and after every box; tapping one commits at that exact index",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Lleno"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Nueva llegada"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "nueva llegada"})
+      lv |> element("#suggestion-#{new_copy.id}") |> render_click()
+
+      html = lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
+      assert count_occurrences(html, "pk-donde-va-slot") == 3
+
+      render_click(lv, "donde-va-commit", %{"index" => "1"})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {new_copy.id, 1}, {b.id, 2}]
+    end
+
+    test "a move keeps the copy in its old spot until the new one is chosen; cancelling changes nothing",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Movible"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "movible"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = render_click(lv, "open-mover", %{})
+      assert html =~ "¿Dónde va?"
+
+      render_click(lv, "donde-va-close", %{})
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == shelf_a.id
+      assert fresh.position == 0
+    end
+
+    test "a cross-estante move leaves both estantes gap-free, committed in one transaction",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      a1 = copy_fixture(%{game_id: game_fixture(%{name: "A1"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+      {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a0"})
+      lv |> element("#suggestion-#{a0.id}") |> render_click()
+
+      render_click(lv, "open-mover", %{})
+      render_change(lv, "donde-va-search", %{"q" => "destino"})
+      html = lv |> element("#donde-va-result-shelf-#{shelf_b.id}") |> render_click()
+
+      assert html =~ "Juego movido"
+
+      remaining_a = shelf_a.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert remaining_a == [a1.id]
+      on_b = shelf_b.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert on_b == [a0.id]
+    end
+
+    test "Deshacer after a move restores the copy's previous estante and position",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recuperable"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "recuperable"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      render_click(lv, "open-mover", %{})
+      render_change(lv, "donde-va-search", %{"q" => "destino"})
+      lv |> element("#donde-va-result-shelf-#{shelf_b.id}") |> render_click()
+
+      assert Shelves.get_copy!(copy.id).shelf_id == shelf_b.id
+
+      render_click(lv, "undo-place", %{})
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == shelf_a.id
+      assert fresh.position == 0
     end
   end
 
