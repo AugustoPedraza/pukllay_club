@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-06-PLAN.md
-last_updated: "2026-09-23T14:31:58.239Z"
+stopped_at: Completed 01.8.2-07-PLAN.md
+last_updated: "2026-09-23T14:56:49.513Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: c2cd8f2420c7052f5694646f4808fc8b131ea039
+state_head: 2982778e863d1ace45995206965a7c04c99f7808
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 33
+  completed_plans: 34
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 7 of 22
+Plan: 8 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -138,6 +138,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P04 | 30min | 3 tasks | 5 files |
 | Phase 01.8.2 P05 | ~45min | 2 tasks | 8 files |
 | Phase 01.8.2 P06 | 25min | 2 tasks | 3 files |
+| Phase 01.8.2 P07 | 55min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -285,6 +286,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-05: copies_test.exs's backfill-replay tests removed (raw SQL read games.units, which this plan drops) and replaced with count_for_game/1/counts_for_games/1 coverage
 - [Phase 01.8.2]: D-05 clear-slate migration ships as specified: no backfill, no audit table, down/0 raises Ecto.MigrationError — Nothing survives the delete for a rollback to read from; the pre-deploy pg_dump is the only recovery path (01.8.2-06)
 - [Phase 01.8.2]: Data-only migrations use PukllayClub.Repo directly instead of the repo() migration-DSL helper when they need direct-call testability — repo() requires an active Ecto.Migrator Runner process; a migration with no DDL can safely use Repo directly and be unit-tested via Code.require_file + direct up/0 invocation (01.8.2-06)
+- [Phase 01.8.2]: 01.8.2-07: resolved TOKENS.md's flagged dark-mode Principal-ink gap with --pk-ramp-400 (the same stop --val already resolves to) rather than reviving the discarded --color-accent-text — TOKENS.md explicitly delegated this substitution to whichever slice implements the A1-A4 button system; --pk-ramp-400 is a real shipped token already measured at 6.52:1 in that same document
+- [Phase 01.8.2]: 01.8.2-07: wired assets/css/admin/components.css via a nested @import inside admin/tokens.css, not app.css — Task 3's own <verify> requires assets/css/app.css to stay untouched by this plan; tokens.css already imports into app.css, so the nested import resolves the same way
 
 ### Pending Todos
 
@@ -428,8 +431,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T14:31:58.121Z
-Stopped at: Completed 01.8.2-06-PLAN.md
+Last session: 2026-09-23T14:56:49.399Z
+Stopped at: Completed 01.8.2-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
