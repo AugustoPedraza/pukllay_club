@@ -254,8 +254,117 @@
   box-shadow: 0 14px 22px -6px rgba(0, 0, 0, 0.8);
 }
 
+/* the placed/moved cover drops into its spot (estante-ui-restart decision
+   39) — from 56px above at 92% size, a small overshoot, settling at the
+   lifted -12px rest position over 620ms. Gated behind
+   `prefers-reduced-motion: no-preference` (this repo's established idiom
+   — `.pk-conn-spinner`, 01.2-15 — a media-query gate on the trigger, not
+   a per-selector `reduce` override) so a user who asked for no motion
+   sees the cover simply appear lifted, with no animation at all. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pk-estantes-land {
+    0% {
+      transform: translateY(-56px) scale(0.92);
+      opacity: 0;
+    }
+
+    55% {
+      transform: translateY(-6px) scale(1.02);
+      opacity: 1;
+    }
+
+    78% {
+      transform: translateY(-15px) scale(1);
+    }
+
+    100% {
+      transform: translateY(-12px);
+    }
+  }
+
+  .pk-estantes-cover--landed .pk-estantes-cover__art {
+    animation: pk-estantes-land 620ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
+
 .pk-estantes-needs-placement {
   padding: 24px 16px;
   text-align: center;
   color: var(--color-neutral);
+}
+
+/* Task 2's "+" slots either side of the selected cover, and the
+   «¿Dónde va?» sheet's own N+1 slots — a visible 24px dashed circle with
+   a 44px hit box that runs UNDER the (inert) covers without covering
+   them, matching admin-estantes.md's `.slot`/`.slot::before` pattern. */
+.pk-estantes-slot,
+.pk-donde-va-slot {
+  position: relative;
+  flex: 0 0 24px;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-neutral);
+  z-index: 2;
+}
+
+.pk-estantes-slot::before,
+.pk-donde-va-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0 -10px;
+}
+
+.pk-estantes-slot span[aria-hidden],
+.pk-donde-va-slot span[aria-hidden] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 38px;
+  border-radius: 50%;
+  border: 1px dashed var(--stroke);
+  background: var(--color-base-100);
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Task 1's full-height «¿Dónde va?»/«¿Qué juego va acá?» sheets
+   (estante-ui-restart decisions 37/64: "F · hoja completa") — an
+   opt-in override on top of `sheet/1`'s own shared 85vh cap
+   (`AdminComponents.sheet/1`, plan 01.8.2-08), scoped to this screen's
+   own class so `admin_components.ex` itself never has to know about
+   it (this plan does not touch that file). */
+.pk-estantes-sheet--full .pk-admin-sheet {
+  top: 24px;
+  bottom: 0;
+  max-height: none;
+}
+
+.pk-donde-va-search {
+  position: relative;
+  margin: 0 16px 8px;
+}
+
+.pk-donde-va-search input {
+  width: 100%;
+  height: 48px;
+  padding: 0 48px 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.pk-donde-va-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 16px 16px 8px;
 }

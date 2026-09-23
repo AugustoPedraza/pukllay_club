@@ -10,10 +10,22 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   picked copy's estante as a rail (`Shelves.copies_on_shelf/1`) with that
   copy lifted.
 
-  A copy with no spot does not render an empty rail — it renders a
-  placeholder handoff to the «¿Dónde va?» sheet, which plan 01.8.2-16
-  owns; this plan only wires the event (see `handle_event("open-donde-va",
-  ...)`) and the placeholder markup, both named at their call sites.
+  **D-00c (plan 01.8.2-16): placing and moving.** A copy with no spot
+  opens the full-height «¿Dónde va?» sheet the instant it is selected —
+  no intermediate button (`select_copy_struct/2` below). Its search
+  (`Shelves.search_estantes_or_copies/2`) finds an estante by name or an
+  already-placed game (resolving to its estante); choosing an empty
+  estante places the copy directly as its first box, otherwise staff pick
+  the exact spot — before the first box, between any two, or after the
+  last — rendered as N+1 "+" slots whose 0-based index is passed straight
+  to `Shelves.place_copy/3` with no translation layer. Moving (Task 3's
+  `open-mover`, fired from the selected cover's options sheet) opens the
+  SAME sheet: the copy keeps its old spot until a new one is chosen, then
+  both changes commit through `place_copy/3`'s own single locked
+  transaction — never a remove-then-place two-step (T-01.8.2-71).
+  Every completed place/move/removal is undoable via `Shelves.
+  restore_position/3` (`@undo_snapshot`, `@action_snackbar` — one Deshacer
+  mechanism shared by every write this screen makes).
 
   Header: a 44px A3 Pendientes icon carrying D-19g's count badge
   (`Shelves.unplaced_copies/0`'s length — the SAME source the dashboard
@@ -30,7 +42,10 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   changed underneath the viewing staff member (place/move/remove by
   someone else), a quiet 4-second snackbar says so via the shared admin
   snackbar mechanism (`Layouts.admin_flash/1`, D-19c) rather than a
-  bespoke one.
+  bespoke one. `Shelves.place_copy/3`/`remove_copy_from_shelf/1`'s own
+  transaction re-reads the copy inside the lock (T-01.8.2-73), so a
+  client-held slot index can never act on a copy the write path itself
+  did not just verify.
 
   This route lives inside the existing `live_session :require_staff`
   block (T-01.8.2-03) — a signed-out visitor is redirected before this
@@ -39,6 +54,7 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   """
   use PukllayClubWeb, :live_view
 
+  alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog.Shelves
   alias PukllayClubWeb.AdminComponents
 
@@ -61,7 +77,14 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
      |> assign(:selected_copy, nil)
      |> assign(:copies, [])
      |> assign(:copy_counts, %{})
-     |> assign(:pending_count, pending_count())}
+     |> assign(:pending_count, pending_count())
+     |> assign(:donde_va, nil)
+     |> assign(:que_va_aca, nil)
+     |> assign(:cover_options_open, false)
+     |> assign(:confirm_remove, nil)
+     |> assign(:undo_snapshot, nil)
+     |> assign(:action_snackbar, nil)
+     |> assign(:landed_copy_id, nil)}
   end
 
   @impl true
@@ -84,24 +107,195 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
   @impl true
   def handle_event("clear", _params, socket) do
+    {:noreply, reset_to_idle(socket)}
+  end
+
+  # ------------------------------------------------------------------
+  # «¿Dónde va?» — placing/moving (D-00c, plan 01.8.2-16)
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("open-mover", _params, socket) do
     {:noreply,
      socket
-     |> assign(:query, "")
-     |> assign(:suggestions, [])
-     |> assign(:selected_copy, nil)
-     |> assign(:copies, [])
-     |> assign(:copy_counts, %{})}
+     |> assign(:cover_options_open, false)
+     |> open_donde_va(socket.assigns.selected_copy)}
   end
 
   @impl true
-  def handle_event("open-donde-va", _params, socket) do
-    # Placeholder handoff (plan 01.8.2-13's own scope: "wire the event,
-    # leave the sheet to plan 01.8.2-16"). The full-height «¿Dónde va?»
-    # sheet that would actually open here is plan 01.8.2-16's build; this
-    # clause exists so the event exists and does not crash the LiveView
-    # when the placeholder button (`#estantes-open-donde-va`) is tapped —
-    # it is a documented no-op until that plan lands.
-    {:noreply, socket}
+  def handle_event("donde-va-search", %{"q" => q}, socket) do
+    query = String.slice(q, 0, 120)
+    moving_copy_id = socket.assigns.donde_va.copy.id
+    results = if query == "", do: [], else: Shelves.search_estantes_or_copies(query, moving_copy_id)
+
+    {:noreply,
+     update(socket, :donde_va, fn dv ->
+       %{dv | query: query, results: results, estante: nil, copies: []}
+     end)}
+  end
+
+  @impl true
+  def handle_event("donde-va-field-clear", _params, socket) do
+    {:noreply, update(socket, :donde_va, fn dv -> %{dv | query: "", results: [], estante: nil, copies: []} end)}
+  end
+
+  @impl true
+  def handle_event("donde-va-pick-estante", %{"shelf-id" => id}, socket) do
+    shelf = Shelves.get_shelf!(String.to_integer(id))
+    {:noreply, pick_donde_va_estante(socket, shelf)}
+  end
+
+  @impl true
+  def handle_event("donde-va-pick-copy", %{"copy-id" => id}, socket) do
+    copy = Shelves.get_copy!(String.to_integer(id))
+    {:noreply, pick_donde_va_estante(socket, copy.shelf)}
+  end
+
+  @impl true
+  def handle_event("donde-va-commit", %{"index" => idx}, socket) do
+    shelf = socket.assigns.donde_va.estante
+    {:noreply, commit_donde_va(socket, shelf.id, String.to_integer(idx))}
+  end
+
+  @impl true
+  def handle_event("donde-va-close", _params, socket) do
+    donde_va = socket.assigns.donde_va
+    socket = assign(socket, :donde_va, nil)
+
+    # Decision 37/39: ✕ / tap outside / Esc cancels — for a genuinely
+    # unplaced copy (this was a PLACE, not a MOVE) there is nothing left
+    # to show, so the screen returns to idle. A move leaves the copy
+    # exactly where it was (nothing was ever written before commit), so
+    # the underlying answered view is simply left as-is.
+    if donde_va && is_nil(donde_va.copy.shelf_id) do
+      {:noreply, reset_to_idle(socket)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # ------------------------------------------------------------------
+  # "+" slots and «¿Qué juego va acá?» (D-08, plan 01.8.2-16)
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("open-que-va-aca", %{"index" => idx}, socket) do
+    index = String.to_integer(idx)
+    copy = socket.assigns.selected_copy
+    snapshot_ids = Enum.map(socket.assigns.copies, & &1.id)
+
+    {:noreply,
+     assign(socket, :que_va_aca, %{
+       shelf_id: copy.shelf_id,
+       index: index,
+       query: "",
+       results: [],
+       snapshot_ids: snapshot_ids
+     })}
+  end
+
+  @impl true
+  def handle_event("que-va-aca-search", %{"q" => q}, socket) do
+    query = String.slice(q, 0, 120)
+    results = if query == "", do: [], else: Shelves.search_copies(query)
+    {:noreply, update(socket, :que_va_aca, fn qva -> %{qva | query: query, results: results} end)}
+  end
+
+  @impl true
+  def handle_event("que-va-aca-pick", %{"copy-id" => id}, socket) do
+    qva = socket.assigns.que_va_aca
+    current_ids = qva.shelf_id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+
+    if current_ids == qva.snapshot_ids do
+      copy = Shelves.get_copy!(String.to_integer(id))
+      {:noreply, commit_que_va_aca(socket, qva, copy)}
+    else
+      {:noreply,
+       socket
+       |> assign(:que_va_aca, nil)
+       |> put_flash(:info, "El estante cambió mientras elegías un juego. Probá de nuevo.")}
+    end
+  end
+
+  @impl true
+  def handle_event("que-va-aca-close", _params, socket) do
+    {:noreply, assign(socket, :que_va_aca, nil)}
+  end
+
+  # ------------------------------------------------------------------
+  # The selected cover's options sheet and Quitar del estante (D-08,
+  # D-19f, D-19e, plan 01.8.2-16)
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("open-cover-options", %{"copy-id" => _id}, socket) do
+    {:noreply, assign(socket, :cover_options_open, true)}
+  end
+
+  @impl true
+  def handle_event("close-cover-options", _params, socket) do
+    {:noreply, assign(socket, :cover_options_open, false)}
+  end
+
+  @impl true
+  def handle_event("ask-quitar", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:cover_options_open, false)
+     |> assign(:confirm_remove, socket.assigns.selected_copy)}
+  end
+
+  @impl true
+  def handle_event("cancel-quitar", _params, socket) do
+    {:noreply, assign(socket, :confirm_remove, nil)}
+  end
+
+  @impl true
+  def handle_event("confirm-quitar", _params, socket) do
+    copy = socket.assigns.confirm_remove
+    previous = %{shelf_id: copy.shelf_id, position: copy.position}
+
+    case Shelves.remove_copy_from_shelf(copy.id) do
+      {:ok, removed} ->
+        {:noreply,
+         socket
+         |> assign(:confirm_remove, nil)
+         |> assign(:undo_snapshot, %{copy_id: removed.id, shelf_id: previous.shelf_id, position: previous.position})
+         |> assign(:action_snackbar, %{
+           id: "estantes-action-snackbar",
+           message: "Juego quitado del estante",
+           action: %{label: "Deshacer", event: "undo-place"}
+         })
+         |> reset_to_idle()}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, :confirm_remove, nil)}
+    end
+  end
+
+  # ------------------------------------------------------------------
+  # The one shared Deshacer mechanism for every write this screen makes
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("undo-place", _params, socket) do
+    case socket.assigns.undo_snapshot do
+      nil ->
+        {:noreply, socket}
+
+      %{copy_id: copy_id, shelf_id: shelf_id, position: position} ->
+        socket = socket |> assign(:undo_snapshot, nil) |> assign(:action_snackbar, nil)
+
+        case Shelves.restore_position(copy_id, shelf_id, position) do
+          {:ok, restored} -> {:noreply, maybe_show_restored(socket, restored)}
+          {:error, _reason} -> {:noreply, socket}
+        end
+    end
+  end
+
+  @impl true
+  def handle_event("dismiss-action-snackbar", _params, socket) do
+    {:noreply, socket |> assign(:action_snackbar, nil) |> assign(:undo_snapshot, nil)}
   end
 
   @impl true
@@ -161,11 +355,19 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   end
 
   defp select_copy_struct(socket, copy) do
-    socket
-    |> assign(:selected_copy, copy)
-    |> assign(:query, copy.game.name)
-    |> assign(:suggestions, [])
-    |> load_rail(copy)
+    socket =
+      socket
+      |> assign(:selected_copy, copy)
+      |> assign(:query, copy.game.name)
+      |> assign(:suggestions, [])
+      |> assign(:cover_options_open, false)
+      |> assign(:que_va_aca, nil)
+      |> assign(:landed_copy_id, nil)
+      |> load_rail(copy)
+
+    # D-00c (estante-ui-restart decision 36): a game with no spot opens
+    # "¿Dónde va?" the instant it is selected — no intermediate button.
+    if is_nil(copy.shelf_id), do: open_donde_va(socket, copy), else: socket
   end
 
   defp load_rail(socket, %{shelf_id: nil}) do
@@ -182,6 +384,111 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
     |> assign(:copies, copies)
     |> assign(:copy_counts, Shelves.counts_for_games(game_ids))
   end
+
+  defp reset_to_idle(socket) do
+    socket
+    |> assign(:selected_copy, nil)
+    |> assign(:query, "")
+    |> assign(:suggestions, [])
+    |> assign(:copies, [])
+    |> assign(:copy_counts, %{})
+    |> assign(:cover_options_open, false)
+    |> assign(:donde_va, nil)
+    |> assign(:que_va_aca, nil)
+    |> assign(:landed_copy_id, nil)
+  end
+
+  defp open_donde_va(socket, copy) do
+    assign(socket, :donde_va, %{copy: copy, query: "", results: [], estante: nil, copies: []})
+  end
+
+  # Empty estante takes the copy directly as its first box (decision 35);
+  # a non-empty one renders the "+" slots for staff to pick from.
+  defp pick_donde_va_estante(socket, %{id: shelf_id} = shelf) do
+    moving_copy = socket.assigns.donde_va.copy
+
+    rail_copies =
+      shelf_id
+      |> Shelves.copies_on_shelf()
+      |> Enum.reject(&(&1.id == moving_copy.id))
+
+    if rail_copies == [] do
+      commit_donde_va(socket, shelf_id, 0)
+    else
+      update(socket, :donde_va, fn dv ->
+        %{dv | estante: shelf, copies: rail_copies, query: shelf.name, results: []}
+      end)
+    end
+  end
+
+  defp commit_donde_va(socket, shelf_id, index) do
+    copy = socket.assigns.donde_va.copy
+
+    socket
+    |> assign(:donde_va, nil)
+    |> commit_placement(copy, shelf_id, index)
+  end
+
+  defp commit_que_va_aca(socket, %{shelf_id: shelf_id, index: index}, copy) do
+    socket
+    |> assign(:que_va_aca, nil)
+    |> commit_placement(copy, shelf_id, index)
+  end
+
+  # The one write path behind every "landing" this screen does — Task 1's
+  # «¿Dónde va?» commit and Task 2's «¿Qué juego va acá?» commit both
+  # funnel through here, so there is exactly one place that decides the
+  # snackbar wording, snapshots the undo, and refreshes whichever rail is
+  # currently on screen.
+  defp commit_placement(socket, copy, shelf_id, index) do
+    previous = %{shelf_id: copy.shelf_id, position: copy.position}
+
+    case Shelves.place_copy(copy.id, shelf_id, index) do
+      {:ok, %{id: moved_id}} ->
+        fresh = Shelves.get_copy!(moved_id)
+        message = if is_nil(previous.shelf_id), do: "Juego ubicado", else: "Juego movido"
+
+        socket
+        |> refresh_after_write(fresh)
+        |> assign(:undo_snapshot, %{
+          copy_id: fresh.id,
+          shelf_id: previous.shelf_id,
+          position: previous.position
+        })
+        |> assign(:action_snackbar, %{
+          id: "estantes-action-snackbar",
+          message: message,
+          action: %{label: "Deshacer", event: "undo-place"}
+        })
+        |> assign(:landed_copy_id, fresh.id)
+
+      {:error, _reason} ->
+        socket
+    end
+  end
+
+  defp refresh_after_write(%{assigns: %{selected_copy: %{id: id}}} = socket, %{id: id} = fresh) do
+    reload_rail(socket, fresh)
+  end
+
+  defp refresh_after_write(%{assigns: %{selected_copy: %{shelf_id: shelf_id}}} = socket, %{shelf_id: shelf_id})
+       when not is_nil(shelf_id) do
+    load_rail(socket, socket.assigns.selected_copy)
+  end
+
+  defp refresh_after_write(socket, _fresh), do: socket
+
+  defp maybe_show_restored(%{assigns: %{selected_copy: %{id: id}}} = socket, %{id: id} = restored) do
+    fresh = Shelves.get_copy!(restored.id)
+    reload_rail(socket, fresh)
+  end
+
+  defp maybe_show_restored(%{assigns: %{selected_copy: %{shelf_id: shelf_id}}} = socket, %{shelf_id: shelf_id})
+       when not is_nil(shelf_id) do
+    load_rail(socket, socket.assigns.selected_copy)
+  end
+
+  defp maybe_show_restored(socket, _restored), do: socket
 
   defp parse_id(id) when is_binary(id) do
     case Integer.parse(id) do
@@ -218,6 +525,33 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
   defp push_recent_list(recent, copy) do
     Enum.take([copy | Enum.reject(recent, &(&1.id == copy.id))], @max_recent)
+  end
+
+  # A "+" slot's accessible name (sketch 069, "Poner un juego entre X y
+  # Y" / "...al principio de..." / "...al final de..."). `copies` is
+  # whichever rail the slot sits in (the donde-va sheet's chosen estante,
+  # or the page's own answered rail).
+  defp slot_label([], _index, estante_name), do: "Poner al principio de #{estante_name}"
+
+  defp slot_label(copies, 0, _estante_name) do
+    "Poner antes de #{hd(copies).game.name}"
+  end
+
+  defp slot_label(copies, index, estante_name) when index == length(copies) do
+    "Poner después de #{List.last(copies).game.name} en #{estante_name}"
+  end
+
+  defp slot_label(copies, index, _estante_name) do
+    before = Enum.at(copies, index - 1)
+    after_ = Enum.at(copies, index)
+    "Poner entre #{before.game.name} y #{after_.game.name}"
+  end
+
+  defp donde_va_shelf_meta(shelf) do
+    case Shelves.copies_on_shelf(shelf.id) do
+      [] -> "Vacío · va directo"
+      copies -> "#{length(copies)} juegos"
+    end
   end
 
   @impl true
@@ -352,57 +686,273 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
             <div :if={@selected_copy.shelf} class="pk-rail-wrap">
               <div class="pk-rail" id="estantes-rail">
-                <div
-                  :for={{copy, index} <- Enum.with_index(@copies)}
-                  id={"estante-copy-#{copy.id}"}
-                  class={[
-                    "pk-poster-card",
-                    "pk-estantes-cover",
-                    copy.id == @selected_copy.id && "pk-estantes-cover--lifted"
-                  ]}
-                  data-pk-rail-selected={to_string(copy.id == @selected_copy.id)}
-                >
-                  <div
-                    role="img"
-                    aria-label={cover_alt(copy, index, length(@copies), @copy_counts)}
-                    class="pk-estantes-cover__art"
+                <%= for {copy, index} <- Enum.with_index(@copies) do %>
+                  <button
+                    :if={copy.id == @selected_copy.id}
+                    type="button"
+                    class="pk-estantes-slot"
+                    data-pk-pressable="true"
+                    phx-click="open-que-va-aca"
+                    phx-value-index={index}
+                    aria-label={slot_label(@copies, index, @selected_copy.shelf.name)}
                   >
-                    <img
-                      :if={copy.game.thumbnail_url}
-                      src={copy.game.thumbnail_url}
-                      alt=""
-                      class="pk-estantes-cover__img"
-                    />
-                    <div :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
-                      <.icon name="hero-puzzle-piece" class="size-8" />
-                    </div>
-                  </div>
-                </div>
+                    <span aria-hidden="true">+</span>
+                  </button>
+                  <button
+                    type="button"
+                    id={"estante-copy-#{copy.id}"}
+                    class={[
+                      "pk-poster-card",
+                      "pk-estantes-cover",
+                      copy.id == @selected_copy.id && "pk-estantes-cover--lifted",
+                      copy.id == @landed_copy_id && "pk-estantes-cover--landed"
+                    ]}
+                    data-pk-pressable="true"
+                    data-pk-rail-selected={to_string(copy.id == @selected_copy.id)}
+                    phx-click={
+                      if copy.id == @selected_copy.id, do: "open-cover-options", else: "pick-copy"
+                    }
+                    phx-value-copy-id={copy.id}
+                    aria-label={cover_alt(copy, index, length(@copies), @copy_counts)}
+                  >
+                    <span class="pk-estantes-cover__art">
+                      <img
+                        :if={copy.game.thumbnail_url}
+                        src={copy.game.thumbnail_url}
+                        alt=""
+                        class="pk-estantes-cover__img"
+                      />
+                      <span :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
+                        <.icon name="hero-puzzle-piece" class="size-8" />
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    :if={copy.id == @selected_copy.id}
+                    type="button"
+                    class="pk-estantes-slot"
+                    data-pk-pressable="true"
+                    phx-click="open-que-va-aca"
+                    phx-value-index={index + 1}
+                    aria-label={slot_label(@copies, index + 1, @selected_copy.shelf.name)}
+                  >
+                    <span aria-hidden="true">+</span>
+                  </button>
+                <% end %>
               </div>
-            </div>
-
-            <div
-              :if={is_nil(@selected_copy.shelf)}
-              class="pk-estantes-needs-placement"
-              id="estantes-needs-placement"
-            >
-              <p>«{@selected_copy.game.name}» no tiene lugar todavía.</p>
-              <%!-- Placeholder for the «¿Dónde va?» entry point (D-00c) —
-            plan 01.8.2-16 replaces this button with the real full-height
-            sheet; the event it dispatches already exists
-            (`handle_event("open-donde-va", ...)` above). --%>
-              <AdminComponents.action
-                id="estantes-open-donde-va"
-                anatomy="a1"
-                role="principal"
-                phx-click="open-donde-va"
-              >
-                Elegir dónde va
-              </AdminComponents.action>
             </div>
           </div>
         </div>
       </div>
+
+      <AdminComponents.sheet
+        :if={@donde_va}
+        id="donde-va-sheet"
+        title="¿Dónde va?"
+        subtitle={@donde_va.copy.game.name}
+        cover={@donde_va.copy.game.thumbnail_url}
+        open
+        on_close={JS.push("donde-va-close")}
+        class="pk-estantes-sheet--full"
+      >
+        <div class="pk-donde-va-search">
+          <input
+            type="text"
+            id="donde-va-search-input"
+            name="q"
+            value={@donde_va.query}
+            placeholder="Buscá un estante o un juego"
+            aria-label="Buscá un estante o un juego"
+            autocomplete="off"
+            phx-change="donde-va-search"
+            phx-debounce="200"
+            onfocus="this.select()"
+          />
+          <button
+            :if={@donde_va.query != ""}
+            type="button"
+            class="pk-estantes-search__clear"
+            aria-label="Limpiar"
+            phx-click="donde-va-field-clear"
+          >
+            <.icon name="hero-x-mark" class="size-5" />
+          </button>
+        </div>
+
+        <div :if={is_nil(@donde_va.estante) and @donde_va.query == ""} id="donde-va-estante-list">
+          <AdminComponents.list_section_label>O elegí un estante</AdminComponents.list_section_label>
+          <AdminComponents.list_row
+            :for={shelf <- Shelves.list_shelves()}
+            id={"donde-va-shelf-#{shelf.id}"}
+            name={shelf.name}
+            meta={donde_va_shelf_meta(shelf)}
+            phx-click="donde-va-pick-estante"
+            phx-value-shelf-id={shelf.id}
+          />
+        </div>
+
+        <div
+          :if={is_nil(@donde_va.estante) and @donde_va.query != "" and @donde_va.results == []}
+          class="pk-estantes-no-match"
+        >
+          <p class="pk-estantes-no-match__hint">Ningún estante ni juego se llama así.</p>
+        </div>
+
+        <div :if={is_nil(@donde_va.estante) and @donde_va.results != []} id="donde-va-results">
+          <.donde_va_result_row :for={result <- @donde_va.results} result={result} />
+        </div>
+
+        <div :if={@donde_va.estante} id="donde-va-rail" class="pk-donde-va-rail">
+          <button
+            type="button"
+            class="pk-donde-va-slot"
+            data-pk-pressable="true"
+            phx-click="donde-va-commit"
+            phx-value-index="0"
+            aria-label={slot_label(@donde_va.copies, 0, @donde_va.estante.name)}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+          <%= for {copy, idx} <- Enum.with_index(@donde_va.copies) do %>
+            <span class="pk-poster-card pk-estantes-cover">
+              <span class="pk-estantes-cover__art">
+                <img
+                  :if={copy.game.thumbnail_url}
+                  src={copy.game.thumbnail_url}
+                  alt=""
+                  class="pk-estantes-cover__img"
+                />
+                <span :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
+                  <.icon name="hero-puzzle-piece" class="size-8" />
+                </span>
+              </span>
+            </span>
+            <button
+              type="button"
+              class="pk-donde-va-slot"
+              data-pk-pressable="true"
+              phx-click="donde-va-commit"
+              phx-value-index={idx + 1}
+              aria-label={slot_label(@donde_va.copies, idx + 1, @donde_va.estante.name)}
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+          <% end %>
+        </div>
+      </AdminComponents.sheet>
+
+      <AdminComponents.sheet
+        :if={@que_va_aca}
+        id="que-va-aca-sheet"
+        title="¿Qué juego va acá?"
+        subtitle={@selected_copy && @selected_copy.shelf && @selected_copy.shelf.name}
+        open
+        on_close={JS.push("que-va-aca-close")}
+        class="pk-estantes-sheet--full"
+      >
+        <div class="pk-donde-va-search">
+          <input
+            type="text"
+            id="que-va-aca-search-input"
+            name="q"
+            value={@que_va_aca.query}
+            placeholder="Buscá el juego que va acá"
+            aria-label="Buscá el juego que va acá"
+            autocomplete="off"
+            phx-change="que-va-aca-search"
+            phx-debounce="200"
+            onfocus="this.select()"
+          />
+        </div>
+
+        <div :if={@que_va_aca.query == ""} id="que-va-aca-unplaced">
+          <AdminComponents.list_section_label>
+            Sin ubicar · {length(Shelves.unplaced_copies())}
+          </AdminComponents.list_section_label>
+          <AdminComponents.list_row
+            :for={copy <- Shelves.unplaced_copies()}
+            id={"que-va-aca-unplaced-#{copy.id}"}
+            cover={copy.game.thumbnail_url}
+            name={copy.game.name}
+            phx-click="que-va-aca-pick"
+            phx-value-copy-id={copy.id}
+          />
+        </div>
+
+        <div
+          :if={@que_va_aca.query != "" and @que_va_aca.results == []}
+          class="pk-estantes-no-match"
+        >
+          <p class="pk-estantes-no-match__hint">Ningún juego se llama así.</p>
+          <%!-- Crear routes to the Juegos new-game editor with the name
+          filled in — placing the created game straight into THIS exact
+          slot (rather than opening a second "¿Dónde va?") is plan
+          01.8.2-20's return-path wiring; this row only names the handoff
+          (estante-ui-restart decision 66). --%>
+          <AdminComponents.list_row
+            id="que-va-aca-create-row"
+            name={"Crear «#{@que_va_aca.query}»"}
+            meta="Agregarlo al catálogo"
+            navigate={~p"/admin/juegos?nombre=#{@que_va_aca.query}"}
+            opens_page
+          />
+        </div>
+
+        <div :if={@que_va_aca.query != "" and @que_va_aca.results != []} id="que-va-aca-results">
+          <AdminComponents.list_row
+            :for={copy <- @que_va_aca.results}
+            id={"que-va-aca-result-#{copy.id}"}
+            cover={copy.game.thumbnail_url}
+            name={copy.game.name}
+            meta={copy.shelf && copy.shelf.name}
+            phx-click="que-va-aca-pick"
+            phx-value-copy-id={copy.id}
+          />
+        </div>
+      </AdminComponents.sheet>
+
+      <AdminComponents.sheet
+        :if={@cover_options_open and @selected_copy}
+        id="cover-options-sheet"
+        title={@selected_copy.game.name}
+        subtitle={@selected_copy.shelf && @selected_copy.shelf.name}
+        cover={@selected_copy.game.thumbnail_url}
+        open
+        on_close={JS.push("close-cover-options")}
+      >
+        <AdminComponents.action
+          anatomy="a4"
+          role="terciaria"
+          navigate={~p"/juegos/#{@selected_copy.game}"}
+        >
+          Ver ficha
+        </AdminComponents.action>
+        <AdminComponents.action anatomy="a4" role="terciaria" phx-click="open-mover">
+          Mover
+        </AdminComponents.action>
+        <AdminComponents.action anatomy="a4" role="peligro" phx-click="ask-quitar">
+          Quitar del estante
+        </AdminComponents.action>
+      </AdminComponents.sheet>
+
+      <AdminComponents.dialog
+        :if={@confirm_remove}
+        id="confirm-quitar-dialog"
+        question={"¿Quitar #{@confirm_remove.game.name} del estante?"}
+        consequence="Queda sin lugar hasta que lo vuelvas a ubicar."
+        verb="Quitar"
+        open
+        on_confirm={JS.push("confirm-quitar")}
+        on_cancel={JS.push("cancel-quitar")}
+      />
+
+      <AdminComponents.snackbar
+        :if={@action_snackbar}
+        id={@action_snackbar.id}
+        message={@action_snackbar.message}
+        action={@action_snackbar.action}
+        on_close={JS.push("dismiss-action-snackbar")}
+      />
     </Layouts.app>
     """
   end
@@ -424,6 +974,37 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
         <AdminComponents.status_dot :if={is_nil(@copy.shelf_id)} status={:sin_lugar} />
       </:trailing>
     </AdminComponents.list_row>
+    """
+  end
+
+  attr :result, :any, required: true
+
+  defp donde_va_result_row(%{result: {:shelf, shelf}} = assigns) do
+    assigns = assign(assigns, :shelf, shelf)
+
+    ~H"""
+    <AdminComponents.list_row
+      id={"donde-va-result-shelf-#{@shelf.id}"}
+      name={@shelf.name}
+      meta={donde_va_shelf_meta(@shelf)}
+      phx-click="donde-va-pick-estante"
+      phx-value-shelf-id={@shelf.id}
+    />
+    """
+  end
+
+  defp donde_va_result_row(%{result: {:copy, copy}} = assigns) do
+    assigns = assign(assigns, :copy, copy)
+
+    ~H"""
+    <AdminComponents.list_row
+      id={"donde-va-result-copy-#{@copy.id}"}
+      cover={@copy.game.thumbnail_url}
+      name={@copy.game.name}
+      meta={@copy.shelf.name}
+      phx-click="donde-va-pick-copy"
+      phx-value-copy-id={@copy.id}
+    />
     """
   end
 end
