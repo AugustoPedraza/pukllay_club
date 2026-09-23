@@ -637,6 +637,162 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
     end
   end
 
+  describe "the selected cover's options sheet and Quitar del estante (D-08, D-19f, D-19e, plan 01.8.2-16 Task 3)" do
+    setup :register_and_log_in_staff
+
+    test "tapping an unselected cover moves the selection; tapping the selected one opens its options sheet",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+
+      # Tapping the OTHER cover moves the selection, no options sheet.
+      html = lv |> element("#estante-copy-#{b.id}") |> render_click()
+      refute html =~ "cover-options-sheet"
+      assert html =~ ~s(id="estante-copy-#{b.id}" class="pk-poster-card pk-estantes-cover pk-estantes-cover--lifted)
+
+      # Tapping the NOW-selected cover opens its options sheet.
+      html = lv |> element("#estante-copy-#{b.id}") |> render_click()
+      assert html =~ "cover-options-sheet"
+      assert html =~ "Ver ficha"
+      assert html =~ "Mover"
+      assert html =~ "Quitar del estante"
+    end
+
+    test "the options sheet renders no Cancelar text and a 44px close control", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "único"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element("#estante-copy-#{copy.id}") |> render_click()
+
+      [_, sheet_and_after] = String.split(html, ~s(id="cover-options-sheet"), parts: 2)
+      sheet_slice = String.slice(sheet_and_after, 0, 2000)
+
+      refute sheet_slice =~ "Cancelar"
+      assert sheet_slice =~ "Cerrar"
+    end
+
+    test "Quitar del estante renders a dialog that is not nested inside a sheet, with Cancelar focused",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "único"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+      lv |> element("#estante-copy-#{copy.id}") |> render_click()
+
+      html = lv |> element("[phx-click='ask-quitar']") |> render_click()
+
+      refute html =~ "cover-options-sheet"
+      assert html =~ ~s(id="confirm-quitar-dialog")
+      assert html =~ "¿Quitar Único del estante?"
+
+      [_, dialog_and_after] = String.split(html, ~s(id="confirm-quitar-dialog"), parts: 2)
+      dialog_slice = String.slice(dialog_and_after, 0, 2000)
+      assert dialog_slice =~ ~s(autofocus)
+    end
+
+    test "confirming removal leaves the estante's remaining positions gap-free", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "b"})
+      lv |> element("#suggestion-#{b.id}") |> render_click()
+      lv |> element("#estante-copy-#{b.id}") |> render_click()
+      lv |> element("[phx-click='ask-quitar']") |> render_click()
+
+      html = render_click(lv, "confirm-quitar", %{})
+      assert html =~ "Juego quitado del estante"
+
+      fresh_b = Shelves.get_copy!(b.id)
+      assert fresh_b.shelf_id == nil
+      assert fresh_b.position == nil
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {c.id, 1}]
+    end
+
+    test "Deshacer after removal restores the copy to its previous position", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+      lv |> element("#estante-copy-#{a.id}") |> render_click()
+      lv |> element("[phx-click='ask-quitar']") |> render_click()
+      render_click(lv, "confirm-quitar", %{})
+
+      render_click(lv, "undo-place", %{})
+
+      fresh_a = Shelves.get_copy!(a.id)
+      assert fresh_a.shelf_id == shelf.id
+      assert fresh_a.position == 0
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {b.id, 1}]
+    end
+
+    test "the selected cover of a three-copy game has an accessible name containing both copia and caja",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      multi = game_fixture(%{name: "Multi"})
+      m1 = copy_fixture(%{game_id: multi.id})
+      _m2 = copy_fixture(%{game_id: multi.id})
+      _m3 = copy_fixture(%{game_id: multi.id})
+      {:ok, _} = Shelves.place_copy(m1.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "multi"})
+      html = lv |> element("#suggestion-#{m1.id}") |> render_click()
+
+      [_, cover_and_after] = String.split(html, ~s(id="estante-copy-#{m1.id}"), parts: 2)
+      cover_slice = String.slice(cover_and_after, 0, 300)
+
+      assert cover_slice =~ "copia #{m1.number} de 3"
+      assert cover_slice =~ "caja 1 de 1"
+    end
+
+    test "the selected cover of a single-copy game's accessible name contains caja and not copia",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      solo = copy_fixture(%{game_id: game_fixture(%{name: "Solo"}).id})
+      {:ok, _} = Shelves.place_copy(solo.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "solo"})
+      html = lv |> element("#suggestion-#{solo.id}") |> render_click()
+
+      [_, cover_and_after] = String.split(html, ~s(id="estante-copy-#{solo.id}"), parts: 2)
+      cover_slice = String.slice(cover_and_after, 0, 300)
+
+      assert cover_slice =~ "caja 1 de 1"
+      refute cover_slice =~ "copia"
+    end
+  end
+
   defp count_occurrences(haystack, needle) do
     haystack
     |> String.split(needle)
