@@ -810,7 +810,22 @@
   pointer-events: none;
 }
 
+/* Plan 01.8.2-14 (Rule 1 — bug): the base rule above is `position:
+   absolute` so the bar costs zero layout at rest (see its own comment) —
+   but nothing had ever made it actually PIN to the viewport while
+   visible, because no live call site existed to prove that half of the
+   contract before this plan's Juegos screen. `position: fixed` here,
+   scoped to the `--visible` modifier only, is the fix: both `absolute`
+   and `fixed` remove an element from normal flow identically, so this
+   transition still costs zero layout to sibling content either way — the
+   only thing it changes is which box the bar's own `top: 0` resolves
+   against (an ancestor vs. the viewport), which is exactly what "pins at
+   the top of the scroller" requires. `test/pukllay_club_web/components/
+   admin_components_test.exs`'s own `page_bar/1` tests only assert the
+   BASE rule stays `position: absolute` (never `sticky`) — untouched by
+   this addition. */
 .pk-admin-page-bar--visible {
+  position: fixed;
   visibility: visible;
   pointer-events: auto;
 }

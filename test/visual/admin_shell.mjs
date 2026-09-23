@@ -52,7 +52,7 @@ const STAFF_EMAIL = process.env.STAFF_EMAIL || "augusto.pedraza08@gmail.com"
 // D-19n's own two named widths, plus 390 for parity with
 // `admin_components.mjs`'s own trio.
 const KEEL_VIEWPORTS = [375, 360, 390]
-const PAGES = ["/admin", "/admin/staff", "/admin/estantes"]
+const PAGES = ["/admin", "/admin/staff", "/admin/estantes", "/admin/juegos"]
 
 function log(...args) {
   console.log(...args)
@@ -389,9 +389,14 @@ async function pollUntil(fn, { timeoutMs = 4000, intervalMs = 150 } = {}) {
 // in layout, by construction — this check confirms that construction
 // holds against the real compiled CSS, not just asserts it from memory).
 // ---------------------------------------------------------------------------
-async function checkPageBarZeroLayout({ client, baseUrl }) {
+// Generalised by plan 01.8.2-14 (page/bodyAnchorSelector params, defaulted
+// to the original `/admin`/`#admin-cards` call so the existing behaviour
+// is byte-identical) — Juegos is this component's first call site whose
+// own title→body rhythm is worth recording independently of the
+// dashboard's grid.
+async function checkPageBarZeroLayout({ client, baseUrl, page = "/admin", bodyAnchorSelector = "#admin-cards" }) {
   await setViewport(client, 375, 844)
-  await navigate(client, `${baseUrl}/admin`)
+  await navigate(client, `${baseUrl}${page}`)
   await new Promise((r) => setTimeout(r, 250))
 
   const json = await evalJS(
@@ -402,12 +407,14 @@ async function checkPageBarZeroLayout({ client, baseUrl }) {
       if (!bar) return { found: false };
       const cs = getComputedStyle(bar);
       const title = document.querySelector('.pk-admin-page-title');
-      const grid = document.getElementById('admin-cards');
+      const grid = document.querySelector(${JSON.stringify(bodyAnchorSelector)});
+      const backRow = document.querySelector('.pk-admin-back-row');
       return {
         found: true,
         position: cs.position,
         titleTop: title ? title.getBoundingClientRect().top : null,
         gridTop: grid ? grid.getBoundingClientRect().top : null,
+        backRowTop: backRow ? backRow.getBoundingClientRect().top : null,
       };
     })())
   `,
@@ -538,6 +545,29 @@ async function main() {
       exitCode = 1
     } else {
       log(`page bar: position=absolute (confirmed zero layout cost by construction) — title top=${pageBar.titleTop}px, grid top=${pageBar.gridTop}px`)
+    }
+
+    // ---- page bar: zero layout cost at rest, on Juegos (plan 01.8.2-14) ----
+    // Juegos is this component's first real subject with its own recorded
+    // anchors — the byte-for-byte numbers this plan's SUMMARY cites.
+    log("Checking the pinned page bar's at-rest layout cost on /admin/juegos...")
+    const juegosPageBar = await checkPageBarZeroLayout({
+      client,
+      baseUrl,
+      page: "/admin/juegos",
+      bodyAnchorSelector: ".pk-admin-juegos-sections, .pk-admin-juegos-empty",
+    })
+    if (!juegosPageBar.found) {
+      log("FAIL: /admin/juegos: .pk-admin-page-bar not found in the DOM")
+      exitCode = 1
+    } else if (juegosPageBar.position !== "absolute") {
+      log(`FAIL: /admin/juegos: .pk-admin-page-bar's computed position is "${juegosPageBar.position}", expected "absolute" at rest`)
+      exitCode = 1
+    } else {
+      log(
+        `/admin/juegos page bar: position=absolute (zero layout cost at rest) — ` +
+          `back row top=${juegosPageBar.backRowTop}px, title top=${juegosPageBar.titleTop}px, body top=${juegosPageBar.gridTop}px`,
+      )
     }
 
     // ---- save bar: deferred (no live call site) ----
