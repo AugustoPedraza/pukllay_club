@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-12-PLAN.md
-last_updated: "2026-09-23T19:13:02.237Z"
+stopped_at: Completed 01.8.2-13-PLAN.md
+last_updated: "2026-09-23T20:03:13.715Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: f68ad068015ae9223227105b4c9b2fc771be2f3e
+state_head: c3bc1a55bf0c9c6246e4133196a0436b92bb14af
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 39
+  completed_plans: 40
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 13 of 22
+Plan: 14 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -144,6 +144,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P10 | 42min | 3 tasks | 12 files |
 | Phase 01.8.2 P11 | 50min | 3 tasks | 10 files |
 | Phase 01.8.2 P12 | 47min | 3 tasks | 11 files |
+| Phase 01.8.2 P13 | ~120min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -301,6 +302,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: Keel = 16 (evidenced by admin_shell.mjs's real content-edge measurement); rejects sketch 079's 14.
 - [Phase 01.8.2]: Fixed admin_sheet.js's isOpen() (position:fixed offsetParent no-op) and the sheet/tab-bar z-index collision inside plan 12, before Wave 7 begins, per explicit user direction.
 - [Phase 01.8.2]: Open item 1's real-device pass deferred to post-deployment (against the live site after plan 01.8.2-22), per explicit user decision. Tracked in 01.8.2-DEVICE-PASS.md, routed to plan 22.
+- [Phase 01.8.2]: 01.8.2-13: header icons precede the title in DOM order (CSS-absolute positioned) so a page title+adjacent-icons row never breaks test/visual/admin_components.mjs's D3 page-head-to-body sibling-walk measurement -- found live by this plan's own required harness run and fixed before committing.
+- [Phase 01.8.2]: 01.8.2-13: Shelves.search_copies/1 caps suggestions at 20 results / 120-char query (CatalogFilters' 20x120 precedent), across BOTH placed and unplaced copies; Estantes rebuilt wholesale from the 01.8.2-01 tracer to D-08's real search-first design with a live-update handle_info over admin:estantes.
 
 ### Pending Todos
 
@@ -444,8 +447,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T19:13:02.117Z
-Stopped at: Completed 01.8.2-12-PLAN.md
+Last session: 2026-09-23T20:03:13.573Z
+Stopped at: Completed 01.8.2-13-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
