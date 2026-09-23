@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 7/22 plans executed
+**Plans:** 8/22 plans executed
 
 Plans:
 
@@ -211,7 +211,7 @@ Plans:
 **Wave 3**
 
 - [ ] 01.8.2-08-PLAN.md — D-18 components part 2: the sheet shell, the centred dialog, one snackbar, the fixed foot save bar, the pinned page bar
-- [ ] 01.8.2-09-PLAN.md — D-12/D-19d/D-00b: the drawer opens and moves left site-wide, staff get the sectioned drawer, `/admin` loses its footer
+- [x] 01.8.2-09-PLAN.md — D-12/D-19d/D-00b: the drawer opens and moves left site-wide, staff get the sectioned drawer, `/admin` loses its footer
 
 **Wave 4**
 
