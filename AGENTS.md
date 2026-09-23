@@ -182,17 +182,31 @@ Production's ~400 pre-existing games still carry the `boardgameversion`-contamin
 prevents going forward. `PukllayClub.Release.enrich_bgg_stats/1` (the repair) and
 `PukllayClub.Release.bgg_stats_report/0` (the read-only before/after measurement) are the
 release-callable equivalent of `mix catalog.enrich_bgg_stats` for a compiled release, where Mix
-doesn't exist. Both **must** be invoked with `rpc`, never `eval` — an `eval` node starts no
-supervision tree, so Req's HTTP pool doesn't exist there and every BGG request would fail — and,
-unlike the dev Mix task, neither writes a file (a `priv/` write would be discarded on the next
-deploy):
+doesn't exist. Both **must** be invoked with the release's `eval` command, with the required
+processes started first in the same expression — `{:ok, _} =
+Application.ensure_all_started(:req)`, `{:ok, _} = Application.ensure_all_started(:ecto_sql)`
+(not optional: `PukllayClub.Repo.start_link()` fails on a missing `DBConnection.Watcher` process
+without it), `{:ok, _} = PukllayClub.Repo.start_link()` — and, unlike the dev Mix task, neither
+writes a file (a `priv/` write would be discarded on the next deploy):
 
 ```bash
-bin/pukllay_club rpc 'PukllayClub.Release.bgg_stats_report()'
-bin/pukllay_club rpc 'PukllayClub.Release.enrich_bgg_stats(dry_run: true)'
+bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.bgg_stats_report()
+'
+bin/pukllay_club eval '
+{:ok, _} = Application.ensure_all_started(:req)
+{:ok, _} = Application.ensure_all_started(:ecto_sql)
+{:ok, _} = PukllayClub.Repo.start_link()
+PukllayClub.Release.enrich_bgg_stats(dry_run: true)
+'
 ```
 
-See `docs/runbooks/production-bgg-reenrichment.md` for the full six-step operator sequence.
+See `docs/runbooks/production-bgg-reenrichment.md` for the full six-step operator sequence
+(rpc was found unavailable on this deployment and the runbook was corrected to eval in quick task
+260922-w5o).
 
 <!-- phoenix-gen-auth-start -->
 ## Authentication
