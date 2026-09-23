@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 4/22 plans executed
+**Plans:** 5/22 plans executed
 
 Plans:
 
@@ -204,7 +204,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 01.8.2-05-PLAN.md — D-31: `games.units` is dropped and every Copias read becomes `count(copies)`
+- [x] 01.8.2-05-PLAN.md — D-31: `games.units` is dropped and every Copias read becomes `count(copies)`
 - [ ] 01.8.2-06-PLAN.md — D-05/D-06: the counted clear-slate migration and the rollout runbook
 - [ ] 01.8.2-07-PLAN.md — D-18 components part 1: the A1–A4 actions, field, panel, row, editable row, status dot, kind tag, count pill
 
