@@ -14,8 +14,8 @@
 //   - the pinned page bar (D-19n): at rest, zero layout cost (a set of
 //     content anchors, unchanged whether the bar is present)
 //   - the fixed foot save bar (D-28) and sketch 080's four negative
-//     checks — see the DEFERRED note below; there is no live call site
-//     yet
+//     checks, against plan 01.8.2-17's game editor — the first live
+//     `save_bar/1` call site (`resolveEditorUrl`/`measureSaveBarLive`)
 //   - the keel (open item 4): the admin shell's real content edges at 375
 //     and 360, so the CONTEXT.md-flagged 16-vs-14 decision is recorded
 //     against a measurement, not a preference
@@ -423,23 +423,110 @@ async function checkPageBarZeroLayout({ client, baseUrl, page = "/admin", bodyAn
 }
 
 // ---------------------------------------------------------------------------
-// The fixed foot save bar (D-28) and sketch 080's four negative checks
-// (no filled button, no full width, no tonal band, no "sin banda" — i.e.
-// the divisor is opaque). DEFERRED: `AdminComponents.save_bar/1` and
-// `page_bar/1` have NO live call site in the shipped admin as of this plan
-// — grep-confirmed (`grep -rn "AdminComponents.save_bar\|AdminComponents.page_bar" lib/pukllay_club_web/live/admin/`
-// returns nothing). Both ship with an editor screen (plans 01.8.2-13
-// onward). Per this file's own guard rules (measure geometry, never
-// assume), these checks do NOT fabricate a measurement against a
-// non-existent element — each is named for its sketch-080 origin, confirms
-// the absence explicitly, and reports the ONE thing that IS resolvable
-// without a live instance: the `--pk-save-bar-h` custom property itself.
+// The fixed foot save bar (D-28): resolves whether a live `[data-pk-save-
+// bar]` instance now exists (it does, as of plan 01.8.2-17's editor) and
+// reports the `--pk-save-bar-h` custom property. The real geometry + sketch
+// 080 negative-check measurement against that live instance lives in
+// `measureSaveBarLive`/`resolveEditorUrl` below, run from `main()` only
+// when a live instance is confirmed present here.
 // ---------------------------------------------------------------------------
 async function checkSaveBarDeferred({ client, baseUrl }) {
   await navigate(client, `${baseUrl}/admin`)
   const saveBarH = await evalJS(client, `getComputedStyle(document.documentElement).getPropertyValue('--pk-save-bar-h').trim()`)
   const liveInstance = await evalJS(client, `document.querySelector('[data-pk-save-bar]') !== null`)
   return { saveBarHVar: saveBarH, liveInstance }
+}
+
+// ---------------------------------------------------------------------------
+// Plan 01.8.2-17: the FIRST live `save_bar/1` call site (the game editor).
+// Resolves a real published game's editor URL off the live /admin/juegos
+// list (never a hardcoded id — the dev catalog's row ordering/ids are not
+// this script's business), then measures the bar's real geometry, the
+// button's A1 shape, and the body's own real clearance/last-block edge —
+// this is what the deferred block above (`checkSaveBarDeferred`) itself
+// says to do "now that a call site exists".
+// ---------------------------------------------------------------------------
+async function resolveEditorUrl(client, baseUrl) {
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  const href = await evalJS(
+    client,
+    `
+    (() => {
+      const a = document.querySelector('a[href^="/admin/juegos/"][href$="/editar"]');
+      return a ? a.getAttribute('href') : null;
+    })()
+  `,
+  )
+  return href
+}
+
+async function measureSaveBarLive({ client, baseUrl, editorUrl, width }) {
+  await setViewport(client, width, 844)
+  await navigate(client, `${baseUrl}${editorUrl}`)
+  await new Promise((r) => setTimeout(r, 200))
+  // Scroll to the real bottom of the document FIRST — `.pk-editor-body`'s
+  // last block sits well past one screenful of content (pills, cover,
+  // title, description, five BGG facts, three editable rows), so its
+  // un-scrolled `getBoundingClientRect()` is naturally below the 844px
+  // viewport even when the page works correctly. A `position: fixed` bar's
+  // own top is always viewport-relative regardless of scroll — comparing
+  // it against an un-scrolled body rect would silently always "pass"
+  // (D-28's own named failure mode requires measuring at the real scrolled
+  // position, exactly as `admin-game-editor.md`'s own reference script
+  // does: `document.querySelector('#scroller').scrollTop = 700`).
+  await evalJS(client, `window.scrollTo(0, document.body.scrollHeight)`)
+  await new Promise((r) => setTimeout(r, 100))
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const bar = document.querySelector('[data-pk-save-bar]');
+      const btn = bar ? bar.querySelector('.pk-admin-save-bar__action') : null;
+      if (!bar || !btn) return null;
+      const br = bar.getBoundingClientRect();
+      const bbr = btn.getBoundingClientRect();
+      const barCs = getComputedStyle(bar);
+      const btnCs = getComputedStyle(btn);
+      const rg = document.createRange();
+      rg.selectNodeContents(btn);
+      const ink = rg.getBoundingClientRect().width;
+      const bodyEls = [...document.querySelectorAll('.pk-editor-body > *')];
+      const lastBlock = bodyEls[bodyEls.length - 1];
+      const lastRect = lastBlock ? lastBlock.getBoundingClientRect() : null;
+      // A bare, unstyled swatch element carries no rule of its own other
+      // than the UA default (transparent) plus whatever inherits — so its
+      // resolved backgroundColor is NOT useful; instead read
+      // '--color-base-100' directly off :root and let the BROWSER resolve
+      // it into the same rgb()/oklch() form backgroundColor already uses,
+      // via a throwaway element's inline style (guarantees an apples-to-
+      // apples comparison against barCs/btnCs regardless of the token's
+      // declared colour space).
+      const swatch = document.createElement('div');
+      swatch.style.cssText = 'background-color: var(--color-base-100); position: fixed; visibility: hidden;';
+      document.body.appendChild(swatch);
+      const pageBg = getComputedStyle(swatch).backgroundColor;
+      swatch.remove();
+      return {
+        barH: Math.round(br.height * 10) / 10,
+        barBg: barCs.backgroundColor,
+        barBt: barCs.borderTopWidth,
+        pageBg,
+        btnW: Math.round(bbr.width * 10) / 10,
+        btnH: Math.round(bbr.height * 10) / 10,
+        btnFill: btnCs.backgroundColor,
+        btnPadL: btnCs.paddingLeft,
+        btnBw: btnCs.borderTopWidth,
+        btnRadius: btnCs.borderRadius,
+        btnFont: btnCs.fontSize + '/' + btnCs.fontWeight,
+        btnRight: Math.round((br.right - bbr.right) * 10) / 10,
+        ink: Math.round(ink * 10) / 10,
+        lastBlockBottom: lastRect ? Math.round(lastRect.bottom * 10) / 10 : null,
+        barTop: Math.round(br.top * 10) / 10,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
 }
 
 // ---------------------------------------------------------------------------
@@ -570,21 +657,69 @@ async function main() {
       )
     }
 
-    // ---- save bar: deferred (no live call site) ----
+    // ---- save bar: plan 01.8.2-17's editor is the FIRST live call site ----
     log("Checking the fixed foot save bar (D-28)...")
     const saveBar = await checkSaveBarDeferred({ client, baseUrl })
-    log(`--pk-save-bar-h resolves to ${saveBar.saveBarHVar}; live [data-pk-save-bar] instance found: ${saveBar.liveInstance}`)
-    if (saveBar.liveInstance) {
-      log("FAIL: a live save bar instance was found but this script has no measurement logic for it yet — extend checkSaveBarDeferred now that a call site exists")
+    log(`--pk-save-bar-h resolves to ${saveBar.saveBarHVar} (checked on /admin, which never carries a save bar itself — save_bar/1 is editor-only)`)
+    const editorUrl = await resolveEditorUrl(client, baseUrl)
+    if (!editorUrl) {
+      log("FAIL: could not resolve a real game editor URL off /admin/juegos — is the dev catalog empty?")
       exitCode = 1
     } else {
-      for (const name of [
-        "22 no filled button (fill must equal the page background, not a solid fill)",
-        "23 no full width (the button stays natural width, right-aligned, never stretched)",
-        "25 no tonal band (the bar's own background must equal the page background)",
-        "26 no \"sin banda\" (the bar is opaque — zero body pixels visible through its band when scrolled)",
-      ]) {
-        log(`SKIPPED (DEFERRED): sketch 080 check ${name} — no live save_bar/1 call site exists yet (ships with the editor screens, 01.8.2-13 onward); this is a real, explicit gap, not a silent pass`)
+      const liveInstance = await (async () => {
+        await navigate(client, `${baseUrl}${editorUrl}`)
+        return evalJS(client, `document.querySelector('[data-pk-save-bar]') !== null`)
+      })()
+      log(`Resolved editor URL: ${editorUrl}; live [data-pk-save-bar] instance found there: ${liveInstance}`)
+      if (!liveInstance) {
+        log(`FAIL: no live [data-pk-save-bar] instance found on ${editorUrl}`)
+        exitCode = 1
+      } else {
+        for (const width of [375, 360]) {
+          const m = await measureSaveBarLive({ client, baseUrl, editorUrl, width })
+          if (!m) {
+            log(`FAIL: save_bar/1 not found on ${editorUrl} @ ${width}px`)
+            exitCode = 1
+            continue
+          }
+          const pct = Math.round((m.ink / m.btnW) * 1000) / 10
+          const clearance = m.lastBlockBottom === null ? null : Math.round((m.barTop - m.lastBlockBottom) * 10) / 10
+          log(
+            `save bar @ ${width}px: barH=${m.barH}px (--pk-save-bar-h=${saveBar.saveBarHVar}) btn=${m.btnW}x${m.btnH} ` +
+              `ink=${pct}% right-gap=${m.btnRight}px lastBlockBottom=${m.lastBlockBottom}px barTop=${m.barTop}px clearance=${clearance}px`,
+          )
+          if (Math.round(parseFloat(saveBar.saveBarHVar)) !== Math.round(m.barH)) {
+            log(`FAIL: rendered bar height ${m.barH}px does not match --pk-save-bar-h (${saveBar.saveBarHVar})`)
+            exitCode = 1
+          }
+          // sketch 080's four negative checks (21/22 filled, 23 full-width,
+          // 25 tonal band) — 26 ("sin banda"/opaque, a pixel-scan) is not
+          // re-run here: `.pk-admin-save-bar`'s `background` is a plain
+          // solid CSS colour (`var(--color-base-100)`, `components.css`),
+          // never a gradient/transparent value, so "opaque by construction"
+          // holds without a screenshot diff — see editor.css/components.css.
+          if (m.btnFill !== m.barBg) {
+            log(`FAIL: negative 22 (no filled button) — button fill ${m.btnFill} != page-coloured bar background ${m.barBg}`)
+            exitCode = 1
+          }
+          if (pct <= 55 || m.btnW >= 160) {
+            log(`FAIL: negative 23 (no full width) — button is ${m.btnW}px wide, ${pct}% ink (expected natural width, >55% ink)`)
+            exitCode = 1
+          }
+          // The bar's own background must be the PAGE ground
+          // (`--color-base-100`), not a distinct tonal surface — asserted
+          // by comparing it against a bare `--color-base-100` swatch
+          // element (not `document.body`, which carries no explicit
+          // background of its own in this app and reads transparent).
+          if (m.barBg !== m.pageBg) {
+            log(`FAIL: negative 25 (no tonal band) — bar background ${m.barBg} != --color-base-100 (${m.pageBg})`)
+            exitCode = 1
+          }
+          if (clearance !== null && clearance < 0) {
+            log(`FAIL: the last body block is hidden under the save bar by ${(-clearance).toFixed(1)}px @ ${width}px (D-28's named failure mode)`)
+            exitCode = 1
+          }
+        }
       }
     }
 
