@@ -263,7 +263,7 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
       {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
 
-      assert [{:copy, found}] = Shelves.search_estantes_or_copies("catan")
+      assert [{:copy, found}] = Shelves.search_estantes_or_copies("cat")
       assert found.id == copy.id
       assert found.shelf.id == shelf.id
     end

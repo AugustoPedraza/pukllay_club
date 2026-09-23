@@ -246,6 +246,87 @@ defmodule PukllayClub.Catalog.Shelves do
 
   def search_copies(_blank), do: []
 
+  @doc """
+  Search results for the «¿Dónde va?» full-height sheet (D-00c, plan
+  01.8.2-16) — estantes matching `q` by name, then already-placed
+  copies matching `q` by their game's name (picking one resolves to
+  **its** estante, so staff can place a box "next to" a game they can
+  see). Estantes rank first, tagged `{:shelf, shelf}` / `{:copy, copy}`,
+  capped at `#{@max_search_results}` total results combined (T-01.8.2-73:
+  bounded, parameterized, never `String.to_atom/1`). `exclude_copy_id`
+  drops the copy currently being placed/moved from its own results —
+  finding yourself as a neighbourhood makes no sense.
+
+  An UNPLACED copy's game never appears here: it has no estante to
+  resolve to, and `search_copies/1` (D-08, the Estantes page's own
+  suggestion source) already covers "find any game, placed or not" —
+  this function answers a narrower question, "where could this box go".
+  """
+  @spec search_estantes_or_copies(String.t(), integer() | nil) :: [
+          {:shelf, Shelf.t()} | {:copy, Copy.t()}
+        ]
+  def search_estantes_or_copies(q, exclude_copy_id \\ nil)
+
+  def search_estantes_or_copies(q, exclude_copy_id) when is_binary(q) and q != "" do
+    escaped = q |> String.slice(0, @max_search_query_length) |> escape_ilike()
+    pattern = "%" <> escaped <> "%"
+
+    shelves =
+      Shelf
+      |> where([s], ilike(s.name, ^pattern))
+      |> order_by([s], asc: s.name, asc: s.id)
+      |> limit(^@max_search_results)
+      |> Repo.all()
+
+    remaining = max(@max_search_results - length(shelves), 0)
+    copies = search_placed_copies(pattern, exclude_copy_id, remaining)
+
+    Enum.map(shelves, &{:shelf, &1}) ++ Enum.map(copies, &{:copy, &1})
+  end
+
+  def search_estantes_or_copies(_blank, _exclude_copy_id), do: []
+
+  defp search_placed_copies(_pattern, _exclude_copy_id, 0), do: []
+
+  defp search_placed_copies(pattern, exclude_copy_id, limit) do
+    Copy
+    |> join(:inner, [c], g in assoc(c, :game))
+    |> where([c, g], g.status != :retired)
+    |> where([c], not is_nil(c.shelf_id))
+    |> where([c, g], ilike(g.name, ^pattern))
+    |> exclude_copy(exclude_copy_id)
+    |> order_by([c, g], asc: g.name, asc: c.id)
+    |> limit(^limit)
+    |> Repo.all()
+    |> Repo.preload([:game, :shelf])
+  end
+
+  defp exclude_copy(query, nil), do: query
+  defp exclude_copy(query, copy_id), do: where(query, [c], c.id != ^copy_id)
+
+  @doc """
+  Restores `copy_id` to the exact `{shelf_id, position}` snapshot taken
+  immediately before a place/move/remove write — the Deshacer path
+  behind every undoable action on `/admin/estantes` (plan 01.8.2-16:
+  the «¿Dónde va?» and «¿Qué juego va acá?» sheets, and the Quitar del
+  estante dialog). `shelf_id: nil` means the copy was Sin ubicar before
+  the write being undone, so restoring is `remove_copy_from_shelf/1`; a
+  real `shelf_id` restores through `place_copy/3`'s own locked, gap-free
+  insert — reindexing around the returning copy exactly as any other
+  placement would, since the neighbours may have shifted while the copy
+  was away (another staff member's write, or the very write being
+  undone). Never `place_copy/3` with a remembered array index against a
+  now-stale neighbour list — that is exactly what this function exists
+  to avoid.
+  """
+  @spec restore_position(integer(), integer() | nil, non_neg_integer() | nil) ::
+          {:ok, Copy.t()} | {:error, term()}
+  def restore_position(copy_id, nil, nil), do: remove_copy_from_shelf(copy_id)
+
+  def restore_position(copy_id, shelf_id, position) when is_integer(shelf_id) and is_integer(position) do
+    place_copy(copy_id, shelf_id, position)
+  end
+
   @doc "Fetches a copy by id, game and shelf preloaded, raising `Ecto.NoResultsError` for an unknown id."
   @spec get_copy!(integer()) :: Copy.t()
   def get_copy!(id) do
