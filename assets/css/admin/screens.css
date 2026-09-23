@@ -1,0 +1,167 @@
+/* Screen-specific admin CSS (plan 01.8.2-11) — rules that belong to ONE
+   screen's own layout, not a reusable atom/composite (those live in
+   `admin/components.css`, D-18's shared module). Imported directly from
+   `app.css` (`@import "./admin/screens.css";`, sibling to the existing
+   `@import "./admin/tokens.css";`/`@import "./admin/chrome.css";` lines)
+   — this plan's own `<verify>` does not forbid touching `app.css`
+   (unlike plan 01.8.2-07's `components.css`, which had to nest its
+   import inside `tokens.css` instead), so there is no workaround needed
+   here.
+
+   Deliberately unlayered (no `@layer` wrapper), matching every other
+   admin stylesheet's convention and `app.css`'s own CASCADE-LAYER HAZARD
+   note: a layered rule here would silently lose to any unlayered
+   `.pk-*`/admin rule setting the same property, with no warning.
+
+   ORGANISATION (read this before adding a section): one `====` banner
+   per screen, in the order the screens were built. Plan 01.8.2-15 is
+   already known to add a section to this same file — append yours as a
+   NEW banner at the end; do not interleave rules into another screen's
+   banner, so a plan can always find (and eventually deprecate) its own
+   block without reading the whole file. Colour resolves through
+   `01.8.2-TOKENS.md`'s reconciled tokens or a directly shipped `app.css`
+   token — never a literal hex, matching `components.css`'s own rule. */
+
+/* ============================================================
+   Plan 01.8.2-11 — shared: the page title rank (D-19j: 22px/600 Inter,
+   never `font-display`). Every future admin screen listed in
+   `admin_composition_test.exs`'s moduledoc (01.8.2-13, -14, -15, -17,
+   -18, -20) needs this same rank at least once, so it is declared here
+   rather than duplicated per screen — the one shared, repeated pattern
+   in this file that isn't itself an AdminComponents atom (a plain
+   `<h1>` needs no Phoenix.Component wrapper).
+   ============================================================ */
+
+.pk-admin-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-base-content);
+}
+
+/* ============================================================
+   Plan 01.8.2-11 — Admin dashboard (`Admin.DashboardLive`, 060-B):
+   the box grid, one box's own anatomy, and its optional meter.
+   ============================================================ */
+
+/* `minmax(0, 1fr)` is load-bearing (060-B's own recorded bug): a plain
+   `1fr` lets a long name widen its own track relative to its neighbours
+   (measured 157 vs 176px in the sketch), so every box must stay the
+   same width regardless of content length. */
+.pk-admin-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 1024px) {
+  .pk-admin-dash-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+/* Outline only (`--color-base-100` fill, 1px `--stroke` border) — 060-B's
+   own note: a `--color-surface` tonal fill "read heavy" for a whole grid
+   of these. No chevron (D-19i doesn't apply — this isn't a `list_row`);
+   the tap affordance is the box shape plus the shared `[data-pk-
+   pressable]:active` press state (`admin/tokens.css`, D-19o) this link
+   already opts into like every other pressable surface in the admin. */
+.pk-admin-dash-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  color: inherit;
+  text-decoration: none;
+}
+
+.pk-admin-dash-box__head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 24px;
+}
+
+.pk-admin-dash-box__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--color-neutral);
+}
+
+.pk-admin-dash-box__name {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-base-content);
+}
+
+/* Content, not a label — 400, not 600 (060-B's "94% bold" fix: the box
+   name is the one bold run per box, so the number must not compete). */
+.pk-admin-dash-box__number {
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-base-content);
+}
+
+.pk-admin-dash-box__meter {
+  align-self: stretch;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.pk-admin-dash-box__meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.pk-admin-dash-box__foot {
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   Plan 01.8.2-11 — Staff (`Admin.StaffLive.Index`): the invite form's
+   own layout only (the field/action atoms themselves are unstyled here
+   — `components.css` owns their paint).
+   ============================================================ */
+
+.pk-admin-invite-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-box);
+}
+
+.pk-admin-invite-form__field {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.pk-admin-empty-note {
+  font-size: 13px;
+  color: var(--color-neutral);
+}

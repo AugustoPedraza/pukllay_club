@@ -155,6 +155,26 @@ defmodule PukllayClub.Catalog.Shelves do
   end
 
   @doc """
+  `{placed, total}` copy-level meter (plan 01.8.2-11, D-02/D-31) — the
+  copy-level replacement `Admin.DashboardLive`'s Estantes box reads for
+  its meter and percentage. `placed` is every copy with a `shelf_id`;
+  `total` is every copy, placed or not. Deliberately NOT
+  `location_progress/0` above: that function still counts
+  non-retired GAMES via the dead `games.shelf_id` column (a carried-
+  forward defect from 01.8.2-01's copy-level rewrite, flagged rather than
+  read from here) — this one is copy-level from the start, consistent
+  with D-02/D-31's "count(copies) is the only Copias source" rule.
+  `{0, 0}` for a club with zero copy rows, never a division error.
+  """
+  @spec copies_progress() :: {non_neg_integer(), non_neg_integer()}
+  def copies_progress do
+    total = Repo.aggregate(Copy, :count)
+    placed = Repo.aggregate(from(c in Copy, where: not is_nil(c.shelf_id)), :count)
+
+    {placed, total}
+  end
+
+  @doc """
   Type-ahead search (D-13) across every non-retired game (placed or not),
   by name — the same escaped ILIKE convention as `Catalog.list_admin_games/1`
   (T-01.8.1-23: `%`/`_`/`\\` escaped before wrapping in `%...%`, so a

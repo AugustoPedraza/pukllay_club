@@ -4,9 +4,41 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
   import Phoenix.LiveViewTest
   import PukllayClub.AccountsFixtures
   import PukllayClub.CatalogFixtures
+  import PukllayClub.CopiesFixtures
+  import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Accounts
+  alias PukllayClub.Catalog.Shelves
   alias PukllayClub.Repo
+
+  # Reads a box's own number/meter/pending-pill via its stable id
+  # (`dash-box-{juegos,estantes,web,niveles,staff}`, dashboard_live.ex),
+  # scoped so an assertion can never accidentally match a substring
+  # elsewhere on the page (the tab bar's own "Web" tab label, in
+  # particular — see the D-00a rename test below).
+  defp box_number(html, box_id) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("##{box_id} .pk-admin-dash-box__number")
+    |> LazyHTML.text()
+  end
+
+  defp box_has_meter?(html, box_id) do
+    html
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("##{box_id} .pk-admin-dash-box__meter")
+    |> Enum.any?()
+  end
+
+  defp box_href(html, box_id) do
+    [href] =
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query("##{box_id}")
+      |> LazyHTML.attribute("href")
+
+    href
+  end
 
   describe "the tracer: /admin/ingresar magic link to a staff-gated /admin (T-01.8.1-01)" do
     test "an owner requests a magic link, confirms it, and lands on /admin", %{conn: conn} do
@@ -34,7 +66,8 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
       assert redirected_to(conn) == ~p"/admin"
 
       conn = get(recycle(conn), ~p"/admin")
-      assert html_response(conn, 200) =~ "Panel"
+      # 01.8.2-11 (D-00a): the page title renames Panel -> Admin.
+      assert html_response(conn, 200) =~ "Admin"
     end
 
     test "GET /admin with no session redirects to /admin/ingresar", %{conn: conn} do
@@ -76,117 +109,179 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
     end
   end
 
-  describe "Juegos card (D-35, D-09 Task 2)" do
+  describe "060-B boxes: every box shows a real numeric count, never blank" do
     setup :register_and_log_in_staff
 
-    test "links to /admin/juegos and shows a borradores badge when N > 0", %{conn: conn} do
-      game_fixture(%{status: :draft})
-      game_fixture(%{status: :draft})
-
+    test "the four non-owner boxes each render a numeric count element", %{conn: conn} do
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Juegos"
-      assert html =~ ~s(href="/admin/juegos")
-      assert html =~ "2 borradores"
+      for box_id <- ~w(dash-box-juegos dash-box-estantes dash-box-web dash-box-niveles) do
+        number = box_number(html, box_id)
+        assert number =~ ~r/^\d/, "#{box_id}'s number (#{inspect(number)}) is not numeric"
+      end
     end
 
-    test "omits the badge when there are no drafts", %{conn: conn} do
+    test "no font-display, no btn- class, no badge- class in this page's own <main> content", %{
+      conn: conn
+    } do
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      # Scoped to <main> — the shared header/drawer/tab-bar chrome around it
+      # is Scope B/pre-existing (e.g. the header brand wordmark's own
+      # `font-display`) and out of this plan's file scope; the plan's own
+      # <verify> greps `dashboard_live.ex`'s SOURCE directly for this, this
+      # test is the rendered-output counterpart of that same guard.
+      main_html = html |> LazyHTML.from_document() |> LazyHTML.query("main") |> LazyHTML.to_html()
+
+      refute main_html =~ "font-display"
+      refute main_html =~ "btn-"
+      refute main_html =~ "badge-"
+    end
+  end
+
+  describe "Juegos box (D-35, D-09 Task 2)" do
+    setup :register_and_log_in_staff
+
+    test "links to /admin/juegos, shows the total game count, and a pending pill when drafts exist",
+         %{conn: conn} do
+      game_fixture(%{status: :draft})
+      game_fixture(%{status: :draft})
       game_fixture(%{status: :published})
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Juegos"
+      assert box_href(html, "dash-box-juegos") == "/admin/juegos"
+      assert box_number(html, "dash-box-juegos") == "3"
+      assert html =~ "2 borradores"
+    end
+
+    test "omits the pending pill when there are no drafts", %{conn: conn} do
+      game_fixture(%{status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert box_number(html, "dash-box-juegos") == "1"
       refute html =~ "borradores"
+      refute html =~ "pk-admin-pending-pill"
     end
   end
 
-  describe "Estantes card (D-35, 01.8.1-09)" do
+  describe "Estantes box (D-35, plan 01.8.2-11 copy-level rewrite)" do
     setup :register_and_log_in_staff
 
-    test "shows a badge-warning N/total ubicados while games remain unplaced", %{conn: conn} do
-      shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
-      placed = game_fixture()
-      _unplaced = game_fixture()
-      placed |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
+    test "the pending count equals length(Shelves.unplaced_copies/0), and a meter renders", %{
+      conn: conn
+    } do
+      shelf = shelf_fixture()
+      placed_game = game_fixture()
+      placed_copy = copy_fixture(%{game_id: placed_game.id})
+      {:ok, _} = Shelves.place_copy(placed_copy.id, shelf.id, 0)
+
+      unplaced_game = game_fixture()
+      _unplaced_copy = copy_fixture(%{game_id: unplaced_game.id})
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Estantes"
-      assert html =~ ~s(href="/admin/estantes")
-      assert html =~ "1/2 ubicados"
-      assert html =~ "badge-warning"
+      expected_unplaced = length(Shelves.unplaced_copies())
+      assert expected_unplaced == 1
+      assert html =~ "#{expected_unplaced} sin ubicar"
+      assert box_has_meter?(html, "dash-box-estantes")
+      # 1 placed of 2 total copies -> 50%
+      assert box_number(html, "dash-box-estantes") == "50%"
     end
 
-    test "omits the badge once every game is placed", %{conn: conn} do
-      shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
+    test "omits the pending pill once every copy is placed", %{conn: conn} do
+      shelf = shelf_fixture()
       game = game_fixture()
-      game |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
+      copy = copy_fixture(%{game_id: game.id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Estantes"
-      refute html =~ "ubicados"
+      assert box_number(html, "dash-box-estantes") == "100%"
+      refute html =~ "sin ubicar"
+      refute html =~ "pk-admin-pending-pill"
+    end
+
+    test "renders a 0% meter and no pending pill with zero copies in the club", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin")
+
+      assert box_number(html, "dash-box-estantes") == "0%"
+      assert box_has_meter?(html, "dash-box-estantes")
+      refute html =~ "pk-admin-pending-pill"
     end
   end
 
-  describe "Secciones card (D-35, 01.8.1-12)" do
+  describe "Web box (D-00a rename from Secciones; 01.8.1-12)" do
     setup :register_and_log_in_staff
 
-    test "links to /admin/secciones with no pending badge", %{conn: conn} do
+    test "renders the Web label, links to /admin/secciones, and shows a real section count", %{
+      conn: conn
+    } do
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Secciones"
-      assert html =~ ~s(href="/admin/secciones")
+      assert box_href(html, "dash-box-web") == "/admin/secciones"
+      assert box_number(html, "dash-box-web") =~ ~r/^\d+$/
+
+      # Scoped to the dashboard's own card grid — the shared tab bar's
+      # unrelated `aria-label="Secciones de Admin"` (a nav landmark
+      # description, not this box's label) lives outside #admin-cards.
+      cards_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#admin-cards") |> LazyHTML.to_html()
+
+      refute cards_html =~ "Secciones"
     end
 
     test "renders third, between Estantes and Staff (D-35 fixed card order)", %{conn: conn} do
       conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      juegos_at = html |> :binary.match("Juegos") |> elem(0)
-      estantes_at = html |> :binary.match("Estantes") |> elem(0)
-      secciones_at = html |> :binary.match("Secciones") |> elem(0)
-      staff_at = html |> :binary.match("Staff") |> elem(0)
+      juegos_at = html |> :binary.match(~s(id="dash-box-juegos")) |> elem(0)
+      estantes_at = html |> :binary.match(~s(id="dash-box-estantes")) |> elem(0)
+      web_at = html |> :binary.match(~s(id="dash-box-web")) |> elem(0)
+      staff_at = html |> :binary.match(~s(id="dash-box-staff")) |> elem(0)
 
       assert juegos_at < estantes_at
-      assert estantes_at < secciones_at
-      assert secciones_at < staff_at
+      assert estantes_at < web_at
+      assert web_at < staff_at
     end
   end
 
-  describe "Revisar niveles card (D-35, 01.8.1-13)" do
+  describe "Revisar niveles box (D-35, 01.8.1-13)" do
     setup :register_and_log_in_staff
 
-    test "shows a badge-warning N discrepancias when count_mismatches/0 > 0", %{conn: conn} do
+    test "shows the mismatch count as its number and a pending pill when count > 0", %{
+      conn: conn
+    } do
       game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 3.8})
       game_fixture(%{weight_band: "descubre_el_hobby", bgg_weight: 4.0})
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Revisar niveles"
-      assert html =~ ~s(href="/admin/niveles")
-      assert html =~ "2 discrepancias"
-      assert html =~ "badge-warning"
+      assert box_href(html, "dash-box-niveles") == "/admin/niveles"
+      assert box_number(html, "dash-box-niveles") == "2"
+      assert html =~ "no coinciden con BGG"
     end
 
-    test "omits the badge when there are no mismatches", %{conn: conn} do
+    test "omits the pending pill when there are no mismatches", %{conn: conn} do
       game_fixture(%{weight_band: "ingenio_estratega", bgg_weight: 2.3})
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Revisar niveles"
-      refute html =~ "discrepancias"
+      assert box_number(html, "dash-box-niveles") == "0"
+      refute html =~ "no coinciden con BGG"
+      refute html =~ "pk-admin-pending-pill"
     end
 
-    test "renders fourth, between Secciones and Staff (D-35 fixed card order)", %{conn: conn} do
+    test "renders fourth, between Web and Staff (D-35 fixed card order)", %{conn: conn} do
       conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      secciones_at = html |> :binary.match("Secciones") |> elem(0)
-      niveles_at = html |> :binary.match("Revisar niveles") |> elem(0)
-      staff_at = html |> :binary.match("Staff") |> elem(0)
+      web_at = html |> :binary.match(~s(id="dash-box-web")) |> elem(0)
+      niveles_at = html |> :binary.match(~s(id="dash-box-niveles")) |> elem(0)
+      staff_at = html |> :binary.match(~s(id="dash-box-staff")) |> elem(0)
 
-      assert secciones_at < niveles_at
+      assert web_at < niveles_at
       assert niveles_at < staff_at
     end
 
@@ -195,21 +290,27 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
       conn = log_in_user(build_conn(), staff)
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Juegos"
-      assert html =~ "Estantes"
-      assert html =~ "Secciones"
-      assert html =~ "Revisar niveles"
+      assert html =~ ~s(id="dash-box-juegos")
+      assert html =~ ~s(id="dash-box-estantes")
+      assert html =~ ~s(id="dash-box-web")
+      assert html =~ ~s(id="dash-box-niveles")
       refute html =~ "/admin/staff"
     end
   end
 
-  describe "Staff card (D-35, T-01.8.1-07 Task 2)" do
-    test "renders for the owner", %{conn: conn} do
-      conn = log_in_user(conn, "owner@example.com" |> Accounts.create_owner() |> elem(1))
+  describe "Staff box (D-35, T-01.8.1-07 Task 2, plan 01.8.2-11)" do
+    test "renders for the owner with a real staff count and a pending-invite pill", %{conn: conn} do
+      owner = "owner@example.com" |> Accounts.create_owner() |> elem(1)
+      conn = log_in_user(conn, owner)
+      staff_fixture()
+      invited = staff_fixture()
+      invited |> Ecto.Changeset.change(confirmed_at: nil) |> Repo.update!()
+
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
-      assert html =~ "Staff"
-      assert html =~ ~s(href="/admin/staff")
+      assert box_href(html, "dash-box-staff") == "/admin/staff"
+      assert box_number(html, "dash-box-staff") == "3"
+      assert html =~ "1 invitación pendiente"
     end
 
     test "does not render for a staff member" do

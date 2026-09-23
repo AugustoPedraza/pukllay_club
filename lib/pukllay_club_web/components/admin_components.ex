@@ -113,14 +113,28 @@ defmodule PukllayClubWeb.AdminComponents do
       """
     end
 
+    is_link? = !!(assigns.rest[:href] || assigns.rest[:navigate] || assigns.rest[:patch])
+    # Plan 01.8.2-11 (Rule 1 — bug): `:rest`'s own `include:` list already
+    # names `type` as a legitimate pass-through attribute (a form's submit
+    # button, e.g. the Staff invite form's `action/1`), but the button
+    # branch below used to hardcode `type="button"` unconditionally,
+    # silently discarding whatever `type` a caller passed via `rest` (a
+    # second `type` attribute after the static one — the browser keeps
+    # only the first, so the override never took effect and no button
+    # rendered by this component could ever submit its enclosing form).
+    # `button_type` reads the caller's own value with a `"button"`
+    # fallback, and the key is stripped from `rest` before the spread so
+    # exactly one `type` attribute is ever emitted.
+    button_type = assigns.rest[:type] || "button"
+
     assigns =
-      assign(
-        assigns,
-        :variant_class,
-        "pk-admin-action--#{assigns.anatomy} pk-admin-action--#{assigns.role}"
+      assign(assigns,
+        variant_class: "pk-admin-action--#{assigns.anatomy} pk-admin-action--#{assigns.role}",
+        button_type: button_type,
+        rest: Map.delete(assigns.rest, :type)
       )
 
-    if assigns.rest[:href] || assigns.rest[:navigate] || assigns.rest[:patch] do
+    if is_link? do
       ~H"""
       <.link
         class={[
@@ -137,7 +151,7 @@ defmodule PukllayClubWeb.AdminComponents do
     else
       ~H"""
       <button
-        type="button"
+        type={@button_type}
         class={[
           "pk-admin-action",
           @variant_class,
@@ -168,15 +182,18 @@ defmodule PukllayClubWeb.AdminComponents do
   radius, and 16px input text under a coarse-pointer media query so iOS
   never zooms on focus (`01.8.2-BENCHMARK.md`'s "Field" row).
 
-  Accepts `type`: `"text"`, `"number"`, `"select"`, `"textarea"`,
+  Accepts `type`: `"text"`, `"number"`, `"email"`, `"select"`, `"textarea"`,
   `"checkbox"` — the same subset `admin_components_test.exs` exercises.
+  `"email"` added by plan 01.8.2-11 (Rule 3 — the Staff invite field needs
+  it; the catch-all clause below already renders `<input type={@type}>`
+  generically, so this was a one-line `values:` gap, not new behaviour).
   """
   attr :id, :any, default: nil
   attr :name, :any
   attr :label, :string, default: nil
   attr :value, :any
 
-  attr :type, :string, default: "text", values: ~w(text number select textarea checkbox)
+  attr :type, :string, default: "text", values: ~w(text number email select textarea checkbox)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
@@ -440,7 +457,16 @@ defmodule PukllayClubWeb.AdminComponents do
     published: "Publicado",
     retired: "Retirado",
     sin_lugar: "Sin lugar",
-    afuera: "Afuera"
+    afuera: "Afuera",
+    # Plan 01.8.2-11 (D-19h applied to Staff): a staff member's role/
+    # confirmation state is genuinely a status ("who is this person to the
+    # club right now"), not a game/copy status — extending the same one
+    # dot-plus-word anatomy here is exactly D-18's "extend the component
+    # over forking it into the screen" rule, rather than inventing a
+    # second, screen-local status treatment for Staff alone.
+    owner: "Dueño",
+    active: "Activo",
+    pending: "Invitación pendiente"
   }
 
   @doc """
@@ -495,6 +521,31 @@ defmodule PukllayClubWeb.AdminComponents do
   def count_pill(assigns) do
     ~H"""
     <span class={["pk-admin-count-pill", @class]}>{@count}</span>
+    """
+  end
+
+  @doc """
+  Renders D-19g's pending-work accent pill: primary fill,
+  `--color-primary-content` text — the SAME shape `Layouts.tab_bar/1`'s own
+  pending badge (plan 01.8.2-10) paints, generalised here as a public atom
+  so a screen composes it directly instead of re-deriving the shape
+  (`admin-shell-navigation.md`: "A count bubble always means pending work
+  — the SAME accent pill in the dashboard box, the drawer count and the
+  tab badge"). Added by plan 01.8.2-11 for the Admin dashboard's boxes
+  (D-18 "extend the component over forking it into the screen").
+
+  Unlike `count_pill/1` (D-19m's neutral, non-pending shape), this atom
+  IS the pending-work signal — never render it for a zero count; the
+  caller gates presence, matching `count_pill/1`'s own no-guard
+  convention (some callers pass pre-formatted text like "84 sin ubicar"
+  that has no separate integer to gate on internally).
+  """
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  def pending_pill(assigns) do
+    ~H"""
+    <span class={["pk-admin-pending-pill", @class]}>{render_slot(@inner_block)}</span>
     """
   end
 

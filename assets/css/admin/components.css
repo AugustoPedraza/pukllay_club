@@ -426,6 +426,21 @@
   color: var(--color-neutral);
 }
 
+/* Plan 01.8.2-11: Staff's own status vocabulary (D-19h applied there —
+   see admin_components.ex's @status_words doc for why this reuses the
+   atom instead of a screen-local treatment). */
+.pk-admin-status-dot--owner {
+  color: var(--color-neutral);
+}
+
+.pk-admin-status-dot--active {
+  color: var(--color-success);
+}
+
+.pk-admin-status-dot--pending {
+  color: var(--color-warning);
+}
+
 /* D-19m: a kind is a quiet tag — 18px tall, 11px regular, lowercase, on a
    hairline `--color-base-300` border (the shipped token
    `01.8.2-TOKENS.md` maps the sketches' own invented `--color-border`
@@ -461,6 +476,23 @@
   font-size: 11px;
   font-weight: 600;
   color: var(--color-neutral);
+}
+
+/* D-19g (plan 01.8.2-11): the pending-work accent pill — primary fill,
+   the SAME shape `chrome.css`'s `.pk-admin-tab-badge` paints for a tab's
+   pending count. Distinct from `.pk-admin-count-pill` above on purpose
+   (D-19m): this shape means "work waiting for you", that one means "here
+   is a count". */
+.pk-admin-pending-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
 }
 
 /* ============================================================
