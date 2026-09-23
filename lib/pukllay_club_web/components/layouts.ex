@@ -194,6 +194,26 @@ defmodule PukllayClubWeb.Layouts do
         "Defaults to %{} — no admin LiveView computes a real count yet (D-19's 'one derived " <>
         "counter source' is future work); this attr ships the component's contract."
 
+  attr :suppress_tab_bar, :boolean,
+    default: false,
+    doc:
+      "Plan 01.8.2-10 Task 3 (D-14, the collide/merge/suppress checkpoint): true for the one " <>
+        "page that already owns the bottom of the screen with its own fixed surface — " <>
+        "CatalogLive.Show, whose `.pk-mobile-cta-bar` (app.css:5396) occupies the identical " <>
+        "fixed-bottom band the tab bar would otherwise share. Measured in real headless " <>
+        "Chrome before this attr existed (390x844 and 360x640): the reserve button sat " <>
+        "ENTIRELY inside the tab bar's band at both viewports (overlapPx: 67 at both, " <>
+        "ctaBtnFullyCoveredByTabBar: true) — 'suppress' was chosen over 'collide' (both bars " <>
+        "render, ~130px lost) and 'merge' (no second bottom surface exists on this page to " <>
+        "fold the tab bar into). The catalog index page has no such collision (measured: " <>
+        "filterTriggerCoveredByTabBar: false at both viewports — CONTEXT.md's framing of a " <>
+        "second `pk-bottom-collapse` bar there does not correspond to a real bottom-fixed " <>
+        "element; `bottom_collapse` is a padding mechanism, not a second bar) and does not " <>
+        "pass this attr, so its tab bar is unaffected. Mirrors `admin_chrome`'s call-site- " <>
+        "boolean pattern (D-00b) — a structural signal the ONE page that needs it passes " <>
+        "explicitly at its own <Layouts.app> call, never a URL-string admin-path match " <>
+        "(T-01.8.2-45's structural-predicate requirement)."
+
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
 
   slot :nav_search,
@@ -630,8 +650,20 @@ defmodule PukllayClubWeb.Layouts do
     signed-in staff member on EVERY page this layout renders — admin and
     public alike, never gated on @admin_chrome or any other route signal.
     tab_bar/1's own :if guards staff_session?(@current_scope) so an
-    anonymous visitor's markup carries none of it. --%>
-    <.tab_bar current_scope={@current_scope} active_tab={@active_tab} badges={@badges} />
+    anonymous visitor's markup carries none of it.
+
+    D-14 exception (plan 01.8.2-10 Task 3, @suppress_tab_bar's own attr
+    doc above has the measured numbers): the ONE page that already owns
+    the screen's bottom with its own fixed surface (CatalogLive.Show's
+    .pk-mobile-cta-bar) opts OUT here, at the call-site level — never a
+    URL-string match, never a change to tab_bar/1's own staff-session
+    gate, which stays the sole authority for every other page. --%>
+    <.tab_bar
+      :if={!@suppress_tab_bar}
+      current_scope={@current_scope}
+      active_tab={@active_tab}
+      badges={@badges}
+    />
 
     <%!-- D-19c (plan 01.8.2-08 Task 2): the admin has exactly ONE feedback
     component, the bottom snackbar — the top toast (`flash_group/1` ->
@@ -883,6 +915,12 @@ defmodule PukllayClubWeb.Layouts do
   and public alike, never gated on the current route (D-13b; T-01.8.2-45's structural-predicate
   requirement bans any URL-string admin classification anywhere in this module, and Task 3's own
   `<verify>` greps for it).
+
+  **D-14 exception (plan 01.8.2-10 Task 3):** `app/1` does not render this component at all for
+  the one page that already owns the screen's bottom with its own fixed surface
+  (`CatalogLive.Show`, via `app/1`'s own `suppress_tab_bar` attr — see that attr's doc for the
+  measured numbers behind the "suppress" choice). This component's own `staff_session?/1` gate
+  is unchanged and stays the sole authority for every other page.
 
   Geometry is `01.8.2-BENCHMARK.md`'s measured Tab bar row, taken verbatim: 67px tall, a 56×30
   pill indicator behind the active icon, 11px/600 labels. `Perfil` renders as the avatar tab
