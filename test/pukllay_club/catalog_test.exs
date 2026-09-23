@@ -19,7 +19,7 @@ defmodule PukllayClub.CatalogTest do
   # predicate test below) must be required explicitly. Guarded against
   # redefinition warnings on a re-run within the same VM (`mix test.watch`,
   # iex -S mix test).
-  unless Code.ensure_loaded?(PukllayClub.Repo.Migrations.UnpublishStillEmptyGames) do
+  if !Code.ensure_loaded?(PukllayClub.Repo.Migrations.UnpublishStillEmptyGames) do
     Code.require_file("priv/repo/migrations/20260923122000_unpublish_still_empty_games.exs")
   end
 

@@ -57,11 +57,12 @@ defmodule PukllayClub.Repo.Migrations.UnpublishStillEmptyGames do
   coincide on 2026-09-23's data).
   """
   def still_empty_query do
-    from g in "games",
+    from(g in "games",
       where: g.status == "published",
       where: is_nil(g.description) or g.description == "",
       where: is_nil(g.cover_url),
       select: g.id
+    )
   end
 
   def up do
