@@ -118,7 +118,7 @@ defmodule PukllayClub.Catalog.CopiesTest do
     test "backfill never places a copy, regardless of the game's own games.shelf_id" do
       shelf = shelf_fixture()
       game = game_fixture(%{units: 2})
-      {:ok, _game, nil} = PukllayClub.Catalog.Shelves.assign_game(game.id, shelf.id)
+      game |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
 
       run_backfill()
 

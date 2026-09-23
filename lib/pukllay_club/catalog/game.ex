@@ -226,8 +226,7 @@ defmodule PukllayClub.Catalog.Game do
   (`Catalog.change_game_admin/2`, `Catalog.update_game_admin/2`) — casts
   the five club-owned fields staff may edit (`:name`, `:units`,
   `:weight_band`, `:is_expansion`, `:description`) plus `:shelf_id` (D-10,
-  01.8.1-09 — also reused directly by `Catalog.Shelves.assign_game/2`,
-  restricting `attrs` to that one key). Every BGG-derived fact (players,
+  01.8.1-09). Every BGG-derived fact (players,
   playtime, age, mechanics, themes, designers, artists, publishers,
   rating, rank, `bgg_weight`, images) is read-only in the admin and is
   never cast here — `status` changes only through `status_changeset/2`'s

@@ -1,23 +1,51 @@
 defmodule PukllayClub.Catalog.Shelves do
   @moduledoc """
-  Shelf CRUD and physical-location tracking (D-10..D-16, 01.8.1-09) — a
-  focused sub-context under `Catalog`, since shelf-location logic is
-  staff-only and `PukllayClub.Catalog` stays the public read surface. Every
-  write here is a single `Repo.update/1` — each tap on the walk-the-shelf
-  screen (`Admin.ShelfLive.Assign`) is its own save, never batched (D-12).
+  Shelf CRUD and per-copy physical-location tracking (D-01..D-04, D-11,
+  01.8.1-09, 01.8.2-01) — a focused sub-context under `Catalog`, since
+  shelf-location logic is staff-only and `PukllayClub.Catalog` stays the
+  public read surface.
 
-  Games are given at most one shelf (`games.shelf_id`) — no in-shelf
-  position, copies of a multi-unit game are assumed stored together
-  (D-11). Deleting a `Shelf` row nilifies every game's `shelf_id`
-  (`on_delete: :nilify_all`, migration `create_shelves`) — handled at the
-  database level, no application code needed for that invariant.
+  **D-01 (reverses 01.8.1 D-11): every physical copy has its own
+  location** — an estante plus a left-to-right `position` in it. Place
+  and move act on a `PukllayClub.Catalog.Copy`, never on a `Game`; the
+  entire old game-level shelf write/read path built directly on
+  `games.shelf_id` (one shelf per game, no in-shelf position) is gone
+  outright — a second, game-level source of truth alongside the
+  copy-level one would reintroduce exactly the model D-01 reverses.
+
+  **D-11: concurrent staff never collide or gap.** `place_copy/3` and
+  `remove_copy_from_shelf/1` each take a per-estante
+  `pg_advisory_xact_lock` (namespace `@estante_lock_namespace`, `shelf_id`
+  as the second key) as the first step of an
+  `Ecto.Multi`/`Repo.transaction/1`, mirroring `catalog.ex`'s
+  `@bgg_id_lock_namespace` precedent for the same reason —
+  the two-int4 form's `pg_locks.objsubid` is a namespace-scoped key
+  space, so this module's namespace can never collide with catalog.ex's.
+  A cross-estante move locks BOTH estantes, always in ascending
+  `shelf_id` order, so two concurrent cross-estante moves can never
+  deadlock waiting on each other in opposite orders.
+
+  Every successful write broadcasts `{:estante_updated, shelf_id}` on
+  PubSub topic `"admin:estantes"` (mirrors
+  `workers/enrich_game_worker.ex`'s `"admin:games"` broadcast) — always
+  AFTER the transaction commits, never from inside it.
   """
 
   import Ecto.Query
 
+  alias Ecto.Multi
+  alias PukllayClub.Catalog.Copy
   alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Shelf
   alias PukllayClub.Repo
+
+  # T-01.8.2-01/02: the first key of the two-int4 `pg_advisory_xact_lock(int,
+  # int)` form — distinct from `catalog.ex`'s own `@bgg_id_lock_namespace`
+  # module attribute (a different integer entirely), so this namespace can
+  # never collide with it (each namespace value gets its own
+  # `pg_locks.objsubid` key space). The second key is always an estante's
+  # `shelf_id`.
+  @estante_lock_namespace 8_811_016
 
   @doc "Shelves in walking order (ascending `position`, `:id` tiebreak)."
   def list_shelves do
@@ -107,39 +135,15 @@ defmodule PukllayClub.Catalog.Shelves do
   end
 
   @doc """
-  Assigns `game_id` to `shelf_id` (D-12/D-14) — a single `Repo.update/1`
-  through `Game.admin_changeset/2`'s cast allowlist, restricted here to
-  `:shelf_id` alone. Returns `{:ok, game, previous_shelf}` — `previous_shelf`
-  is `nil` when the game had no prior shelf — or `{:error, changeset}` when
-  `shelf_id` doesn't exist (`foreign_key_constraint/2` on the changeset,
-  surfaced instead of a raised exception so a save-failure toast can render
-  it, UI-SPEC E4 error).
-  """
-  @spec assign_game(integer(), integer() | nil) ::
-          {:ok, Game.t(), Shelf.t() | nil} | {:error, Ecto.Changeset.t()}
-  def assign_game(game_id, shelf_id) do
-    game = Game |> Repo.get!(game_id) |> Repo.preload(:shelf)
-    previous_shelf = game.shelf
-
-    game
-    |> Game.admin_changeset(%{shelf_id: shelf_id})
-    |> Repo.update()
-    |> case do
-      {:ok, updated} -> {:ok, Repo.preload(updated, :shelf, force: true), previous_shelf}
-      {:error, changeset} -> {:error, changeset}
-    end
-  end
-
-  @doc "Unassigns `game_id` from its current shelf, back to \"Sin ubicar\" (D-14 undo)."
-  @spec unassign_game(integer()) :: {:ok, Game.t(), Shelf.t() | nil} | {:error, Ecto.Changeset.t()}
-  def unassign_game(game_id), do: assign_game(game_id, nil)
-
-  @doc """
   `{placed, total}` — count of non-retired games with a shelf assigned vs.
   every non-retired game (D-12). The denominator excludes retired games:
   there is nothing to place for a game no one can rent. Drives the
-  walk-the-shelf progress line and the dashboard Estantes card badge —
-  the single source both surfaces read, so they can never disagree.
+  dashboard Estantes card badge (`Admin.DashboardLive`) — unchanged by
+  01.8.2-01's copy-level rewrite below, since it still reads the
+  pre-existing `games.shelf_id` column directly rather than deriving from
+  `copies` (a later plan revisits this once `games.shelf_id` itself is
+  retired — D-31 only schedules `games.units`, not this column, for
+  removal).
   """
   @spec location_progress() :: {non_neg_integer(), non_neg_integer()}
   def location_progress do
@@ -149,31 +153,6 @@ defmodule PukllayClub.Catalog.Shelves do
     placed = Repo.aggregate(from(g in base, where: not is_nil(g.shelf_id)), :count)
 
     {placed, total}
-  end
-
-  @doc """
-  Non-retired games with no shelf yet, ordered by name (D-12/D-13).
-  Preloads `:shelf` (always `nil` here) so callers rendering a game with
-  `Admin.ShelfLive.Assign`'s shared tap-button component never hit an
-  `Ecto.Association.NotLoaded` truthy-check bug when checking `game.shelf`.
-  """
-  def unplaced_games do
-    from(g in Game,
-      where: g.status != :retired and is_nil(g.shelf_id),
-      order_by: [asc: g.name, asc: g.id]
-    )
-    |> Repo.all()
-    |> Repo.preload(:shelf)
-  end
-
-  @doc "Non-retired games currently placed on `shelf_id`, ordered by name. Preloads `:shelf`."
-  def games_on_shelf(shelf_id) do
-    from(g in Game,
-      where: g.status != :retired and g.shelf_id == ^shelf_id,
-      order_by: [asc: g.name, asc: g.id]
-    )
-    |> Repo.all()
-    |> Repo.preload(:shelf)
   end
 
   @doc """
@@ -208,37 +187,189 @@ defmodule PukllayClub.Catalog.Shelves do
   end
 
   @doc """
-  The Saturday pick/restore list (D-15, UI-SPEC E5 zero-one-many): every
-  non-retired game grouped by shelf in walking order, names ordered inside
-  each group, followed by a final `{:unplaced, games}` group. An empty
-  shelf still appears as `{shelf, []}` — a shelf with nothing on it yet is
-  exactly what a Saturday pick/restore run needs to see, not something to
-  hide. `q` optionally filters games by name (same escaped ILIKE as
-  `search_games/1`) without hiding a shelf's own heading — a shelf with
-  zero matches under an active filter still renders, empty.
+  Copies on `shelf_id`, in real left-to-right `position` order (D-04/D-08
+  — the replacement for the old game-level read's name ordering). Game
+  preloaded.
   """
-  @spec pick_list(String.t() | nil) :: [{Shelf.t(), [Game.t()]} | {:unplaced, [Game.t()]}]
-  def pick_list(q \\ nil) do
-    games =
-      Game
-      |> where([g], g.status != :retired)
-      |> maybe_filter_pick_name(q)
-      |> order_by([g], asc: g.name, asc: g.id)
-      |> Repo.all()
-
-    games_by_shelf = Enum.group_by(games, & &1.shelf_id)
-
-    shelf_groups =
-      Enum.map(list_shelves(), fn shelf ->
-        {shelf, Map.get(games_by_shelf, shelf.id, [])}
-      end)
-
-    shelf_groups ++ [{:unplaced, Map.get(games_by_shelf, nil, [])}]
+  @spec copies_on_shelf(integer()) :: [Copy.t()]
+  def copies_on_shelf(shelf_id) do
+    Copy
+    |> where([c], c.shelf_id == ^shelf_id)
+    |> order_by([c], asc: c.position)
+    |> Repo.all()
+    |> Repo.preload(:game)
   end
 
-  defp maybe_filter_pick_name(query, q) when q in [nil, ""], do: query
+  @doc "Unplaced copies (\"Sin ubicar\", `shelf_id` nil), game preloaded, ordered by game name."
+  @spec unplaced_copies() :: [Copy.t()]
+  def unplaced_copies do
+    Repo.all(
+      from(c in Copy,
+        join: g in assoc(c, :game),
+        where: is_nil(c.shelf_id),
+        order_by: [asc: g.name, asc: c.id],
+        preload: [game: g]
+      )
+    )
+  end
 
-  defp maybe_filter_pick_name(query, q) do
-    where(query, [g], ilike(g.name, ^("%" <> escape_ilike(q) <> "%")))
+  @doc """
+  Places `copy_id` on `shelf_id` at the 0-based `index` slot — D-00c
+  ("before the first box, between any two, or after the last"). Handles
+  every starting state uniformly: a first placement (the copy was
+  unplaced), a move from a different estante (D-11: removed from the old
+  estante and that estante is reindexed gap-free, in the same
+  transaction), and a move to a new index within the SAME estante.
+  `index` is clamped into `0..count` (`count` = the destination
+  estante's OTHER copies, after the copy has been vacated from its old
+  position) — an out-of-range index lands at the nearest valid end
+  rather than erroring, since a stale client-side count racing a
+  concurrent placement is exactly the case the advisory lock exists to
+  serialize, not reject.
+
+  Every position write inside the transaction is its own single-row
+  `UPDATE`, issued in an order chosen so no two copies on one estante
+  ever transiently share a `position` — `copies_shelf_position_unique`
+  is a real (non-deferrable) unique index, checked immediately, so a
+  same-statement bulk shift could otherwise raise spuriously depending on
+  Postgres's internal row-processing order. Vacating shifts the old
+  estante DOWN in ascending-position order (each row moves into a slot
+  already emptied by the row below it); inserting shifts the destination
+  estante UP in descending-position order (each row moves into a slot
+  already emptied by the row above it).
+
+  Returns `{:ok, copy}` / `{:error, reason}`. Broadcasts
+  `{:estante_updated, shelf_id}` for the destination estante, and again
+  for the source estante when a cross-estante move actually vacated one.
+  """
+  @spec place_copy(integer(), integer(), non_neg_integer()) ::
+          {:ok, Copy.t()} | {:error, term()}
+  def place_copy(copy_id, shelf_id, index) when is_integer(index) do
+    Multi.new()
+    |> Multi.run(:copy, fn repo, _changes -> fetch_copy(repo, copy_id) end)
+    |> Multi.run(:lock, fn repo, %{copy: copy} -> lock_estantes(repo, [copy.shelf_id, shelf_id]) end)
+    |> Multi.run(:vacated, fn repo, %{copy: copy} -> vacate(repo, copy) end)
+    |> Multi.run(:moved, fn repo, %{copy: copy} -> insert_at(repo, copy, shelf_id, index) end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{copy: original, moved: moved}} ->
+        broadcast(shelf_id)
+        if original.shelf_id not in [nil, shelf_id], do: broadcast(original.shelf_id)
+        {:ok, moved}
+
+      {:error, _step, reason, _changes} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Removes `copy_id` from its estante — `shelf_id`/`position` both go to
+  `nil` ("Sin ubicar") and the estante it left is reindexed gap-free
+  under the same per-estante advisory lock `place_copy/3` uses. A no-op
+  (`{:ok, copy}`, no lock taken, no broadcast) when the copy is already
+  unplaced.
+  """
+  @spec remove_copy_from_shelf(integer()) :: {:ok, Copy.t()} | {:error, term()}
+  def remove_copy_from_shelf(copy_id) do
+    Multi.new()
+    |> Multi.run(:copy, fn repo, _changes -> fetch_copy(repo, copy_id) end)
+    |> Multi.run(:lock, fn repo, %{copy: copy} -> lock_estantes(repo, [copy.shelf_id]) end)
+    |> Multi.run(:removed, fn repo, %{copy: copy} -> vacate_and_clear(repo, copy) end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{copy: %Copy{shelf_id: nil}, removed: removed}} ->
+        {:ok, removed}
+
+      {:ok, %{copy: original, removed: removed}} ->
+        broadcast(original.shelf_id)
+        {:ok, removed}
+
+      {:error, _step, reason, _changes} ->
+        {:error, reason}
+    end
+  end
+
+  defp fetch_copy(repo, copy_id) do
+    case repo.get(Copy, copy_id) do
+      nil -> {:error, :copy_not_found}
+      copy -> {:ok, copy}
+    end
+  end
+
+  # T-01.8.2-02: every non-nil, distinct estante among the ones this write
+  # touches is locked, always in ascending `shelf_id` order, so two
+  # concurrent cross-estante moves can never deadlock waiting on each
+  # other in opposite orders. `nil` (unplaced) has no estante to lock.
+  defp lock_estantes(repo, shelf_ids) do
+    shelf_ids
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort()
+    |> Enum.each(fn id ->
+      repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@estante_lock_namespace, id])
+    end)
+
+    {:ok, :locked}
+  end
+
+  # Removes `copy` from its current position (if it has one), reindexing
+  # its OLD estante gap-free. A copy that is already unplaced is a no-op.
+  defp vacate(_repo, %Copy{shelf_id: nil}), do: {:ok, :not_placed}
+
+  defp vacate(repo, %Copy{id: id, shelf_id: shelf_id, position: position}) do
+    # Vacate this copy's own slot FIRST — a NOT DEFERRABLE unique index
+    # checks immediately, so leaving this row's `position` in place while
+    # shifting its neighbours down risks a transient (shelf_id, position)
+    # collision the instant a neighbour lands on it.
+    repo.update_all(from(c in Copy, where: c.id == ^id), set: [position: nil])
+
+    Copy
+    |> where([c], c.shelf_id == ^shelf_id and c.position > ^position)
+    |> order_by([c], asc: c.position)
+    |> select([c], {c.id, c.position})
+    |> repo.all()
+    |> Enum.each(fn {row_id, row_position} ->
+      repo.update_all(from(c in Copy, where: c.id == ^row_id), set: [position: row_position - 1])
+    end)
+
+    {:ok, :vacated}
+  end
+
+  defp vacate_and_clear(_repo, %Copy{shelf_id: nil} = copy), do: {:ok, copy}
+
+  defp vacate_and_clear(repo, %Copy{} = copy) do
+    {:ok, :vacated} = vacate(repo, copy)
+    repo.update_all(from(c in Copy, where: c.id == ^copy.id), set: [shelf_id: nil, position: nil])
+    {:ok, %{copy | shelf_id: nil, position: nil}}
+  end
+
+  # Inserts `copy` onto `shelf_id` at `index`, clamped to the destination
+  # estante's OTHER copies (`c.id != ^id` excludes `copy` itself — load
+  # bearing for a same-estante move, where `copy`'s own row still carries
+  # `shelf_id` at this point, just a `nil` position from `vacate/2`
+  # above). Shifts the destination's copies at or after the target index
+  # UP by one, descending-position order first, so each shift lands in a
+  # slot its own neighbour has already vacated.
+  defp insert_at(repo, %Copy{id: id} = copy, shelf_id, index) do
+    others = where(Copy, [c], c.shelf_id == ^shelf_id and c.id != ^id)
+    count = repo.aggregate(others, :count)
+    target = index |> max(0) |> min(count)
+
+    others
+    |> where([c], c.position >= ^target)
+    |> order_by([c], desc: c.position)
+    |> select([c], {c.id, c.position})
+    |> repo.all()
+    |> Enum.each(fn {row_id, row_position} ->
+      repo.update_all(from(c in Copy, where: c.id == ^row_id), set: [position: row_position + 1])
+    end)
+
+    repo.update_all(from(c in Copy, where: c.id == ^id), set: [shelf_id: shelf_id, position: target])
+
+    {:ok, %{copy | shelf_id: shelf_id, position: target}}
+  end
+
+  defp broadcast(shelf_id) do
+    Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:estantes", {:estante_updated, shelf_id})
   end
 end

@@ -7,6 +7,7 @@ defmodule PukllayClubWeb.ShelfPrivacyTest do
   use PukllayClubWeb.ConnCase, async: true
 
   import PukllayClub.CatalogFixtures
+  import PukllayClub.CopiesFixtures
   import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Catalog.Shelves
@@ -16,7 +17,8 @@ defmodule PukllayClubWeb.ShelfPrivacyTest do
   test "a visitor's /juegos/:id HTML never contains the shelf name", %{conn: conn} do
     shelf = shelf_fixture(%{name: @secret_shelf_name})
     game = game_fixture()
-    {:ok, _game, nil} = Shelves.assign_game(game.id, shelf.id)
+    copy = copy_fixture(%{game_id: game.id})
+    {:ok, _copy} = Shelves.place_copy(copy.id, shelf.id, 0)
 
     conn = get(conn, ~p"/juegos/#{game}")
 
@@ -29,7 +31,8 @@ defmodule PukllayClubWeb.ShelfPrivacyTest do
     test "does not see the shelf name on /juegos/:id either", %{conn: conn} do
       shelf = shelf_fixture(%{name: @secret_shelf_name})
       game = game_fixture()
-      {:ok, _game, nil} = Shelves.assign_game(game.id, shelf.id)
+      copy = copy_fixture(%{game_id: game.id})
+      {:ok, _copy} = Shelves.place_copy(copy.id, shelf.id, 0)
 
       conn = get(conn, ~p"/juegos/#{game}")
 

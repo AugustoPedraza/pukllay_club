@@ -6,7 +6,7 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
   import PukllayClub.CatalogFixtures
 
   alias PukllayClub.Accounts
-  alias PukllayClub.Catalog.Shelves
+  alias PukllayClub.Repo
 
   describe "the tracer: /admin/ingresar magic link to a staff-gated /admin (T-01.8.1-01)" do
     test "an owner requests a magic link, confirms it, and lands on /admin", %{conn: conn} do
@@ -107,7 +107,7 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
       shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
       placed = game_fixture()
       _unplaced = game_fixture()
-      {:ok, _game, nil} = Shelves.assign_game(placed.id, shelf.id)
+      placed |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
@@ -120,7 +120,7 @@ defmodule PukllayClubWeb.Admin.DashboardLiveTest do
     test "omits the badge once every game is placed", %{conn: conn} do
       shelf = PukllayClub.ShelvesFixtures.shelf_fixture()
       game = game_fixture()
-      {:ok, _game, nil} = Shelves.assign_game(game.id, shelf.id)
+      game |> Ecto.Changeset.change(shelf_id: shelf.id) |> Repo.update!()
 
       {:ok, _lv, html} = live(conn, ~p"/admin")
 
