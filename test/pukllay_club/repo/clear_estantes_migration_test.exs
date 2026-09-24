@@ -2,10 +2,30 @@
 # compiled application (`mix compile` never sees them) — `mix ecto.migrate`
 # loads them ad hoc via `Ecto.Migrator`. To call the module's `up/0`/`down/0`
 # directly, this test must load the source file itself, first.
-Code.require_file(
-  "priv/repo/migrations/20260923140000_clear_estantes_and_assignments.exs",
-  File.cwd!()
-)
+# Guarded, and the guard is load-bearing on a FRESH database. `mix test`'s
+# alias is `["ecto.create --quiet", "ecto.migrate --quiet", "test"]`, and on a
+# database that actually has migrations to run, `Ecto.Migrator` compiles every
+# migration module into the VM first. An unguarded `Code.require_file/2` then
+# re-evaluates this one and emits "redefining module … (current version defined
+# in memory)". Because this call sits at the top level of a test FILE, that
+# warning is emitted while the suite is being loaded — which is exactly what
+# `--warnings-as-errors` counts, so `mix quality` aborts after an otherwise
+# green run (CI run 35961407560: "1852 tests, 0 failures" followed by
+# "Test suite aborted after successful execution due to warnings").
+#
+# It does not reproduce on a developer machine whose test database is already
+# migrated, because there `ecto.migrate` is a no-op and loads nothing. Fresh
+# database only — i.e. CI, always.
+#
+# Same guard `catalog_test.exs` already uses for its own migration require.
+# (`sections_backfill_test.exs` requires a migration too, but from inside
+# `setup` — a runtime warning, which `--warnings-as-errors` does not count.)
+if !Code.ensure_loaded?(PukllayClub.Repo.Migrations.ClearEstantesAndAssignments) do
+  Code.require_file(
+    "priv/repo/migrations/20260923140000_clear_estantes_and_assignments.exs",
+    File.cwd!()
+  )
+end
 
 defmodule PukllayClub.Repo.ClearEstantesMigrationTest do
   @moduledoc """

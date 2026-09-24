@@ -158,3 +158,31 @@ from the harness's own headless-Chrome evidence.
   substring collision and plan 01.8.2-08's Styler-underscore integer grep. A whole-document
   substring assertion is not a guard — it is a coincidence detector. A guard that fails for the
   wrong reason costs exactly as much trust as one that passes for the wrong reason.
+
+## From the PR's CI (2026-09-24) — a latent fresh-database trap in migration-behaviour tests
+
+`mix test`'s alias is `["ecto.create --quiet", "ecto.migrate --quiet", "test"]`. On a database
+that actually has migrations to run, `Ecto.Migrator` compiles **every** migration module into the
+VM before the suite loads. A test that then calls `Code.require_file/2` on one of those migrations
+re-evaluates it and emits `redefining module … (current version defined in memory)`.
+
+Whether that warning is fatal depends on WHERE the call sits:
+
+- **Top level of a test file** → emitted while the suite is being loaded → `--warnings-as-errors`
+  counts it → `mix quality` aborts *after* an otherwise green run. This is what broke CI run
+  35961407560 ("1852 tests, 0 failures" immediately followed by "Test suite aborted after
+  successful execution due to warnings"). Fixed in `clear_estantes_migration_test.exs` with the
+  `Code.ensure_loaded?` guard `catalog_test.exs` already used.
+- **Inside `setup`** → a runtime warning → not counted. This is why
+  `test/pukllay_club/catalog/sections_backfill_test.exs` has the identical unguarded
+  `Code.require_file` and has never broken CI.
+
+**Still open, low priority:** `sections_backfill_test.exs` is one refactor away from breaking CI —
+move its require to the top level (a natural-looking cleanup, since it re-requires per test today)
+and the build goes red for a reason that has nothing to do with the change. Guard it with
+`Code.ensure_loaded?` the next time that file is touched.
+
+**Why nobody caught it locally:** a developer's test database is already migrated, so
+`ecto.migrate` is a no-op, loads nothing, and the warning never fires. It reproduces only on a
+fresh database — i.e. CI, every time. Verifying `mix quality` locally is not equivalent to
+verifying CI unless the test database is dropped first.
