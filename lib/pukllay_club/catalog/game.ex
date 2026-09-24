@@ -262,6 +262,21 @@ defmodule PukllayClub.Catalog.Game do
   end
 
   @doc """
+  D-30's publish-gate predicate: true when `game` cannot yet publish because
+  it is a non-expansion draft with no `weight_band` — `weight_band` maps 1:1
+  onto `Catalog.section_query(:weight_band)`'s own membership condition
+  (`g.weight_band == ^band`), so a nivel-less non-expansion game would
+  render in NO weight-band row on the home page once published (D-37). An
+  expansion carries no nivel condition at all (D-30 is explicit: "and NONE
+  for an expansion"). Shared by `Catalog.publish_game/1`'s function-level
+  gate and the draft sheet's own live `Publicar`-tap explanation
+  (`PukllayClubWeb.Admin.GameLive.Index`, plan 01.8.2-20), so the two can
+  never independently drift.
+  """
+  def needs_nivel_to_publish?(%__MODULE__{is_expansion: true}), do: false
+  def needs_nivel_to_publish?(%__MODULE__{weight_band: band}), do: band in [nil, ""]
+
+  @doc """
   Changeset for the D-30 band-audit actions
   (`PukllayClub.Catalog.BandAudit.correct_band/1`, `keep_band/1`) — casts
   only `:weight_band, :band_reviewed_band, :band_reviewed_at`, never any

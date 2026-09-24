@@ -179,6 +179,53 @@ defmodule PukllayClub.CatalogTest do
       assert Catalog.get_game!(game.id).status == :published
     end
 
+    test "publish_game/1 on a nivel-less non-expansion draft refuses with :nivel_required (D-30/D-37)" do
+      game =
+        game_fixture(%{
+          name: "Sin nivel",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: false
+        })
+
+      assert Catalog.publish_game(game) == {:error, :nivel_required}
+      assert Catalog.get_game!(game.id).status == :draft
+    end
+
+    test "publish_game/1 on a nivel-less EXPANSION draft succeeds — D-30 has no nivel condition for an expansion" do
+      game =
+        game_fixture(%{
+          name: "Expansión sin nivel",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: true
+        })
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+    end
+
+    test "publish_game/1 on a draft that already carries a nivel succeeds" do
+      game =
+        game_fixture(%{
+          name: "Con nivel",
+          status: :draft,
+          weight_band: "descubre_el_hobby",
+          is_expansion: false
+        })
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+    end
+
+    test "saving a nivel-less non-expansion draft succeeds — required to publish, never to save (D-30)" do
+      game = game_fixture(%{name: "Guardable", status: :draft, weight_band: nil, is_expansion: false})
+
+      assert {:ok, updated} = Catalog.update_game_admin(game, %{"description" => "Nueva descripción"})
+      assert updated.weight_band == nil
+      assert updated.description == "Nueva descripción"
+    end
+
     test "retire_game/1 moves a published game to retired, removing it from filter_games/1" do
       game = game_fixture(%{name: "Se retira", status: :published})
 

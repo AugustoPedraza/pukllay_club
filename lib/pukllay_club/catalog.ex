@@ -532,14 +532,30 @@ defmodule PukllayClub.Catalog do
   `:published` only through `restore_game/1`, the dedicated retired ->
   published entry point; publishing it directly here would bypass that
   function's guard, the exact gap sketch 078 proved was pure paint (a drawn
-  gate the code never enforced). Returns `{:ok, game}` on a draft, or
-  `{:error, :not_publishable}` for any other origin status (leaving it
-  unchanged).
+  gate the code never enforced).
+
+  **D-30's nivel gate (plan 01.8.2-20):** a draft additionally needs
+  `Game.needs_nivel_to_publish?/1` to be false — a non-expansion draft with
+  no `weight_band` returns `{:error, :nivel_required}` instead of
+  publishing, since it would otherwise render in no weight-band row on the
+  home page (D-37). An expansion has no such condition (D-30 is explicit).
+  This lives HERE, not only in the draft sheet's UI (D-37: "078 proved the
+  drawn gate is pure paint by publishing through the other door") — every
+  caller of this function is gated, the button is a convenience, not the
+  control.
+
+  Returns `{:ok, game}` on a publishable draft, `{:error, :nivel_required}`
+  on a non-expansion draft with no nivel, or `{:error, :not_publishable}`
+  for any other origin status (leaving it unchanged in every error case).
   """
   def publish_game(%Game{status: :draft} = game) do
-    game
-    |> Game.status_changeset(%{status: :published})
-    |> Repo.update()
+    if Game.needs_nivel_to_publish?(game) do
+      {:error, :nivel_required}
+    else
+      game
+      |> Game.status_changeset(%{status: :published})
+      |> Repo.update()
+    end
   end
 
   def publish_game(%Game{}), do: {:error, :not_publishable}

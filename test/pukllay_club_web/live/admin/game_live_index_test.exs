@@ -758,6 +758,78 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — the draft sheet's publish gate (D-30/D-37, plan 01.8.2-20)" do
+    test "Publicar is always rendered enabled — never a disabled attribute", %{conn: conn} do
+      game = game_fixture(%{status: :draft, weight_band: nil, is_expansion: false})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      assert has_element?(lv, "#draft-sheet-publish")
+      refute has_element?(lv, "#draft-sheet-publish[disabled]")
+
+      refute html =~
+               ~s(id="draft-sheet-publish" class="pk-draft-sheet-cta" data-pk-pressable="true" phx-disable-with="Publicando…" disabled)
+    end
+
+    test "tapping Publicar with no nivel shows the inline gate line and does not publish", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Necesita nivel",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      html =
+        render_submit(lv, "publish-draft", %{
+          "name" => game.name,
+          "description" => game.description,
+          "is_expansion" => "false"
+        })
+
+      assert has_element?(lv, "[data-pk-draft-sheet-gate]")
+      assert html =~ "Sin nivel, Necesita nivel no va a aparecer en ninguna fila del inicio."
+      assert has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      assert Catalog.get_game!(game.id).status == :draft
+    end
+
+    test "an expansion publishes with no nivel — the gate has no condition for it", %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Expansión lista",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: true
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      render_submit(lv, "publish-draft", %{
+        "name" => game.name,
+        "description" => game.description,
+        "is_expansion" => "true"
+      })
+
+      refute has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      assert Catalog.get_game!(game.id).status == :published
+    end
+
+    test "the nivel picker offers exactly the three real Vocabulary bands", %{conn: conn} do
+      game = game_fixture(%{status: :draft, weight_band: nil, is_expansion: false})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      assert has_element?(lv, "#draft-sheet-weight-band")
+      assert count_occurrences(html, ~s(<option value="descubre_el_hobby")) == 1
+      assert count_occurrences(html, ~s(<option value="ingenio_estratega")) == 1
+      assert count_occurrences(html, ~s(<option value="nivel_experto")) == 1
+    end
+  end
+
   defp count_occurrences(text, substring) do
     text |> String.split(substring) |> length() |> Kernel.-(1)
   end

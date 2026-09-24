@@ -327,10 +327,23 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          |> load_groups()
          |> push_patch(to: search_path(socket.assigns.q))}
 
-      {:error, _reason} ->
+      # Task 1's chosen shape (01.8.2-UI-SPEC.md "Live-gate explanation"):
+      # a persistent inline line under the gate, stating the consequence —
+      # never a required-field message. The fields just saved above stay
+      # saved (D-30: "required to publish, never to save") — only the
+      # status transition itself refused.
+      {:error, :nivel_required} ->
+        {:noreply,
+         socket
+         |> assign(:draft_sheet, draft_sheet_from_game(updated))
+         |> assign(:draft_sheet_error, nivel_gate_message(updated))}
+
+      {:error, _other} ->
         {:noreply, assign(socket, :draft_sheet_error, "No se pudo publicar. Probá de nuevo.")}
     end
   end
+
+  defp nivel_gate_message(game), do: "Sin nivel, #{game.name} no va a aparecer en ninguna fila del inicio."
 
   defp maybe_open_draft_from_param(socket, nil), do: socket
 
