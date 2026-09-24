@@ -34,6 +34,7 @@ numbers and their scope; nothing from them is pulled forward.
 - [x] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text (completed 2026-09-12)
 - [x] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3) (completed 2026-09-16)
 - [ ] **Phase 01.8.2: Admin UI/UX Redesign** - Implement sketches 059–065 across the staff admin: in-shelf position backend, admin shell, Estantes as one page, one save bar, one action system, sheets (inserted 2026-09-16)
+- [ ] **Phase 01.8.3: Admin Screen-by-Screen Refinement** - Close the UI gaps raised by 01.8.2's UAT one admin screen at a time: main-menu screens drop their back row and page title, the Juegos search cluster becomes a `+` that opens a bottom sheet, one shared page width across bar and body, opaque pinned section captions, and the list/section/facet refinements (inserted 2026-09-24)
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
 
@@ -252,6 +253,45 @@ Plans:
 **Wave 12**
 
 - [ ] 01.8.2-22-PLAN.md — rollout: the pre-deploy baseline (D-06), the same-deploy gate (D-07), the post-deploy smoke, D-20's Phase 4 scope note, D-21's UAT set
+
+### Phase 01.8.3: Admin Screen-by-Screen Refinement (INSERTED)
+
+**Goal:** Every admin screen is worked once, in isolation, until it reads right — so that
+01.8.2's paused UAT can be re-walked end to end and pass. A main-menu destination carries no
+`Volver` row and no redundant page title; the Juegos search-field-plus-button-plus-label cluster
+is replaced by a single `+` that opens a bottom sheet; the top bar and the page body share one
+width; a pinned section caption is opaque, never transparent over the list; and the list rows,
+status sections (Borradores / Juegos del club) and the Secciones facet get their visual
+refinement settled by a sketch slice before being built.
+**Scope as planned (01.8.3-CONTEXT D-01/D-02/D-03):** this phase rebuilds **`/admin/juegos` only**.
+Estantes and Web each become their own later phase, in that order — inserting them is a `/gsd-phase`
+operation that has not been done yet (D-02). The Secciones facet (`G-01.8.2-7`) lives in the public
+`filter_modal.ex`, not admin, and stays an open gap because the developer's note on it was never made
+specific (D-03). The UAT re-walk covers tests 3 and 4 only; the other 17 checkpoints stay paused until
+Estantes and Web ship (D-04), and test 25 is rewritten rather than re-run because this phase deletes
+the page bar and back control its expectation names (D-05).
+**Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
+unblocks the 19 outstanding 01.8.2 UAT checkpoints.
+**Depends on:** Phase 01.8.2
+**Plans:** 5 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
+- [ ] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 

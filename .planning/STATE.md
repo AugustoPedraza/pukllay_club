@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.2
-current_phase_name: Admin UI/UX Redesign (INSERTED)
+current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
-last_updated: "2026-09-24T02:09:14.377Z"
-last_activity: 2026-09-23
-last_activity_desc: Phase 01.8.2 execution started
-state_head: 81f68849004937cdf272fdf0b860c9afa8df7e84
+stopped_at: Phase 01.8.3 context gathered
+last_updated: "2026-09-24T21:25:43.902Z"
+last_activity: 2026-09-24
+last_activity_desc: Phase 01.8.2 UAT paused; Phase 01.8.3 inserted
+state_head: 73e9ee415bc5db77008a0e343ed28e9c2ce64ecb
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 4
-  total_plans: 49
-  completed_plans: 48
+  total_plans: 54
+  completed_plans: 49
 ---
 
 Total Phases: 9
@@ -27,16 +27,22 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.2 — Admin UI/UX Redesign (INSERTED)
+**Current focus:** Phase 01.8.3 — Admin Screen-by-Screen Refinement (INSERTED)
 (production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
 ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 22 of 22
-Status: Ready to execute
-Last activity: 2026-09-23 — Phase 01.8.2 execution started
+Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — READY TO EXECUTE
+Plan: 0 of 0
+Status: Ready to plan — `/gsd-plan-phase 01.8.3`
+Last activity: 2026-09-24 — Phase 01.8.2 UAT paused after test 7 (6 passed, 1 issue, 3 gaps, 19 outstanding); Phase 01.8.3 inserted to work the admin screens one at a time
+
+Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
+`gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
+persisted failure_reason, never implemented) and its UAT.md is `partial` with 19 checkpoints
+outstanding. Re-walk 01.8.2's UAT **from test 1**, not test 8, once 01.8.3 lands — tests 1-7
+covered screens 01.8.3 will change.
 
 ## Performance Metrics
 
@@ -435,6 +441,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 - Phase 01.8 inserted after Phase 01.7 (milestone v1.1): SEO, Structured Data & Social Sharing — per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, real image `alt` text. Split from 01.7 because its UAT (share a live game link, run Rich Results Test) requires production to already hold the real catalog, and because its verification mode (crawler/social-preview) is entirely different from 01.7's (operator/`curl -I`/production data).
 - Phase 01.8.1 inserted after Phase 01.8: Staff Admin — Ludoteca, Shelves & Curated Destacados (prioritized ahead of Phase 2/3; from /gsd-explore) (URGENT)
 - Phase 01.8.2 inserted after Phase 01.8.1: Admin UI/UX Redesign — implement sketches 059–065 (scope: .planning/notes/admin-redesign-scope.md)
+- Phase 01.8.3 inserted after Phase 01.8.2: Admin screen-by-screen refinement — close 01.8.2 UAT gaps one screen at a time (URGENT)
 
 ## Deferred Items
 
@@ -469,9 +476,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T02:09:14.242Z
-Stopped at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
-Resume file: None
+Last session: 2026-09-24T20:01:50.539Z
+Stopped at: Phase 01.8.3 context gathered
+Resume file: .planning/phases/01.8.3-admin-screen-by-screen-refinement/01.8.3-CONTEXT.md
 
 ## Operator Next Steps
 
