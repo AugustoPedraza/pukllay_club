@@ -162,6 +162,20 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   defp dirty?(draft, saved), do: draft != saved
 
+  # WR-04: `status` commits outside `@draft`/`@saved` entirely (this
+  # module's own moduledoc note) so an in-progress field edit survives a
+  # status change untouched — but that also means a staff member who
+  # retires a game and then saves an already-in-progress draft edit in
+  # the same session gets no signal anywhere in the retire flow that the
+  # two are now out of sync. Surface a distinct confirmation here so a
+  # save on a retired game is never silently indistinguishable from a
+  # normal one.
+  defp save_confirmation_message(%{status: :retired}) do
+    "Cambios guardados. Este juego está retirado — los cambios se guardan igual."
+  end
+
+  defp save_confirmation_message(_game), do: "Cambios guardados."
+
   # ============================================================
   # The write model — Guardar (D-28) and the generic draft-write seam
   # plan 01.8.2-19's field sheets will call.
@@ -170,7 +184,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   @impl true
   def handle_event("save", _params, socket) do
     case save_draft_if_dirty(socket) do
-      {:ok, socket} -> {:noreply, put_flash(socket, :info, "Cambios guardados.")}
+      {:ok, socket} -> {:noreply, put_flash(socket, :info, save_confirmation_message(socket.assigns.game))}
       {:error, socket} -> {:noreply, put_flash(socket, :error, "No se pudo guardar. Revisá los datos.")}
     end
   end

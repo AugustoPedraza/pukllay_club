@@ -275,6 +275,27 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert Catalog.get_game!(game.id).status == :retired
     end
 
+    # WR-04 regression: `status` commits outside `@draft`/`@saved` (this
+    # module's own moduledoc note), so an in-progress unsaved edit
+    # survives Retirar untouched — Guardar afterward must say something
+    # distinct from a normal save, since the game is now retired.
+    test "Guardar after Retirar in the same session surfaces a distinct confirmation", %{conn: conn} do
+      game = game_fixture(%{status: :published, name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      render_click(lv, "open-menu")
+      render_click(lv, "retire")
+      render_click(lv, "confirm-retire")
+
+      html = render_click(lv, "save")
+
+      assert html =~ "Cambios guardados. Este juego está retirado — los cambios se guardan igual."
+      assert Catalog.get_game!(game.id).name == "Después"
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
     test "cancelling the retire dialog leaves the game published", %{conn: conn} do
       game = game_fixture(%{status: :published})
 
