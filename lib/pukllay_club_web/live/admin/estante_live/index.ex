@@ -27,6 +27,17 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   restore_position/3` (`@undo_snapshot`, `@action_snackbar` — one Deshacer
   mechanism shared by every write this screen makes).
 
+  **`?copy=<id>` (plan 01.8.2-18):** Pendientes' own rows (Sin ubicar,
+  and Afuera once Phase 4 exists) navigate here with that literal
+  query param instead of inventing a second selection mechanism —
+  `mount/3` reads it and calls the SAME `select_copy_struct/2` a
+  suggestion-row tap uses, so a Sin ubicar copy opens «¿Dónde va?»
+  immediately (its own `shelf_id` is `nil`) and an Afuera copy lands on
+  its estante's rail with itself lifted, exactly as picking it from the
+  search dropdown would. An unknown/malformed id is silently ignored
+  (falls through to the normal idle state) rather than raising, since a
+  stale link should degrade, not error.
+
   Header: a 44px A3 Pendientes icon carrying D-19g's count badge
   (`Shelves.unplaced_copies/0`'s length — the SAME source the dashboard
   box reads, so the two counts can never disagree) followed by the
@@ -63,28 +74,46 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   @max_recent 3
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:estantes")
     end
 
-    {:ok,
-     socket
-     |> assign(:page_title, "Estantes")
-     |> assign(:query, "")
-     |> assign(:suggestions, [])
-     |> assign(:recent_searches, [])
-     |> assign(:selected_copy, nil)
-     |> assign(:copies, [])
-     |> assign(:copy_counts, %{})
-     |> assign(:pending_count, pending_count())
-     |> assign(:donde_va, nil)
-     |> assign(:que_va_aca, nil)
-     |> assign(:cover_options_open, false)
-     |> assign(:confirm_remove, nil)
-     |> assign(:undo_snapshot, nil)
-     |> assign(:action_snackbar, nil)
-     |> assign(:landed_copy_id, nil)}
+    socket =
+      socket
+      |> assign(:page_title, "Estantes")
+      |> assign(:query, "")
+      |> assign(:suggestions, [])
+      |> assign(:recent_searches, [])
+      |> assign(:selected_copy, nil)
+      |> assign(:copies, [])
+      |> assign(:copy_counts, %{})
+      |> assign(:pending_count, pending_count())
+      |> assign(:donde_va, nil)
+      |> assign(:que_va_aca, nil)
+      |> assign(:cover_options_open, false)
+      |> assign(:confirm_remove, nil)
+      |> assign(:undo_snapshot, nil)
+      |> assign(:action_snackbar, nil)
+      |> assign(:landed_copy_id, nil)
+
+    {:ok, apply_copy_param(socket, params)}
+  end
+
+  defp apply_copy_param(socket, %{"copy" => raw_id}) do
+    case parse_id(raw_id) do
+      nil -> socket
+      id -> select_copy_from_param(socket, id)
+    end
+  end
+
+  defp apply_copy_param(socket, _params), do: socket
+
+  defp select_copy_from_param(socket, id) do
+    copy = Shelves.get_copy!(id)
+    select_copy_struct(socket, copy)
+  rescue
+    Ecto.NoResultsError -> socket
   end
 
   @impl true

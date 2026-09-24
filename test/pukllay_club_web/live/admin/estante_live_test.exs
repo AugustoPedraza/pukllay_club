@@ -793,6 +793,353 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
     end
   end
 
+  describe "the ?copy= param (plan 01.8.2-18) — Pendientes' one navigation mechanism for both queues" do
+    setup :register_and_log_in_staff
+
+    test "an unplaced copy's id opens «¿Dónde va?» immediately, exactly as a Sin ubicar row promises",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "Catán"
+    end
+
+    test "an already-placed copy's id lands on its estante's rail with itself lifted — the exact mechanism an Afuera row (Phase 4) will reuse",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Dixit"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "Estante Norte"
+      assert html =~ ~s(id="estante-copy-#{copy.id}")
+      assert html =~ "pk-estantes-cover--lifted"
+    end
+
+    test "an unknown copy id is ignored — the page falls back to the normal idle state", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=999999")
+
+      assert html =~ "¿Qué juego buscás?"
+    end
+  end
+
+  describe "GET /admin/estantes/pendientes — signed-out visitor (T-01.8.2-85)" do
+    test "is redirected to the login path", %{conn: conn} do
+      conn = get(conn, ~p"/admin/estantes/pendientes")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "GET /admin/estantes/administrar — signed-out visitor (T-01.8.2-85)" do
+    test "is redirected to the login path", %{conn: conn} do
+      conn = get(conn, ~p"/admin/estantes/administrar")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "Pendientes — Afuera and Sin ubicar, both always rendered (D-08, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "renders the back row to Estantes, the page title, and both queue headings + hints, even at 0 rows",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      assert html =~ "Pendientes"
+      assert html =~ "Estantes"
+      assert html =~ "Afuera · 0"
+      assert html =~ "Volvieron de una mesa: tocá uno para ver dónde va."
+      assert html =~ "Todavía no hay juegos afuera."
+      assert html =~ "Sin ubicar · 0"
+      assert html =~ "Todavía no tienen lugar: tocá uno para ubicarlo."
+      assert html =~ "Todos los juegos tienen lugar."
+    end
+
+    test "the Sin ubicar count equals Shelves.unplaced_copies/0's length and lists every row",
+         %{conn: conn} do
+      copy_fixture(%{game_id: game_fixture(%{name: "Uno"}).id})
+      copy_fixture(%{game_id: game_fixture(%{name: "Dos"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      assert length(Shelves.unplaced_copies()) == 2
+      assert html =~ "Sin ubicar · 2"
+      assert html =~ "Uno"
+      assert html =~ "Dos"
+      refute html =~ "Todos los juegos tienen lugar."
+    end
+
+    test "tapping a Sin ubicar row navigates to Estantes with «¿Dónde va?» already open",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      {:ok, _estantes_lv, html} =
+        lv
+        |> element("#pendientes-sin-ubicar-#{copy.id}")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "Catán"
+    end
+
+    test "a broadcast updates the Sin ubicar count and list live (D-11)", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+      assert html =~ "Sin ubicar · 0"
+
+      copy_fixture(%{game_id: game_fixture(%{name: "Recién llegado"}).id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:estantes", {:estante_updated, nil})
+
+      html = render(lv)
+      assert html =~ "Sin ubicar · 1"
+      assert html =~ "Recién llegado"
+    end
+  end
+
+  describe "Administrar estantes — first run (D-09, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "with zero estantes, renders one line of purpose and Nuevo estante as the only action",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Creá los estantes en el orden en que los recorrés."
+      assert html =~ "Nuevo estante"
+      refute html =~ "Ordenar estantes"
+
+      [_, actions_and_after] = String.split(html, "pk-administrar-header-actions", parts: 2)
+      [actions_slice, _] = String.split(actions_and_after, "</div>", parts: 2)
+      assert count_occurrences(actions_slice, ~s(data-pk-pressable="true")) == 1
+    end
+  end
+
+  describe "Administrar estantes — rows, options sheet, and the name sheet (D-08, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "an estante row shows the icon, name and N juegos, and renders no chevron", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Estante Norte"
+      assert html =~ "1 juegos"
+
+      [_, row_and_after] = String.split(html, ~s(id="shelf-row-#{shelf.id}"), parts: 2)
+      row_slice = String.slice(row_and_after, 0, 500)
+      refute row_slice =~ "pk-admin-row__chevron"
+    end
+
+    test "the estante counts are batched, not queried per row (T-01.8.2-86)", %{conn: conn} do
+      a = shelf_fixture(%{name: "Estante A"})
+      b = shelf_fixture(%{name: "Estante B"})
+      %{game_id: game_fixture(%{name: "X"}).id} |> copy_fixture() |> then(&Shelves.place_copy(&1.id, a.id, 0))
+      %{game_id: game_fixture(%{name: "Y"}).id} |> copy_fixture() |> then(&Shelves.place_copy(&1.id, b.id, 0))
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Estante A"
+      assert html =~ "Estante B"
+      assert count_occurrences(html, "1 juegos") == 2
+    end
+
+    test "tapping a row opens its options sheet with Editar and Eliminar", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+
+      assert html =~ ~s(id="shelf-options-sheet")
+      assert html =~ "Estante Norte"
+      assert html =~ "Editar"
+      assert html =~ "Eliminar"
+    end
+
+    test "Nuevo estante opens the name sheet pre-filled with the next default name", %{conn: conn} do
+      shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "Nuevo estante"
+      assert html =~ "Un nombre que se reconozca en el salón."
+      assert html =~ "Crear estante"
+      assert html =~ ~s(value="Estante 2")
+    end
+
+    test "saving an empty name surfaces an error inside the sheet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      html = lv |> form("#shelf-name-form", %{"name" => ""}) |> render_submit()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "pk-admin-field__error"
+      refute html =~ "Estante creado"
+    end
+
+    test "saving a duplicate name surfaces a distinct error, raised from the unique constraint",
+         %{conn: conn} do
+      shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      html = lv |> form("#shelf-name-form", %{"name" => "Estante Norte"}) |> render_submit()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "pk-admin-field__error"
+    end
+
+    test "Editar pre-fills the current name and renaming updates the row", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      html = lv |> element("[phx-click='open-edit-shelf']") |> render_click()
+
+      assert html =~ "Editar estante"
+      assert html =~ ~s(value="Estante Norte")
+      assert html =~ "Guardar"
+
+      html = lv |> form("#shelf-name-form", %{"name" => "Estante Sur"}) |> render_submit()
+
+      assert html =~ "Estante Sur"
+      refute html =~ ~s(id="shelf-name-sheet")
+    end
+
+    test "one name-sheet implementation serves both Nuevo estante and Editar" do
+      source = File.read!("lib/pukllay_club_web/live/admin/estante_live/administrar.ex")
+      assert count_occurrences(source, ~s(id="shelf-name-sheet")) == 1
+    end
+
+    test "the page consumes the shared Ordenar-mode components from AdminComponents" do
+      source = File.read!("lib/pukllay_club_web/live/admin/estante_live/administrar.ex")
+      assert source =~ "AdminComponents.reorder_header"
+      assert source =~ "AdminComponents.reorder_row"
+    end
+  end
+
+  describe "Administrar estantes — Ordenar→Listo (D-08 decision 68, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "Ordenar swaps the whole header to Ordenar estantes + Listo, shows handles, and Listo commits the order with an undoable snackbar",
+         %{conn: conn} do
+      a = shelf_fixture(%{name: "Estante A"})
+      b = shelf_fixture(%{name: "Estante B"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("[phx-click='start-reorder']") |> render_click()
+
+      assert html =~ "Ordenar estantes"
+      assert has_element?(lv, "button", "Listo")
+      refute html =~ "pk-admin-back-row"
+      assert html =~ ~s(id="reorder-shelf-#{a.id}")
+      assert html =~ ~s(id="reorder-shelf-#{b.id}")
+
+      lv |> element("#reorder-shelf-#{a.id} button[aria-label='Reordenar']") |> render_click()
+      assert has_element?(lv, "button[aria-label='Bajar #{a.name}']")
+
+      lv |> element("button[aria-label='Bajar #{a.name}']") |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+      assert html =~ "Orden guardado"
+      assert html =~ "Deshacer"
+
+      assert Enum.map(Shelves.list_shelves(), & &1.id) == [b.id, a.id]
+
+      html = lv |> element("[phx-click='undo-reorder']") |> render_click()
+      refute html =~ "Orden guardado"
+      assert Enum.map(Shelves.list_shelves(), & &1.id) == [a.id, b.id]
+    end
+  end
+
+  describe "Administrar estantes — deleting an estante (D-10, D-19f, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "Eliminar opens a dialog whose consequence line shows the real copy count, never nested inside the sheet",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      html = lv |> element("[phx-click='ask-delete']") |> render_click()
+
+      refute html =~ ~s(id="shelf-options-sheet")
+      assert html =~ ~s(id="confirm-delete-shelf-dialog")
+      assert html =~ "¿Eliminar Estante Norte?"
+      assert html =~ "Sus 2 juegos quedan sin lugar hasta que los vuelvas a ubicar."
+    end
+
+    test "confirming deletes the estante, its copies still exist with shelf_id nil, and stays on the page",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      html = lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      assert html =~ "Estante eliminado"
+      assert html =~ "Deshacer"
+      refute html =~ "Estante Norte"
+
+      fresh_a = Shelves.get_copy!(a.id)
+      assert fresh_a.shelf_id == nil
+      assert fresh_a.position == nil
+      assert_raise Ecto.NoResultsError, fn -> Shelves.get_shelf!(shelf.id) end
+    end
+
+    test "Deshacer restores the estante and every copy to its recorded position, gap-free", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      html = lv |> element("[phx-click='undo-delete']") |> render_click()
+      assert html =~ "Estante Norte"
+
+      [restored] = Enum.filter(Shelves.list_shelves(), &(&1.name == "Estante Norte"))
+      positions = restored.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {b.id, 1}, {c.id, 2}]
+    end
+
+    test "deleting an estante never deletes a Copy row (T-01.8.2-81, on_delete: :nilify_all verified directly)" do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      # Directly through `Repo.delete/1` (bypassing `Shelves.delete_shelf/1`
+      # entirely) proves the FK-level `on_delete: :nilify_all` itself, not
+      # just this plan's own application-level nilify — the second line of
+      # defense the delete function's own moduledoc names.
+      {:ok, _} = PukllayClub.Repo.delete(shelf)
+
+      fresh = PukllayClub.Repo.get!(PukllayClub.Catalog.Copy, copy.id)
+      assert fresh.shelf_id == nil
+    end
+  end
+
   defp count_occurrences(haystack, needle) do
     haystack
     |> String.split(needle)

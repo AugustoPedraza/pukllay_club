@@ -101,6 +101,8 @@ defmodule PukllayClubWeb.Router do
       live "/juegos/:id/editar", GameLive.Form, :edit
       live "/staff", StaffLive.Index, :index
       live "/estantes", EstanteLive.Index, :index
+      live "/estantes/pendientes", EstanteLive.Pendientes, :index
+      live "/estantes/administrar", EstanteLive.Administrar, :index
       live "/secciones", SectionLive.Index, :index
       live "/secciones/:id", SectionLive.Edit, :edit
       live "/niveles", BandAuditLive, :index

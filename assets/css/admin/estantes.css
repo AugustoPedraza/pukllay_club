@@ -368,3 +368,76 @@
   overflow-x: auto;
   padding: 16px 16px 8px;
 }
+
+/* ============================================================
+   Plan 01.8.2-18 — Pendientes (D-08, D-19g): each queue is a heading
+   (`list_section_label/1`) + one hint line (`.pk-admin-empty-note`,
+   reused as-is rather than a second near-identical hint class) + rows,
+   stacked with the SAME 4px rhythm `.pk-admin-web-otras` already
+   established for a section-plus-rows block.
+   ============================================================ */
+.pk-admin-pendientes-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ============================================================
+   Plan 01.8.2-18 — Administrar estantes (D-08, D-09, D-10, decision 68).
+   ============================================================ */
+
+/* `position: relative` anchor for `.pk-administrar-header-actions` below —
+   the SAME idiom `.pk-estantes` establishes on that other page, for the
+   SAME reason. A first attempt here rendered the actions AFTER the
+   `<h1>` inside a plain flex row; `test/visual/admin_components.mjs`'s
+   D3 check (run live against this page) caught two real regressions
+   that caused: the page-head-to-body gap measured negative (the check
+   walks `<h1>`'s own `nextElementSibling`, which was the actions row,
+   not real body content) AND the title's own top position shifted
+   ~8px narrower-than-375 viewports (the actions' "Nuevo estante" A2
+   text button changed the flex row's cross-axis height at that width,
+   and `align-items: center` recentred the title against it). Both are
+   closed by moving the actions BEFORE the title in DOM and taking them
+   out of flow entirely. */
+.pk-administrar {
+  position: relative;
+}
+
+.pk-administrar-header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Room for the two actions above (a 44px icon + the "Nuevo estante" text
+   button) so the title never runs under them — measured against the
+   rendered `pk-admin-action--a2` text button's natural width plus the
+   a3 icon and their 4px gap. */
+.pk-administrar-title {
+  padding-right: 210px;
+}
+
+#administrar-rows,
+#administrar-reorder-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The estante row's own glyph tile (`estante_row/1`, administrar.ex) —
+   same 40px slot `.pk-admin-row__cover` reserves for a game's cover
+   image, just filled with an icon instead since an estante has no
+   photo. */
+.pk-admin-administrar-row__icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
