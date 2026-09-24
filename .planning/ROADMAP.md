@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 19/22 plans executed
+**Plans:** 20/22 plans executed
 
 Plans:
 
@@ -243,7 +243,7 @@ Plans:
 
 **Wave 10**
 
-- [ ] 01.8.2-20-PLAN.md — D-30's draft sheet and row routing, with open item 6's live publish-gate explanation decided by measurement
+- [x] 01.8.2-20-PLAN.md — D-30's draft sheet and row routing, with open item 6's live publish-gate explanation decided by measurement
 
 **Wave 11**
 
