@@ -684,6 +684,138 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — the enrichment-completion snackbar (D-11/D-17, plan 01.8.3-04)" do
+    test "a successful arrival shows a 10s Editar snackbar naming the game", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "On Mars agregado"
+      assert html =~ "Editar"
+      assert html =~ ~s(data-timeout="10000")
+    end
+
+    test "a failed arrival shows a snackbar naming the bgg_id, not the game's name", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "No pudimos traer los datos BGG de #184267"
+      assert html =~ "Editar"
+      assert html =~ ~s(data-timeout="10000")
+      refute html =~ "Juego #184267 agregado"
+    end
+
+    test "a {:game_enriched, id} for a still-pending game renders no snackbar", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "pending"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      refute has_element?(lv, "#enrichment-toast")
+    end
+
+    test "two arrivals in sequence leave exactly one snackbar, naming the second game", %{
+      conn: conn
+    } do
+      game1 =
+        game_fixture(%{
+          bgg_id: 111_111,
+          name: "Primero",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      game2 =
+        game_fixture(%{
+          bgg_id: 222_222,
+          name: "Segundo",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game1.id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game2.id})
+
+      html = render(lv)
+      assert count_occurrences(html, ~s(id="enrichment-toast")) == 1
+      assert html =~ "Segundo agregado"
+      refute html =~ "Primero agregado"
+    end
+
+    test "clicking Editar redirects to the game's editor", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+      render(lv)
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               lv
+               |> element("#enrichment-toast .pk-admin-snackbar__action")
+               |> render_click()
+
+      assert to == ~p"/admin/juegos/#{game.id}/editar"
+    end
+
+    test "dismiss-enrichment-toast removes the snackbar", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+      render(lv)
+
+      html = render_click(lv, "dismiss-enrichment-toast", %{})
+      refute html =~ ~s(id="enrichment-toast")
+    end
+
+    test "edit-enriched-game with no toast assign neither redirects nor raises", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "edit-enriched-game", %{})
+      assert is_binary(html)
+    end
+  end
+
   describe "GameLive.Index — the pinned row's boundary and edge cases (plan 01.8.3-01)" do
     test "an empty catalog still renders the pinned search/+ row, so + stays reachable", %{
       conn: conn
