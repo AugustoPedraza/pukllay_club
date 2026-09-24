@@ -263,14 +263,25 @@ is replaced by a single `+` that opens a bottom sheet; the top bar and the page 
 width; a pinned section caption is opaque, never transparent over the list; and the list rows,
 status sections (Borradores / Juegos del club) and the Secciones facet get their visual
 refinement settled by a sketch slice before being built.
+**Scope as planned (01.8.3-CONTEXT D-01/D-02/D-03):** this phase rebuilds **`/admin/juegos` only**.
+Estantes and Web each become their own later phase, in that order — inserting them is a `/gsd-phase`
+operation that has not been done yet (D-02). The Secciones facet (`G-01.8.2-7`) lives in the public
+`filter_modal.ex`, not admin, and stays an open gap because the developer's note on it was never made
+specific (D-03). The UAT re-walk covers tests 3 and 4 only; the other 17 checkpoints stay paused until
+Estantes and Web ship (D-04), and test 25 is rewritten rather than re-run because this phase deletes
+the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.8.3 to break down)
+- [ ] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
+- [ ] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
+- [ ] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
+- [ ] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
+- [ ] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
