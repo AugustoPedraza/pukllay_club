@@ -236,12 +236,10 @@ defmodule PukllayClub.Catalog.Shelves do
     |> Multi.run(:restored, fn repo, %{shelf: shelf} ->
       live_by_id = live_shelf_by_copy(repo, copy_ids)
 
-      Enum.each(copies, fn {copy_id, copy_position} ->
-        if Map.get(live_by_id, copy_id) == nil do
-          repo.update_all(from(c in Copy, where: c.id == ^copy_id),
-            set: [shelf_id: shelf.id, position: copy_position]
-          )
-        end
+      copies
+      |> Enum.reject(fn {copy_id, _copy_position} -> Map.get(live_by_id, copy_id) end)
+      |> Enum.each(fn {copy_id, copy_position} ->
+        restore_copy(repo, copy_id, shelf.id, copy_position)
       end)
 
       {:ok, shelf}
@@ -255,6 +253,12 @@ defmodule PukllayClub.Catalog.Shelves do
       {:error, _step, reason, _changes} ->
         {:error, reason}
     end
+  end
+
+  defp restore_copy(repo, copy_id, shelf_id, position) do
+    repo.update_all(from(c in Copy, where: c.id == ^copy_id),
+      set: [shelf_id: shelf_id, position: position]
+    )
   end
 
   defp live_shelf_ids(repo, copy_ids) do
