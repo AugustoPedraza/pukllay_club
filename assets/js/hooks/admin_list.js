@@ -1,5 +1,6 @@
 // AdminList — the Juegos screen's own interaction layer (plan 01.8.2-14,
-// D-19g-bis/D-19n; pinned row rebuilt by plan 01.8.3-01, D-06/D-07/D-09).
+// D-19g-bis/D-19n; pinned row rebuilt by plan 01.8.3-01, D-06/D-07/D-09;
+// pin-observer/sticky-offset fix by plan 01.8.3-03, D-15).
 // Registered as a plain (non-colocated) hook in `app.js`'s `hooks` object
 // (`phx-hook="AdminList"`, no leading dot), mirroring `AdminRail`'s own
 // non-colocated convention: mounted once on the page's stable wrapper
@@ -16,11 +17,15 @@
 //   2. Pinned section captions (D-19n): an IntersectionObserver watches a
 //      zero-height sentinel placed just before each section's sticky
 //      heading and toggles `data-pinned` on the heading wrap the instant
-//      the sentinel scrolls out of view above the fold — the heading
-//      gains its `--color-surface` fill ONLY while pinned (juegos.css).
-//      Kept byte-identical in plan 01.8.3-01 (D-15's fix is plan 03's
-//      job) — including its own use of `PAGE_BAR_BAND` below, which this
-//      plan therefore cannot delete despite the constant's stale name.
+//      the sentinel scrolls above the pinned search row — the heading
+//      gains its `::before` band fill (juegos.css) ONLY while pinned. The
+//      pin predicate is `!entry.isIntersecting` alone: 01.8.3-RESEARCH.md
+//      found the prior real-viewport rect comparison (a second, stricter
+//      AND-clause) dominated a correctly-sized `rootMargin` and re-opened
+//      the ~45px window the `rootMargin` already compensated for — an
+//      IntersectionObserverEntry's real-viewport rect is never affected
+//      by `rootMargin`, so ANDing a check against it back in always fires
+//      later than the `rootMargin`'s own compensation (D-15).
 //   3. D-08's pinned search row: the SAME `#juegos-search-wrap` (never a
 //      second, synced copy) hides on scroll-down and returns on
 //      scroll-up, never while `#juegos-search-input` is focused and never
@@ -36,13 +41,6 @@
 // pinned-caption fill) — same shape as `AdminRail`'s `data-pinned-hidden`
 // — rather than a LiveView assign updated on every scroll tick, so
 // scrolling never costs a server round trip.
-//
-// `PAGE_BAR_BAND` is kept, not deleted, despite its name: `setupPinObserver`
-// below still reads it and is required to stay byte-identical in this
-// plan, so removing the declaration would throw a ReferenceError the
-// instant this hook mounts. Plan 03 owns renaming/repurposing it
-// alongside its own observer fix (D-15).
-const PAGE_BAR_BAND = 44
 
 export default {
   mounted() {
@@ -62,6 +60,21 @@ export default {
     this.searchWrap = this.el.querySelector("#juegos-search-wrap")
     this.searchInput = this.el.querySelector("#juegos-search-input")
     this.lastScrollY = window.scrollY
+
+    // D-15: the pin-observer's rootMargin must track the REAL pinned
+    // search row's rendered height, not a literal — measured once here
+    // from the same wrap juegos.css's own `--pk-juegos-pinned-h` declares
+    // the section captions' sticky offset from. If the wrap cannot be
+    // measured (absent, or its height rounds to 0), fall back to a single
+    // declared default rather than to 0 — a 0 inset would silently
+    // re-open the window this fix closes. 60 is `4 + 48 + 8`: the row's
+    // own top padding, the 48px field (D-07), and its bottom padding
+    // (`.pk-admin-juegos-search-row` in juegos.css) — traceable to the
+    // stylesheet, not arbitrary.
+    const measuredHeight = this.searchWrap
+      ? Math.round(this.searchWrap.getBoundingClientRect().height)
+      : 0
+    this.pinnedBandPx = measuredHeight > 0 ? measuredHeight : 60
 
     this.onScroll = () => {
       if (!this.searchWrap) return
@@ -121,15 +134,18 @@ export default {
         for (const entry of entries) {
           const wrap = entry.target.nextElementSibling
           if (!wrap) continue
-          // Pinned means: the sentinel has scrolled fully above the
-          // reserved band (not merely "not intersecting" — an element
-          // below the viewport is also "not intersecting" and must NOT
-          // read as pinned).
-          const pinned = !entry.isIntersecting && entry.boundingClientRect.top < 0
+          // Pinned means: the sentinel is no longer intersecting the
+          // rootMargin-shrunk viewport. `rootMargin`'s top inset already
+          // matches the pinned search row's real height (D-15) — do NOT
+          // additionally gate on the entry's real-viewport rect, which
+          // rootMargin never affects: ANDing a check against it back in
+          // re-opens the exact window this rootMargin exists to close
+          // (01.8.3-RESEARCH.md).
+          const pinned = !entry.isIntersecting
           wrap.toggleAttribute("data-pinned", pinned)
         }
       },
-      { rootMargin: `-${PAGE_BAR_BAND + 1}px 0px 0px 0px`, threshold: [0, 1] },
+      { rootMargin: `-${this.pinnedBandPx + 1}px 0px 0px 0px`, threshold: [0, 1] },
     )
     sentinels.forEach((s) => this.pinObserver.observe(s))
   },
