@@ -52,7 +52,16 @@ const STAFF_EMAIL = process.env.STAFF_EMAIL || "augusto.pedraza08@gmail.com"
 // D-19n's own two named widths, plus 390 for parity with
 // `admin_components.mjs`'s own trio.
 const KEEL_VIEWPORTS = [375, 360, 390]
-const PAGES = ["/admin", "/admin/staff", "/admin/estantes", "/admin/juegos", "/admin/secciones", "/admin/niveles"]
+const PAGES = [
+  "/admin",
+  "/admin/staff",
+  "/admin/estantes",
+  "/admin/estantes/pendientes",
+  "/admin/estantes/administrar",
+  "/admin/juegos",
+  "/admin/secciones",
+  "/admin/niveles",
+]
 
 function log(...args) {
   console.log(...args)

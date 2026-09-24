@@ -6,6 +6,11 @@ defmodule PukllayClubWeb.Admin.AdminCompositionTest do
   first to write this guard, seeded with the two screens that same plan
   rebuilt (`dashboard_live.ex`, `staff_live/index.ex`, D-18/D-19h/D-19i).
 
+  Plan 01.8.2-18 (Pendientes, Administrar estantes) is the fourth to
+  extend this list, per the moduledoc's own "Contract for later plans"
+  below — with this plan, every admin LiveView is covered (the phase's
+  own read_first note for its Task 3).
+
   Two independent checks run against every file in `@files`:
 
     1. **Negative** — none of `@retired_patterns` (the eleven daisyUI/
@@ -40,7 +45,9 @@ defmodule PukllayClubWeb.Admin.AdminCompositionTest do
     "lib/pukllay_club_web/live/admin/section_live/index.ex",
     "lib/pukllay_club_web/live/admin/section_live/edit.ex",
     "lib/pukllay_club_web/live/admin/band_audit_live.ex",
-    "lib/pukllay_club_web/live/admin/game_live/form.ex"
+    "lib/pukllay_club_web/live/admin/game_live/form.ex",
+    "lib/pukllay_club_web/live/admin/estante_live/pendientes.ex",
+    "lib/pukllay_club_web/live/admin/estante_live/administrar.ex"
   ]
 
   # The eleven retired patterns this guard exists to catch — the exact

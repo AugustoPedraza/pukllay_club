@@ -92,7 +92,16 @@ const THEMES = ["light", "dark"]
 // shipped the dashboard + Staff). Append a new route here the same way
 // `admin_composition_test.exs`'s own `@files` list is appended per plan —
 // no other change to this file is needed.
-const PAGES = ["/admin", "/admin/staff", "/admin/estantes", "/admin/juegos", "/admin/secciones", "/admin/niveles"]
+const PAGES = [
+  "/admin",
+  "/admin/staff",
+  "/admin/estantes",
+  "/admin/estantes/pendientes",
+  "/admin/estantes/administrar",
+  "/admin/juegos",
+  "/admin/secciones",
+  "/admin/niveles",
+]
 
 // Plan 01.8.2-17: the game editor is NOT appended to `PAGES` above — its
 // content wrapper (`.pk-editor-body`, a 16px keel `<div>`, not the shared

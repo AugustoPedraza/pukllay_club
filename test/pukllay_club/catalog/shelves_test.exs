@@ -434,4 +434,109 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       assert positions == [0, 1, 2, 3]
     end
   end
+
+  describe "counts_for_shelves/1 (T-01.8.2-86, plan 01.8.2-18)" do
+    test "returns a batched shelf_id => count map, omitting an empty shelf" do
+      a = shelf_fixture()
+      b = shelf_fixture()
+      c1 = copy_fixture(%{game_id: game_fixture(%{name: "C1"}).id})
+      c2 = copy_fixture(%{game_id: game_fixture(%{name: "C2"}).id})
+      {:ok, _} = Shelves.place_copy(c1.id, a.id, 0)
+      {:ok, _} = Shelves.place_copy(c2.id, a.id, 1)
+
+      counts = Shelves.counts_for_shelves([a.id, b.id])
+
+      assert counts == %{a.id => 2}
+      assert Map.get(counts, b.id, 0) == 0
+    end
+
+    test "an empty list of shelf ids returns an empty map, never an error" do
+      assert Shelves.counts_for_shelves([]) == %{}
+    end
+  end
+
+  describe "delete_shelf/1 (D-10, T-01.8.2-81/82, plan 01.8.2-18)" do
+    test "snapshots every copy's {copy_id, position} before deleting, and never deletes a Copy row" do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      assert {:ok, snapshot} = Shelves.delete_shelf(shelf)
+
+      assert snapshot.name == "Estante Norte"
+      assert snapshot.position == shelf.position
+      assert Enum.sort(snapshot.copies) == Enum.sort([{a.id, 0}, {b.id, 1}])
+
+      assert_raise Ecto.NoResultsError, fn -> Shelves.get_shelf!(shelf.id) end
+
+      fresh_a = Shelves.get_copy!(a.id)
+      fresh_b = Shelves.get_copy!(b.id)
+      assert fresh_a.shelf_id == nil
+      assert fresh_a.position == nil
+      assert fresh_b.shelf_id == nil
+      assert fresh_b.position == nil
+    end
+
+    test "deleting an EMPTY estante still works and returns an empty copies snapshot" do
+      shelf = shelf_fixture(%{name: "Estante Vacío"})
+
+      assert {:ok, %{copies: []}} = Shelves.delete_shelf(shelf)
+      assert_raise Ecto.NoResultsError, fn -> Shelves.get_shelf!(shelf.id) end
+    end
+
+    test "broadcasts {:estante_updated, shelf_id} on admin:estantes" do
+      shelf = shelf_fixture()
+      Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:estantes")
+
+      {:ok, _snapshot} = Shelves.delete_shelf(shelf)
+
+      assert_received {:estante_updated, shelf_id}
+      assert shelf_id == shelf.id
+    end
+
+    test "deleting an estante directly via Repo.delete/1 also leaves its copies alive with shelf_id nil (on_delete: :nilify_all verified directly, T-01.8.2-81)" do
+      shelf = shelf_fixture()
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, _shelf} = Repo.delete(shelf)
+
+      fresh = Repo.get!(Copy, copy.id)
+      assert fresh.shelf_id == nil
+    end
+  end
+
+  describe "restore_deleted_shelf/1 (D-10 Deshacer, plan 01.8.2-18)" do
+    test "re-inserts the shelf and restores every copy to its exact recorded position, gap-free" do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, snapshot} = Shelves.delete_shelf(shelf)
+      assert {:ok, restored} = Shelves.restore_deleted_shelf(snapshot)
+
+      assert restored.id != shelf.id
+      assert restored.name == "Estante Norte"
+
+      positions = restored.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {b.id, 1}, {c.id, 2}]
+    end
+
+    test "broadcasts {:estante_updated, shelf_id} for the restored shelf's own new id" do
+      shelf = shelf_fixture()
+      {:ok, snapshot} = Shelves.delete_shelf(shelf)
+
+      Phoenix.PubSub.subscribe(PukllayClub.PubSub, "admin:estantes")
+      {:ok, restored} = Shelves.restore_deleted_shelf(snapshot)
+
+      assert_received {:estante_updated, shelf_id}
+      assert shelf_id == restored.id
+    end
+  end
 end
