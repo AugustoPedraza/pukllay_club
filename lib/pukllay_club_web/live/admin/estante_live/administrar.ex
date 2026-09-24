@@ -190,8 +190,23 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Administrar do
         {:noreply, socket}
 
       snapshot ->
-        {:ok, _shelf} = Shelves.restore_deleted_shelf(snapshot)
-        {:noreply, socket |> assign(:deleted_shelf, nil) |> load_shelves()}
+        # WR-02: `restore_deleted_shelf/1` re-inserts a shelf row through
+        # `Shelf.changeset/2`'s `unique_constraint(:name)` — if a shelf with
+        # this exact name has been (re)created in the interim (plausible:
+        # staff commonly re-create a shelf right after deleting it, or two
+        # staff members are both managing estantes at once), it returns
+        # `{:error, changeset}` instead of `{:ok, shelf}`. Handle that
+        # branch rather than crashing the LiveView on a `MatchError`.
+        case Shelves.restore_deleted_shelf(snapshot) do
+          {:ok, _shelf} ->
+            {:noreply, socket |> assign(:deleted_shelf, nil) |> load_shelves()}
+
+          {:error, _reason} ->
+            {:noreply,
+             socket
+             |> assign(:deleted_shelf, nil)
+             |> put_flash(:error, "No se pudo deshacer: ya existe un estante con ese nombre.")}
+        end
     end
   end
 

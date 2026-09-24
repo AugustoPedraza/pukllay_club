@@ -1150,6 +1150,28 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert positions == [{a.id, 0}, {b.id, 1}, {c.id, 2}]
     end
 
+    # WR-02 regression: `restore_deleted_shelf/1` re-inserts a shelf row
+    # through `Shelf.changeset/2`'s `unique_constraint(:name)`. If a shelf
+    # with the deleted shelf's exact name has been (re)created before
+    # "Deshacer" is tapped, the undo returns `{:error, changeset}` — the
+    # LiveView must surface a flash rather than crash on a `MatchError`.
+    test "Deshacer surfaces a flash instead of crashing when a name collision blocks the restore", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      # A different staff member re-creates a shelf with the exact
+      # deleted name before "Deshacer" is tapped.
+      {:ok, _collision} = Shelves.create_shelf(%{name: "Estante Norte"})
+
+      html = lv |> element("[phx-click='undo-delete']") |> render_click()
+
+      assert html =~ "No se pudo deshacer: ya existe un estante con ese nombre."
+    end
+
     test "deleting an estante never deletes a Copy row (T-01.8.2-81, on_delete: :nilify_all verified directly)" do
       shelf = shelf_fixture(%{name: "Estante Norte"})
       copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
