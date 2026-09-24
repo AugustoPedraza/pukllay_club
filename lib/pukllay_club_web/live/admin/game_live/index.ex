@@ -117,6 +117,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:bgg_id_input, "")
      |> assign(:bgg_id_error, nil)
      |> assign(:edition_prompt, nil)
+     |> assign(:enrichment_toast, nil)
      |> assign(:add_game_sheet_open, false)
      |> assign(:draft_sheet_open, false)
      |> assign(:draft_sheet_game_id, nil)
@@ -291,6 +292,31 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     end
   end
 
+  # D-11/D-17 (plan 01.8.3-04): dismiss just clears the toast; edit reads the
+  # target id from the server-held `:enrichment_toast` assign (never from
+  # client params — `snackbar/1`'s `action` renders no value attributes at
+  # all), so a forged payload cannot navigate to a caller-chosen id. A `nil`
+  # assign — the toast already dismissed, or a stale double-click — leaves
+  # the socket unchanged rather than navigating anywhere.
+  @impl true
+  def handle_event("dismiss-enrichment-toast", _params, socket) do
+    {:noreply, assign(socket, :enrichment_toast, nil)}
+  end
+
+  @impl true
+  def handle_event("edit-enriched-game", _params, %{assigns: %{enrichment_toast: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("edit-enriched-game", _params, socket) do
+    %{enrichment_toast: toast} = socket.assigns
+
+    {:noreply,
+     socket
+     |> assign(:enrichment_toast, nil)
+     |> push_navigate(to: ~p"/admin/juegos/#{toast.game_id}/editar")}
+  end
+
   # ============================================================
   # D-30/plan 01.8.2-20 — the draft sheet: a classic form, one filled CTA,
   # nothing written until "publish-draft". Opened either by tapping a
@@ -356,10 +382,57 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     end
   end
 
+  # D-11/D-17 (plan 01.8.3-04): the arrival of a background enrichment now
+  # speaks, off the SAME `{:game_enriched, id}` signal this handler already
+  # consumed silently — no new PubSub topic/message/broadcast. The row
+  # refresh (`load_groups/1`) is existing behaviour and always runs;
+  # `enrichment_toast_for/1` returns `nil` for anything other than the two
+  # terminal `enrichment_status` values (`"enriched"`/`"failed"`) — a race
+  # (row deleted between the worker's broadcast and this handler) or a
+  # transient status neither assigns nor clears whatever toast is showing.
   @impl true
-  def handle_info({:game_enriched, _game_id}, socket) do
-    {:noreply, load_groups(socket)}
+  def handle_info({:game_enriched, game_id}, socket) do
+    socket = load_groups(socket)
+
+    case safe_get_game(game_id) do
+      nil ->
+        {:noreply, socket}
+
+      game ->
+        case enrichment_toast_for(game) do
+          nil -> {:noreply, socket}
+          toast -> {:noreply, assign(socket, :enrichment_toast, toast)}
+        end
+    end
   end
+
+  # D-17's exact copy. Success: `game.name` alone — `Enrichment.build_attrs/4`
+  # already overwrites the `Juego #<bgg_id>` placeholder with the real BGG
+  # title BEFORE `enrichment_status` flips to `"enriched"`, so no special-
+  # casing is needed here. Failure: the `bgg_id`, never `name` — on a
+  # failure path the placeholder was never overwritten, so naming it would
+  # read as a real title. The single stable `"enrichment-toast"` id means a
+  # second arrival's patch replaces the first's DOM outright (`snackbar/1`'s
+  # own doc), never stacking two announcements.
+  defp enrichment_toast_for(%Game{enrichment_status: "enriched"} = game) do
+    %{
+      id: "enrichment-toast",
+      message: "#{game.name} agregado",
+      action: %{label: "Editar", event: "edit-enriched-game"},
+      game_id: game.id
+    }
+  end
+
+  defp enrichment_toast_for(%Game{enrichment_status: "failed"} = game) do
+    %{
+      id: "enrichment-toast",
+      message: "No pudimos traer los datos BGG de ##{game.bgg_id}",
+      action: %{label: "Editar", event: "edit-enriched-game"},
+      game_id: game.id
+    }
+  end
+
+  defp enrichment_toast_for(_game), do: nil
 
   defp handle_publish_after_save(socket, updated) do
     case Catalog.publish_game(updated) do
@@ -705,6 +778,18 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
         cover={@draft_sheet_cover}
         draft={@draft_sheet}
         error={@draft_sheet_error}
+      />
+
+      <%!-- D-11/D-17 (plan 01.8.3-04): the enrichment-arrival snackbar, off
+      the existing {:game_enriched, id} signal — no new PubSub topic. Placed
+      as a sibling of the page content, following estante_live/index.ex's
+      own @action_snackbar call site. --%>
+      <AdminComponents.snackbar
+        :if={@enrichment_toast}
+        id={@enrichment_toast.id}
+        message={@enrichment_toast.message}
+        action={@enrichment_toast.action}
+        on_close={JS.push("dismiss-enrichment-toast")}
       />
     </Layouts.app>
     """
