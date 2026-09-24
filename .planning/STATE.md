@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-19-PLAN.md
-last_updated: "2026-09-23T23:21:26.846Z"
+stopped_at: Completed 01.8.2-18-PLAN.md
+last_updated: "2026-09-24T00:12:46.543Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: 5564f903740ddadb0641b3bc78b9c039947e4966
+state_head: c3fbfb0774d0abe5d06305690d0440537f667009
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 45
+  completed_plans: 46
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 19 of 22
+Plan: 20 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -150,6 +150,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P17 | ~100min | 3 tasks | 9 files |
 | Phase 01.8.2 P16 | 173min | 3 tasks | 5 files |
 | Phase 01.8.2 P19 | ~25min | 3 tasks | 5 files |
+| Phase 01.8.2 P18 | ~100min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -317,6 +318,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 01.8.2-17: The editor's Secciones checkbox fieldset is removed outright, not relocated -- D-26 renders the chip de seccion read-only and section_live/edit.ex (plan 15) already owns add_game/remove_game exclusively
 - [Phase 01.8.2]: Task 2 and Task 3 built holistically with Task 1 in one implementation commit; tested independently per task afterward — All three tasks share one rail, one commit_placement/4 write path, and one Deshacer mechanism -- splitting into three disableable slices would have meant commenting out working code mid-plan. Each task's own acceptance criteria still independently verified before that task's commit landed.
 - [Phase 01.8.2]: 01.8.2-19: choice_sheet/1 + text_sheet/1 implement D-30's two never-mixed field-sheet patterns for nivel/es-una-expansion (tick, closes on choice) and nombre/descripcion (own wide Guardar, X discards); both write only into @draft, never Catalog. The lifecycle_error_message/1 helper handles D-37's refusal tuples explicitly instead of a silent no-op. Task 2's read_first cited a 40-char name cap that does not exist for Game (that's Section/Shelf's convention, max:255 for Game) -- implemented against the real 255 cap rather than widening game-name validation unrequested.
+- [Phase 01.8.2]: 01.8.2-18: Pendientes (Afuera+Sin ubicar behind the header badge) and Administrar estantes (create/rename/reorder/delete, one name sheet, Ordenar->Listo reused as its second consumer) shipped; EstanteLive.Index gained a ?copy=<id> mount param (not in this plan's stated files) reusing select_copy_struct/2 as the one navigation mechanism both Pendientes queues share; Shelves.delete_shelf/1 + restore_deleted_shelf/1 give estante deletion a full position-snapshot Deshacer as a distinct function, not a loop over the single-copy restore.
 
 ### Pending Todos
 
@@ -460,8 +462,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T23:21:26.716Z
-Stopped at: Completed 01.8.2-19-PLAN.md
+Last session: 2026-09-24T00:12:46.406Z
+Stopped at: Completed 01.8.2-18-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
