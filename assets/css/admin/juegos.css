@@ -340,6 +340,66 @@
   background: var(--stroke);
 }
 
+/* D-13 (plan 01.8.3-03): Juegos-scoped row anatomy overrides on the
+   shared `.pk-admin-row` atom (`components.css`) — 64px rows with 40px
+   covers, replacing the shared 44px/40px-cover defaults. Never edit
+   `components.css` directly: `AdminComponents.list_row/1` is called by
+   eight admin screens (Staff, Estantes x2, Band Audit, Section x2, plus
+   this page's own editor form), and a direct edit there would silently
+   reflow all of them (D-01, 01.8.3-RESEARCH.md "Two shared-component
+   blast-radius traps"). A plain class selector (no element type) already
+   covers both element shapes `.pk-admin-row` renders as (`<a>` via
+   `list_row/1`'s link branch, `<div>` via its non-link branch and the
+   pending/failed rows composed directly in `index.ex`), mirroring this
+   file's own divider-rule precedent above. */
+.pk-admin-juegos-rows > .pk-admin-row {
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+/* 15/400, wrapping mid-word rather than overflowing — a 435-game catalog
+   contains single tokens longer than the column. Overrides the shared
+   `.pk-admin-row__name`'s 14/600 (`components.css`). */
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__name {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__meta {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* D-13/d28: Juegos captions are 14/600 uppercase tracked, superseding the
+   shared `.pk-admin-list-section-label`'s 15/600 sentence case
+   (`components.css`) — Juegos-scoped only, same reasoning as the row
+   override above (eight other screens share the label class untouched).
+   `font-size`/`line-height` here are exactly what `--cap-box: 18.2px`
+   above claims (`14 × 1.3`) — if either value changes, update
+   `--cap-box` in the same edit or Task 2's band arithmetic silently goes
+   wrong. `.pk-admin-juegos-count` (below) keeps its own `font-weight:
+   400` so the count reads as a modifier of the label rather than a
+   second label. */
+.pk-admin-juegos-section-header .pk-admin-list-section-label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-base-content);
+}
+
 /* D-37 gate 4 / 076's `.fresh`: the just-created row, held for one
    session so `admin_list.js` can scroll it into view. No colour beyond
    the shared surface-2 press token — a persistent tint here would read
