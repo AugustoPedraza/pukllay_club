@@ -150,7 +150,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
-      html = lv |> form("#admin-games-search", q: "cat") |> render_change()
+      html = lv |> form("#juegos-search-form", q: "cat") |> render_change()
 
       assert html =~ "Catán"
       refute html =~ "Carcassonne"
@@ -161,7 +161,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
-      html = lv |> form("#admin-games-search", q: "zzz-no-match") |> render_change()
+      html = lv |> form("#juegos-search-form", q: "zzz-no-match") |> render_change()
 
       assert html =~ "Ningún juego coincide"
     end
@@ -286,7 +286,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "184267")
+        |> form("#add-game-sheet-form", bgg_id: "184267")
         |> render_submit()
 
       game = Repo.get_by!(Game, bgg_id: 184_267)
@@ -299,7 +299,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
-      lv |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+      lv |> form("#add-game-sheet-form", bgg_id: "184267") |> render_submit()
       html = lv |> element("#confirm-edition") |> render_click()
 
       edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
@@ -361,7 +361,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "not-a-number")
+        |> form("#add-game-sheet-form", bgg_id: "not-a-number")
         |> render_submit()
 
       assert html =~ "Pegá un número de BGG o el link del juego."
@@ -375,10 +375,10 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "184267")
+        |> form("#add-game-sheet-form", bgg_id: "184267")
         |> render_submit()
 
-      assert html =~ "Juego agregado como borrador."
+      assert html =~ "Buscando info desde BGG"
       assert html =~ "Juego #184267 (cargando…)"
       assert html =~ "skeleton"
     end
@@ -392,7 +392,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
       lv
-      |> form("#add-game-form", bgg_id: "184267")
+      |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
       game = Repo.get_by!(Game, bgg_id: 184_267)
@@ -447,7 +447,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "184267")
+        |> form("#add-game-sheet-form", bgg_id: "184267")
         |> render_submit()
 
       assert html =~ "Ya tenés Ya en la ludoteca con este BGG ID. ¿Es otra edición?"
@@ -477,10 +477,10 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "https://boardgamegeek.com/boardgame/184267/on-mars")
+        |> form("#add-game-sheet-form", bgg_id: "https://boardgamegeek.com/boardgame/184267/on-mars")
         |> render_submit()
 
-      assert html =~ "Juego agregado como borrador."
+      assert html =~ "Buscando info desde BGG"
       assert Catalog.count_admin_games() == 1
     after
       Application.delete_env(:pukllay_club, :catalog_storage)
@@ -492,10 +492,10 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
-      assert has_element?(lv, "#add-game-form button[phx-disable-with]")
+      assert has_element?(lv, "#add-game-sheet-form button[phx-disable-with]")
 
       lv
-      |> form("#add-game-form", bgg_id: "184267")
+      |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
       assert has_element?(lv, "#confirm-edition[phx-disable-with]")
@@ -507,7 +507,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
       lv
-      |> form("#add-game-form", bgg_id: "184267")
+      |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
       assert has_element?(lv, "#edition-prompt")
@@ -528,7 +528,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       html =
         lv
-        |> form("#add-game-form", bgg_id: "163412")
+        |> form("#add-game-sheet-form", bgg_id: "163412")
         |> render_submit()
 
       assert html =~ "Ya tenés Patchwork y Patchwork Andino con este BGG ID. ¿Es otra edición?"
@@ -540,7 +540,7 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
 
       lv
-      |> form("#add-game-form", bgg_id: "184267")
+      |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
       render_click(lv, "confirm-edition", %{})
@@ -555,8 +555,8 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       {:ok, lv1, _html} = live(conn, ~p"/admin/juegos")
       {:ok, lv2, _html} = live(conn, ~p"/admin/juegos")
 
-      lv1 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
-      lv2 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
+      lv1 |> form("#add-game-sheet-form", bgg_id: "184267") |> render_submit()
+      lv2 |> form("#add-game-sheet-form", bgg_id: "184267") |> render_submit()
 
       lv1 |> element("#confirm-edition") |> render_click()
       assert Catalog.count_admin_games() == 2
@@ -567,6 +567,97 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
       assert html =~ existing.name
       assert html =~ edition.name
+    end
+  end
+
+  describe "GameLive.Index — the pinned search/+ row and its sheet (tracer, plan 01.8.3-01)" do
+    setup do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+      previous_translate_call = Application.get_env(:pukllay_club, :enrichment_translate_call)
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      on_exit(fn ->
+        if previous_storage do
+          Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+        else
+          Application.delete_env(:pukllay_club, :catalog_storage)
+        end
+
+        if previous_translate_call do
+          Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+        else
+          Application.delete_env(:pukllay_club, :enrichment_translate_call)
+        end
+      end)
+
+      :ok
+    end
+
+    test "renders no back row, no page title, no page bar, and one sr-only h1", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      refute has_element?(lv, ".pk-admin-back-row")
+      refute has_element?(lv, ".pk-admin-page-title")
+      refute has_element?(lv, ".pk-admin-page-bar")
+      refute has_element?(lv, "#add-game-form")
+      assert has_element?(lv, "h1.sr-only", "Juegos")
+      assert has_element?(lv, "#juegos-search-wrap #juegos-search-input")
+      assert has_element?(lv, "#juegos-add-action")
+    end
+
+    test "tapping + opens the Agregar juego sheet with a disabled Agregar while the field is empty",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "open-add-game-sheet", %{})
+
+      assert html =~ "Agregar juego"
+      assert html =~ "Número o link de BGG"
+      assert html =~ "342942"
+      assert html =~ "Agregar"
+      assert has_element?(lv, "#add-game-sheet-form button[disabled]")
+    end
+
+    test "Agregar enables at one character; a non-empty unparseable value still raises its own error",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+
+      lv |> form("#add-game-sheet-form", bgg_id: "3") |> render_change()
+      refute has_element?(lv, "#add-game-sheet-form button[disabled]")
+
+      html =
+        lv
+        |> form("#add-game-sheet-form", bgg_id: "no-es-un-id")
+        |> render_submit()
+
+      assert html =~ "Pegá un número de BGG o el link del juego."
+      assert has_element?(lv, "#add-game-sheet.pk-admin-overlay--open")
+    end
+
+    test "submitting a valid BGG id creates a draft, closes the sheet, and lands fresh in Borradores",
+         %{conn: conn} do
+      stub_bgg_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+
+      html =
+        lv
+        |> form("#add-game-sheet-form", bgg_id: "184267")
+        |> render_submit()
+
+      game = Repo.get_by!(Game, bgg_id: 184_267)
+
+      assert html =~ "Buscando info desde BGG"
+      refute html =~ "Juego agregado como borrador."
+      refute has_element?(lv, "#add-game-sheet.pk-admin-overlay--open")
+      assert has_element?(lv, "#game-row-#{game.id}")
+      assert html =~ "pk-admin-juegos-row--fresh"
     end
   end
 
@@ -613,24 +704,6 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       html = render_click(lv, "retry-enrichment", %{"game-id" => "not-a-number"})
 
       assert is_binary(html)
-    end
-  end
-
-  describe "GameLive.Index — D-19n pinned page bar and back row (T-01.8.2-64)" do
-    test "renders page_bar/1 and back_row/1", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
-
-      assert html =~ "pk-admin-page-bar"
-      assert html =~ "pk-admin-back-row"
-    end
-
-    test "at rest, the pinned page bar's own back link is inert and the in-page back row is not", %{
-      conn: conn
-    } do
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      assert has_element?(lv, ".pk-admin-page-bar__back[inert]")
-      refute has_element?(lv, ".pk-admin-back-row[inert]")
     end
   end
 
