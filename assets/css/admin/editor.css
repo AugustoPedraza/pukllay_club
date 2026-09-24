@@ -569,3 +569,35 @@ body:has(.pk-game-editor) main {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ============================================================
+   Plan 01.8.2-21 — open item 3 / D-38's link-a-BGG-id sheet
+   (`bgg_link_sheet/1`): the same wide-`Guardar`-shaped form as the two
+   text-field sheets above (`.pk-editor-sheet-save` reused verbatim, no
+   new commit-button style), plus the editions-warning block reusing
+   `GameLive.Index`'s own `.pk-admin-juegos-edition-*` spacing rhythm
+   for the SAME warning shape shown here inside a sheet instead of
+   inline on the list.
+   ============================================================ */
+
+#editor-bgg-edition-prompt p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-base-content);
+}
+
+#editor-bgg-edition-prompt ul {
+  margin: 0 0 16px;
+  padding: 0 0 0 20px;
+  font-size: 14px;
+  color: var(--color-neutral);
+}
+
+#editor-bgg-edition-prompt #confirm-link-edition {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#editor-bgg-edition-prompt #cancel-link-edition {
+  width: 100%;
+}
