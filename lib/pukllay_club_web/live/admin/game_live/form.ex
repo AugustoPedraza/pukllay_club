@@ -162,6 +162,20 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   defp dirty?(draft, saved), do: draft != saved
 
+  # WR-04: `status` commits outside `@draft`/`@saved` entirely (this
+  # module's own moduledoc note) so an in-progress field edit survives a
+  # status change untouched — but that also means a staff member who
+  # retires a game and then saves an already-in-progress draft edit in
+  # the same session gets no signal anywhere in the retire flow that the
+  # two are now out of sync. Surface a distinct confirmation here so a
+  # save on a retired game is never silently indistinguishable from a
+  # normal one.
+  defp save_confirmation_message(%{status: :retired}) do
+    "Cambios guardados. Este juego está retirado — los cambios se guardan igual."
+  end
+
+  defp save_confirmation_message(_game), do: "Cambios guardados."
+
   # ============================================================
   # The write model — Guardar (D-28) and the generic draft-write seam
   # plan 01.8.2-19's field sheets will call.
@@ -170,7 +184,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   @impl true
   def handle_event("save", _params, socket) do
     case save_draft_if_dirty(socket) do
-      {:ok, socket} -> {:noreply, put_flash(socket, :info, "Cambios guardados.")}
+      {:ok, socket} -> {:noreply, put_flash(socket, :info, save_confirmation_message(socket.assigns.game))}
       {:error, socket} -> {:noreply, put_flash(socket, :error, "No se pudo guardar. Revisá los datos.")}
     end
   end
@@ -311,20 +325,42 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   @impl true
   def handle_event("donde-va-pick-estante", %{"shelf-id" => id}, socket) do
-    shelf = Shelves.get_shelf!(String.to_integer(id))
-    {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_estante(socket.assigns.shelf_sheet, shelf))}
+    # WR-03: a raising `String.to_integer/1` crashes the LiveView on a
+    # forged/tampered client payload — route through the same
+    # `parse_copy_id/1` + no-op-on-`nil` fallback convention this file
+    # already uses for `?copy=` query params.
+    case parse_copy_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      shelf_id ->
+        shelf = Shelves.get_shelf!(shelf_id)
+        {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_estante(socket.assigns.shelf_sheet, shelf))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-pick-copy", %{"copy-id" => id}, socket) do
-    copy = Shelves.get_copy!(String.to_integer(id))
-    {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_copy(socket.assigns.shelf_sheet, copy))}
+    case parse_copy_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      copy_id ->
+        copy = Shelves.get_copy!(copy_id)
+        {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_copy(socket.assigns.shelf_sheet, copy))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-commit", %{"index" => idx}, socket) do
-    shelf = socket.assigns.shelf_sheet.estante
-    {:noreply, commit_shelf_sheet(socket, shelf.id, String.to_integer(idx))}
+    case parse_copy_id(idx) do
+      nil ->
+        {:noreply, socket}
+
+      index ->
+        shelf = socket.assigns.shelf_sheet.estante
+        {:noreply, commit_shelf_sheet(socket, shelf.id, index)}
+    end
   end
 
   @impl true
@@ -761,11 +797,14 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   defp commit_shelf_sheet(socket, shelf_id, index) do
     copy = socket.assigns.shelf_sheet.copy
-    previous_shelf_id = copy.shelf_id
-    previous_position = copy.position
 
+    # WR-01: the previous location comes from `place_copy/3`'s own return
+    # (verified under its advisory lock), never from `copy` above — that
+    # struct was captured whenever the sheet OPENED, which can be stale by
+    # the time this commits if a different staff member moved this exact
+    # copy while the sheet was still open.
     case Shelves.place_copy(copy.id, shelf_id, index) do
-      {:ok, moved} ->
+      {:ok, %{moved: moved, previous_shelf_id: previous_shelf_id, previous_position: previous_position}} ->
         message = if is_nil(previous_shelf_id), do: "Juego ubicado", else: "Juego movido"
         socket = refresh_copies_and_context(socket)
         fresh = Enum.find(socket.assigns.copies, &(&1.id == moved.id)) || moved

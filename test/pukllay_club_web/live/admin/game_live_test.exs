@@ -275,6 +275,27 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert Catalog.get_game!(game.id).status == :retired
     end
 
+    # WR-04 regression: `status` commits outside `@draft`/`@saved` (this
+    # module's own moduledoc note), so an in-progress unsaved edit
+    # survives Retirar untouched — Guardar afterward must say something
+    # distinct from a normal save, since the game is now retired.
+    test "Guardar after Retirar in the same session surfaces a distinct confirmation", %{conn: conn} do
+      game = game_fixture(%{status: :published, name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      render_click(lv, "open-menu")
+      render_click(lv, "retire")
+      render_click(lv, "confirm-retire")
+
+      html = render_click(lv, "save")
+
+      assert html =~ "Cambios guardados. Este juego está retirado — los cambios se guardan igual."
+      assert Catalog.get_game!(game.id).name == "Después"
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
     test "cancelling the retire dialog leaves the game published", %{conn: conn} do
       game = game_fixture(%{status: :published})
 
@@ -833,6 +854,32 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       html = lv |> element("#donde-va-shelf-#{shelf_b.id}") |> render_click()
 
       assert html =~ "Juego movido"
+    end
+
+    # WR-03 regression: this event is normally fired only with a server-
+    # rendered index, but a forged/tampered client payload must degrade to
+    # a no-op instead of crashing the LiveView on a raising
+    # `String.to_integer/1`.
+    test "a malformed donde-va-commit index degrades to a no-op instead of crashing the LiveView", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Lleno"})
+      other = copy_fixture(%{game_id: game_fixture(%{name: "Otro"}).id, shelf_id: shelf.id, position: 0})
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "shelf_id"})
+      html = lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
+      assert html =~ "pk-donde-va-slot"
+
+      html = render_click(lv, "donde-va-commit", %{"index" => "not-a-number"})
+      assert html =~ "pk-donde-va-slot"
+
+      # Nothing committed — the sheet is still open, and the LiveView
+      # keeps working after the bad payload.
+      render_click(lv, "donde-va-commit", %{"index" => "0"})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert other.id in positions
     end
 
     test "the ESTANTE block renders with the --val tint and pencil, matching the other editable blocks", %{

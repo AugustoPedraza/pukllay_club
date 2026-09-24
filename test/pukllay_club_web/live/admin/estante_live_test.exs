@@ -413,6 +413,32 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert positions == [{a.id, 0}, {new_copy.id, 1}, {b.id, 2}]
     end
 
+    # WR-03 regression: these events are normally fired only with server-
+    # rendered ids, but a forged/tampered client payload must degrade to a
+    # no-op instead of crashing the LiveView on a raising `String.to_integer/1`.
+    test "a malformed donde-va-commit index degrades to a no-op instead of crashing the LiveView", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Lleno"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Nueva llegada"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "nueva llegada"})
+      lv |> element("#suggestion-#{new_copy.id}") |> render_click()
+      lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
+
+      html = render_click(lv, "donde-va-commit", %{"index" => "not-a-number"})
+      assert html =~ "pk-donde-va-slot"
+
+      # Nothing committed — the copy sheet is still open, and the LiveView
+      # keeps working after the bad payload.
+      render_click(lv, "donde-va-commit", %{"index" => "0"})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{new_copy.id, 0}, {a.id, 1}]
+    end
+
     test "a move keeps the copy in its old spot until the new one is chosen; cancelling changes nothing",
          %{conn: conn} do
       shelf_a = shelf_fixture(%{name: "Origen"})
@@ -1122,6 +1148,28 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       [restored] = Enum.filter(Shelves.list_shelves(), &(&1.name == "Estante Norte"))
       positions = restored.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
       assert positions == [{a.id, 0}, {b.id, 1}, {c.id, 2}]
+    end
+
+    # WR-02 regression: `restore_deleted_shelf/1` re-inserts a shelf row
+    # through `Shelf.changeset/2`'s `unique_constraint(:name)`. If a shelf
+    # with the deleted shelf's exact name has been (re)created before
+    # "Deshacer" is tapped, the undo returns `{:error, changeset}` — the
+    # LiveView must surface a flash rather than crash on a `MatchError`.
+    test "Deshacer surfaces a flash instead of crashing when a name collision blocks the restore", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      # A different staff member re-creates a shelf with the exact
+      # deleted name before "Deshacer" is tapped.
+      {:ok, _collision} = Shelves.create_shelf(%{name: "Estante Norte"})
+
+      html = lv |> element("[phx-click='undo-delete']") |> render_click()
+
+      assert html =~ "No se pudo deshacer: ya existe un estante con ese nombre."
     end
 
     test "deleting an estante never deletes a Copy row (T-01.8.2-81, on_delete: :nilify_all verified directly)" do

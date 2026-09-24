@@ -2,6 +2,18 @@
 // Zero-dependency Node production smoke check for the Phase 01.8.1 rollout
 // (staff admin, ludoteca shelves, curated destacados) — see
 // .planning/phases/01.8.1-staff-admin-ludoteca-shelves-curated-destacados/01.8.1-14-PLAN.md.
+// Extended by Phase 01.8.2 (admin UI/UX redesign) with the Estantes route and
+// game-detail checks below.
+//
+// KNOWN GAP — Phase 01.8.2 has NO pre-deploy baseline file. The 01.8.2 deploy
+// ran automatically on the PR #68 merge (run 36003197484, 2026-09-24T13:04Z)
+// before its rollout plan's baseline task executed, so `--expect-baseline` has
+// nothing to compare against for this phase and the sitemap check degrades to
+// an absolute read. Do NOT capture a baseline now and pass it as `01.8.2`'s:
+// a post-deploy capture compared against itself passes trivially and proves
+// nothing — the exact near-miss recorded in CLAUDE.md for plan 01.8.1-14.
+// The shelves/copies counts this phase's migration cleared are likewise
+// unmeasured; they are DB-level and were never observable from this script.
 //
 // What it observes and why no existing gate can observe it: this phase ships
 // several one-way migrations (games.status, sections backfill) against the
@@ -120,14 +132,54 @@ async function checkSitemap(baseUrl, expectedFloor) {
   }
 }
 
-async function checkAdminRedirect(baseUrl) {
-  const res = await fetch(new URL("/admin", baseUrl), { redirect: "manual" })
+async function checkAdminRedirect(baseUrl, path = "/admin") {
+  const res = await fetch(new URL(path, baseUrl), { redirect: "manual" })
   const location = res.headers.get("location") || ""
   const pass = res.status === 302 && location.endsWith("/admin/ingresar")
   return {
-    name: "/admin",
+    name: path,
     pass,
     detail: `HTTP ${res.status}, Location=${location || "(none)"}`,
+  }
+}
+
+// Phase 01.8.2: the three Estantes routes must exist and be staff-gated. A 404
+// here is the D-07 failure this phase's rollout was built to make impossible —
+// the clear-slate migration having run in a deploy that did NOT carry the
+// rebuild screens, leaving production with no shelf map and no way to rebuild
+// one. Anonymous-redirect (not 404) is therefore the load-bearing assertion.
+async function checkEstanteRoutes(baseUrl) {
+  return Promise.all(
+    [
+      "/admin/estantes",
+      "/admin/estantes/pendientes",
+      "/admin/estantes/administrar",
+    ].map((path) => checkAdminRedirect(baseUrl, path)),
+  )
+}
+
+// Phase 01.8.2: the migration touches games.shelf_id, so a public game detail
+// page is the cheapest end-to-end proof the catalog still renders after it.
+// The slug comes from the live sitemap rather than a hardcoded id, so this
+// check cannot rot against catalog changes.
+async function checkGameDetail(baseUrl) {
+  const res = await fetch(new URL("/sitemap.xml", baseUrl))
+  if (!res.ok) {
+    return { name: "/juegos/:id", pass: false, detail: `sitemap HTTP ${res.status}` }
+  }
+
+  const body = await res.text()
+  const match = body.match(/<loc>([^<]*\/juegos\/[^<]+)<\/loc>/)
+  if (!match) {
+    return { name: "/juegos/:id", pass: false, detail: "no /juegos/ URL in sitemap" }
+  }
+
+  const gameUrl = match[1]
+  const gameRes = await fetch(gameUrl)
+  return {
+    name: "/juegos/:id",
+    pass: gameRes.status === 200,
+    detail: `HTTP ${gameRes.status} for ${gameUrl}`,
   }
 }
 
@@ -153,6 +205,8 @@ async function runChecks(baseUrl, expectBaselineFile) {
     await checkAdminRedirect(baseUrl),
     await checkAdminLogin(baseUrl),
     await checkUsersRegisterGone(baseUrl),
+    ...(await checkEstanteRoutes(baseUrl)),
+    await checkGameDetail(baseUrl),
   ]
 
   let anyFail = false

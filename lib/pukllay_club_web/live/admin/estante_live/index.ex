@@ -165,20 +165,41 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
   @impl true
   def handle_event("donde-va-pick-estante", %{"shelf-id" => id}, socket) do
-    shelf = Shelves.get_shelf!(String.to_integer(id))
-    {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_estante(socket.assigns.donde_va, shelf))}
+    # WR-03: a raising `String.to_integer/1` crashes the LiveView on a
+    # forged/tampered client payload — route through the same `parse_id/1`
+    # + no-op-on-`nil` fallback every sibling handler in this file uses.
+    case parse_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      shelf_id ->
+        shelf = Shelves.get_shelf!(shelf_id)
+        {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_estante(socket.assigns.donde_va, shelf))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-pick-copy", %{"copy-id" => id}, socket) do
-    copy = Shelves.get_copy!(String.to_integer(id))
-    {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_copy(socket.assigns.donde_va, copy))}
+    case parse_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      copy_id ->
+        copy = Shelves.get_copy!(copy_id)
+        {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_copy(socket.assigns.donde_va, copy))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-commit", %{"index" => idx}, socket) do
-    shelf = socket.assigns.donde_va.estante
-    {:noreply, commit_donde_va(socket, shelf.id, String.to_integer(idx))}
+    case parse_id(idx) do
+      nil ->
+        {:noreply, socket}
+
+      index ->
+        shelf = socket.assigns.donde_va.estante
+        {:noreply, commit_donde_va(socket, shelf.id, index)}
+    end
   end
 
   @impl true
@@ -204,18 +225,23 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
   @impl true
   def handle_event("open-que-va-aca", %{"index" => idx}, socket) do
-    index = String.to_integer(idx)
-    copy = socket.assigns.selected_copy
-    snapshot_ids = Enum.map(socket.assigns.copies, & &1.id)
+    case parse_id(idx) do
+      nil ->
+        {:noreply, socket}
 
-    {:noreply,
-     assign(socket, :que_va_aca, %{
-       shelf_id: copy.shelf_id,
-       index: index,
-       query: "",
-       results: [],
-       snapshot_ids: snapshot_ids
-     })}
+      index ->
+        copy = socket.assigns.selected_copy
+        snapshot_ids = Enum.map(socket.assigns.copies, & &1.id)
+
+        {:noreply,
+         assign(socket, :que_va_aca, %{
+           shelf_id: copy.shelf_id,
+           index: index,
+           query: "",
+           results: [],
+           snapshot_ids: snapshot_ids
+         })}
+    end
   end
 
   @impl true
@@ -230,14 +256,19 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
     qva = socket.assigns.que_va_aca
     current_ids = qva.shelf_id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
 
-    if current_ids == qva.snapshot_ids do
-      copy = Shelves.get_copy!(String.to_integer(id))
+    with true <- current_ids == qva.snapshot_ids,
+         copy_id when not is_nil(copy_id) <- parse_id(id) do
+      copy = Shelves.get_copy!(copy_id)
       {:noreply, commit_que_va_aca(socket, qva, copy)}
     else
-      {:noreply,
-       socket
-       |> assign(:que_va_aca, nil)
-       |> put_flash(:info, "El estante cambió mientras elegías un juego. Probá de nuevo.")}
+      false ->
+        {:noreply,
+         socket
+         |> assign(:que_va_aca, nil)
+         |> put_flash(:info, "El estante cambió mientras elegías un juego. Probá de nuevo.")}
+
+      nil ->
+        {:noreply, socket}
     end
   end
 
@@ -452,19 +483,23 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   # snackbar wording, snapshots the undo, and refreshes whichever rail is
   # currently on screen.
   defp commit_placement(socket, copy, shelf_id, index) do
-    previous = %{shelf_id: copy.shelf_id, position: copy.position}
-
+    # WR-01: the previous location comes from `place_copy/3`'s own return
+    # (verified under its advisory lock), never from `copy` above — that
+    # struct can be stale by the time this commits if a different staff
+    # member moved this exact copy while the «¿Dónde va?»/«¿Qué juego va
+    # acá?» sheet was still open (PubSub reconciliation here only ever
+    # refreshes what's RENDERED, never this already-captured `copy`).
     case Shelves.place_copy(copy.id, shelf_id, index) do
-      {:ok, %{id: moved_id}} ->
-        fresh = Shelves.get_copy!(moved_id)
-        message = if is_nil(previous.shelf_id), do: "Juego ubicado", else: "Juego movido"
+      {:ok, %{moved: moved, previous_shelf_id: previous_shelf_id, previous_position: previous_position}} ->
+        fresh = Shelves.get_copy!(moved.id)
+        message = if is_nil(previous_shelf_id), do: "Juego ubicado", else: "Juego movido"
 
         socket
         |> refresh_after_write(fresh)
         |> assign(:undo_snapshot, %{
           copy_id: fresh.id,
-          shelf_id: previous.shelf_id,
-          position: previous.position
+          shelf_id: previous_shelf_id,
+          position: previous_position
         })
         |> assign(:action_snackbar, %{
           id: "estantes-action-snackbar",

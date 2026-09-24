@@ -135,7 +135,9 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       game = game_fixture()
       copy = copy_fixture(%{game_id: game.id})
 
-      assert {:ok, moved} = Shelves.place_copy(copy.id, shelf.id, 0)
+      assert {:ok, %{moved: moved, previous_shelf_id: nil, previous_position: nil}} =
+               Shelves.place_copy(copy.id, shelf.id, 0)
+
       assert moved.shelf_id == shelf.id
       assert moved.position == 0
     end
@@ -148,7 +150,7 @@ defmodule PukllayClub.Catalog.ShelvesTest do
 
       {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
       {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
-      {:ok, moved} = Shelves.place_copy(c2.id, shelf.id, 1)
+      {:ok, %{moved: moved}} = Shelves.place_copy(c2.id, shelf.id, 1)
 
       assert moved.position == 1
 
@@ -172,9 +174,13 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
       {:ok, _} = Shelves.place_copy(a2.id, shelf_a.id, 2)
 
-      assert {:ok, moved} = Shelves.place_copy(a1.id, shelf_b.id, 0)
+      assert {:ok, %{moved: moved, previous_shelf_id: previous_shelf_id, previous_position: previous_position}} =
+               Shelves.place_copy(a1.id, shelf_b.id, 0)
+
       assert moved.shelf_id == shelf_b.id
       assert moved.position == 0
+      assert previous_shelf_id == shelf_a.id
+      assert previous_position == 1
 
       remaining_a =
         shelf_a.id
@@ -197,7 +203,7 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
       {:ok, _} = Shelves.place_copy(c2.id, shelf.id, 2)
 
-      assert {:ok, moved} = Shelves.place_copy(c0.id, shelf.id, 2)
+      assert {:ok, %{moved: moved}} = Shelves.place_copy(c0.id, shelf.id, 2)
       assert moved.position == 2
 
       positions =
@@ -433,6 +439,71 @@ defmodule PukllayClub.Catalog.ShelvesTest do
 
       assert positions == [0, 1, 2, 3]
     end
+
+    # CR-01 regression: the test above races copies that all START
+    # `shelf_id: nil` onto an empty destination — every one of those hits
+    # `vacate/2`'s no-op clause (`vacate(_repo, %Copy{shelf_id: nil})`),
+    # never the buggy non-nil branch CR-01 actually lived in. This test
+    # races ALREADY-PLACED copies (a real, non-nil `shelf_id`/`position`
+    # each) against each other on their own shared estante, so a green run
+    # here actually proves `place_copy/3` re-reads under its lock instead
+    # of vacating from a pre-lock, potentially-stale snapshot.
+    test "N-way race on ALREADY-PLACED copies (vacate/2's real, non-nil branch) still yields positions 0..n-1, no duplicate, no gap" do
+      {shelf, copies} =
+        Sandbox.unboxed_run(Repo, fn ->
+          shelf = shelf_fixture()
+          copies = for n <- 1..4, do: copy_fixture(%{game_id: game_fixture(%{name: "P#{n}"}).id})
+
+          # Placed SEQUENTIALLY first (not concurrently) so every copy
+          # starts this test with a REAL, non-nil shelf_id/position — the
+          # exact precondition CR-01 flagged.
+          copies
+          |> Enum.with_index()
+          |> Enum.each(fn {copy, index} -> {:ok, _} = Shelves.place_copy(copy.id, shelf.id, index) end)
+
+          {shelf, copies}
+        end)
+
+      game_ids = Enum.map(copies, & &1.game_id)
+
+      on_exit(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.delete_all(from(g in Game, where: g.id in ^game_ids))
+          Repo.delete_all(from(s in Shelf, where: s.id == ^shelf.id))
+        end)
+      end)
+
+      # Every copy races to move to index 0 on its OWN already-placed
+      # estante — each one must go through `vacate/2`'s real (non-nil
+      # `shelf_id`) branch to leave its current slot before `insert_at/4`
+      # reinserts it at the front.
+      tasks =
+        for copy <- copies do
+          Task.async(fn ->
+            Sandbox.unboxed_run(Repo, fn ->
+              receive do
+                :go -> Shelves.place_copy(copy.id, shelf.id, 0)
+              end
+            end)
+          end)
+        end
+
+      for task <- tasks, do: send(task.pid, :go)
+
+      results = Task.await_many(tasks, 5_000)
+      assert Enum.all?(results, &match?({:ok, _}, &1))
+
+      positions =
+        Sandbox.unboxed_run(Repo, fn ->
+          Copy
+          |> where([c], c.shelf_id == ^shelf.id)
+          |> Repo.all()
+          |> Enum.map(& &1.position)
+          |> Enum.sort()
+        end)
+
+      assert positions == [0, 1, 2, 3]
+    end
   end
 
   describe "counts_for_shelves/1 (T-01.8.2-86, plan 01.8.2-18)" do
@@ -537,6 +608,40 @@ defmodule PukllayClub.Catalog.ShelvesTest do
 
       assert_received {:estante_updated, shelf_id}
       assert shelf_id == restored.id
+    end
+
+    # WR-05 regression: a copy independently placed on a DIFFERENT, real
+    # shelf in the window between `delete_shelf/1` and this Deshacer must
+    # never be silently clobbered back onto the restored shelf — that
+    # write correctly reindexed the OTHER shelf around the copy's
+    # departure, so overwriting it here would both yank the copy away
+    # from where a different staff member just put it AND leave a gap on
+    # that other shelf with nothing left to explain it.
+    test "skips restoring a copy that was placed on a different real shelf in the interim, leaving it there" do
+      shelf = shelf_fixture(%{name: "Estante Sur"})
+      other_shelf = shelf_fixture(%{name: "Estante Otro"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, snapshot} = Shelves.delete_shelf(shelf)
+
+      # A different staff member independently places `a` onto
+      # `other_shelf` before "Deshacer" is tapped.
+      {:ok, _} = Shelves.place_copy(a.id, other_shelf.id, 0)
+
+      assert {:ok, restored} = Shelves.restore_deleted_shelf(snapshot)
+
+      # `a` stays exactly where the other staff member put it.
+      fresh_a = Repo.get!(Copy, a.id)
+      assert fresh_a.shelf_id == other_shelf.id
+      assert fresh_a.position == 0
+
+      # `b` (untouched since the delete) restores normally.
+      fresh_b = Repo.get!(Copy, b.id)
+      assert fresh_b.shelf_id == restored.id
+      assert fresh_b.position == 1
     end
   end
 end
