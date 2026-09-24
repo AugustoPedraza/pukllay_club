@@ -455,7 +455,10 @@ defmodule PukllayClub.Catalog.Shelves do
   def restore_position(copy_id, nil, nil), do: remove_copy_from_shelf(copy_id)
 
   def restore_position(copy_id, shelf_id, position) when is_integer(shelf_id) and is_integer(position) do
-    place_copy(copy_id, shelf_id, position)
+    case place_copy(copy_id, shelf_id, position) do
+      {:ok, %{moved: moved}} -> {:ok, moved}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc "Fetches a copy by id, game and shelf preloaded, raising `Ecto.NoResultsError` for an unknown id."
@@ -629,11 +632,17 @@ defmodule PukllayClub.Catalog.Shelves do
     end
   end
 
-  def delete_copy(%Copy{shelf_id: shelf_id} = copy) do
+  def delete_copy(%Copy{id: copy_id, shelf_id: shelf_id}) do
     Multi.new()
     |> Multi.run(:lock, fn repo, _changes -> lock_estantes(repo, [shelf_id]) end)
-    |> Multi.run(:vacated, fn repo, _changes -> vacate(repo, copy) end)
-    |> Multi.delete(:deleted, copy)
+    # CR-01: this clause used to trust the CALLER's already-held `copy`
+    # struct outright — never re-fetching at all, unlocked or otherwise —
+    # which could be minutes stale (e.g. a `GameLive.Form` session opened
+    # long before this call). Re-fetch by id inside the lock instead of
+    # trusting it.
+    |> Multi.run(:fresh_copy, fn repo, _changes -> fetch_copy(repo, copy_id) end)
+    |> Multi.run(:vacated, fn repo, %{fresh_copy: copy} -> vacate(repo, copy) end)
+    |> Multi.run(:deleted, fn repo, %{fresh_copy: copy} -> repo.delete(copy) end)
     |> Repo.transaction()
     |> case do
       {:ok, %{deleted: deleted}} ->
@@ -688,24 +697,36 @@ defmodule PukllayClub.Catalog.Shelves do
   estante UP in descending-position order (each row moves into a slot
   already emptied by the row above it).
 
-  Returns `{:ok, copy}` / `{:error, reason}`. Broadcasts
-  `{:estante_updated, shelf_id}` for the destination estante, and again
-  for the source estante when a cross-estante move actually vacated one.
+  Returns `{:ok, %{moved: copy, previous_shelf_id: ..., previous_position:
+  ...}}` / `{:error, reason}` — the `previous_*` fields are the copy's
+  location as verified UNDER THE LOCK (`:fresh_copy` below), never the
+  unlocked `:copy` read taken before it, so a caller building a Deshacer
+  snapshot from this return value is always correct regardless of how
+  stale its own already-held copy struct is (CR-01/WR-01, plan
+  01.8.2-review-fix-1). Broadcasts `{:estante_updated, shelf_id}` for the
+  destination estante, and again for the source estante when a
+  cross-estante move actually vacated one.
   """
   @spec place_copy(integer(), integer(), non_neg_integer()) ::
-          {:ok, Copy.t()} | {:error, term()}
+          {:ok, %{moved: Copy.t(), previous_shelf_id: integer() | nil, previous_position: non_neg_integer() | nil}}
+          | {:error, term()}
   def place_copy(copy_id, shelf_id, index) when is_integer(index) do
     Multi.new()
     |> Multi.run(:copy, fn repo, _changes -> fetch_copy(repo, copy_id) end)
     |> Multi.run(:lock, fn repo, %{copy: copy} -> lock_estantes(repo, [copy.shelf_id, shelf_id]) end)
-    |> Multi.run(:vacated, fn repo, %{copy: copy} -> vacate(repo, copy) end)
-    |> Multi.run(:moved, fn repo, %{copy: copy} -> insert_at(repo, copy, shelf_id, index) end)
+    # CR-01: the `:copy` read above happens BEFORE the lock is acquired,
+    # so it can be stale by the time we actually hold it — re-read it here,
+    # now inside the lock, and use THIS value (never `:copy`) for every
+    # write below.
+    |> Multi.run(:fresh_copy, fn repo, %{copy: copy} -> fetch_copy(repo, copy.id) end)
+    |> Multi.run(:vacated, fn repo, %{fresh_copy: copy} -> vacate(repo, copy) end)
+    |> Multi.run(:moved, fn repo, %{fresh_copy: copy} -> insert_at(repo, copy, shelf_id, index) end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{copy: original, moved: moved}} ->
+      {:ok, %{fresh_copy: original, moved: moved}} ->
         broadcast(shelf_id)
         if original.shelf_id not in [nil, shelf_id], do: broadcast(original.shelf_id)
-        {:ok, moved}
+        {:ok, %{moved: moved, previous_shelf_id: original.shelf_id, previous_position: original.position}}
 
       {:error, _step, reason, _changes} ->
         {:error, reason}
@@ -724,13 +745,16 @@ defmodule PukllayClub.Catalog.Shelves do
     Multi.new()
     |> Multi.run(:copy, fn repo, _changes -> fetch_copy(repo, copy_id) end)
     |> Multi.run(:lock, fn repo, %{copy: copy} -> lock_estantes(repo, [copy.shelf_id]) end)
-    |> Multi.run(:removed, fn repo, %{copy: copy} -> vacate_and_clear(repo, copy) end)
+    # CR-01: same re-read-under-the-lock fix as `place_copy/3` — `:copy` is
+    # unlocked and can be stale by the time the lock is actually held.
+    |> Multi.run(:fresh_copy, fn repo, %{copy: copy} -> fetch_copy(repo, copy.id) end)
+    |> Multi.run(:removed, fn repo, %{fresh_copy: copy} -> vacate_and_clear(repo, copy) end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{copy: %Copy{shelf_id: nil}, removed: removed}} ->
+      {:ok, %{fresh_copy: %Copy{shelf_id: nil}, removed: removed}} ->
         {:ok, removed}
 
-      {:ok, %{copy: original, removed: removed}} ->
+      {:ok, %{fresh_copy: original, removed: removed}} ->
         broadcast(original.shelf_id)
         {:ok, removed}
 
