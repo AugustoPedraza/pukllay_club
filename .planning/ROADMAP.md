@@ -276,11 +276,21 @@ unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
 - [ ] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
 
 ### Phase 2: Natural-Language Spanish Search + Auth
