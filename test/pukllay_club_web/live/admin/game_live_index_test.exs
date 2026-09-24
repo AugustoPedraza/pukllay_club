@@ -905,6 +905,95 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — security & concurrency properties (T-01.8.3-01, plan 01.8.3-04)" do
+    test "confirm-edition with no prompt held inserts nothing, redirects nowhere, and the process stays alive",
+         %{conn: conn} do
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "confirm-edition", %{})
+
+      assert Catalog.count_admin_games() == count_before
+      assert is_binary(html)
+      assert Process.alive?(lv.pid)
+    end
+
+    test "confirm-edition with no prompt held ignores a fabricated game-id param and inserts nothing",
+         %{conn: conn} do
+      existing = game_fixture(%{name: "Un juego real", status: :published})
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      render_click(lv, "confirm-edition", %{"game-id" => to_string(existing.id)})
+
+      assert Catalog.count_admin_games() == count_before
+    end
+
+    test "two {:game_enriched} arrivals leave exactly one #enrichment-toast element", %{
+      conn: conn
+    } do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+
+      previous_translate_call =
+        Application.get_env(:pukllay_club, :enrichment_translate_call)
+
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      game1 =
+        game_fixture(%{
+          bgg_id: 333_333,
+          name: "Cardal",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      game2 =
+        game_fixture(%{
+          bgg_id: 444_444,
+          name: "Marisco",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game1.id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game2.id})
+
+      html = render(lv)
+      assert count_occurrences(html, ~s(id="enrichment-toast")) == 1
+      assert html =~ "Marisco agregado"
+
+      if previous_storage do
+        Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+      else
+        Application.delete_env(:pukllay_club, :catalog_storage)
+      end
+
+      if previous_translate_call do
+        Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+      else
+        Application.delete_env(:pukllay_club, :enrichment_translate_call)
+      end
+    end
+
+    test "the rendered /admin/juegos HTML never contains phx-value-value", %{conn: conn} do
+      game_fixture(%{name: "Cualquiera", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+      html = render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      refute html =~ "phx-value-value"
+    end
+  end
+
   describe "GameLive.Index — failed enrichment retry (D-03)" do
     test "a failed draft's row shows the error alert and Reintentar button", %{conn: conn} do
       game_fixture(%{
