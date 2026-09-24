@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 3/5 plans executed
+**Plans:** 4/5 plans executed
 
 Plans:
 **Wave 1**
@@ -287,7 +287,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
+- [x] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
