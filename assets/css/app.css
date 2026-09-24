@@ -3,6 +3,12 @@
 
 @import "tailwindcss" source(none);
 @import "phoenix-colocated/pukllay_club/colocated.css";
+@import "./admin/tokens.css";
+@import "./admin/chrome.css";
+@import "./admin/screens.css";
+@import "./admin/estantes.css";
+@import "./admin/juegos.css";
+@import "./admin/editor.css";
 @source "../css";
 @source "../js";
 @source "../../lib/pukllay_club_web";
@@ -3055,7 +3061,18 @@ body.pk-sheet-open {
   transition: opacity var(--duration-base) var(--ease-standard);
 }
 
-.pk-drawer-backdrop.is-open {
+/* Task 1 (01.8.2-09, D-12/G-01.8.1-1b): the backdrop's open state is now
+   driven by :has(), not its own `.is-open` class. The drawer's open/close
+   state moved server-side into PukllayClubWeb.Layouts.NavDrawer (a stateful
+   LiveComponent) so it works identically on every page regardless of
+   whether that page's header is sticky — but the backdrop stays a plain,
+   stateless sibling div (moving it inside the component would break the
+   WINDOWS #4 "backdrop is a direct child of body" contract
+   nav_drawer_stacking_test.exs pins). :has() lets it react to the drawer
+   panel's own class without needing a copy of the state — same idiom this
+   file already uses for `body:has(#about-hero.is-docked)` and
+   `body:has(#about-hero[data-morph-armed])`, Baseline-2023. */
+body:has(#pk-nav-drawer.is-open) .pk-drawer-backdrop {
   opacity: 1;
   pointer-events: auto;
 }
@@ -3076,11 +3093,19 @@ body.pk-sheet-open {
    here either, now that the drawer's ancestor is the LiveView root, not the
    sticky header). See .pk-drawer-backdrop above for the matching backdrop
    tier. */
+/* Task 2 (01.8.2-09, D-19d): the drawer moves to the LEADING (left) edge,
+   site-wide (public and admin) — the BENCHMARK's deviation D-4, resolved
+   ALIGN against Material 3's modal navigation drawer, which opens from the
+   leading edge, never the right. `right: 0` -> `left: 0` and the enter
+   transform's sign flips to match (`translateX(100%)` traveled in FROM the
+   right at rest; `translateX(-100%)` now travels in from the left). `.is-
+   open`'s `translateX(0)` is unchanged — the panel's RESTING position is
+   the same regardless of which edge it enters from. */
 .pk-drawer {
   display: none;
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   width: 82%;
   max-width: 20rem;
@@ -3090,7 +3115,7 @@ body.pk-sheet-open {
   padding: 1rem;
   overflow-y: auto;
   flex-direction: column;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   /* --ease-standard, not --ease-out-soft — same reasoning as .pk-sheet, see the
      long note on that rule. This panel travels its own width (82%, capped at
      20rem = ~320px at 390px wide), and --ease-out-soft (easeOutExpo) puts 32.7%

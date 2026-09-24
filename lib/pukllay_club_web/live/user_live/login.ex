@@ -8,7 +8,9 @@ defmodule PukllayClubWeb.UserLive.Login do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+    <%!-- D-00b: only ever routed at /admin/ingresar today (router.ex) — no
+    footer, same as every other /admin page. --%>
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
       <div class="mx-auto max-w-sm space-y-4">
         <div class="text-center">
           <.header>Ingresar al panel</.header>

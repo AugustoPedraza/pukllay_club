@@ -1,0 +1,234 @@
+/* Juegos (plan 01.8.2-14, D-25, D-19g-bis, D-19n) — one continuous list
+   grouped by `status`: Borradores · Juegos del club · Retirados. Every
+   section header shares ONE anatomy (`AdminComponents.list_section_label`,
+   15/600 full-strength, D-19g-bis decision 20) — a `<span>` unless the
+   section collapses, in which case it is wrapped in a `<button>` carrying
+   an inline caret AFTER the count (never leading, never at the row's
+   trailing chevron slot, D-19i). Sections butt together with no gap; two
+   text left edges hold, 16 (the section label, the caret, the page title)
+   and 68 (a row's name, inherited for free from `.pk-admin-row`'s own
+   40px cover + 12px gap + 16px padding = 68, declared once in
+   `components.css`, not redeclared here).
+
+   Wired into the build via `@import "./admin/juegos.css";` appended to
+   `app.css`'s existing admin-import block, sibling to `estantes.css` —
+   this plan's own `<verify>` does not forbid touching `app.css` directly.
+   Proven reaching `priv/static/assets/css/app.css` after `mix
+   assets.build` — see this plan's SUMMARY for the grep proof.
+
+   Deliberately unlayered (no `@layer` wrapper), matching every other
+   admin stylesheet's convention — see `app.css`'s own CASCADE-LAYER
+   HAZARD note. */
+
+.pk-admin-juegos {
+  position: relative;
+}
+
+.pk-admin-juegos-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.pk-admin-juegos-add-form .pk-admin-field {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.pk-admin-juegos-edition-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pk-admin-juegos-edition-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pk-admin-juegos-edition-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pk-admin-juegos-empty {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--color-neutral);
+}
+
+.pk-admin-juegos-empty h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-juegos-empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* ============================================================
+   ONE LIST, one section anatomy (D-19g-bis decision 17/18/20/21).
+   ============================================================ */
+
+/* No gap between sections — they butt together (D-19g-bis decision 17). */
+.pk-admin-juegos-sections {
+  display: flex;
+  flex-direction: column;
+}
+
+.pk-admin-juegos-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Zero-height scroll marker this section's own pinned state is measured
+   from — `assets/js/hooks/admin_list.js`'s IntersectionObserver watches
+   this element (not the sticky header itself, whose own rect never
+   leaves `top: 44px` once stuck) to know when the header ahead of it has
+   become pinned. */
+.pk-admin-juegos-sentinel {
+  height: 0;
+}
+
+/* Pins under the 44px page bar once the title row has scrolled behind it
+   (D-19n) — `top: 44px` reserves exactly that band regardless of whether
+   the page bar itself is currently visible. Full-bleed for free: this
+   wrapper and every ancestor up to the 16px-inset content keel carry no
+   horizontal padding of their own, so a 100%-width header already spans
+   edge to edge without a negative-margin trick. Gains `--color-surface`
+   ONLY while pinned (`[data-pinned="true"]`, JS-toggled) — at rest it is
+   fully transparent, the one moment nothing needs to terminate itself. */
+.pk-admin-juegos-section-heading-wrap {
+  position: sticky;
+  top: 44px;
+  z-index: 10;
+}
+
+.pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header {
+  background: var(--color-surface);
+}
+
+/* One anatomy for every header — caption rank, keyline, height are
+   identical whether it is a `<button>` (collapsible) or a `<div>` (the
+   body section, D-19g-bis decision 15: it never collapses). Air above a
+   label and none below (decision 21, measured text-to-text): 26px of
+   top padding puts 26px of ink above the caption; the header's own
+   bottom padding stays 0 so the rows below sit welded against it. */
+.pk-admin-juegos-section-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 30.9px;
+  padding: 26px 16px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  position: relative;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+/* The first section takes less leading air — the search/add block above
+   it already separates it (decision 21's stated exception). */
+.pk-admin-juegos-section:first-child .pk-admin-juegos-section-header {
+  padding-top: 14px;
+}
+
+.pk-admin-juegos-section-header--collapsible {
+  cursor: pointer;
+}
+
+/* Below the 44px touch floor visually (30.9px) — stretched by a
+   pseudo-element rather than padding the visible row, so the touch floor
+   is met without loosening the list's rhythm (D-19g-bis decision 18). */
+.pk-admin-juegos-section-header--collapsible::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 44px;
+  transform: translateY(-50%);
+}
+
+/* The count: same rank as the label but at normal weight, so it reads as
+   a modifier of the label rather than a second label. */
+.pk-admin-juegos-count {
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* The caret — affordance, not a second kind of header (D-19g-bis decision
+   18). Sits INLINE, after the count: never leading (that punches a hole
+   in the x=16 column) and never at x where a row's own trailing chevron
+   sits (D-19i reserves that for "this row opens another page"). */
+.pk-admin-juegos-caret {
+  display: inline-flex;
+  margin-left: 4px;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.pk-admin-juegos-section-header--collapsible[aria-expanded="true"] .pk-admin-juegos-caret {
+  transform: rotate(180deg);
+}
+
+.pk-admin-juegos-section-hint {
+  margin: 0;
+  padding: 4px 16px 0;
+  font-size: 13px;
+  color: var(--color-neutral);
+}
+
+.pk-admin-juegos-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Row divider inset to 68px — the row-text column (`.pk-admin-row`'s own
+   40px cover + 12px gap + 16px padding-left = 68, declared once in
+   `components.css`; this rule only adds the hairline between consecutive
+   rows, which no other admin list has needed until a list this long). */
+.pk-admin-juegos-rows > .pk-admin-row + .pk-admin-row,
+.pk-admin-juegos-rows > div.pk-admin-row + .pk-admin-row {
+  position: relative;
+}
+
+.pk-admin-juegos-rows > .pk-admin-row + .pk-admin-row::before,
+.pk-admin-juegos-rows > div.pk-admin-row + .pk-admin-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 68px;
+  right: 0;
+  height: 1px;
+  background: var(--stroke);
+}
+
+/* D-37 gate 4 / 076's `.fresh`: the just-created row, held for one
+   session so `admin_list.js` can scroll it into view. No colour beyond
+   the shared surface-2 press token — a persistent tint here would read
+   as a second, permanent status, which D-19h forbids. */
+.pk-admin-juegos-row--fresh {
+  background: var(--color-surface-2);
+}
+
+/* The failed-enrichment row's inline alert + Reintentar (D-03) — composed
+   directly against `.pk-admin-row__body`'s own column, not a daisyUI
+   alert box (D-19h: a status is a dot + text, never a box). */
+.pk-admin-juegos-row-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--color-error);
+}

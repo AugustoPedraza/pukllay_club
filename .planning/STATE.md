@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.2
-current_phase_name: Admin UI/UX Redesign
-status: planning
-stopped_at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
-last_updated: "2026-09-23T02:29:25.724Z"
-last_activity: 2026-09-22
-last_activity_desc: Phase 01.8.1 complete, transitioned to Phase 01.8.2
-state_head: 1e57d6a78e8ce6250cc456c72fb0d25d4b419e03
+current_phase_name: Admin UI/UX Redesign (INSERTED)
+status: executing
+stopped_at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
+last_updated: "2026-09-24T02:09:14.377Z"
+last_activity: 2026-09-23
+last_activity_desc: Phase 01.8.2 execution started
+state_head: 81f68849004937cdf272fdf0b860c9afa8df7e84
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 49
+  completed_plans: 48
 ---
 
 Total Phases: 9
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.1 — Staff Admin — Ludoteca, Shelves & Curated Destacados (INSERTED)
+**Current focus:** Phase 01.8.2 — Admin UI/UX Redesign (INSERTED)
 (production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
 ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.2 — Admin UI/UX Redesign
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-run): publishers.max 178→45, rows-with-duplicates 385→0, controls unmoved; prod report now matches dev field-for-field. Catalog data repair closed.
+Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
+Plan: 22 of 22
+Status: Ready to execute
+Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
 ## Performance Metrics
 
@@ -132,6 +132,27 @@ Last activity: 2026-09-23 — Production BGG re-enrichment COMPLETE (operator-ru
 | Phase 01.8.1 P13 | 30min | 2 tasks | 11 files |
 | Phase 01.8.1 P15 | 62min | 3 tasks | 8 files |
 | Phase quick-260922-veq P01 | 15min | 3 tasks | 6 files |
+| Phase 01.8.2 P01 | 90min | 3 tasks | 16 files |
+| Phase 01.8.2 P02 | 25min | 3 tasks | 4 files |
+| Phase 01.8.2 P03 | 40min | 3 tasks | 3 files |
+| Phase 01.8.2 P04 | 30min | 3 tasks | 5 files |
+| Phase 01.8.2 P05 | ~45min | 2 tasks | 8 files |
+| Phase 01.8.2 P06 | 25min | 2 tasks | 3 files |
+| Phase 01.8.2 P07 | 55min | 3 tasks | 4 files |
+| Phase 01.8.2 P09 | 45min | 3 tasks | 17 files |
+| Phase 01.8.2 P08 | 24min | 3 tasks | 7 files |
+| Phase 01.8.2 P10 | 42min | 3 tasks | 12 files |
+| Phase 01.8.2 P11 | 50min | 3 tasks | 10 files |
+| Phase 01.8.2 P12 | 47min | 3 tasks | 11 files |
+| Phase 01.8.2 P13 | ~120min | 3 tasks | 10 files |
+| Phase 01.8.2 P14 | ~100min | 3 tasks | 13 files |
+| Phase 01.8.2 P15 | ~140min | 3 tasks | 12 files |
+| Phase 01.8.2 P17 | ~100min | 3 tasks | 9 files |
+| Phase 01.8.2 P16 | 173min | 3 tasks | 5 files |
+| Phase 01.8.2 P19 | ~25min | 3 tasks | 5 files |
+| Phase 01.8.2 P18 | ~100min | 3 tasks | 13 files |
+| Phase 01.8.2 P20 | ~55min | 3 tasks | 10 files |
+| Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -264,6 +285,47 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: 260922-veq: ensure_live_node!/1 takes its process-name list as an argument (not hardcoded) so the raise branch is testable and the real required-process list is itself asserted satisfiable
 - [Phase 01.8.2]: 260922-veq: Release.enrich_bgg_stats/1 and Release.bgg_stats_report/0 print one JSON line via IO.puts + Logger.info and write no file under priv/ (discarded on every deploy) — repair still pending a human-authorized production run per docs/runbooks/production-bgg-reenrichment.md
 - [Phase 01.8.2]: Quick task 260922-w5o: corrected the production invocation rule from rpc to eval across release.ex, release_test.exs, the runbook, and AGENTS.md (rpc verified unavailable on the production container 2026-09-22, :noconnection, root cause not established; eval + three-expression preamble is proven); Credentials.fetch() also proven resolving on production
+- [Phase 01.8.2]: 01.8.2-01: place_copy/3 handles first placement, cross-estante move, and same-estante reorder with one algorithm — vacate the copy's own position first (removing it from the position space entirely), then insert with a descending-order shift; avoids a transient collision on the NOT DEFERRABLE copies_shelf_position_unique index.
+- [Phase 01.8.2]: 01.8.2-01: the old game-level ShelfLive.Index/Assign screens and their router lines were deleted in Task 2 (not Task 3) because Task 2's own strict verify grep for zero surviving assign_game/unassign_game/games_on_shelf/pick_list references is unsatisfiable while those screens' only remaining callers still exist.
+- [Phase 01.8.2]: 01.8.2-01: @estante_lock_namespace = 8_811_016, distinct from catalog.ex's @bgg_id_lock_namespace (8_811_015) — same two-int4 pg_advisory_xact_lock form, separate pg_locks.objsubid key space.
+- [Phase 01.8.2]: 01.8.2-02: D-33 --val lands on --pk-ramp-400 dark / --pk-ramp-700 light, distinct from --color-primary's own ramp stop in each theme, measured 6.52:1 in dark (beats the 4.83:1 floor)
+- [Phase 01.8.2]: 01.8.2-02: D-34 token reconciliation table (01.8.2-TOKENS.md) fates all 24 admin-sketch custom properties; --color-accent-bg/--color-accent-text confirmed DISCARD, Sin guardar dot resolves to --color-warning
+- [Phase 01.8.2]: 01.8.2-03: ui-design-system rewritten with two explicit scopes (D-17) — Scope A admin (/admin + shared staff chrome, S3 Contorno outline-only, no filled button), Scope B unchanged daisyUI/font-display for public catalog content
+- [Phase 01.8.2]: 01.8.2-03: fresh 01.8.2-UI-SPEC.md supersedes 01.8.1-UI-SPEC.md wholesale except the surviving fraction (voseo, BGG/edition copy, destructive-confirmation copy, undo-toast shape, 40-char caps, E7, 44px floor); banner prepended to the 01.8.1 file naming its successor
+- [Phase 01.8.2]: 01.8.2-03: open item 5 resolved by developer — 'agregado' split into Borrador creado (creation) vs Agregado al club (arrival); enrichment-completion toast action is Editar not Ver; editor save bar is one-word Guardar, superseding 01.8.1's Guardar cambios
+- [Phase 01.8.2]: 01.8.2-04: publish_game/1 and retire_game/1 gained pattern-matched catch-all refusal heads (D-37 gate 1), matching restore_game/1's existing shape
+- [Phase 01.8.2]: 01.8.2-04: D-36's unpublish predicate is keyed on real content (blank description AND no cover_url), not enrichment_status labels, and includes all 26 no_bgg_id expansions per D-36's own "unless the measurement says otherwise" exception
+- [Phase 01.8.2]: 01.8.2-04: the unpublish migration's reversibility is backed by a dedicated audit table (unpublish_still_empty_games_audit), created/dropped within the same migration, rather than a marker column on games
+- [Phase 01.8.2]: 01.8.2-05: checkpoint resolved 'drop now' — games.units dropped, count(copies) via Shelves.count_for_game/1 is the only Copias source; admin_changeset/2 cast ceiling narrows to [:name, :weight_band, :is_expansion, :description, :shelf_id]
+- [Phase 01.8.2]: 01.8.2-05: copies_test.exs's backfill-replay tests removed (raw SQL read games.units, which this plan drops) and replaced with count_for_game/1/counts_for_games/1 coverage
+- [Phase 01.8.2]: D-05 clear-slate migration ships as specified: no backfill, no audit table, down/0 raises Ecto.MigrationError — Nothing survives the delete for a rollback to read from; the pre-deploy pg_dump is the only recovery path (01.8.2-06)
+- [Phase 01.8.2]: Data-only migrations use PukllayClub.Repo directly instead of the repo() migration-DSL helper when they need direct-call testability — repo() requires an active Ecto.Migrator Runner process; a migration with no DDL can safely use Repo directly and be unit-tested via Code.require_file + direct up/0 invocation (01.8.2-06)
+- [Phase 01.8.2]: 01.8.2-07: resolved TOKENS.md's flagged dark-mode Principal-ink gap with --pk-ramp-400 (the same stop --val already resolves to) rather than reviving the discarded --color-accent-text — TOKENS.md explicitly delegated this substitution to whichever slice implements the A1-A4 button system; --pk-ramp-400 is a real shipped token already measured at 6.52:1 in that same document
+- [Phase 01.8.2]: 01.8.2-07: wired assets/css/admin/components.css via a nested @import inside admin/tokens.css, not app.css — Task 3's own <verify> requires assets/css/app.css to stay untouched by this plan; tokens.css already imports into app.css, so the nested import resolves the same way
+- [Phase 01.8.2]: 01.8.2-09: PukllayClubWeb.Layouts.NavDrawer (a stateful LiveComponent, id="pk-nav-drawer") now owns the drawer's open/close state directly, addressed via phx-target from the hamburger and backdrop -- fixes G-01.8.1-1b (the hook that used to wire this was only attached when @sticky was true, so every admin page and three non-sticky public pages had a hamburger with no click handler at all)
+- [Phase 01.8.2]: 01.8.2-09: Layouts.app/1 gained admin_chrome (boolean, passed explicitly by all 10 admin-scoped LiveViews) as D-00b's structural no-footer-on-/admin predicate -- touches 10 LiveView call sites beyond this plan's stated files, documented as necessary since no existing attr reliably distinguished admin routes from two public routes sharing the same call shape
+- [Phase 01.8.2]: 01.8.2-08: sheet/1, dialog/1, snackbar/1 (routed via Layouts.admin_flash/1, deleting the admin top toast), save_bar/1, back_row/1, page_bar/1 land in AdminComponents; admin_sheet.js hand-authored non-colocated hook shared by sheet/dialog; --pk-save-bar-h is the single source for both the 77px bar height and its calc()-derived body clearance
+- [Phase 01.8.2]: 01.8.2-10: D-14 resolved 'suppress' via real-browser measurement — the staff tab bar hides only on the game detail page (full occlusion of the reserve CTA measured), shows everywhere else including the catalog index (measured zero collision) — Mechanism: Layouts.app/1's new suppress_tab_bar call-site attr (mirrors admin_chrome), never a URL-string match; post-fix re-measurement confirmed the tab bar does not render at all on the detail page
+- [Phase 01.8.2]: 01.8.2-11: dashboard rebuilt as 060-B boxes (D-00a renames: Panel->Admin, Secciones->Web) with every count computed once in mount/3 (Shelves.copies_progress/0 added for the Estantes meter, replacing the dead games.shelf_id-based location_progress/0); Staff rebuilt onto list_row+status_dot rows and D-19f's centred Quitar dialog, deleting the shipped modal-open/modal-action footer -- AdminComponents gained pending_pill/1 (D-19g), status_dot/1's vocabulary widened for Staff's own states, field/1's type values gained "email", and action/1's dead type="button" hardcode was fixed to honor a caller's type via rest; admin_composition_test.exs is the new shared D-18 guard, seeded with both screens and structured for a one-line append per later screen plan (01.8.2-13/-14/-15/-18/-19/-20)
+- [Phase 01.8.2]: Keel = 16 (evidenced by admin_shell.mjs's real content-edge measurement); rejects sketch 079's 14.
+- [Phase 01.8.2]: Fixed admin_sheet.js's isOpen() (position:fixed offsetParent no-op) and the sheet/tab-bar z-index collision inside plan 12, before Wave 7 begins, per explicit user direction.
+- [Phase 01.8.2]: Open item 1's real-device pass deferred to post-deployment (against the live site after plan 01.8.2-22), per explicit user decision. Tracked in 01.8.2-DEVICE-PASS.md, routed to plan 22.
+- [Phase 01.8.2]: 01.8.2-13: header icons precede the title in DOM order (CSS-absolute positioned) so a page title+adjacent-icons row never breaks test/visual/admin_components.mjs's D3 page-head-to-body sibling-walk measurement -- found live by this plan's own required harness run and fixed before committing.
+- [Phase 01.8.2]: 01.8.2-13: Shelves.search_copies/1 caps suggestions at 20 results / 120-char query (CatalogFilters' 20x120 precedent), across BOTH placed and unplaced copies; Estantes rebuilt wholesale from the 01.8.2-01 tracer to D-08's real search-first design with a live-update handle_info over admin:estantes.
+- [Phase 01.8.2]: 01.8.2-14: Catalog.list_admin_games_by_status/1 groups Juegos by status in one un-paginated query; D-25's grouping replaces Cargar más entirely, no per-row query for Copias (batched counts_for_games/1) — Status is a mutually-exclusive Ecto.Enum (D-04), so the partition is schema-guaranteed rather than derived from three predicates
+- [Phase 01.8.2]: 01.8.2-14: back_row/page_bar back_to both point at /admin (dashboard) since Juegos is a tab-root page with no other natural back destination; components.css's page_bar--visible gained position:fixed (Rule 1 fix) since no prior plan had a live call site proving the pin mechanism — First live call site for AdminComponents.page_bar/1's scrolled-pin behavior
+- [Phase 01.8.2]: 01.8.2-15: Web opens on the destacada's own rail (reused .pk-rail/.pk-poster-card) with Otras filas below as navigation; Quitar de la fila is undoable (D-19k, no exact-position restore — Deshacer re-adds at the end via existing Sections.add_game/2, since no new Sections function was in this plan's scope); Ordenar->Listo reorder mode (AdminComponents.reorder_header/reorder_row) restores its pre-mode order via a selection-sort of adjacent Sections.move_section/2 / move_game/3 swaps, reusing the existing neighbour-swap primitive rather than adding a bulk-reorder function; Niveles' Pasar a {nivel} row sources its meaning from Vocabulary.weight_bands/0 dynamically (never duplicated as literal text in band_audit_live.ex)
+- [Phase 01.8.2]: 01.8.2-17: Nivel (weight_band) is edited via the top pills row, not the divider trio -- resolves an ambiguity between D-26's abbreviated order text and the packaged design doc by cross-checking sketch 072's own concrete markup (weight_band/units/shelf_id/is_expansion), giving exactly seven editable blocks
+- [Phase 01.8.2]: 01.8.2-17: The D-29 franja is fixed directly under the top bar (top: 56px), per CONTEXT.md's own text closing 080's open item 4 -- not the later-superseded in-body/scrolling placement an earlier mid-lineage note in the packaged reference doc still describes
+- [Phase 01.8.2]: 01.8.2-17: The editor's Secciones checkbox fieldset is removed outright, not relocated -- D-26 renders the chip de seccion read-only and section_live/edit.ex (plan 15) already owns add_game/remove_game exclusively
+- [Phase 01.8.2]: Task 2 and Task 3 built holistically with Task 1 in one implementation commit; tested independently per task afterward — All three tasks share one rail, one commit_placement/4 write path, and one Deshacer mechanism -- splitting into three disableable slices would have meant commenting out working code mid-plan. Each task's own acceptance criteria still independently verified before that task's commit landed.
+- [Phase 01.8.2]: 01.8.2-19: choice_sheet/1 + text_sheet/1 implement D-30's two never-mixed field-sheet patterns for nivel/es-una-expansion (tick, closes on choice) and nombre/descripcion (own wide Guardar, X discards); both write only into @draft, never Catalog. The lifecycle_error_message/1 helper handles D-37's refusal tuples explicitly instead of a silent no-op. Task 2's read_first cited a 40-char name cap that does not exist for Game (that's Section/Shelf's convention, max:255 for Game) -- implemented against the real 255 cap rather than widening game-name validation unrequested.
+- [Phase 01.8.2]: 01.8.2-18: Pendientes (Afuera+Sin ubicar behind the header badge) and Administrar estantes (create/rename/reorder/delete, one name sheet, Ordenar->Listo reused as its second consumer) shipped; EstanteLive.Index gained a ?copy=<id> mount param (not in this plan's stated files) reusing select_copy_struct/2 as the one navigation mechanism both Pendientes queues share; Shelves.delete_shelf/1 + restore_deleted_shelf/1 give estante deletion a full position-snapshot Deshacer as a distinct function, not a loop over the single-copy restore.
+- [Phase 01.8.2]: Open item 6: the live-gate explanation is a persistent inline line under Publicar (b), chosen over a snackbar (a) and scroll-to-nivel (c) — real headless-Chrome measurement against sketch 078's own fixture found the nivel row already on screen at both 390x844 and 360x640
+- [Phase 01.8.2]: Game.needs_nivel_to_publish?/1 is the one shared predicate between Catalog.publish_game/1's function-level gate and the draft sheet's live Publicar-tap explanation — never duplicated
+- [Phase 01.8.2]: GameLive.Form's mount/3 redirects a draft's direct editor URL to /admin/juegos?draft=<id> BEFORE loading section names/shelves/copies, so the editor page renders only for an already-published or retired game
+- [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
+- [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
 
 ### Pending Todos
 
@@ -407,8 +469,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-23T02:29:20.565Z
-Stopped at: Completed quick task 260922-w5o (corrected rpc->eval production invocation docs across release.ex, release_test.exs, runbook, AGENTS.md)
+Last session: 2026-09-24T02:09:14.242Z
+Stopped at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
 Resume file: None
 
 ## Operator Next Steps

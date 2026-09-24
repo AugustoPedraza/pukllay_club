@@ -393,6 +393,13 @@ defmodule PukllayClubWeb.CatalogLive.Show do
     <%!-- active_nav={nil} passed explicitly, not defaulted into: Detalle is a
     drill-down of the catalog and a peer of neither top-level nav entry
     (sketch 017's own page switcher marks no drawer link active here). --%>
+    <%!-- suppress_tab_bar (D-14, plan 01.8.2-10 Task 3): this page's own
+    #detail-cta-bar (below) is unconditionally rendered and fixed at the
+    same screen-bottom band the staff tab bar would otherwise occupy —
+    measured in real headless Chrome, the reserve button sat entirely
+    inside the tab bar's band at both 390x844 and 360x640. See
+    Layouts.app/1's own @suppress_tab_bar attr doc for the full
+    measurement and the collide/merge/suppress decision. --%>
     <Layouts.app
       flash={@flash}
       current_scope={@current_scope}
@@ -401,6 +408,7 @@ defmodule PukllayClubWeb.CatalogLive.Show do
       search_expanded={@search_expanded}
       active_nav={nil}
       boundary_collapse
+      suppress_tab_bar
     >
       <:crumb>
         <.link navigate={@catalog_path}>Ludoteca</.link>

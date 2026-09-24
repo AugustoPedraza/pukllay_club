@@ -1,0 +1,242 @@
+/* Admin-only shared-chrome CSS (plan 01.8.2-09, D-12/D-19d/D-13a).
+
+   PUBLIC-VS-ADMIN SPLIT — read before adding a rule here:
+
+   The drawer and the hamburger that opens it are SHARED chrome — a public
+   visitor sees them too (Layouts.app/1 renders them unconditionally on
+   every page, not gated on being under /admin). Their CSS therefore stays
+   in `assets/css/app.css`, alongside every other rule a public visitor's
+   browser must load regardless of whether they ever reach /admin. Task 2
+   of this plan moved the drawer's anchoring (`right: 0` -> `left: 0`,
+   D-19d) entirely inside `app.css` for exactly this reason — do not move
+   it here later under a mistaken "it's in the admin plan, so it's admin
+   CSS" assumption.
+
+   THIS file is for rules that only ever apply to a signed-in staff
+   member's ADMIN-ONLY chrome — content that never renders for an
+   anonymous visitor and never renders on a public page. Task 3 (this same
+   plan) is the first to populate it: the staff drawer's three sectioned
+   groups (PANEL / SITIO / TU CUENTA, D-13a) are staff-only content, but
+   even then, only the parts of that markup with no public-drawer
+   counterpart belong here — a rule that also has to look right for the
+   public drawer's plain link list stays in `app.css`, shared, not
+   duplicated into two files that could drift.
+
+   Plan 01.8.2-10 (next wave) is the second consumer: the 5-tab admin tab
+   bar (D-13b) is genuinely admin/staff-only chrome (it never renders on a
+   public page for an anonymous visitor) and belongs entirely in this
+   file — leave room here rather than restructuring `chrome.css` when that
+   plan lands.
+
+   Imported directly from `app.css` (`@import "./admin/chrome.css";`),
+   sibling to the existing `@import "./admin/tokens.css";` — unlike plan
+   01.8.2-07's `components.css`, this plan's own `<verify>` does not forbid
+   touching `app.css`, so there is no need for tokens.css's nested-import
+   workaround here. */
+
+/* ============================================================
+   Task 3 — the staff sectioned drawer (D-13a): Panel / Sitio / Tu cuenta.
+
+   Rows themselves keep app.css's existing `.pk-drawer-links a` recipe
+   (shared with the anonymous-visitor drawer, D-13a's "same drawer
+   everywhere" — the row CSS is not admin-only, only the SECTION grouping
+   around it is). Only the section-label spacing and the static "Perfil"
+   identity row are genuinely staff-only: neither has a counterpart in the
+   plain public drawer, so they belong here rather than in app.css.
+   ============================================================ */
+
+/* AdminComponents.form_label/1 rank="group" (13px/600 sentence case,
+   D-19g-bis's noticed-on-the-way resolution — see layouts.ex's Task 3
+   comment) has no built-in spacing of its own (components.css's
+   .pk-admin-label is `display: block; margin: 0;`) — it is a caption atom
+   meant to be composed into whatever rhythm the composing screen needs.
+   Inside the drawer's full-bleed `.pk-drawer-links` list (margin-inline:
+   -1rem in app.css), give it the same 1rem horizontal inset as every row
+   plus air above so three back-to-back sections don't read as one run of
+   text. The first label needs less top air (nothing precedes it but the
+   drawer header) — :first-child on the drawer's <nav> wrapper, not the
+   label itself, since the label element carries no other distinguishing
+   class of its own. */
+.pk-drawer-links--staff .pk-admin-label--group {
+  padding-inline: 1rem;
+  margin: 1.25rem 0 0.25rem;
+}
+
+.pk-drawer-links--staff .pk-admin-label--group:first-child {
+  margin-top: 0.25rem;
+}
+
+/* The static "Perfil" identity row (D-00b's TU CUENTA section): no href,
+   no chevron — it names the signed-in account, it does not navigate.
+   Matches the row's sibling `.pk-drawer-links a` rows on padding/min-
+   height so the section reads as one list, not two anatomies, even
+   though this one row is a <div> rather than an <a>. */
+.pk-drawer-account {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  justify-content: center;
+}
+
+.pk-drawer-account-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-drawer-account-email {
+  font-size: 0.75rem;
+  color: var(--color-neutral);
+  overflow-wrap: anywhere;
+}
+
+/* ============================================================
+   Plan 01.8.2-10 — the 5-tab admin bar (D-13b).
+
+   Renders for a signed-in staff member on EVERY page Layouts.app/1
+   wraps — admin and public alike (D-13b) — never gated on @admin_chrome
+   or any route signal, which is exactly why this genuinely admin/staff-
+   only chrome belongs here rather than in a page-scoped file: it is
+   content that never renders for an anonymous visitor and never depends
+   on which page it happens to sit under.
+   ============================================================ */
+
+/* Declared ONCE — this bar's own `min-height`, `AdminComponents.snackbar`'s
+   bottom offset (components.css:623, already written against this exact
+   property with a 0px fallback) and `.pk-admin-has-tab-bar` below all
+   `calc()` off this SAME custom property, mirroring `--pk-save-bar-h`'s
+   single-source pattern (D-28, components.css:665-667) — never two
+   independently drifting pixel figures. BENCHMARK's measured 67px, taken
+   verbatim. */
+:root {
+  --pk-tab-bar-h: 67px;
+}
+
+.pk-admin-tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  min-height: var(--pk-tab-bar-h);
+  padding: 4px 4px max(4px, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--stroke);
+}
+
+.pk-admin-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* 56x30 pill indicator behind the active icon (BENCHMARK's Tab bar row,
+   matched to M3). `--color-accent`/`--color-accent-content` — a real
+   shipped pastel pair already used elsewhere in app.css for a soft "this
+   is selected" fill (`.pk-pill-accent`, app.css:4008-4027) — not the
+   sketch-local `--color-accent-bg` 01.8.2-TOKENS.md's D-34 pass marked
+   DISCARD (never existed upstream). */
+.pk-admin-tab-icon {
+  position: relative;
+  width: 56px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+}
+
+.pk-admin-tab.is-active {
+  color: var(--color-primary);
+}
+
+.pk-admin-tab.is-active .pk-admin-tab-icon {
+  background: var(--color-accent);
+  color: var(--color-accent-content);
+}
+
+/* inactive stays 400 — the pair must not collapse (admin-shell-
+   navigation.md's own recorded font-weight trap). */
+.pk-admin-tab.is-active .pk-admin-tab-label {
+  font-weight: 600;
+}
+
+/* Perfil, the avatar tab (BENCHMARK's "Perfil = avatar tab" requirement):
+   no `/admin/perfil` page or account sheet exists yet (01.8.2-09's own
+   recorded scope boundary), so this opens the nav drawer's already-
+   shipped `Tu cuenta` section instead of navigating anywhere. */
+.pk-admin-tab-avatar-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-2);
+  color: var(--color-base-content);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* D-19g's pending-work badge: 18px, primary fill — the SAME shape D-19g
+   reserves for "pending work", never D-19m's neutral count pill. */
+.pk-admin-tab-badge {
+  position: absolute;
+  top: -2px;
+  right: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Body clearance: the ONLY consumer of --pk-tab-bar-h outside the bar
+   itself and the snackbar (which already reads it via its own 0px
+   fallback). Applied by whichever page needs its last block cleared of
+   the fixed bar — mirrors `.pk-admin-has-save-bar`'s identical role for
+   `--pk-save-bar-h` (components.css:724-726). */
+.pk-admin-has-tab-bar {
+  padding-bottom: calc(var(--pk-tab-bar-h) + 0px);
+}
+
+/* Retires `.pk-nav-admin` (the header gear link to /admin, app.css:3042)
+   for a signed-in staff member: the Admin tab now supersedes it at every
+   viewport this bar renders at, and D-13b's own action text says so in
+   as many words ("so staff do not have two entry points to /admin in one
+   viewport"). Higher specificity (0-2-0 via the real `.pk-nav-inner`
+   ancestor) rather than editing app.css's own rule directly — app.css's
+   `@import` for this file is hoisted ABOVE app.css's own body (see this
+   file's own header comment), so a same-specificity override placed here
+   would lose to source order, not win by it. The link stays IN THE DOM
+   (not removed from header_inner/1) so it stays out of the keyboard/
+   focus order via `display: none` without touching the existing staff
+   pk-nav-admin substring assertions this markup change would otherwise
+   have to rewrite. */
+.pk-nav-inner .pk-nav-admin {
+  display: none;
+}

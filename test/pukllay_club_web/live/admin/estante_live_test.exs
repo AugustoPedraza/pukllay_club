@@ -1,0 +1,1149 @@
+defmodule PukllayClubWeb.Admin.EstanteLiveTest do
+  @moduledoc """
+  D-08's search-first Estantes screen (plan 01.8.2-13, rebuilding the
+  01.8.2-01 tracer this replaces): the idle prompt+field at rest, the
+  search dropdown (recent/suggestions/no-match), the answered state's
+  rail — reusing `Shelves.copies_on_shelf/1`'s real `position` order and
+  D-03/D-04's accessible-name contract — and D-11's live-update behaviour
+  over `"admin:estantes"` broadcasts.
+  """
+  use PukllayClubWeb.ConnCase, async: true
+
+  import Phoenix.LiveViewTest
+  import PukllayClub.CatalogFixtures
+  import PukllayClub.CopiesFixtures
+  import PukllayClub.ShelvesFixtures
+
+  alias PukllayClub.Catalog.Shelves
+
+  describe "GET /admin/estantes — signed-out visitor (T-01.8.2-03)" do
+    test "is redirected to the login path", %{conn: conn} do
+      conn = get(conn, ~p"/admin/estantes")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "GET /admin/estantes/1/asignar — superseded route (D-08)" do
+    test "returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/1/asignar")
+    end
+  end
+
+  describe "the idle state (D-08, D-19j)" do
+    setup :register_and_log_in_staff
+
+    test "renders the prompt and the field, and nothing else below (D-19j)", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      assert html =~ "¿Qué juego buscás?"
+      assert html =~ "Buscá un juego"
+      assert html =~ "Todavía no buscaste ningún juego."
+
+      refute html =~ "pk-rail\""
+      refute html =~ "estante-copy-"
+      refute html =~ "estantes-suggestions"
+    end
+
+    test "renders no estante list and no pending-game list", %{conn: conn} do
+      shelf_fixture(%{name: "Estante Norte"})
+      copy_fixture(%{game_id: game_fixture(%{name: "Sin lugar aún"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      refute html =~ "Estante Norte"
+      refute html =~ "Sin lugar aún"
+    end
+
+    test "the header renders the Pendientes A3 icon before the gear icon, with no badge at 0",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      pendientes_at = html |> :binary.match("Pendientes") |> elem(0)
+      gear_at = html |> :binary.match("Administrar estantes") |> elem(0)
+      assert pendientes_at < gear_at
+
+      refute html =~ "pk-estantes-icon-badge__count"
+    end
+
+    test "the Pendientes badge count is Shelves.unplaced_copies/0's length", %{conn: conn} do
+      copy_fixture(%{game_id: game_fixture(%{name: "Uno"}).id})
+      copy_fixture(%{game_id: game_fixture(%{name: "Dos"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes")
+
+      assert length(Shelves.unplaced_copies()) == 2
+      assert html =~ "pk-estantes-icon-badge__count"
+      assert html =~ ~r/pk-estantes-icon-badge__count[^<]*>\s*2\s*</
+    end
+  end
+
+  describe "typing shows suggestions (D-08)" do
+    setup :register_and_log_in_staff
+
+    test "a match renders cover, name and the estante name", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      game = game_fixture(%{name: "Catán"})
+      copy = copy_fixture(%{game_id: game.id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "cat"})
+
+      assert html =~ "Catán"
+      assert html =~ "Estante Norte"
+    end
+
+    test "an unplaced match renders the Sin lugar status dot, never a pill", %{conn: conn} do
+      game = game_fixture(%{name: "Dixit"})
+      copy_fixture(%{game_id: game.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "dix"})
+
+      assert html =~ "Dixit"
+      assert html =~ "pk-admin-status-dot--sin_lugar"
+      assert html =~ "Sin lugar"
+
+      # D-19h: never a pill for a status.
+      refute html =~ "pk-admin-pending-pill"
+      refute html =~ "pk-admin-count-pill"
+    end
+
+    test "a query with no match renders exactly one Crear « row", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      html = render_change(lv, "search", %{"q" => "zzzznomatch"})
+
+      assert html =~ "Ningún juego se llama así."
+      assert html |> String.split("Crear «") |> length() == 2
+      assert html =~ "Crear «zzzznomatch»"
+    end
+
+    test "the suggestion query is capped at 120 characters and never crashes on a long input",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      long_query = String.duplicate("a", 500)
+
+      html = render_change(lv, "search", %{"q" => long_query})
+
+      assert html =~ "Ningún juego se llama así."
+    end
+  end
+
+  describe "picking a suggestion — the answered state (D-08, D-03, D-04)" do
+    setup :register_and_log_in_staff
+
+    test "the field keeps the name, the estante shows as context, and the rail renders in position order",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Primero"}).id})
+      c1 = copy_fixture(%{game_id: game_fixture(%{name: "Segundo"}).id})
+      c2 = copy_fixture(%{game_id: game_fixture(%{name: "Tercero"}).id})
+
+      {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c2.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "tercero"})
+      html = lv |> element("#suggestion-#{c2.id}") |> render_click()
+
+      assert html =~ ~s(value="Tercero")
+      assert html =~ "Estante Norte"
+
+      i0 = html |> :binary.match("estante-copy-#{c0.id}") |> elem(0)
+      i1 = html |> :binary.match("estante-copy-#{c1.id}") |> elem(0)
+      i2 = html |> :binary.match("estante-copy-#{c2.id}") |> elem(0)
+      assert i0 < i1
+      assert i1 < i2
+
+      assert html =~ "Tercero, caja 3 de 3"
+    end
+
+    test "a cover's accessible name matches caja 3 de 7 for the third of seven boxes",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Grande"})
+      target = game_fixture(%{name: "Objetivo"})
+      target_copy = copy_fixture(%{game_id: target.id})
+
+      Enum.each(1..7, fn n ->
+        copy =
+          if n == 3, do: target_copy, else: copy_fixture(%{game_id: game_fixture(%{name: "G#{n}"}).id})
+
+        {:ok, _} = Shelves.place_copy(copy.id, shelf.id, n - 1)
+      end)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "objetivo"})
+      html = lv |> element("#suggestion-#{target_copy.id}") |> render_click()
+
+      assert html =~ "Objetivo, caja 3 de 7"
+    end
+
+    test "the selected cover carries the lift class and the others do not", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Sur"})
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Uno"}).id})
+      c1 = copy_fixture(%{game_id: game_fixture(%{name: "Dos"}).id})
+      {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "uno"})
+      html = lv |> element("#suggestion-#{c0.id}") |> render_click()
+
+      [_, c0_tag] = String.split(html, ~s(id="estante-copy-#{c0.id}"), parts: 2)
+      [_, c1_tag] = String.split(html, ~s(id="estante-copy-#{c1.id}"), parts: 2)
+
+      assert String.slice(c0_tag, 0, 120) =~ "pk-estantes-cover--lifted"
+      refute String.slice(c1_tag, 0, 120) =~ "pk-estantes-cover--lifted"
+    end
+
+    test "a game with two copies renders copia 1 de 2; a game with one copy renders no copia string",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Este"})
+      multi = game_fixture(%{name: "Multi"})
+      solo = game_fixture(%{name: "Solo"})
+
+      m1 = copy_fixture(%{game_id: multi.id})
+      _m2 = copy_fixture(%{game_id: multi.id})
+      s1 = copy_fixture(%{game_id: solo.id})
+
+      {:ok, _} = Shelves.place_copy(m1.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(s1.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "multi"})
+      html = lv |> element("#suggestion-#{m1.id}") |> render_click()
+
+      assert html =~ "Multi, copia #{m1.number} de 2, caja 1 de 2"
+      assert html =~ "Solo, caja 2 de 2"
+      refute html =~ "Solo, copia"
+    end
+
+    test "exactly one search input renders in idle, searching and answered states", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Oeste"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, idle_html} = live(conn, ~p"/admin/estantes")
+      assert count_occurrences(idle_html, ~s(id="estantes-search-input")) == 1
+
+      searching_html = render_change(lv, "search", %{"q" => "úni"})
+      assert count_occurrences(searching_html, ~s(id="estantes-search-input")) == 1
+
+      answered_html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+      assert count_occurrences(answered_html, ~s(id="estantes-search-input")) == 1
+    end
+
+    test "picking a copy with no spot does not render an empty rail", %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Sin lugar todavía"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "sin lugar"})
+      html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      refute html =~ "pk-rail-wrap"
+      refute html =~ "id=\"estantes-rail\""
+    end
+
+    test "the ✕ clears the query and the selection, returning to idle", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Volver"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "volver"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element(".pk-estantes-search__clear") |> render_click()
+
+      assert html =~ "¿Qué juego buscás?"
+      refute html =~ "estante-copy-#{copy.id}"
+    end
+  end
+
+  describe "Últimas búsquedas (D-08)" do
+    setup :register_and_log_in_staff
+
+    test "picking a copy adds it to Últimas búsquedas, visible after clearing", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recordado"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "recordado"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element(".pk-estantes-search__clear") |> render_click()
+
+      assert html =~ "Últimas búsquedas"
+      assert html =~ ~s(id="recent-#{copy.id}")
+      assert html =~ "Recordado"
+    end
+  end
+
+  describe "live updates (D-11, plan 01.8.2-13 Task 3)" do
+    setup :register_and_log_in_staff
+
+    test "a broadcast for the shown estante re-renders the rail", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Primero"}).id})
+      {:ok, _} = Shelves.place_copy(c0.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "primero"})
+      lv |> element("#suggestion-#{c0.id}") |> render_click()
+
+      c1 = copy_fixture(%{game_id: game_fixture(%{name: "Segundo"}).id})
+      {:ok, _} = Shelves.place_copy(c1.id, shelf.id, 1)
+
+      assert render(lv) =~ "estante-copy-#{c1.id}"
+    end
+
+    test "a broadcast for a different estante leaves the rail's rendered order and selection unchanged",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Estante A"})
+      shelf_b = shelf_fixture(%{name: "Estante B"})
+      c0 = copy_fixture(%{game_id: game_fixture(%{name: "Quedate"}).id})
+      {:ok, _} = Shelves.place_copy(c0.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "quedate"})
+      before_html = lv |> element("#suggestion-#{c0.id}") |> render_click()
+
+      other = copy_fixture(%{game_id: game_fixture(%{name: "Otro"}).id})
+      {:ok, _} = Shelves.place_copy(other.id, shelf_b.id, 0)
+
+      after_html = render(lv)
+      assert after_html =~ "Estante A"
+      refute after_html =~ "Otro"
+      assert before_html =~ "estante-copy-#{c0.id}"
+      assert after_html =~ "estante-copy-#{c0.id}"
+    end
+
+    test "a broadcast moving the selected copy elsewhere renders a snackbar with no action",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Estante A"})
+      shelf_b = shelf_fixture(%{name: "Estante B"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Movido"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "movido"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_b.id, 0)
+
+      html = render(lv)
+      assert html =~ "cambió de lugar"
+      assert html =~ ~s(data-timeout="4000")
+    end
+  end
+
+  describe "«¿Dónde va?» — placing a copy with no spot (D-00c, plan 01.8.2-16)" do
+    setup :register_and_log_in_staff
+
+    test "selecting a game with no spot opens the sheet directly, with no intermediate control",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Sin lugar todavía"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "sin lugar"})
+      html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "donde-va-sheet"
+      refute html =~ "Elegir dónde va"
+      assert html =~ "O elegí un estante"
+    end
+
+    # D-00c removed the separate Ubicar button on purpose — the plan's own
+    # <verify> greps the compiled source for this literally; this test
+    # pins the same rule at the behavioural level.
+    test "there is no Ubicar control anywhere on the page", %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Cualquiera"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "cualquiera"})
+      html = lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      refute html =~ ">Ubicar<"
+      refute html =~ "\"Ubicar\""
+    end
+
+    test "choosing an empty estante places the copy at position 0 and shows Juego ubicado",
+         %{conn: conn} do
+      empty_shelf = shelf_fixture(%{name: "Estante Vacío"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recién llegado"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "recién"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element("#donde-va-shelf-#{empty_shelf.id}") |> render_click()
+
+      assert html =~ "Juego ubicado"
+      refute html =~ "donde-va-sheet"
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == empty_shelf.id
+      assert fresh.position == 0
+    end
+
+    test "choosing a non-empty estante renders a + slot before, between and after every box; tapping one commits at that exact index",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Lleno"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Nueva llegada"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "nueva llegada"})
+      lv |> element("#suggestion-#{new_copy.id}") |> render_click()
+
+      html = lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
+      assert count_occurrences(html, "pk-donde-va-slot") == 3
+
+      render_click(lv, "donde-va-commit", %{"index" => "1"})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {new_copy.id, 1}, {b.id, 2}]
+    end
+
+    test "a move keeps the copy in its old spot until the new one is chosen; cancelling changes nothing",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Movible"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "movible"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = render_click(lv, "open-mover", %{})
+      assert html =~ "¿Dónde va?"
+
+      render_click(lv, "donde-va-close", %{})
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == shelf_a.id
+      assert fresh.position == 0
+    end
+
+    test "a cross-estante move leaves both estantes gap-free, committed in one transaction",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      a1 = copy_fixture(%{game_id: game_fixture(%{name: "A1"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+      {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a0"})
+      lv |> element("#suggestion-#{a0.id}") |> render_click()
+
+      render_click(lv, "open-mover", %{})
+      render_change(lv, "donde-va-search", %{"q" => "destino"})
+      html = lv |> element("#donde-va-result-shelf-#{shelf_b.id}") |> render_click()
+
+      assert html =~ "Juego movido"
+
+      remaining_a = shelf_a.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert remaining_a == [a1.id]
+      on_b = shelf_b.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert on_b == [a0.id]
+    end
+
+    test "Deshacer after a move restores the copy's previous estante and position",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Recuperable"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "recuperable"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      render_click(lv, "open-mover", %{})
+      render_change(lv, "donde-va-search", %{"q" => "destino"})
+      lv |> element("#donde-va-result-shelf-#{shelf_b.id}") |> render_click()
+
+      assert Shelves.get_copy!(copy.id).shelf_id == shelf_b.id
+
+      render_click(lv, "undo-place", %{})
+
+      fresh = Shelves.get_copy!(copy.id)
+      assert fresh.shelf_id == shelf_a.id
+      assert fresh.position == 0
+    end
+  end
+
+  describe "the \"+\" slots and «¿Qué juego va acá?» (D-08, plan 01.8.2-16 Task 2)" do
+    setup :register_and_log_in_staff
+
+    test "the rail renders exactly two + slots, one on each side of the selected cover",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "b"})
+      html = lv |> element("#suggestion-#{b.id}") |> render_click()
+
+      assert count_occurrences(html, "pk-estantes-slot") == 2
+    end
+
+    test "each + carries its 0-based index and opens the sheet bound to that exact slot",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+
+      html = render_click(lv, "open-que-va-aca", %{"index" => "1"})
+      assert html =~ "¿Qué juego va acá?"
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Entre A y B"}).id})
+      render_click(lv, "que-va-aca-pick", %{"copy-id" => to_string(new_copy.id)})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {new_copy.id, 1}, {b.id, 2}]
+    end
+
+    test "the sheet lists Sin ubicar games before any search results", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      selected = copy_fixture(%{game_id: game_fixture(%{name: "Elegido"}).id})
+      {:ok, _} = Shelves.place_copy(selected.id, shelf.id, 0)
+      unplaced = copy_fixture(%{game_id: game_fixture(%{name: "Suelto"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "elegido"})
+      lv |> element("#suggestion-#{selected.id}") |> render_click()
+
+      html = render_click(lv, "open-que-va-aca", %{"index" => "1"})
+
+      assert html =~ "Sin ubicar"
+      assert html =~ ~s(id="que-va-aca-unplaced-#{unplaced.id}")
+    end
+
+    test "choosing an already-shelved game moves it and leaves its old estante gap-free",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      selected = copy_fixture(%{game_id: game_fixture(%{name: "Elegido"}).id})
+      {:ok, _} = Shelves.place_copy(selected.id, shelf_b.id, 0)
+
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      a1 = copy_fixture(%{game_id: game_fixture(%{name: "A1"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+      {:ok, _} = Shelves.place_copy(a1.id, shelf_a.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "elegido"})
+      lv |> element("#suggestion-#{selected.id}") |> render_click()
+
+      render_click(lv, "open-que-va-aca", %{"index" => "1"})
+      render_change(lv, "que-va-aca-search", %{"q" => "a0"})
+      html = lv |> element("#que-va-aca-result-#{a0.id}") |> render_click()
+
+      assert html =~ "Juego movido"
+
+      remaining_a = shelf_a.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert remaining_a == [a1.id]
+
+      on_b = shelf_b.id |> Shelves.copies_on_shelf() |> Enum.map(& &1.id)
+      assert on_b == [selected.id, a0.id]
+    end
+
+    test "picking a Sin ubicar game places it beside the selected cover in one transaction",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      selected = copy_fixture(%{game_id: game_fixture(%{name: "Elegido"}).id})
+      {:ok, _} = Shelves.place_copy(selected.id, shelf.id, 0)
+      unplaced = copy_fixture(%{game_id: game_fixture(%{name: "Suelto"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "elegido"})
+      lv |> element("#suggestion-#{selected.id}") |> render_click()
+
+      render_click(lv, "open-que-va-aca", %{"index" => "0"})
+      html = lv |> element("#que-va-aca-unplaced-#{unplaced.id}") |> render_click()
+
+      assert html =~ "Juego ubicado"
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{unplaced.id, 0}, {selected.id, 1}]
+    end
+
+    test "the + before the first box in the rail opens the sheet bound to index 0", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "único"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+
+      render_click(lv, "open-que-va-aca", %{"index" => "0"})
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Primero"}).id})
+      render_click(lv, "que-va-aca-pick", %{"copy-id" => to_string(new_copy.id)})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{new_copy.id, 0}, {a.id, 1}]
+    end
+
+    test "a broadcast reindexing the estante while the sheet is open aborts the commit and renders a snackbar with no action",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      selected = copy_fixture(%{game_id: game_fixture(%{name: "Elegido"}).id})
+      {:ok, _} = Shelves.place_copy(selected.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "elegido"})
+      lv |> element("#suggestion-#{selected.id}") |> render_click()
+
+      render_click(lv, "open-que-va-aca", %{"index" => "1"})
+
+      # A concurrent staff member places another copy on the SAME estante
+      # while the sheet is open — a real write through the same locked
+      # path, broadcasting {:estante_updated, shelf_id} for real.
+      intruder = copy_fixture(%{game_id: game_fixture(%{name: "Intruso"}).id})
+      {:ok, _} = Shelves.place_copy(intruder.id, shelf.id, 1)
+
+      pending = copy_fixture(%{game_id: game_fixture(%{name: "Pendiente"}).id})
+      html = render_click(lv, "que-va-aca-pick", %{"copy-id" => to_string(pending.id)})
+
+      assert html =~ "cambió mientras elegías"
+      assert html =~ ~s(data-timeout="4000")
+
+      # The would-be commit never happened — pending stays unplaced.
+      assert Shelves.get_copy!(pending.id).shelf_id == nil
+    end
+  end
+
+  describe "the selected cover's options sheet and Quitar del estante (D-08, D-19f, D-19e, plan 01.8.2-16 Task 3)" do
+    setup :register_and_log_in_staff
+
+    test "tapping an unselected cover moves the selection; tapping the selected one opens its options sheet",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+
+      # Tapping the OTHER cover moves the selection, no options sheet.
+      html = lv |> element("#estante-copy-#{b.id}") |> render_click()
+      refute html =~ "cover-options-sheet"
+      assert html =~ ~s(id="estante-copy-#{b.id}" class="pk-poster-card pk-estantes-cover pk-estantes-cover--lifted)
+
+      # Tapping the NOW-selected cover opens its options sheet.
+      html = lv |> element("#estante-copy-#{b.id}") |> render_click()
+      assert html =~ "cover-options-sheet"
+      assert html =~ "Ver ficha"
+      assert html =~ "Mover"
+      assert html =~ "Quitar del estante"
+    end
+
+    test "the options sheet renders no Cancelar text and a 44px close control", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "único"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+
+      html = lv |> element("#estante-copy-#{copy.id}") |> render_click()
+
+      [_, sheet_and_after] = String.split(html, ~s(id="cover-options-sheet"), parts: 2)
+      sheet_slice = String.slice(sheet_and_after, 0, 2000)
+
+      refute sheet_slice =~ "Cancelar"
+      assert sheet_slice =~ "Cerrar"
+    end
+
+    test "Quitar del estante renders a dialog that is not nested inside a sheet, with Cancelar focused",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Único"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "único"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+      lv |> element("#estante-copy-#{copy.id}") |> render_click()
+
+      html = lv |> element("[phx-click='ask-quitar']") |> render_click()
+
+      refute html =~ "cover-options-sheet"
+      assert html =~ ~s(id="confirm-quitar-dialog")
+      assert html =~ "¿Quitar Único del estante?"
+
+      [_, dialog_and_after] = String.split(html, ~s(id="confirm-quitar-dialog"), parts: 2)
+      dialog_slice = String.slice(dialog_and_after, 0, 2000)
+      assert dialog_slice =~ ~s(autofocus)
+    end
+
+    test "confirming removal leaves the estante's remaining positions gap-free", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "b"})
+      lv |> element("#suggestion-#{b.id}") |> render_click()
+      lv |> element("#estante-copy-#{b.id}") |> render_click()
+      lv |> element("[phx-click='ask-quitar']") |> render_click()
+
+      html = render_click(lv, "confirm-quitar", %{})
+      assert html =~ "Juego quitado del estante"
+
+      fresh_b = Shelves.get_copy!(b.id)
+      assert fresh_b.shelf_id == nil
+      assert fresh_b.position == nil
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {c.id, 1}]
+    end
+
+    test "Deshacer after removal restores the copy to its previous position", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "a"})
+      lv |> element("#suggestion-#{a.id}") |> render_click()
+      lv |> element("#estante-copy-#{a.id}") |> render_click()
+      lv |> element("[phx-click='ask-quitar']") |> render_click()
+      render_click(lv, "confirm-quitar", %{})
+
+      render_click(lv, "undo-place", %{})
+
+      fresh_a = Shelves.get_copy!(a.id)
+      assert fresh_a.shelf_id == shelf.id
+      assert fresh_a.position == 0
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {b.id, 1}]
+    end
+
+    test "the selected cover of a three-copy game has an accessible name containing both copia and caja",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      multi = game_fixture(%{name: "Multi"})
+      m1 = copy_fixture(%{game_id: multi.id})
+      _m2 = copy_fixture(%{game_id: multi.id})
+      _m3 = copy_fixture(%{game_id: multi.id})
+      {:ok, _} = Shelves.place_copy(m1.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "multi"})
+      html = lv |> element("#suggestion-#{m1.id}") |> render_click()
+
+      [_, cover_and_after] = String.split(html, ~s(id="estante-copy-#{m1.id}"), parts: 2)
+      cover_slice = String.slice(cover_and_after, 0, 300)
+
+      assert cover_slice =~ "copia #{m1.number} de 3"
+      assert cover_slice =~ "caja 1 de 1"
+    end
+
+    test "the selected cover of a single-copy game's accessible name contains caja and not copia",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      solo = copy_fixture(%{game_id: game_fixture(%{name: "Solo"}).id})
+      {:ok, _} = Shelves.place_copy(solo.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "solo"})
+      html = lv |> element("#suggestion-#{solo.id}") |> render_click()
+
+      [_, cover_and_after] = String.split(html, ~s(id="estante-copy-#{solo.id}"), parts: 2)
+      cover_slice = String.slice(cover_and_after, 0, 300)
+
+      assert cover_slice =~ "caja 1 de 1"
+      refute cover_slice =~ "copia"
+    end
+  end
+
+  describe "the ?copy= param (plan 01.8.2-18) — Pendientes' one navigation mechanism for both queues" do
+    setup :register_and_log_in_staff
+
+    test "an unplaced copy's id opens «¿Dónde va?» immediately, exactly as a Sin ubicar row promises",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "Catán"
+    end
+
+    test "an already-placed copy's id lands on its estante's rail with itself lifted — the exact mechanism an Afuera row (Phase 4) will reuse",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Dixit"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "Estante Norte"
+      assert html =~ ~s(id="estante-copy-#{copy.id}")
+      assert html =~ "pk-estantes-cover--lifted"
+    end
+
+    test "an unknown copy id is ignored — the page falls back to the normal idle state", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes?copy=999999")
+
+      assert html =~ "¿Qué juego buscás?"
+    end
+  end
+
+  describe "GET /admin/estantes/pendientes — signed-out visitor (T-01.8.2-85)" do
+    test "is redirected to the login path", %{conn: conn} do
+      conn = get(conn, ~p"/admin/estantes/pendientes")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "GET /admin/estantes/administrar — signed-out visitor (T-01.8.2-85)" do
+    test "is redirected to the login path", %{conn: conn} do
+      conn = get(conn, ~p"/admin/estantes/administrar")
+      assert redirected_to(conn) == ~p"/admin/ingresar"
+    end
+  end
+
+  describe "Pendientes — Afuera and Sin ubicar, both always rendered (D-08, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "renders the back row to Estantes, the page title, and both queue headings + hints, even at 0 rows",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      assert html =~ "Pendientes"
+      assert html =~ "Estantes"
+      assert html =~ "Afuera · 0"
+      assert html =~ "Volvieron de una mesa: tocá uno para ver dónde va."
+      assert html =~ "Todavía no hay juegos afuera."
+      assert html =~ "Sin ubicar · 0"
+      assert html =~ "Todavía no tienen lugar: tocá uno para ubicarlo."
+      assert html =~ "Todos los juegos tienen lugar."
+    end
+
+    test "the Sin ubicar count equals Shelves.unplaced_copies/0's length and lists every row",
+         %{conn: conn} do
+      copy_fixture(%{game_id: game_fixture(%{name: "Uno"}).id})
+      copy_fixture(%{game_id: game_fixture(%{name: "Dos"}).id})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      assert length(Shelves.unplaced_copies()) == 2
+      assert html =~ "Sin ubicar · 2"
+      assert html =~ "Uno"
+      assert html =~ "Dos"
+      refute html =~ "Todos los juegos tienen lugar."
+    end
+
+    test "tapping a Sin ubicar row navigates to Estantes with «¿Dónde va?» already open",
+         %{conn: conn} do
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Catán"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/pendientes")
+
+      {:ok, _estantes_lv, html} =
+        lv
+        |> element("#pendientes-sin-ubicar-#{copy.id}")
+        |> render_click()
+        |> follow_redirect(conn, ~p"/admin/estantes?copy=#{copy.id}")
+
+      assert html =~ "¿Dónde va?"
+      assert html =~ "Catán"
+    end
+
+    test "a broadcast updates the Sin ubicar count and list live (D-11)", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/estantes/pendientes")
+      assert html =~ "Sin ubicar · 0"
+
+      copy_fixture(%{game_id: game_fixture(%{name: "Recién llegado"}).id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:estantes", {:estante_updated, nil})
+
+      html = render(lv)
+      assert html =~ "Sin ubicar · 1"
+      assert html =~ "Recién llegado"
+    end
+  end
+
+  describe "Administrar estantes — first run (D-09, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "with zero estantes, renders one line of purpose and Nuevo estante as the only action",
+         %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Creá los estantes en el orden en que los recorrés."
+      assert html =~ "Nuevo estante"
+      refute html =~ "Ordenar estantes"
+
+      [_, actions_and_after] = String.split(html, "pk-administrar-header-actions", parts: 2)
+      [actions_slice, _] = String.split(actions_and_after, "</div>", parts: 2)
+      assert count_occurrences(actions_slice, ~s(data-pk-pressable="true")) == 1
+    end
+  end
+
+  describe "Administrar estantes — rows, options sheet, and the name sheet (D-08, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "an estante row shows the icon, name and N juegos, and renders no chevron", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Estante Norte"
+      assert html =~ "1 juegos"
+
+      [_, row_and_after] = String.split(html, ~s(id="shelf-row-#{shelf.id}"), parts: 2)
+      row_slice = String.slice(row_and_after, 0, 500)
+      refute row_slice =~ "pk-admin-row__chevron"
+    end
+
+    test "the estante counts are batched, not queried per row (T-01.8.2-86)", %{conn: conn} do
+      a = shelf_fixture(%{name: "Estante A"})
+      b = shelf_fixture(%{name: "Estante B"})
+      %{game_id: game_fixture(%{name: "X"}).id} |> copy_fixture() |> then(&Shelves.place_copy(&1.id, a.id, 0))
+      %{game_id: game_fixture(%{name: "Y"}).id} |> copy_fixture() |> then(&Shelves.place_copy(&1.id, b.id, 0))
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/estantes/administrar")
+
+      assert html =~ "Estante A"
+      assert html =~ "Estante B"
+      assert count_occurrences(html, "1 juegos") == 2
+    end
+
+    test "tapping a row opens its options sheet with Editar and Eliminar", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+
+      assert html =~ ~s(id="shelf-options-sheet")
+      assert html =~ "Estante Norte"
+      assert html =~ "Editar"
+      assert html =~ "Eliminar"
+    end
+
+    test "Nuevo estante opens the name sheet pre-filled with the next default name", %{conn: conn} do
+      shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "Nuevo estante"
+      assert html =~ "Un nombre que se reconozca en el salón."
+      assert html =~ "Crear estante"
+      assert html =~ ~s(value="Estante 2")
+    end
+
+    test "saving an empty name surfaces an error inside the sheet", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      html = lv |> form("#shelf-name-form", %{"name" => ""}) |> render_submit()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "pk-admin-field__error"
+      refute html =~ "Estante creado"
+    end
+
+    test "saving a duplicate name surfaces a distinct error, raised from the unique constraint",
+         %{conn: conn} do
+      shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("[phx-click='open-new-shelf']") |> render_click()
+
+      html = lv |> form("#shelf-name-form", %{"name" => "Estante Norte"}) |> render_submit()
+
+      assert html =~ ~s(id="shelf-name-sheet")
+      assert html =~ "pk-admin-field__error"
+    end
+
+    test "Editar pre-fills the current name and renaming updates the row", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      html = lv |> element("[phx-click='open-edit-shelf']") |> render_click()
+
+      assert html =~ "Editar estante"
+      assert html =~ ~s(value="Estante Norte")
+      assert html =~ "Guardar"
+
+      html = lv |> form("#shelf-name-form", %{"name" => "Estante Sur"}) |> render_submit()
+
+      assert html =~ "Estante Sur"
+      refute html =~ ~s(id="shelf-name-sheet")
+    end
+
+    test "one name-sheet implementation serves both Nuevo estante and Editar" do
+      source = File.read!("lib/pukllay_club_web/live/admin/estante_live/administrar.ex")
+      assert count_occurrences(source, ~s(id="shelf-name-sheet")) == 1
+    end
+
+    test "the page consumes the shared Ordenar-mode components from AdminComponents" do
+      source = File.read!("lib/pukllay_club_web/live/admin/estante_live/administrar.ex")
+      assert source =~ "AdminComponents.reorder_header"
+      assert source =~ "AdminComponents.reorder_row"
+    end
+  end
+
+  describe "Administrar estantes — Ordenar→Listo (D-08 decision 68, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "Ordenar swaps the whole header to Ordenar estantes + Listo, shows handles, and Listo commits the order with an undoable snackbar",
+         %{conn: conn} do
+      a = shelf_fixture(%{name: "Estante A"})
+      b = shelf_fixture(%{name: "Estante B"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      html = lv |> element("[phx-click='start-reorder']") |> render_click()
+
+      assert html =~ "Ordenar estantes"
+      assert has_element?(lv, "button", "Listo")
+      refute html =~ "pk-admin-back-row"
+      assert html =~ ~s(id="reorder-shelf-#{a.id}")
+      assert html =~ ~s(id="reorder-shelf-#{b.id}")
+
+      lv |> element("#reorder-shelf-#{a.id} button[aria-label='Reordenar']") |> render_click()
+      assert has_element?(lv, "button[aria-label='Bajar #{a.name}']")
+
+      lv |> element("button[aria-label='Bajar #{a.name}']") |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+      assert html =~ "Orden guardado"
+      assert html =~ "Deshacer"
+
+      assert Enum.map(Shelves.list_shelves(), & &1.id) == [b.id, a.id]
+
+      html = lv |> element("[phx-click='undo-reorder']") |> render_click()
+      refute html =~ "Orden guardado"
+      assert Enum.map(Shelves.list_shelves(), & &1.id) == [a.id, b.id]
+    end
+  end
+
+  describe "Administrar estantes — deleting an estante (D-10, D-19f, plan 01.8.2-18)" do
+    setup :register_and_log_in_staff
+
+    test "Eliminar opens a dialog whose consequence line shows the real copy count, never nested inside the sheet",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      html = lv |> element("[phx-click='ask-delete']") |> render_click()
+
+      refute html =~ ~s(id="shelf-options-sheet")
+      assert html =~ ~s(id="confirm-delete-shelf-dialog")
+      assert html =~ "¿Eliminar Estante Norte?"
+      assert html =~ "Sus 2 juegos quedan sin lugar hasta que los vuelvas a ubicar."
+    end
+
+    test "confirming deletes the estante, its copies still exist with shelf_id nil, and stays on the page",
+         %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      html = lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      assert html =~ "Estante eliminado"
+      assert html =~ "Deshacer"
+      refute html =~ "Estante Norte"
+
+      fresh_a = Shelves.get_copy!(a.id)
+      assert fresh_a.shelf_id == nil
+      assert fresh_a.position == nil
+      assert_raise Ecto.NoResultsError, fn -> Shelves.get_shelf!(shelf.id) end
+    end
+
+    test "Deshacer restores the estante and every copy to its recorded position, gap-free", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      c = copy_fixture(%{game_id: game_fixture(%{name: "C"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+      {:ok, _} = Shelves.place_copy(c.id, shelf.id, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes/administrar")
+      lv |> element("#shelf-row-#{shelf.id}") |> render_click()
+      lv |> element("[phx-click='ask-delete']") |> render_click()
+      lv |> element("#confirm-delete-shelf-dialog button", "Eliminar") |> render_click()
+
+      html = lv |> element("[phx-click='undo-delete']") |> render_click()
+      assert html =~ "Estante Norte"
+
+      [restored] = Enum.filter(Shelves.list_shelves(), &(&1.name == "Estante Norte"))
+      positions = restored.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{a.id, 0}, {b.id, 1}, {c.id, 2}]
+    end
+
+    test "deleting an estante never deletes a Copy row (T-01.8.2-81, on_delete: :nilify_all verified directly)" do
+      shelf = shelf_fixture(%{name: "Estante Norte"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf.id, 0)
+
+      # Directly through `Repo.delete/1` (bypassing `Shelves.delete_shelf/1`
+      # entirely) proves the FK-level `on_delete: :nilify_all` itself, not
+      # just this plan's own application-level nilify — the second line of
+      # defense the delete function's own moduledoc names.
+      {:ok, _} = PukllayClub.Repo.delete(shelf)
+
+      fresh = PukllayClub.Repo.get!(PukllayClub.Catalog.Copy, copy.id)
+      assert fresh.shelf_id == nil
+    end
+  end
+
+  defp count_occurrences(haystack, needle) do
+    haystack
+    |> String.split(needle)
+    |> length()
+    |> Kernel.-(1)
+  end
+end

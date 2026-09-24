@@ -7,7 +7,7 @@ defmodule PukllayClubWeb.UserLive.Confirmation do
   @impl true
   def render(%{user: nil} = assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
       <div class="mx-auto max-w-sm space-y-4 text-center">
         <.header>Ingresar al panel</.header>
         <p>El link venció o ya se usó. Pedí uno nuevo.</p>
@@ -21,7 +21,7 @@ defmodule PukllayClubWeb.UserLive.Confirmation do
 
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse>
+    <Layouts.app flash={@flash} current_scope={@current_scope} bottom_collapse admin_chrome>
       <div class="mx-auto max-w-sm">
         <div class="text-center">
           <.header>Welcome {@user.email}</.header>

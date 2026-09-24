@@ -1,0 +1,603 @@
+/* The game editor's own shell + body CSS (plan 01.8.2-17, D-26..D-30).
+
+   Wired into the build via `@import "./admin/editor.css";` in `app.css`,
+   sibling to the existing `@import "./admin/tokens.css";`/`chrome.css`/
+   `screens.css`/`estantes.css`/`juegos.css` lines — same pattern every
+   prior admin-CSS-file plan used (see any of those files' own header
+   comments). This file's own rules read colour through `01.8.2-TOKENS.md`'s
+   reconciled tokens (`--val`, `--color-surface`, `--stroke`) or a directly
+   shipped `app.css` token — never a second name for a value that table
+   already fates.
+
+   Plans 01.8.2-19, -20 and -21 also write to this file (the sheets that
+   write into the draft this plan establishes, the draft-sheet flow, and
+   the Copias stepper) — sections are numbered and scoped by selector
+   prefix (`.pk-editor-*`) so those plans extend without restructuring. */
+
+/* ============================================================
+   Task 1 — the 56px top app bar + the 39px D-29 franja, and hiding the
+   shared app chrome this page's own bar replaces (D-27: "replacing .hdr +
+   .pbar + .back, which cost 97px before the game's name and drew the back
+   affordance twice").
+
+   `body:has(.pk-game-editor)` is this file's ONLY way to reach outside
+   `<main>` without touching `layouts.ex`/`app.css` (this plan's own
+   `files_modified` never lists either) — the same `:has()` technique
+   `app.css` already uses for `body:has(.pk-about-cta-bar)`'s document-end
+   clearance (01.5-08), not a novel pattern for this codebase.
+   ============================================================ */
+
+body:has(.pk-game-editor) #app-header {
+  display: none;
+}
+
+/* `<main>`'s own `pt-8 sm:pt-20`/`pb-20` utilities are layered Tailwind —
+   this unlayered rule beats them on the same property without touching
+   `layouts.ex` (the cascade-layer hazard `app.css`'s own header comment
+   documents, applied deliberately here). The editor supplies its own top
+   clearance (`.pk-editor-body`, below) and its own bottom clearance via
+   `.pk-admin-has-save-bar` (components.css, D-28) — `<main>` itself
+   carries none. */
+body:has(.pk-game-editor) main {
+  padding: 0;
+}
+
+.pk-editor-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 58;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 4px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--stroke);
+}
+
+.pk-editor-topbar__back {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+/* D-19n applied to a bar already present: the title is absent at rest and
+   fades in on scroll — `flex: 1` is set UNCONDITIONALLY (not toggled),
+   which is what keeps the ⋮'s position fixed instead of sliding left at
+   rest and jumping right on scroll (the "the thing to tap is moving"
+   defect this bar exists to avoid). Opacity is the only property the
+   scroll toggle changes. */
+.pk-editor-topbar__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-base-content);
+  opacity: 0;
+  transition: opacity 140ms var(--ease-out-soft, ease-out);
+}
+
+.pk-editor-topbar.is-titled .pk-editor-topbar__title {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-editor-topbar__title {
+    transition: none;
+  }
+}
+
+/* D-27 d47: the one documented exception to Scope A's outline-only rule
+   (`ui-design-system` Scope A / 064 "S3 Contorno") is the top app bar —
+   and ONLY the top app bar. Recorded here even though nothing below
+   currently paints a filled surface: 074's swapping filled CTA slot (the
+   original reason d47 was written) is deleted outright in 079/080 — the
+   ⋮ opens a sheet and `Guardar` lives at the foot (`save_bar/1`, itself
+   outline per D-28). Nothing in THIS bar is filled today; the exception is
+   recorded so a later slice does not read its absence as "the exception
+   was never real" and does not read its presence as license to add a
+   filled control anywhere else in the admin. */
+.pk-editor-topbar__menu {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  border-radius: 9999px;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+.pk-editor-topbar__menu:active,
+.pk-editor-topbar__menu[aria-expanded="true"] {
+  background: var(--color-surface-2);
+}
+
+/* D-29: the durable-status franja, fixed directly under the 56px bar
+   (`top: 56px`) — status and the save bar's own transient `Sin guardar`
+   state get SEPARATE fixed homes (closing 080's open item 4), rather than
+   competing for one line. Renders only for `:published`/`:retired`
+   (`form.ex`'s `franja_text/1` returns `nil` for `:draft` — the
+   prohibition this plan's own verify greps for: a draft must never claim
+   to be on the web). */
+.pk-editor-franja {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  z-index: 57;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--stroke);
+}
+
+.pk-editor-franja__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.pk-editor-franja__dot--published {
+  background: var(--color-success);
+}
+
+.pk-editor-franja__dot--retired {
+  background: var(--color-error);
+}
+
+.pk-editor-franja__text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-base-content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The body's own clearance for the two fixed bars above it (56 + 39 =
+   95px) plus the D-28 fixed foot save bar (`.pk-admin-has-save-bar`,
+   `components.css`, `calc()`-derived off `--pk-save-bar-h` — never a
+   second bottom literal here). Horizontal keel = 16px (01.8.2-UI-SPEC.md
+   "The keel (open item 4) — decided: 16", measured against the real admin
+   shell, not sketch 079's rejected 14). */
+.pk-editor-body {
+  padding-top: 95px;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+.pk-editor-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-error);
+  border-radius: 12px;
+  color: var(--color-error);
+  font-size: 14px;
+}
+
+/* ============================================================
+   Task 3 — the ficha-mirroring body and D-26/D-23's editable affordance
+   (`--val` tint + 14px pencil) on the seven editable blocks: the pills'
+   nivel chip, the cover, the título, the descripción, and the divider
+   group's Copias/Estante/Es una expansión rows (the last three render via
+   `AdminComponents.editable_row/1` directly — no new CSS needed for them
+   beyond what `components.css` already ships).
+   ============================================================ */
+
+.pk-editor-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* A pill, not a row — D-23's row anatomy does not fit a chip-shaped
+   control, so the affordance here is the SAME signal (tint + pencil)
+   carried by a different container, exactly as D-26 requires for the
+   cover below. */
+.pk-editor-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  background: none;
+  cursor: pointer;
+}
+
+/* A8 — 44px hit-box floor measured on the hit box (bleeding `::after`
+   included), not the drawn 32px pill itself (`admin_components.mjs`'s own
+   real-browser sweep found this: a compact pill would otherwise under-
+   report its tap target). */
+.pk-editor-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -6px;
+  bottom: -6px;
+}
+
+.pk-editor-pill--editable {
+  color: var(--val);
+  border-color: var(--val);
+}
+
+.pk-editor-pencil {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.pk-editor-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-width: 220px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.pk-editor-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* The cover's pencil renders as a corner badge (a tint cannot mark an
+   image) — positioned where the public ficha puts its own share control
+   (`show.ex`'s `absolute right-3 top-3`). It is intentionally NOT wrapped
+   in a `phx-click` handler: 01.8.2's own packaged design reference
+   (`admin-game-editor.md` "What to Avoid") records that redrawing the
+   cover is a reversion of 01.3.1/D-07 (which emptied `gallery_urls` on
+   purpose) — the badge is drawn because the pencil needs a target, but it
+   does nothing, by design, not by omission. */
+.pk-editor-cover__pencil {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: var(--color-base-100);
+  color: var(--color-neutral);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 15%);
+}
+
+/* The título: Bebas 30/36, no label (D-26 overrides D-19j for THIS page
+   only). `font-family: var(--font-display)` reaches the real Bebas stack
+   through the CSS custom property directly — never the Tailwind
+   `font-display` utility CLASS, which `admin_composition_test.exs`'s
+   negative check forbids by literal string in every listed admin file's
+   SOURCE (the guard exists to keep every other admin screen off Bebas;
+   this rule achieves the same visual result through CSS, not through the
+   banned class name, so D-26's override and the composition guard both
+   hold at once). */
+.pk-editor-title {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 36px;
+  font-weight: 400;
+  color: var(--val);
+  cursor: pointer;
+}
+
+/* A8 — the drawn box is exactly the 36px line-height; bleed 4px top/bottom
+   to clear the 44px hit-box floor (same technique as `.pk-editor-pill`,
+   both found by `admin_components.mjs`'s real-browser sweep). */
+.pk-editor-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
+}
+
+.pk-editor-title .pk-editor-pencil {
+  vertical-align: 4px;
+  margin-left: 8px;
+  color: var(--color-neutral);
+}
+
+/* The non-editable section chip: D-33's whole point is that `--val` and
+   `--color-primary` resolve to DIFFERENT stops, so this chip (which uses
+   `--color-primary`, matching every other section chip in the app) reads
+   as visibly distinct from an editable value's tint — asserted directly
+   in `form.ex`'s own tests (the chip's resolved colour differs from
+   `--val`). */
+.pk-editor-section-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 2px 10px;
+  border: 1px solid var(--color-primary);
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+/* The descripción: D-23's row anatomy does not fit a paragraph (line 2
+   would have nothing left but a hint), so this block tints the paragraph
+   text directly and anchors the pencil in the SAME 44px column the public
+   ficha's own clamp-toggle chevron reserves (`show.ex`'s `.pk-desc-toggle`)
+   — the pencil could not live inside the 3-line clamp itself, which would
+   clip it. */
+.pk-editor-desc {
+  position: relative;
+  width: 100%;
+  margin: 0 0 16px;
+  padding: 0 44px 0 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.pk-editor-desc__text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--val);
+}
+
+.pk-editor-desc .pk-editor-pencil {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 28px;
+  color: var(--color-neutral);
+}
+
+/* The five read-only BGG facts (AÑO / DISEÑADORES / ILUSTRADORES /
+   MECÁNICAS / TEMÁTICAS): E3's own measured rank, byte-identical to the
+   public ficha's `.pk-spec-list` label styling (12px | 400 | uppercase |
+   0.08em | muted) — no `--val` tint anywhere in this block, since none of
+   it is editable. */
+.pk-editor-facts {
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pk-editor-facts dt {
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-neutral);
+  margin-bottom: 2px;
+}
+
+.pk-editor-facts dd {
+  font-size: 14px;
+  color: var(--color-base-content);
+  margin: 0;
+}
+
+.pk-editor-divider {
+  height: 1px;
+  margin: 0 0 8px;
+  background: var(--color-base-300);
+}
+
+/* ============================================================
+   Plan 01.8.2-19 — the two sheet patterns (D-30), never mixed:
+   `.pk-editor-opt` is the CHOICE row (choosing commits and closes, no
+   commit control anywhere in the sheet); `.pk-editor-sheet-save` is the
+   TEXT sheet's own wide `Guardar` (the ONLY commit control in that
+   pattern). Plans 01.8.2-20/-21 extend this section for the draft sheet
+   and the Copias stepper — keep the `.pk-editor-opt`/`.pk-editor-sheet-*`
+   naming so those plans compose rather than fork it.
+   ============================================================ */
+
+.pk-editor-opt {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 -16px;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+.pk-editor-opt__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pk-editor-opt__label {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.pk-editor-opt__sub {
+  font-size: 13px;
+  color: var(--color-neutral);
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+/* D-23: the selected option gets a TICK, never the `--val` tint — tinting
+   it here would collide with the at-rest editable marker already carried
+   by the row that opened this sheet (`.pk-editor-pill--editable`, etc). */
+.pk-editor-opt__tick {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--color-primary);
+}
+
+/* The text sheet's own wide `Guardar` — `action/1` `anatomy="a1"` stays
+   outline (Scope A's S3 Contorno; D-27's top-bar exception does not
+   extend here), only WIDTH is widened past A1's usual natural-width rule,
+   since this is a sheet's own commit slot, not the save bar's A1 (D-28
+   keeps that one natural-width and right-aligned; the two never share a
+   container). Loads after `tokens.css`'s nested `components.css` (see
+   `app.css`'s import order), so this single-class selector wins the
+   `.pk-admin-action--a1` width on source order alone. */
+.pk-editor-sheet-save {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* ============================================================
+   Plan 01.8.2-20 — the draft sheet's classic-form CTA (D-30's OTHER
+   documented S3 Contorno exception, alongside D-27's top app bar above):
+   one FILLED, 52px, full-width `Publicar` — geometry taken from sketch
+   078's own `.cta` rule (`min-height: 52px`), the primary fill from
+   `--color-primary`/`--color-primary-content` (the same pair every other
+   filled-button EXCEPTION in this codebase already resolves through,
+   never a bespoke colour). Unlike 078's origin sketch, this button is
+   NEVER `[disabled]` (D-24 overturned that P2 choice) — `@error` renders
+   its own inline line instead (`.pk-draft-sheet-gate-line`, below), never
+   a dead control.
+   ============================================================ */
+
+.pk-draft-sheet-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.pk-draft-sheet-row {
+  margin-bottom: 16px;
+}
+
+.pk-draft-sheet-row--cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.pk-draft-sheet-cover {
+  width: 96px;
+  height: 128px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-surface);
+}
+
+.pk-draft-sheet-cover--placeholder {
+  display: block;
+}
+
+.pk-draft-sheet-cover-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-neutral);
+}
+
+.pk-draft-sheet-gate-line {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+.pk-draft-sheet-cta {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ============================================================
+   Plan 01.8.2-21 — open item 3 / D-38's link-a-BGG-id sheet
+   (`bgg_link_sheet/1`): the same wide-`Guardar`-shaped form as the two
+   text-field sheets above (`.pk-editor-sheet-save` reused verbatim, no
+   new commit-button style), plus the editions-warning block reusing
+   `GameLive.Index`'s own `.pk-admin-juegos-edition-*` spacing rhythm
+   for the SAME warning shape shown here inside a sheet instead of
+   inline on the list.
+   ============================================================ */
+
+#editor-bgg-edition-prompt p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-base-content);
+}
+
+#editor-bgg-edition-prompt ul {
+  margin: 0 0 16px;
+  padding: 0 0 0 20px;
+  font-size: 14px;
+  color: var(--color-neutral);
+}
+
+#editor-bgg-edition-prompt #confirm-link-edition {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#editor-bgg-edition-prompt #cancel-link-edition {
+  width: 100%;
+}

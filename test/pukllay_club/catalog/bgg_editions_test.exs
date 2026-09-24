@@ -81,6 +81,43 @@ defmodule PukllayClub.Catalog.BggEditionsTest do
     end
   end
 
+  describe "link_bgg_id/3 — an EXISTING game linking a fresh id (open item 3, D-38, plan 01.8.2-21)" do
+    test "links, sets enrichment_status pending, and enqueues exactly one job" do
+      game = game_fixture(%{bgg_id: nil, enrichment_status: "no_bgg_id"})
+
+      assert {:ok, updated} = Catalog.link_bgg_id(game, "184267")
+      assert updated.bgg_id == 184_267
+      assert updated.enrichment_status == "pending"
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "unparseable input returns {:error, :invalid_bgg_id} without enqueueing a job" do
+      game = game_fixture(%{bgg_id: nil})
+
+      assert Catalog.link_bgg_id(game, "not a bgg id") == {:error, :invalid_bgg_id}
+      refute_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "a bgg id already held by another game returns {:existing_editions, games} — rejected the same way creation rejects it" do
+      existing = game_fixture(%{bgg_id: 163_412, name: "Patchwork"})
+      game = game_fixture(%{bgg_id: nil, name: "Patchwork Andino"})
+
+      assert {:existing_editions, [got]} = Catalog.link_bgg_id(game, "163412")
+      assert got.id == existing.id
+      assert Catalog.get_game!(game.id).bgg_id == nil
+    end
+
+    test "acknowledging every current holder proceeds with the link" do
+      existing = game_fixture(%{bgg_id: 163_412, name: "Patchwork"})
+      game = game_fixture(%{bgg_id: nil, name: "Patchwork Andino"})
+
+      assert {:ok, updated} =
+               Catalog.link_bgg_id(game, "163412", acknowledged_game_ids: [existing.id])
+
+      assert updated.bgg_id == 163_412
+    end
+  end
+
   describe "games.bgg_id has no unique index (guards the rejected REVIEW fix)" do
     test "no unique or partial-unique index exists on games.bgg_id" do
       %{rows: rows} =

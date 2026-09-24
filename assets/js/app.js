@@ -24,12 +24,35 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/pukllay_club"
 import topbar from "../vendor/topbar"
+// AdminSheet (01.8.2-08): a hand-authored, non-colocated hook — see its own
+// moduledoc-style header comment for why it isn't a `Phoenix.LiveView.
+// ColocatedHook` block like `CarouselRow`'s `.CarouselScroll` (two
+// components, `sheet/1` and `dialog/1`, need the identical behaviour).
+// Referenced from admin_components.ex via `phx-hook="AdminSheet"` — no
+// leading dot, since that syntax is reserved for colocated hooks.
+import AdminSheet from "./hooks/admin_sheet"
+// AdminRail (plan 01.8.2-13, D-08/D-19n): scroll-to-selected for the
+// Estantes rail plus the pinned-search hide/return — same non-colocated
+// convention as AdminSheet above, since this one also needs to reach
+// across two different subtrees (the search field, the rail) from one
+// mount point on the page's own stable wrapper.
+import AdminRail from "./hooks/admin_rail"
+// AdminList (plan 01.8.2-14, D-19g-bis/D-19n): expand-keeps-position for
+// Juegos' collapsible sections, the pinned section-caption IntersectionObserver,
+// the pinned page bar's scroll toggle, and the fresh-row scroll-into-view —
+// same non-colocated, mount-once-on-the-page's-own-wrapper convention as
+// AdminSheet/AdminRail above.
+import AdminList from "./hooks/admin_list"
+// EditorShell (plan 01.8.2-17, D-27/D-19n): the game editor's scroll-
+// driven top-bar title fade-in — same non-colocated, mount-once convention
+// as AdminSheet/AdminRail/AdminList above.
+import EditorShell from "./hooks/editor_shell"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, AdminSheet, AdminRail, AdminList, EditorShell},
 })
 
 // Show progress bar on live navigation and form submits, and on any

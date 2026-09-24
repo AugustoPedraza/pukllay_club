@@ -87,8 +87,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         assert html =~ label
       end
 
-      refute html =~ "+3"
-      refute html =~ "+7"
+      # The overflow cap renders as `<span class="pk-pill pk-pill-outline">+N</span>`
+      # inside `.pk-chip-row` (GameChips.chip_row/1). Scope the refutation THERE.
+      #
+      # A bare `refute html =~ "+3"` matches anywhere in the document, and the CSP
+      # nonce is random base64 — one like "82PoRQZcd60mTOL/+3AFNPfQoKWq/G6i"
+      # contains "+3" and turns this test red for a reason with nothing to do with
+      # chips. Observed in CI run 35959524325; it had been recorded as a
+      # "non-reproducible flake" in deferred-items.md before the real cause was
+      # found. Same failure family as the SVG-path-data substring collision noted
+      # in plan 01.8.2-13's summary: a guard that fails for the wrong reason is
+      # just as broken as one that passes for the wrong reason.
+      chip_rows_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-chip-row")
+        |> LazyHTML.to_html()
+
+      refute chip_rows_html =~ ~r/>\+\d+</
     end
 
     test "renders designers in the fact grid and description in the reading column, and players/duration once in the facts row; no minimum-age label renders (D-05, UAT gap G-01.3-1 item 2)",
@@ -3465,6 +3481,32 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
   # time and so never appear in the rendered HTML.
   describe "every event the detail page can dispatch is handled (catalog-show-no-clause class guard)" do
     @event_attr_pattern ~r/phx-(?:click|blur|submit|change|keydown|keyup|focus)="([^"]*)"/
+    # Task 1 (01.8.2-09, D-12/G-01.8.1-1b): a start tag is scanned WHOLE, not
+    # via one flat regex over the whole document, so an explicit phx-target
+    # on the SAME tag can exclude it — an event bound with phx-target is, by
+    # construction, routed to that target (a LiveComponent's own
+    # handle_event/3), never to CatalogLive.Show's. The shared chrome's
+    # drawer (Layouts.NavDrawer, PukllayClubWeb.Layouts.NavDrawer) is the
+    # concrete case this guards: its hamburger/close/backdrop all carry
+    # phx-target (either "#pk-nav-drawer" or @myself's numeric CID) and are
+    # therefore out of THIS page's dispatchable set, not an oversight.
+    @start_tag_pattern ~r/<[a-zA-Z][^>]*>/
+
+    defp dispatchable_events_from_markup(html) do
+      @start_tag_pattern
+      |> Regex.scan(html)
+      |> List.flatten()
+      |> Enum.reject(&(&1 =~ ~r/phx-target="[^"]*"/))
+      |> Enum.flat_map(fn tag ->
+        @event_attr_pattern
+        |> Regex.scan(tag)
+        |> Enum.map(&List.last/1)
+      end)
+      # JS-command bindings (e.g. the theme switcher's JS.dispatch) render as
+      # a JSON array, not an event name — they never reach handle_event/3.
+      |> Enum.reject(&String.starts_with?(&1, "["))
+    end
+
     # Show's own module, plus the two other modules whose colocated hooks run
     # on a rendered detail page (Layouts.app's header and the Juegos similares
     # shelf). A hook push is invisible to any markup scan.
@@ -3487,13 +3529,7 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
       # Open the reservation modal so its own subtree is in the scanned markup.
       html = view |> element(".pk-poster-col button[phx-click='open-reservation']") |> render_click()
 
-      from_markup =
-        @event_attr_pattern
-        |> Regex.scan(html)
-        |> Enum.map(&List.last/1)
-        # JS-command bindings (e.g. the theme switcher's JS.dispatch) render as
-        # a JSON array, not an event name — they never reach handle_event/3.
-        |> Enum.reject(&String.starts_with?(&1, "["))
+      from_markup = dispatchable_events_from_markup(html)
 
       from_hooks =
         Enum.flat_map(@hook_push_sources, fn path ->

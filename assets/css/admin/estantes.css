@@ -1,0 +1,443 @@
+/* Estantes (plan 01.8.2-13, D-08, D-19g, D-19j, D-19n) — the search-first
+   "find a box" screen. Idle: prompt + 48px field at the optical centre
+   (2:3 top:bottom split — 069's own `.sp-top`/`.sp-bot` ratio, measured as
+   reading better than a geometric 1:1 centre). Answered: the block rises
+   (title -> field 16px, field -> answer 32px) and the estante renders as
+   context over a rail of covers.
+
+   The rail deliberately reuses `.pk-rail`/`.pk-rail-wrap`/`.pk-poster-card`
+   from `app.css` (065 R9's own pinned card-width/gap/fade geometry,
+   already the catalog rail's own contract) rather than redeclaring a
+   second card/gap/fade set here — this file only adds the cover's own art
+   box, fallback tile and lifted-state paint on top of that shared
+   geometry. Do not add a literal pixel card-width rule anywhere below;
+   this file's own `<verify>` greps for it — the `aspect-ratio` used below
+   is a ratio, not a width, and stays inside whatever width
+   `.pk-poster-card` already sets.
+
+   Wired into the build via a direct `@import "./admin/estantes.css";`
+   appended to `app.css`'s existing admin-import block (sibling to
+   `tokens.css`/`chrome.css`/`screens.css`) — unlike plan 01.8.2-07's
+   `components.css`, nothing in this plan's `<verify>` forbids touching
+   `app.css` directly, so no nested-import workaround is needed here.
+   Proven reaching `priv/static/assets/css/app.css` after `mix
+   assets.build` — see this plan's SUMMARY for the grep proof. */
+
+/* Absolutely positioned relative to `.pk-estantes` (below) — see the
+   `<h1>` call site's own comment for why this precedes the title in DOM
+   order instead of sitting beside it in a flex header row. */
+.pk-estantes-header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Room for `.pk-estantes-header-actions`'s two 44px icons so a long
+   heading (not "Estantes" itself, but any future rename) cannot run
+   under them. */
+.pk-estantes-title {
+  padding-right: 100px;
+}
+
+/* Mirrors `chrome.css`'s `.pk-admin-tab-badge` D-19g visual contract
+   (18px, primary fill, "99+" above 99, absent at 0) at a different
+   anchor — a 44px A3 icon button in a page header, not the tab bar's own
+   56x30 icon wrapper. Declared separately rather than reusing
+   `.pk-admin-tab-badge` directly, since that class's `top`/`right` offsets
+   are tuned to the tab bar's own icon geometry, not this one. */
+.pk-estantes-icon-badge {
+  position: relative;
+  display: inline-flex;
+}
+
+.pk-estantes-icon-badge__count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Idle hero (D-08, decision 58): the prompt sits above the field, and
+   "nothing below it may look heavier than the field" — there is nothing
+   else in this block on purpose. */
+.pk-estantes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* Room to distribute the 2:3 idle split into — flex-grow has nothing to
+     divide without it. `--pk-tab-bar-h` (0px fallback until plan
+     01.8.2-10's chrome is on screen for this route) and a rough allowance
+     for the page header above this block. */
+  min-height: calc(100dvh - var(--pk-tab-bar-h, 0px) - 140px);
+}
+
+.pk-estantes-hero {
+  display: flex;
+  flex: 2 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 16px;
+  text-align: center;
+}
+
+.pk-estantes-prompt {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* the optical-centre bottom half (decision 61's `.sp-bot`, flex: 3): an
+   idle-only spacer so the hero+field group sits at 2:3, not a geometric
+   1:1 centre — measured in 069 as reading "sunk" at 1:1. */
+.pk-estantes-spacer-bottom {
+  flex: 3 1 0;
+}
+
+/* raised rhythm (decision 61): title -> field 16px */
+.pk-estantes[data-raised="true"] .pk-estantes-search-wrap {
+  margin-top: 16px;
+}
+
+.pk-estantes-search-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--color-base-100);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+/* D-19n: the SAME field pins — hides on scroll-down, returns on
+   scroll-up, never while focused, never within 140px of the top
+   (`assets/js/hooks/admin_rail.js` owns the threshold and the toggle). */
+.pk-estantes-search-wrap[data-pinned-hidden] {
+  transform: translateY(-100%);
+}
+
+.pk-estantes-search {
+  position: relative;
+}
+
+#estantes-search-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 48px 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+#estantes-search-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.pk-estantes-search__clear {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+  cursor: pointer;
+}
+
+/* D-08 decision 12: "the dropdown falls OVER the page" — an absolutely
+   positioned overlay, not a block that pushes content below it down.
+   Shown only while the field (or a row inside the dropdown) has focus —
+   `:focus-within` on the wrapping form, so no server round trip is
+   needed just to open/close it, and clicking a row never races a blur
+   close (the click target is still inside the focus-within subtree at
+   the moment of mousedown). */
+.pk-estantes-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  border: 1px solid var(--color-base-300);
+  border-radius: 12px;
+  background: var(--color-base-100);
+  box-shadow: 0 10px 30px -6px color-mix(in srgb, var(--color-base-content) 25%, transparent);
+  padding: 4px 0;
+  max-height: 264px;
+  overflow-y: auto;
+  z-index: 16;
+}
+
+.pk-estantes-search:not(:focus-within) .pk-estantes-dropdown {
+  display: none;
+}
+
+.pk-estantes-no-match {
+  padding: 4px 0 8px;
+}
+
+.pk-estantes-no-match__hint,
+.pk-estantes-no-recent {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--color-neutral);
+}
+
+.pk-estantes-row-meta {
+  font-size: 13px;
+  color: var(--color-neutral);
+}
+
+/* answered state (decision 61): field -> answer 32px */
+.pk-estantes-answer {
+  margin-top: 32px;
+}
+
+/* the estante as context, not a heading (decision 63): 18px icon + 14/600
+   muted name, 16px above the rail. */
+.pk-estantes-estante-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral);
+  margin-bottom: 16px;
+}
+
+.pk-estantes-cover__art {
+  aspect-ratio: 96 / 100;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.pk-estantes-cover__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pk-estantes-cover__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-primary);
+}
+
+/* the picked cover is lifted -12px with a shadow (decision 23) */
+.pk-estantes-cover--lifted .pk-estantes-cover__art {
+  transform: translateY(-12px);
+  box-shadow: 0 14px 22px -6px rgba(36, 18, 56, 0.45);
+}
+
+:root[data-theme="dark"] .pk-estantes-cover--lifted .pk-estantes-cover__art {
+  box-shadow: 0 14px 22px -6px rgba(0, 0, 0, 0.8);
+}
+
+/* the placed/moved cover drops into its spot (estante-ui-restart decision
+   39) — from 56px above at 92% size, a small overshoot, settling at the
+   lifted -12px rest position over 620ms. Gated behind
+   `prefers-reduced-motion: no-preference` (this repo's established idiom
+   — `.pk-conn-spinner`, 01.2-15 — a media-query gate on the trigger, not
+   a per-selector `reduce` override) so a user who asked for no motion
+   sees the cover simply appear lifted, with no animation at all. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pk-estantes-land {
+    0% {
+      transform: translateY(-56px) scale(0.92);
+      opacity: 0;
+    }
+
+    55% {
+      transform: translateY(-6px) scale(1.02);
+      opacity: 1;
+    }
+
+    78% {
+      transform: translateY(-15px) scale(1);
+    }
+
+    100% {
+      transform: translateY(-12px);
+    }
+  }
+
+  .pk-estantes-cover--landed .pk-estantes-cover__art {
+    animation: pk-estantes-land 620ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
+
+.pk-estantes-needs-placement {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--color-neutral);
+}
+
+/* Task 2's "+" slots either side of the selected cover, and the
+   «¿Dónde va?» sheet's own N+1 slots — a visible 24px dashed circle with
+   a 44px hit box that runs UNDER the (inert) covers without covering
+   them, matching admin-estantes.md's `.slot`/`.slot::before` pattern. */
+.pk-estantes-slot,
+.pk-donde-va-slot {
+  position: relative;
+  flex: 0 0 24px;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--color-neutral);
+  z-index: 2;
+}
+
+.pk-estantes-slot::before,
+.pk-donde-va-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0 -10px;
+}
+
+.pk-estantes-slot span[aria-hidden],
+.pk-donde-va-slot span[aria-hidden] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 38px;
+  border-radius: 50%;
+  border: 1px dashed var(--stroke);
+  background: var(--color-base-100);
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Task 1's full-height «¿Dónde va?»/«¿Qué juego va acá?» sheets
+   (estante-ui-restart decisions 37/64: "F · hoja completa") — an
+   opt-in override on top of `sheet/1`'s own shared 85vh cap
+   (`AdminComponents.sheet/1`, plan 01.8.2-08), scoped to this screen's
+   own class so `admin_components.ex` itself never has to know about
+   it (this plan does not touch that file). */
+.pk-estantes-sheet--full .pk-admin-sheet {
+  top: 24px;
+  bottom: 0;
+  max-height: none;
+}
+
+.pk-donde-va-search {
+  position: relative;
+  margin: 0 16px 8px;
+}
+
+.pk-donde-va-search input {
+  width: 100%;
+  height: 48px;
+  padding: 0 48px 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.pk-donde-va-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  padding: 16px 16px 8px;
+}
+
+/* ============================================================
+   Plan 01.8.2-18 — Pendientes (D-08, D-19g): each queue is a heading
+   (`list_section_label/1`) + one hint line (`.pk-admin-empty-note`,
+   reused as-is rather than a second near-identical hint class) + rows,
+   stacked with the SAME 4px rhythm `.pk-admin-web-otras` already
+   established for a section-plus-rows block.
+   ============================================================ */
+.pk-admin-pendientes-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ============================================================
+   Plan 01.8.2-18 — Administrar estantes (D-08, D-09, D-10, decision 68).
+   ============================================================ */
+
+/* `position: relative` anchor for `.pk-administrar-header-actions` below —
+   the SAME idiom `.pk-estantes` establishes on that other page, for the
+   SAME reason. A first attempt here rendered the actions AFTER the
+   `<h1>` inside a plain flex row; `test/visual/admin_components.mjs`'s
+   D3 check (run live against this page) caught two real regressions
+   that caused: the page-head-to-body gap measured negative (the check
+   walks `<h1>`'s own `nextElementSibling`, which was the actions row,
+   not real body content) AND the title's own top position shifted
+   ~8px narrower-than-375 viewports (the actions' "Nuevo estante" A2
+   text button changed the flex row's cross-axis height at that width,
+   and `align-items: center` recentred the title against it). Both are
+   closed by moving the actions BEFORE the title in DOM and taking them
+   out of flow entirely. */
+.pk-administrar {
+  position: relative;
+}
+
+.pk-administrar-header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Room for the two actions above (a 44px icon + the "Nuevo estante" text
+   button) so the title never runs under them — measured against the
+   rendered `pk-admin-action--a2` text button's natural width plus the
+   a3 icon and their 4px gap. */
+.pk-administrar-title {
+  padding-right: 210px;
+}
+
+#administrar-rows,
+#administrar-reorder-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The estante row's own glyph tile (`estante_row/1`, administrar.ex) —
+   same 40px slot `.pk-admin-row__cover` reserves for a game's cover
+   image, just filled with an icon instead since an estante has no
+   photo. */
+.pk-admin-administrar-row__icon {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+}

@@ -244,7 +244,20 @@ defmodule PukllayClubWeb.LayoutsTest do
     test "emits no nav-hook attribute value when sticky is not passed (01-12)" do
       html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
 
-      refute html =~ "phx-hook"
+      # Scoped to #app-header (not the whole page, per 01.8.2-09 Task 1):
+      # PukllayClubWeb.Layouts.NavDrawer, the drawer's own LiveComponent,
+      # renders an unconditional colocated hook (.NavDrawerFocus) OUTSIDE
+      # #app-header regardless of @sticky — that unconditional presence is
+      # exactly the G-01.8.1-1b fix (the drawer used to only work on pages
+      # whose header carried .CatalogNav). .CatalogNav itself stays
+      # genuinely conditional on @sticky.
+      header_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#app-header")
+        |> LazyHTML.to_html()
+
+      refute header_html =~ "phx-hook"
       refute html =~ "CatalogNav"
     end
 
@@ -262,7 +275,7 @@ defmodule PukllayClubWeb.LayoutsTest do
   # connection-status bar. No pre-existing test in this file ever asserted
   # on either removed id, so there is nothing to delete here — these are all
   # newly authored assertions.
-  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15)" do
+  describe "app/1 connection-status bar (G-01.2-8, plan 01.2-15) and admin flash routing (D-19c, plan 01.8.2-08)" do
     test "flash_group/1 renders neither connection-state id nor the stock toast positioning classes" do
       html = render_component(&Layouts.flash_group/1, %{flash: %{}})
 
@@ -280,6 +293,50 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert html =~ "Guardado con éxito"
       assert html =~ "Algo salió mal"
+    end
+
+    test "admin_chrome: true with an :info flash renders the snackbar, never the top toast" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"info" => "Sesión cerrada."},
+          inner_block: [],
+          admin_chrome: true
+        })
+
+      assert html =~ "pk-admin-snackbar"
+      assert html =~ "Sesión cerrada."
+      refute html =~ "toast-top"
+      refute html =~ "toast-end"
+    end
+
+    test "admin_chrome: true with an :error flash renders the snackbar, never the top toast" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"error" => "Error al traer datos de BGG."},
+          inner_block: [],
+          admin_chrome: true
+        })
+
+      assert html =~ "pk-admin-snackbar"
+      assert html =~ "Error al traer datos de BGG."
+      refute html =~ "toast-top"
+    end
+
+    test "admin_chrome: true with no flash present renders no snackbar" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], admin_chrome: true})
+
+      refute html =~ "pk-admin-snackbar"
+    end
+
+    test "admin_chrome: false (default, public pages) still renders the top toast — regression guard" do
+      html =
+        render_component(&Layouts.app/1, %{
+          flash: %{"info" => "Guardado con éxito"},
+          inner_block: []
+        })
+
+      assert html =~ "toast-top"
+      refute html =~ "pk-admin-snackbar"
     end
 
     test "app/1 renders exactly one connection-status bar carrying hidden, role and both connection bindings" do
@@ -1310,6 +1367,379 @@ defmodule PukllayClubWeb.LayoutsTest do
 
       assert utility_html |> String.split("min-h-11") |> length() |> Kernel.-(1) == 3
       assert utility_html |> String.split("min-w-11") |> length() |> Kernel.-(1) == 3
+    end
+  end
+
+  # Task 1, plan 01.8.2-09 (D-12/G-01.8.1-1b): the drawer's open/close state
+  # moved server-side into PukllayClubWeb.Layouts.NavDrawer, a stateful
+  # LiveComponent addressed by DOM id (#pk-nav-drawer) rather than the old
+  # .CatalogNav-hook mechanism that only mounted when @sticky was true. These
+  # tests hit REAL routes (not render_component/2) so render_click/1 can
+  # simulate an actual click through the component's own handle_event/3 —
+  # exactly what G-01.8.1-1b's "I click and nothing happens" report needs
+  # covered on both a public page and an admin page (neither of Show/About
+  # nor any admin LiveView passes `sticky`, so this is precisely the
+  # previously-broken path).
+  describe "app/1 mobile nav drawer — server-rendered open state (01.8.2-09 Task 1, D-12/G-01.8.1-1b)" do
+    test "the hamburger opens the drawer on a public page (/)", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/")
+
+      # At rest: closed, inert, aria-expanded false — the same server-
+      # rendered signal a browser-less test can assert on.
+      assert html =~ ~s(id="pk-nav-drawer")
+      refute html =~ ~s(class="pk-drawer is-open")
+      assert html =~ ~s(aria-expanded="false")
+      assert html =~ "inert"
+
+      opened_html = view |> element(".pk-nav-hamburger") |> render_click()
+
+      assert opened_html =~ ~s(class="pk-drawer is-open")
+      assert opened_html =~ ~s(aria-expanded="true")
+
+      drawer_html =
+        opened_html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      refute drawer_html =~ "inert",
+             "inert must be absent once the drawer is open — inert={!@open} renders the bare " <>
+               "boolean attribute only when @open is false"
+    end
+
+    test "the hamburger opens the drawer on an admin page (/admin), the page G-01.8.1-1b was reported from" do
+      %{conn: conn} = register_and_log_in_staff(%{conn: conn()})
+
+      {:ok, view, html} = live(conn, ~p"/admin")
+
+      refute html =~ ~s(class="pk-drawer is-open")
+      assert html =~ ~s(aria-expanded="false")
+
+      opened_html = view |> element(".pk-nav-hamburger") |> render_click()
+
+      assert opened_html =~ ~s(class="pk-drawer is-open")
+      assert opened_html =~ ~s(aria-expanded="true")
+    end
+
+    test "the close button (inside the component) closes the drawer again, toggling aria-expanded back" do
+      {:ok, view, _html} = live(conn(), ~p"/")
+
+      view |> element(".pk-nav-hamburger") |> render_click()
+      closed_html = view |> element(".pk-drawer-close") |> render_click()
+
+      refute closed_html =~ ~s(class="pk-drawer is-open")
+      assert closed_html =~ ~s(aria-expanded="false")
+      assert closed_html =~ "inert"
+    end
+
+    test "the backdrop (a plain sibling div outside the component) also closes the drawer, via phx-target" do
+      {:ok, view, _html} = live(conn(), ~p"/")
+
+      view |> element(".pk-nav-hamburger") |> render_click()
+      closed_html = view |> element("#pk-nav-drawer-backdrop") |> render_click()
+
+      refute closed_html =~ ~s(class="pk-drawer is-open")
+      assert closed_html =~ ~s(aria-expanded="false")
+    end
+
+    test "the hamburger and the backdrop both target #pk-nav-drawer directly — no shared hook required" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      hamburger_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query(".pk-nav-hamburger") |> LazyHTML.to_html()
+
+      backdrop_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("#pk-nav-drawer-backdrop")
+        |> LazyHTML.to_html()
+
+      assert hamburger_html =~ ~s(phx-click="open")
+      assert hamburger_html =~ ~s(phx-target="#pk-nav-drawer")
+      assert backdrop_html =~ ~s(phx-click="close")
+      assert backdrop_html =~ ~s(phx-target="#pk-nav-drawer")
+    end
+
+    test "the drawer's own colocated hook (.NavDrawerFocus) renders unconditionally, regardless of @sticky" do
+      non_sticky = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+      sticky = render_component(&Layouts.app/1, %{flash: %{}, inner_block: [], sticky: true})
+
+      for html <- [non_sticky, sticky] do
+        drawer_html =
+          html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+        assert drawer_html =~ "phx-hook"
+        assert drawer_html =~ "NavDrawerFocus"
+      end
+    end
+
+    defp conn, do: Phoenix.ConnTest.build_conn()
+  end
+
+  # Task 2, plan 01.8.2-09 (D-19d): the drawer moves to the leading (left)
+  # edge site-wide — the BENCHMARK's deviation D-4, resolved ALIGN. Asserts
+  # against assets/css/app.css's SOURCE (not rendered markup, since the
+  # anchoring lives in a CSS rule, not an HTML attribute) using the exact
+  # negative-grep idiom this plan's own <verify> runs, so this test and the
+  # CI/CD gate can never silently drift apart.
+  describe "the drawer moves left, site-wide (01.8.2-09 Task 2, D-19d)" do
+    @app_css_path Path.expand("../../../assets/css/app.css", __DIR__)
+
+    test "no .pk-drawer rule in app.css anchors to the right edge" do
+      # Same shell pipeline as this plan's own <verify> command, run here
+      # too so this ExUnit gate and the plan's verify can never silently
+      # drift apart from re-implementing the same check two different ways.
+      cmd = """
+      grep -vE '^\\s*(/\\*|\\*)' #{@app_css_path} | grep -B2 -A2 "pk-drawer" | grep -cE "right: *0"
+      """
+
+      {output, _exit} = System.shell(cmd)
+
+      assert String.trim(output) == "0",
+             "A .pk-drawer-adjacent rule still anchors to the right edge — D-19d moves the " <>
+               "drawer left SITE-WIDE, and a half-moved drawer is worse than either position."
+    end
+
+    test "the .pk-drawer rule anchors left: 0 and enters via a negative translateX" do
+      css = File.read!(@app_css_path)
+
+      drawer_rule =
+        case Regex.run(~r/(?m)^\.pk-drawer\s*\{([^}]*)\}/s, css) do
+          [_, body] -> body
+          nil -> flunk("no top-level `.pk-drawer { ... }` rule found in assets/css/app.css")
+        end
+
+      assert drawer_rule =~ ~r/left:\s*0\b/
+      refute drawer_rule =~ ~r/right:\s*0\b/
+      assert drawer_rule =~ ~r/transform:\s*translateX\(-100%\)/
+    end
+
+    test "the drawer opens flush against the left edge (translateX(0) once .is-open, same as before the move)" do
+      css = File.read!(@app_css_path)
+
+      open_rule =
+        case Regex.run(~r/(?m)^\.pk-drawer\.is-open\s*\{([^}]*)\}/s, css) do
+          [_, body] -> body
+          nil -> flunk("no top-level `.pk-drawer.is-open { ... }` rule found in assets/css/app.css")
+        end
+
+      assert open_rule =~ ~r/transform:\s*translateX\(0\)/
+    end
+
+    test "the hamburger renders before the brand wordmark in header DOM order" do
+      html = render_component(&Layouts.app/1, %{flash: %{}, inner_block: []})
+
+      hamburger_index = html |> :binary.match(~s(class="pk-nav-hamburger")) |> elem(0)
+      brand_index = html |> :binary.match(~s(pk-brand-wordmark)) |> elem(0)
+
+      assert hamburger_index < brand_index,
+             "The hamburger must precede the brand wordmark in DOM order — with no `order` " <>
+               "override anywhere in app.css (verified: no `order:` property on any .pk-nav-* " <>
+               "or .pk-drawer* selector), plain flex DOM order is what visually places the " <>
+               "hamburger on the left, D-19d's other half."
+    end
+
+    test "assets/css/admin/chrome.css exists and opens with a comment stating the public-vs-admin CSS split" do
+      chrome_css_path = Path.expand("../../../assets/css/admin/chrome.css", __DIR__)
+
+      assert File.exists?(chrome_css_path)
+
+      content = File.read!(chrome_css_path)
+      assert content |> String.trim_leading() |> String.starts_with?("/*")
+      assert content =~ "PUBLIC-VS-ADMIN SPLIT"
+      assert content =~ "app.css"
+    end
+
+    test "app.css imports admin/chrome.css" do
+      css = File.read!(@app_css_path)
+      assert css =~ ~s(@import "./admin/chrome.css";)
+    end
+  end
+
+  # Task 3, plan 01.8.2-09 (D-13a): the staff sectioned drawer. Real routes
+  # (not render_component/2) since staff_session?/1 needs a real
+  # @current_scope from an authenticated conn, and D-00b's footer gate
+  # needs a real admin route too.
+  describe "the staff sectioned drawer, Panel/Sitio/Tu cuenta (01.8.2-09 Task 3, D-13a)" do
+    test "a signed-in staff member sees all three sections on a public page (/)" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "Panel"
+      assert drawer_html =~ "Sitio"
+      assert drawer_html =~ "Tu cuenta"
+      assert drawer_html =~ "Admin"
+      assert drawer_html =~ "Web"
+      assert drawer_html =~ "Perfil"
+      assert drawer_html =~ "Salir"
+      assert drawer_html =~ staff.email
+    end
+
+    test "a signed-in staff member sees the same three sections on an admin page (/admin)" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/admin")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "Panel"
+      assert drawer_html =~ "Sitio"
+      assert drawer_html =~ "Tu cuenta"
+    end
+
+    test "an anonymous visitor's drawer contains none of Panel/Sitio/Tu cuenta" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      refute drawer_html =~ "Panel"
+      refute drawer_html =~ "Sitio"
+      refute drawer_html =~ "Tu cuenta"
+      refute drawer_html =~ "Perfil"
+      refute drawer_html =~ "Salir"
+
+      # The anonymous drawer is otherwise byte-identical to before Task 3:
+      # still exactly the two public rows.
+      assert drawer_html =~ "Inicio"
+      assert drawer_html =~ "Quiénes Somos"
+    end
+
+    test "form_label/1 rank=\"group\" (13px/600 sentence case) drives the section labels, not the old 11px uppercase .group-label look" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      drawer_html =
+        html |> LazyHTML.from_document() |> LazyHTML.query("#pk-nav-drawer") |> LazyHTML.to_html()
+
+      assert drawer_html =~ "pk-admin-label--group"
+      refute drawer_html =~ "group-label"
+    end
+
+    test "the public GET / still renders its footer for an anonymous visitor (footer gate does not over-apply)" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      assert html =~ "<footer"
+      assert html =~ "pk-footer"
+    end
+
+    test "the public GET / still renders its footer for a signed-in staff member too" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "<footer"
+      assert html =~ "pk-footer"
+    end
+  end
+
+  describe "tab_bar/1, the 5-tab admin bar (01.8.2-10 Task 1, D-13b)" do
+    test "a signed-in staff member sees five destinations on /admin, and the active one carries the indicator" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      conn = PukllayClubWeb.ConnCase.log_in_user(Phoenix.ConnTest.build_conn(), staff)
+
+      {:ok, _view, html} = live(conn, ~p"/admin")
+
+      tab_bar_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-admin-tab-bar")
+        |> LazyHTML.to_html()
+
+      assert tab_bar_html =~ "Admin"
+      assert tab_bar_html =~ "Juegos"
+      assert tab_bar_html =~ "Estantes"
+      assert tab_bar_html =~ "Web"
+      assert tab_bar_html =~ "Perfil"
+
+      [admin_link] = Regex.run(~r/<a[^>]*href="\/admin"[^>]*>/, tab_bar_html)
+      assert admin_link =~ "is-active"
+      assert admin_link =~ ~s(aria-current="page")
+
+      [juegos_link] = Regex.run(~r/<a[^>]*href="\/admin\/juegos"[^>]*>/, tab_bar_html)
+      refute juegos_link =~ "is-active"
+      refute juegos_link =~ "aria-current"
+    end
+
+    test "an anonymous visitor's / markup contains no tab bar" do
+      {:ok, _view, html} = live(Phoenix.ConnTest.build_conn(), ~p"/")
+
+      refute html =~ "pk-admin-tab-bar"
+    end
+
+    test "the tab bar's own height is declared once and consumed by the snackbar offset and page clearance via calc()" do
+      chrome_css =
+        File.read!(Path.expand("../../../assets/css/admin/chrome.css", __DIR__))
+
+      components_css =
+        File.read!(Path.expand("../../../assets/css/admin/components.css", __DIR__))
+
+      assert chrome_css =~ ~r/--pk-tab-bar-h:\s*67px;/
+      assert components_css =~ ~r/bottom:\s*calc\(var\(--pk-tab-bar-h,\s*0px\)/
+      assert chrome_css =~ ~r/\.pk-admin-has-tab-bar\s*\{\s*padding-bottom:\s*calc\(var\(--pk-tab-bar-h\)/
+    end
+
+    test "a badge of 0 renders no badge element" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html =
+        render_component(&Layouts.tab_bar/1, %{
+          current_scope: scope,
+          active_tab: :admin,
+          badges: %{juegos: 0}
+        })
+
+      refute html =~ "pk-admin-tab-badge"
+    end
+
+    test "a badge of 150 renders 99+ visually and puts 150 in the accessible name" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html =
+        render_component(&Layouts.tab_bar/1, %{
+          current_scope: scope,
+          active_tab: :admin,
+          badges: %{juegos: 150}
+        })
+
+      assert html =~ "pk-admin-tab-badge"
+      assert html =~ "99+"
+      refute html =~ ">150<"
+      assert html =~ ~s(aria-label="Juegos, 150 pendientes")
+    end
+
+    test "Perfil renders as an avatar tab that opens the nav drawer, not a navigate link" do
+      staff = PukllayClub.AccountsFixtures.staff_fixture()
+      scope = PukllayClub.AccountsFixtures.user_scope_fixture(staff)
+
+      html = render_component(&Layouts.tab_bar/1, %{current_scope: scope})
+
+      perfil_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-admin-tab--avatar")
+        |> LazyHTML.to_html()
+
+      assert perfil_html =~ "Perfil"
+      assert perfil_html =~ ~s(phx-click="open")
+      assert perfil_html =~ ~s(phx-target="#pk-nav-drawer")
+      refute perfil_html =~ "navigate"
+    end
+
+    test ".pk-nav-admin is retired (display: none) now that the tab bar supersedes it" do
+      chrome_css =
+        File.read!(Path.expand("../../../assets/css/admin/chrome.css", __DIR__))
+
+      assert chrome_css =~ ~r/\.pk-nav-inner \.pk-nav-admin\s*\{\s*display:\s*none;/
     end
   end
 

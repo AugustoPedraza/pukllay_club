@@ -5,6 +5,11 @@ defmodule PukllayClubWeb.Layouts do
   """
   use PukllayClubWeb, :html
 
+  # Plan 01.8.2-08 Task 2 (D-19c): admin_flash/1 below renders every admin
+  # flash through AdminComponents.snackbar/1 instead of flash_group/1's
+  # top toast.
+  alias PukllayClubWeb.AdminComponents
+
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -139,6 +144,19 @@ defmodule PukllayClubWeb.Layouts do
         "subnav slots. false renders no hook attribute at all — the non-sticky path is byte-" <>
         "compatible with pages that don't opt in."
 
+  attr :admin_chrome, :boolean,
+    default: false,
+    doc:
+      "Task 3 (01.8.2-09, D-00b): true for every /admin page — gates <.footer /> off (D-00b: " <>
+        "no footer on /admin). Passed explicitly by each admin LiveView's own <Layouts.app> " <>
+        "call, the same shorthand-boolean pattern already used for `bottom_collapse` — there is " <>
+        "no separate admin layout module in this app, Layouts.app IS the one shared layout for " <>
+        "both scopes, so this is the structural signal the admin routes carry ('an app/1 attr " <>
+        "the admin layout passes', per the plan). Deliberately never derived from a URL string " <>
+        "match: a future admin route prefix would silently break a path-based predicate, while " <>
+        "this one is pinned at the call site of every admin LiveView, verified by an explicit " <>
+        "test per route family (dashboard_live_test.exs) rather than assumed to generalize."
+
   attr :search_expanded, :boolean,
     default: false,
     doc:
@@ -158,6 +176,43 @@ defmodule PukllayClubWeb.Layouts do
         "page that is neither. Drives the mobile drawer's own aria-current-based active row " <>
         "(the drawer's link list is shell-owned, not slot-owned, so Detalle — which passes no " <>
         "nav_links slot — still gets a real menu)."
+
+  attr :active_tab, :atom,
+    default: nil,
+    doc:
+      "Plan 01.8.2-10 (D-13b): which of the tab bar's five destinations is current — " <>
+        ":admin, :juegos, :estantes, :web, or nil. Mirrors `active_nav`'s own contract: the " <>
+        "caller states its own position explicitly (never derived from the request path — " <>
+        "T-01.8.2-45 forbids a URL-string admin predicate anywhere in this module). A page " <>
+        "outside the five destinations (Revisar niveles, Staff — admin-shell-navigation.md's " <>
+        "documented 'overflow' sections) passes nil; no tab lights."
+
+  attr :badges, :map,
+    default: %{},
+    doc:
+      "Plan 01.8.2-10 (D-19g): %{tab_atom => pending_count} for the tab bar's badges. " <>
+        "Defaults to %{} — no admin LiveView computes a real count yet (D-19's 'one derived " <>
+        "counter source' is future work); this attr ships the component's contract."
+
+  attr :suppress_tab_bar, :boolean,
+    default: false,
+    doc:
+      "Plan 01.8.2-10 Task 3 (D-14, the collide/merge/suppress checkpoint): true for the one " <>
+        "page that already owns the bottom of the screen with its own fixed surface — " <>
+        "CatalogLive.Show, whose `.pk-mobile-cta-bar` (app.css:5396) occupies the identical " <>
+        "fixed-bottom band the tab bar would otherwise share. Measured in real headless " <>
+        "Chrome before this attr existed (390x844 and 360x640): the reserve button sat " <>
+        "ENTIRELY inside the tab bar's band at both viewports (overlapPx: 67 at both, " <>
+        "ctaBtnFullyCoveredByTabBar: true) — 'suppress' was chosen over 'collide' (both bars " <>
+        "render, ~130px lost) and 'merge' (no second bottom surface exists on this page to " <>
+        "fold the tab bar into). The catalog index page has no such collision (measured: " <>
+        "filterTriggerCoveredByTabBar: false at both viewports — CONTEXT.md's framing of a " <>
+        "second `pk-bottom-collapse` bar there does not correspond to a real bottom-fixed " <>
+        "element; `bottom_collapse` is a padding mechanism, not a second bar) and does not " <>
+        "pass this attr, so its tab bar is unaffected. Mirrors `admin_chrome`'s call-site- " <>
+        "boolean pattern (D-00b) — a structural signal the ONE page that needs it passes " <>
+        "explicitly at its own <Layouts.app> call, never a URL-string admin-path match " <>
+        "(T-01.8.2-45's structural-predicate requirement)."
 
   slot :nav_links, doc: "shelf anchor links, rendered between the brand and the search box"
 
@@ -334,92 +389,6 @@ defmodule PukllayClubWeb.Layouts do
             }
 
             try {
-              // Mobile nav drawer (01.1-09; re-tiered for WINDOWS #4): guarded
-              // on this.drawer existing so this hook is a no-op everywhere the
-              // drawer markup isn't present. The drawer and its backdrop are
-              // page-level siblings of #app-header (moved out for WINDOWS #4
-              // because the sticky header's z-index: 50 stacking context
-              // capped the drawer's effective root z at 50, below both the
-              // About page's floating isologo and the flash toast — see
-              // .planning/debug/resolved/about-logo-over-nav-drawer.md), so
-              // they are looked up by id OUTSIDE this.el — the same
-              // named-root, cross-root pattern the scroll-spy block above
-              // already uses for #app-subnav. The hamburger stays inside the
-              // header and is still found via this.el. The body-class scroll
-              // lock remains the other documented reach outside the header.
-              // Guarded on this.drawer existing, and this remains the one
-              // hook that owns the drawer rather than adding a second.
-              this.drawer = document.getElementById("pk-nav-drawer")
-              if (this.drawer) {
-                this.drawerBackdrop = document.getElementById("pk-nav-drawer-backdrop")
-                this.hamburger = this.el.querySelector(".pk-nav-hamburger")
-                this.drawerClose = this.drawer.querySelector(".pk-drawer-close")
-                this.drawerReturnFocus = null
-
-                this.openDrawer = () => {
-                  this.drawer.classList.add("is-open")
-                  this.drawerBackdrop?.classList.add("is-open")
-                  this.drawer.removeAttribute("inert")
-                  this.hamburger?.setAttribute("aria-expanded", "true")
-                  document.body.classList.add("pk-drawer-open")
-                  this.drawerReturnFocus = document.activeElement
-                  this.drawerClose?.focus()
-                }
-
-                // Idempotent: no-ops when already closed, so calling it
-                // unconditionally from updated() on every server round trip
-                // (see below) never steals focus back to the hamburger on an
-                // unrelated re-render.
-                this.closeDrawer = () => {
-                  if (!this.drawer.classList.contains("is-open")) return
-                  this.drawer.classList.remove("is-open")
-                  this.drawerBackdrop?.classList.remove("is-open")
-                  this.drawer.setAttribute("inert", "")
-                  this.hamburger?.setAttribute("aria-expanded", "false")
-                  document.body.classList.remove("pk-drawer-open")
-                  const returnTarget = this.drawerReturnFocus || this.hamburger
-                  returnTarget?.focus()
-                  this.drawerReturnFocus = null
-                }
-
-                this.onHamburgerClick = () => this.openDrawer()
-                this.onDrawerCloseClick = () => this.closeDrawer()
-                this.onDrawerBackdropClick = () => this.closeDrawer()
-
-                // Escape closes unconditionally; Tab traps focus inside the
-                // panel — copied verbatim from GamePreview's onSheetKeydown
-                // focusable-elements query and first/last wrap (game_preview.ex).
-                this.onDrawerKeydown = (e) => {
-                  if (e.key === "Escape") {
-                    this.closeDrawer()
-                    return
-                  }
-                  if (e.key !== "Tab") return
-                  const focusable = this.drawer.querySelectorAll(
-                    'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
-                  )
-                  if (focusable.length === 0) return
-                  const first = focusable[0]
-                  const last = focusable[focusable.length - 1]
-                  if (e.shiftKey && document.activeElement === first) {
-                    e.preventDefault()
-                    last.focus()
-                  } else if (!e.shiftKey && document.activeElement === last) {
-                    e.preventDefault()
-                    first.focus()
-                  }
-                }
-
-                this.hamburger?.addEventListener("click", this.onHamburgerClick)
-                this.drawerClose?.addEventListener("click", this.onDrawerCloseClick)
-                this.drawerBackdrop?.addEventListener("click", this.onDrawerBackdropClick)
-                this.drawer.addEventListener("keydown", this.onDrawerKeydown)
-              }
-            } catch (e) {
-              console.error("CatalogNav: drawer block failed to wire", e)
-            }
-
-            try {
               // Desktop category mega-menu (SHELL-01, sketch 020): guarded on
               // this.catTrigger existing so Quiénes Somos and Detalle (neither
               // renders the nav_menu slot) are untouched no-ops. Modelled line
@@ -488,10 +457,6 @@ defmodule PukllayClubWeb.Layouts do
               this.wasExpanded = isExpanded
             }
             this.publishHeaderHeight?.()
-            // A drawer-link navigation is the only way this hook's updated()
-            // fires while the drawer is open; closeDrawer() is idempotent, so
-            // calling it unconditionally here needs no old/new-link diffing.
-            this.closeDrawer?.()
             this.closeCatMenu?.()
           },
           destroyed() {
@@ -499,17 +464,10 @@ defmodule PukllayClubWeb.Layouts do
             this.observer?.disconnect()
             this.heightObserver?.disconnect()
             document.removeEventListener("keydown", this.onDocumentKeydown)
-            this.hamburger?.removeEventListener("click", this.onHamburgerClick)
-            this.drawerClose?.removeEventListener("click", this.onDrawerCloseClick)
-            this.drawerBackdrop?.removeEventListener("click", this.onDrawerBackdropClick)
-            this.drawer?.removeEventListener("keydown", this.onDrawerKeydown)
             this.catTrigger?.removeEventListener("click", this.onCatTriggerClick)
             this.catBackdrop?.removeEventListener("click", this.onCatBackdropClick)
             this.catItems?.forEach((item) => item.removeEventListener("click", this.onCatItemClick))
             document.removeEventListener("keydown", this.onCatDocumentKeydown)
-            // Defensive: a LiveView teardown mid-open must never leave the
-            // page permanently unscrollable.
-            document.body.classList.remove("pk-drawer-open")
           }
         }
       </script>
@@ -683,9 +641,63 @@ defmodule PukllayClubWeb.Layouts do
       </div>
     </main>
 
-    <.footer />
+    <%!-- D-00b: no footer on /admin. Gated on @admin_chrome (the structural
+    per-call-site attr every admin LiveView passes — see its own attr doc
+    above for why this is not a URL string match). --%>
+    <.footer :if={!@admin_chrome} />
 
-    <.flash_group flash={@flash} />
+    <%!-- D-13b (plan 01.8.2-10): the 5-tab admin bar renders for a
+    signed-in staff member on EVERY page this layout renders — admin and
+    public alike, never gated on @admin_chrome or any other route signal.
+    tab_bar/1's own :if guards staff_session?(@current_scope) so an
+    anonymous visitor's markup carries none of it.
+
+    D-14 exception (plan 01.8.2-10 Task 3, @suppress_tab_bar's own attr
+    doc above has the measured numbers): the ONE page that already owns
+    the screen's bottom with its own fixed surface (CatalogLive.Show's
+    .pk-mobile-cta-bar) opts OUT here, at the call-site level — never a
+    URL-string match, never a change to tab_bar/1's own staff-session
+    gate, which stays the sole authority for every other page. --%>
+    <.tab_bar
+      :if={!@suppress_tab_bar}
+      current_scope={@current_scope}
+      active_tab={@active_tab}
+      badges={@badges}
+    />
+
+    <%!-- D-19c (plan 01.8.2-08 Task 2): the admin has exactly ONE feedback
+    component, the bottom snackbar — the top toast (`flash_group/1` ->
+    `CoreComponents.flash/1`'s `.toast.toast-top`) is deleted for every
+    `@admin_chrome` page and its messages (including `Sesión cerrada.` from
+    `UserSessionController`) route through `admin_flash/1` instead. Scope B
+    (public catalog pages) keeps `flash_group/1` unchanged — D-16 leaves
+    that scope alone. --%>
+    <.admin_flash :if={@admin_chrome} flash={@flash} />
+    <.flash_group :if={!@admin_chrome} flash={@flash} />
+    """
+  end
+
+  # D-19c: renders every present flash (`:info`/`:error`) through
+  # `AdminComponents.snackbar/1` instead of `flash_group/1`'s top toast —
+  # the admin's one feedback component. A plain flash (no undo/retry
+  # action attached) always renders without an action, per D-19c's own
+  # example (`Cerraste sesión`/`Sesión cerrada.`): 4s, no ✕.
+  attr :flash, :map, required: true
+
+  defp admin_flash(assigns) do
+    ~H"""
+    <AdminComponents.snackbar
+      :if={msg = Phoenix.Flash.get(@flash, :info)}
+      id="admin-snackbar-info"
+      message={msg}
+      on_close={JS.push("lv:clear-flash", value: %{key: :info})}
+    />
+    <AdminComponents.snackbar
+      :if={msg = Phoenix.Flash.get(@flash, :error)}
+      id="admin-snackbar-error"
+      message={msg}
+      on_close={JS.push("lv:clear-flash", value: %{key: :error})}
+    />
     """
   end
 
@@ -703,12 +715,30 @@ defmodule PukllayClubWeb.Layouts do
         "pk-nav-inner mx-auto w-full max-w-7xl pk-gutter",
         @search_expanded && "is-search-open"
       ]}>
+        <%!-- Task 1 (D-12/G-01.8.1-1b): the drawer's open/close state is owned
+        entirely by the PukllayClubWeb.Layouts.NavDrawer LiveComponent below
+        (id="pk-nav-drawer"), so this click is routed there directly via
+        phx-target — no hook wiring required. This is what fixes the diagnosed
+        cause of G-01.8.1-1b: the previous mechanism lived inside the
+        .CatalogNav hook, which app/1 only attached to #app-header when
+        @sticky was true, so every admin LiveView (dashboard, estantes,
+        staff, secciones, niveles, the game form) and every non-sticky public
+        page (About, login, confirmation) rendered a header with NO hook at
+        all — the hamburger had no click handler and "I click and nothing
+        happens" (G-01.8.1-1b) was reported from exactly one of those pages
+        (/admin). A plain phx-click/phx-target binding needs no hook and
+        therefore no @sticky gate; it fires on every page this header
+        renders on. No aria-expanded here: the target is a role="dialog"
+        modal (D-19e's admin sheet family, and 059/017's public drawer
+        both agree on this shape), and its own open/inert state is what
+        assistive tech reads — see NavDrawer's moduledoc. --%>
         <button
           type="button"
           class="pk-nav-hamburger"
           aria-label="Abrir menú"
-          aria-expanded="false"
           aria-controls="pk-nav-drawer"
+          phx-click="open"
+          phx-target="#pk-nav-drawer"
         >
           <.icon name="hero-bars-3" class="size-6" />
         </button>
@@ -836,69 +866,173 @@ defmodule PukllayClubWeb.Layouts do
     """
   end
 
-  # Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5): the
-  # drawer's link list is defined ONCE here, shell-owned rather than
-  # slot-owned, so it is identical on all three routes — including Detalle,
-  # which passes no nav_links slot and would otherwise get an empty drawer.
-  # `inert` is the closed state's a11y mechanism (removes the panel from the
-  # tab order/a11y tree without display:none, which would kill the slide
-  # transition); `.CatalogNav` adds/removes it. Content (chevrons, the
-  # pinned theme-toggle/social bottom block) is filled in by plan 01.1-09
-  # Task 2 — Task 1 ships the empty `.pk-drawer-bottom` placeholder only.
+  # Mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5; rebuilt
+  # as a stateful LiveComponent for Task 1 of plan 01.8.2-09, D-12/
+  # G-01.8.1-1b — see PukllayClubWeb.Layouts.NavDrawer's moduledoc for the
+  # diagnosed cause and the fix). This wrapper only owns the backdrop (a
+  # plain, always-rendered div — its own `.is-open`-equivalent styling is
+  # driven by app.css's `body:has(#pk-nav-drawer.is-open)` rule, since the
+  # backdrop itself carries no reactive state) and threads active_nav/
+  # current_scope into the component. The backdrop's close-tap targets the
+  # component directly by DOM id — the same phx-target mechanism the
+  # hamburger uses (header_inner/1) — so it works identically regardless of
+  # which LiveView rendered this page.
   attr :active_nav, :atom, default: nil
   attr :current_scope, :map, default: nil
 
   defp nav_drawer(assigns) do
     ~H"""
-    <div id="pk-nav-drawer-backdrop" class="pk-drawer-backdrop" aria-hidden="true"></div>
-    <aside
-      id="pk-nav-drawer"
-      class="pk-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Menú"
-      inert
+    <div
+      id="pk-nav-drawer-backdrop"
+      class="pk-drawer-backdrop"
+      aria-hidden="true"
+      phx-click="close"
+      phx-target="#pk-nav-drawer"
     >
-      <div class="pk-drawer-header">
-        <span class="font-display text-lg">Menú</span>
-        <button type="button" class="pk-drawer-close" aria-label="Cerrar menú">
-          <.icon name="hero-x-mark" class="size-5" />
-        </button>
-      </div>
-      <nav class="pk-drawer-links" aria-label="Navegación principal">
-        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
-          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
-          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-        <%!-- D-34: mobile staff's one entry into /admin — the header's own
-        .pk-nav-admin icon link is hidden at this same breakpoint (app.css),
-        so this drawer row is the sole mobile path. Nothing renders for a
-        visitor. --%>
-        <.link :if={staff_session?(@current_scope)} navigate={~p"/admin"}>
-          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
-        </.link>
-      </nav>
-      <div class="pk-drawer-bottom">
-        <div class="pk-drawer-divider"></div>
-        <.social_links class="pk-drawer-social" />
-        <div class="pk-drawer-divider"></div>
-        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
-          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
-          <.theme_toggle />
-        </div>
-      </div>
-    </aside>
+    </div>
+    <.live_component
+      module={PukllayClubWeb.Layouts.NavDrawer}
+      id="pk-nav-drawer"
+      active_nav={@active_nav}
+      current_scope={@current_scope}
+    />
     """
   end
 
   # D-34: `current_scope` is `nil` for a visitor (every LiveView's own
   # `mount_current_scope/2` default), a real `Scope` struct for a signed-in
   # one — never a bare `false`/missing key, so the two-clause match below
-  # is exhaustive.
-  defp staff_session?(nil), do: false
-  defp staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+  # is exhaustive. Public (not `defp`) since Task 1 (01.8.2-09) moved the
+  # drawer's own staff branch into the separate `NavDrawer` LiveComponent
+  # module, which needs this same predicate — see D-13a's "same drawer
+  # everywhere" gate.
+  def staff_session?(nil), do: false
+  def staff_session?(scope), do: PukllayClub.Accounts.User.staff?(scope.user)
+
+  @doc """
+  Renders D-13b's 5-destination admin tab bar (Admin · Juegos · Estantes · Web · Perfil), fixed
+  at the screen's bottom for a signed-in staff member on EVERY page this app renders — admin
+  and public alike, never gated on the current route (D-13b; T-01.8.2-45's structural-predicate
+  requirement bans any URL-string admin classification anywhere in this module, and Task 3's own
+  `<verify>` greps for it).
+
+  **D-14 exception (plan 01.8.2-10 Task 3):** `app/1` does not render this component at all for
+  the one page that already owns the screen's bottom with its own fixed surface
+  (`CatalogLive.Show`, via `app/1`'s own `suppress_tab_bar` attr — see that attr's doc for the
+  measured numbers behind the "suppress" choice). This component's own `staff_session?/1` gate
+  is unchanged and stays the sole authority for every other page.
+
+  Geometry is `01.8.2-BENCHMARK.md`'s measured Tab bar row, taken verbatim: 67px tall, a 56×30
+  pill indicator behind the active icon, 11px/600 labels. `Perfil` renders as the avatar tab
+  the BENCHMARK requires — tapping it opens the nav drawer's already-shipped account section
+  (`NavDrawer`'s `Tu cuenta` group, plan 01.8.2-09) rather than a dedicated account sheet, since
+  no `/admin/perfil` page or account sheet exists yet in this phase's scope (01.8.2-09's own
+  recorded boundary) and building one is not this plan's job.
+
+  `active_tab` is passed explicitly by the LiveView rendering `Layouts.app/1` — the same
+  "caller states its own nav position" contract `active_nav` already uses for the public
+  header, chosen specifically so this component never has to read the request path itself. A
+  page outside the five destinations (`Revisar niveles`, `Staff` — `admin-shell-navigation.md`'s
+  documented "overflow" sections) passes no `active_tab`; no tab lights, matching the design
+  source of truth.
+
+  `badges` (`%{tab_atom => pending_count}`) renders D-19g's pending-work badge: 18px, primary
+  fill, `99+` above 99, absent at a count of 0, and the count folded into the destination's
+  accessible name via `aria-label` — never the top-right filled shape doubling as D-19m's
+  neutral count pill (that shape means pending work here, and only here).
+
+  The bar's own height is declared **once**, as `--pk-tab-bar-h` (`assets/css/admin/chrome.css`),
+  mirroring `--pk-save-bar-h`'s single-source pattern (D-28): `AdminComponents.snackbar/1`
+  already reads it (0px fallback, plan 01.8.2-08) for its bottom offset, and
+  `.pk-admin-has-tab-bar` derives a page's own bottom clearance from the same property — never a
+  second, independently typed pixel figure.
+  """
+  attr :current_scope, :map, default: nil
+  attr :active_tab, :atom, default: nil
+  attr :badges, :map, default: %{}
+
+  def tab_bar(assigns) do
+    ~H"""
+    <nav :if={staff_session?(@current_scope)} class="pk-admin-tab-bar" aria-label="Secciones de Admin">
+      <.tab_bar_link to={~p"/admin"} active={@active_tab == :admin} icon="hero-home" label="Admin" />
+      <.tab_bar_link
+        to={~p"/admin/juegos"}
+        active={@active_tab == :juegos}
+        icon="hero-puzzle-piece"
+        label="Juegos"
+        count={Map.get(@badges, :juegos, 0)}
+      />
+      <.tab_bar_link
+        to={~p"/admin/estantes"}
+        active={@active_tab == :estantes}
+        icon="hero-archive-box"
+        label="Estantes"
+        count={Map.get(@badges, :estantes, 0)}
+      />
+      <.tab_bar_link
+        to={~p"/admin/secciones"}
+        active={@active_tab == :web}
+        icon="hero-globe-alt"
+        label="Web"
+        count={Map.get(@badges, :web, 0)}
+      />
+      <button
+        type="button"
+        class="pk-admin-tab pk-admin-tab--avatar"
+        data-pk-pressable="true"
+        aria-label="Tu perfil"
+        aria-haspopup="dialog"
+        aria-controls="pk-nav-drawer"
+        phx-click="open"
+        phx-target="#pk-nav-drawer"
+      >
+        <span class="pk-admin-tab-icon">
+          <span class="pk-admin-tab-avatar-mark" aria-hidden="true">{tab_bar_avatar_initial(
+            @current_scope
+          )}</span>
+        </span>
+        <span class="pk-admin-tab-label">Perfil</span>
+      </button>
+    </nav>
+    """
+  end
+
+  attr :to, :string, required: true
+  attr :active, :boolean, required: true
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :count, :integer, default: 0
+
+  defp tab_bar_link(assigns) do
+    ~H"""
+    <.link
+      navigate={@to}
+      class={["pk-admin-tab", @active && "is-active"]}
+      aria-current={@active && "page"}
+      aria-label={@count > 0 && tab_bar_badge_aria_label(@label, @count)}
+      data-pk-pressable="true"
+    >
+      <span class="pk-admin-tab-icon">
+        <.icon name={@icon} class="size-6" />
+        <span :if={@count > 0} class="pk-admin-tab-badge" aria-hidden="true">
+          {tab_bar_badge_text(@count)}
+        </span>
+      </span>
+      <span class="pk-admin-tab-label">{@label}</span>
+    </.link>
+    """
+  end
+
+  defp tab_bar_badge_text(count) when count > 99, do: "99+"
+  defp tab_bar_badge_text(count), do: Integer.to_string(count)
+
+  defp tab_bar_badge_aria_label(label, count), do: "#{label}, #{count} pendientes"
+
+  defp tab_bar_avatar_initial(%{user: %{email: email}}) when is_binary(email) and email != "" do
+    email |> String.slice(0, 1) |> String.upcase()
+  end
+
+  defp tab_bar_avatar_initial(_), do: "?"
 
   @doc """
   The "Sumate" join CTA — the club's WhatsApp group invite link.
@@ -1365,4 +1499,212 @@ defmodule PukllayClubWeb.Layouts do
     </div>
     """
   end
+end
+
+defmodule PukllayClubWeb.Layouts.NavDrawer do
+  @moduledoc """
+  The site-wide mobile nav drawer (SHELL-01, sketch 011 + sketch 017 Rounds 4-5), rebuilt as a
+  stateful LiveComponent for Task 1 of plan 01.8.2-09 (D-12/G-01.8.1-1b).
+
+  **Diagnosed cause of G-01.8.1-1b** ("drawer stop working (I click and nothing happens)",
+  reported from `/admin`, 01.8.1-UAT.md test 1): the drawer's entire open/close wiring used to
+  live inside the `.CatalogNav` colocated hook, which `Layouts.app/1` only attached
+  (`phx-hook=".CatalogNav"`) to `#app-header` when the `sticky` attr was `true`. Every admin
+  LiveView (dashboard, estantes, staff, secciones, niveles, the game form) and every non-sticky
+  public page (About, login, confirmation) called `<Layouts.app>` without `sticky`, so on those
+  pages the hook never mounted at all — the hamburger had no click handler, no keydown listener,
+  nothing. Clicking it did exactly what was reported: nothing.
+
+  **The fix:** move the drawer's open/close state into this LiveComponent, addressed by a stable
+  DOM id (`#pk-nav-drawer`) that both the hamburger (`Layouts.header_inner/1`) and the backdrop
+  (`Layouts.nav_drawer/1`) target directly via `phx-target` — a plain declarative `phx-click`
+  binding needs no hook and therefore no `@sticky` gate, so it fires identically on every page
+  (`Layouts.app/1` renders this component unconditionally, itself outside either `#app-header`
+  branch).
+
+  `@open` drives the state class (`"is-open"`), `aria-expanded` and `inert` straight from the
+  component's own assign — server-rendered, so a LiveView test can `render_click/1` the hamburger
+  and assert the drawer's open state in the rendered markup without a browser. The colocated
+  `.NavDrawerFocus` hook is reduced to what a server round trip cannot do on its own: Escape-to-
+  close, Tab focus-trapping while open, moving focus into the panel on open and back to whatever
+  had it before on close, and the `body.pk-drawer-open` scroll lock — it never toggles the open
+  state itself, only reacts to it (`updated()` compares the previous vs current `"is-open"` class,
+  the same before/after-transition idiom `.CatalogNav`'s search-morph focus logic already uses).
+
+  Kept as exactly one drawer component (D-13a "same drawer everywhere"): this module renders the
+  identical public content on every page for a visitor; Task 3 adds the staff sectioned content
+  (PANEL / SITIO / TU CUENTA) as a second branch inside this same render, never a second component.
+  """
+  use PukllayClubWeb, :live_component
+
+  alias PukllayClubWeb.AdminComponents
+  alias PukllayClubWeb.Layouts
+
+  @impl true
+  def mount(socket) do
+    {:ok, assign(socket, :open, false)}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <aside
+      id="pk-nav-drawer"
+      class={["pk-drawer", @open && "is-open"]}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Menú"
+      aria-expanded={to_string(@open)}
+      inert={!@open}
+      phx-hook=".NavDrawerFocus"
+    >
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".NavDrawerFocus">
+        export default {
+          mounted() {
+            // Unconditional — this hook lives on the LiveComponent's OWN
+            // root, rendered by Layouts.app/1 on every page, so it mounts
+            // regardless of @sticky. This is the other half of the
+            // G-01.8.1-1b fix: focus management no longer depends on which
+            // page rendered the header.
+            this.wasOpen = this.el.classList.contains("is-open")
+            this.returnFocus = null
+            this.closeButton = this.el.querySelector(".pk-drawer-close")
+            document.body.classList.toggle("pk-drawer-open", this.wasOpen)
+
+            // Escape closes unconditionally; Tab traps focus inside the
+            // panel — same shape as GamePreview's onSheetKeydown
+            // focusable-elements query and first/last wrap (game_preview.ex).
+            this.onKeydown = (e) => {
+              if (e.key === "Escape") {
+                this.pushEventTo(this.el, "close", {})
+                return
+              }
+              if (e.key !== "Tab") return
+              const focusable = this.el.querySelectorAll(
+                'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+              )
+              if (focusable.length === 0) return
+              const first = focusable[0]
+              const last = focusable[focusable.length - 1]
+              if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault()
+                last.focus()
+              } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault()
+                first.focus()
+              }
+            }
+            this.el.addEventListener("keydown", this.onKeydown)
+          },
+          updated() {
+            const isOpen = this.el.classList.contains("is-open")
+            document.body.classList.toggle("pk-drawer-open", isOpen)
+
+            if (!this.wasOpen && isOpen) {
+              this.returnFocus = document.activeElement
+              this.closeButton?.focus()
+            } else if (this.wasOpen && !isOpen) {
+              const target =
+                (this.returnFocus && document.contains(this.returnFocus) && this.returnFocus) ||
+                document.querySelector(".pk-nav-hamburger")
+              target?.focus()
+              this.returnFocus = null
+            }
+            this.wasOpen = isOpen
+          },
+          destroyed() {
+            this.el.removeEventListener("keydown", this.onKeydown)
+            // Defensive: a LiveView teardown mid-open must never leave the
+            // page permanently unscrollable.
+            document.body.classList.remove("pk-drawer-open")
+          }
+        }
+      </script>
+      <div class="pk-drawer-header">
+        <span class="font-display text-lg">Menú</span>
+        <button
+          type="button"
+          class="pk-drawer-close"
+          aria-label="Cerrar menú"
+          phx-click="close"
+          phx-target={@myself}
+        >
+          <.icon name="hero-x-mark" class="size-5" />
+        </button>
+      </div>
+      <%!-- Task 3 (01.8.2-09, D-13a): ONE drawer component, TWO content
+      branches — never a second component. A signed-in staff member gets
+      the sectioned drawer (Panel / Sitio / Tu cuenta) on every page,
+      public or admin; an anonymous visitor keeps today's plain public
+      drawer, byte-identical to before this task (the `else` branch below
+      is untouched from Task 1/2). --%>
+      <nav
+        :if={Layouts.staff_session?(@current_scope)}
+        class="pk-drawer-links pk-drawer-links--staff"
+        aria-label="Navegación principal"
+      >
+        <%!-- Section labels: resolves the BENCHMARK's "noticed on the way"
+        item (11px UPPERCASE drawer labels vs 13px sentence-case page group
+        labels — two looks for one "labelled group" role). Chosen: the
+        13px/600 sentence-case look, routed through plan 01.8.2-07's
+        `form_label/1 rank="group"` so there is one implementation, not
+        two — see the plan SUMMARY for the recorded decision. --%>
+        <AdminComponents.form_label rank="group">Panel</AdminComponents.form_label>
+        <.link navigate={~p"/admin"}>
+          Admin <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/admin/secciones"}>
+          Web <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+
+        <AdminComponents.form_label rank="group">Sitio</AdminComponents.form_label>
+        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
+          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
+          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+
+        <AdminComponents.form_label rank="group">Tu cuenta</AdminComponents.form_label>
+        <%!-- D-00b: Salir moves here (the drawer's account section) — the
+        loose `Salir` link that used to sit on the dashboard page itself is
+        deleted (dashboard_live.ex). This identity row is static (no href,
+        no chevron — it acts as a label, not a destination), matching
+        admin-shell-navigation.md's account-sheet identity-row anatomy. --%>
+        <div class="pk-drawer-account" aria-label="Perfil">
+          <span class="pk-drawer-account-label">Perfil</span>
+          <span class="pk-drawer-account-email">{@current_scope.user.email}</span>
+        </div>
+        <.link href={~p"/admin/salir"} method="delete">
+          Salir <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+      </nav>
+      <nav
+        :if={!Layouts.staff_session?(@current_scope)}
+        class="pk-drawer-links"
+        aria-label="Navegación principal"
+      >
+        <.link navigate={~p"/"} aria-current={@active_nav == :inicio && "page"}>
+          Inicio <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+        <.link navigate={~p"/quienes-somos"} aria-current={@active_nav == :quienes_somos && "page"}>
+          Quiénes Somos <.icon name="hero-chevron-right-micro" class="pk-drawer-chevron size-4" />
+        </.link>
+      </nav>
+      <div class="pk-drawer-bottom">
+        <div class="pk-drawer-divider"></div>
+        <Layouts.social_links class="pk-drawer-social" />
+        <div class="pk-drawer-divider"></div>
+        <div class="pk-drawer-utility" role="group" aria-labelledby="pk-drawer-theme-label">
+          <span id="pk-drawer-theme-label" class="pk-drawer-utility-label sr-only">Tema</span>
+          <Layouts.theme_toggle />
+        </div>
+      </div>
+    </aside>
+    """
+  end
+
+  @impl true
+  def handle_event("open", _params, socket), do: {:noreply, assign(socket, :open, true)}
+  def handle_event("close", _params, socket), do: {:noreply, assign(socket, :open, false)}
 end

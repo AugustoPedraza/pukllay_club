@@ -1,0 +1,86 @@
+/* Admin-scoped design tokens (D-33, D-34, D-19o).
+   Every value declared below is traced to a real shipped `--color-*`/
+   `--pk-ramp-*` token or a measured contrast figure in
+   `.planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-TOKENS.md` — that
+   file is the value authority; this stylesheet only transcribes it. Do not
+   add a token here that isn't in that table's LAND set, and never re-add
+   a property that table marks DISCARD as a sketch-local invention.
+
+   Deliberately unlayered (no cascade-layer wrapper), matching app.css's own
+   convention — see app.css's CASCADE-LAYER HAZARD note (G-01.2-5): a
+   layered custom property here would silently lose to any unlayered
+   `.pk-*`/admin rule that also sets it, with no warning and no specificity
+   fight to notice. */
+
+/* `components.css` (D-18's admin component module CSS) is imported HERE,
+   not from `app.css`, even though `app.css` already imports this file
+   (`admin/tokens.css`) at its own top. Plan 01.8.2-07's own `<verify>`
+   forbids modifying `app.css` at all (`git status --porcelain --
+   assets/css/app.css` must print nothing), so the only legal place to
+   wire a new admin stylesheet in is here — a nested `@import`, resolved
+   the same way Tailwind's standalone CLI (Lightning CSS) already resolves
+   this file's own import from `app.css`. CSS requires `@import` to
+   precede every other rule in the file (comments excepted), so this must
+   stay the first statement below. */
+@import "./components.css";
+
+/* --color-surface / --color-surface-2 (D-34, LAND): admin-scoped alias
+   names for the shipped `--color-base-200`/`--color-base-300` stops, so
+   admin rules can name "surface" semantically without reaching past the
+   daisyUI role name. --stroke (D-34, LAND): the sketches' own hairline
+   formula, rewritten onto the real shipped `--color-base-content`/
+   `--color-base-100` tokens. --val (D-33, LAND): its own ramp stop, NOT
+   the one `--color-primary` uses in that theme — see 01.8.2-TOKENS.md's
+   "`--val` contrast" section for the measured 6.52:1 dark floor (beats the
+   required 4.83:1) against `--color-base-100`. */
+:root[data-theme="dark"] {
+  --color-surface: var(--color-base-200);
+  --color-surface-2: var(--color-base-300);
+  --stroke: color-mix(in srgb, var(--color-base-content) 42%, var(--color-base-100));
+  --val: var(--pk-ramp-400);
+}
+
+:root[data-theme="light"] {
+  --color-surface: var(--color-base-200);
+  --color-surface-2: var(--color-base-300);
+  --stroke: color-mix(in srgb, var(--color-base-content) 58%, var(--color-base-100));
+  --val: var(--pk-ramp-700);
+}
+
+/* D-19o: suppress the platform tap highlight exactly once. The property
+   INHERITS, so this single :root declaration covers every pressable
+   surface added later — do not add a second declaration on a component
+   selector; that would violate the "declared exactly once" rule this rule
+   exists to satisfy. Left unset, every future control gets the platform
+   default (`rgba(51,181,229,0.4)`, Android's Holo cyan) — a colour in no
+   PukllayClub palette. */
+:root {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* D-19o: a `:hover` implies an `:active`. Touch has no hover, so a
+   hover-only control is invisible to press on the primary platform this
+   app targets. One token, not a ramp: press = --color-surface-2, painted
+   directly on the pressable surface itself.
+
+   `[data-pk-pressable]` is a single attribute hook — later component
+   slices opt a surface in by attribute rather than by enumerating class
+   names here. Verify with a real mouse/tap press: CDP touch emulation does
+   NOT set `:active` (an injected rule painted under `mouse.down()` is not
+   painted under `Input.dispatchTouchEvent`), so a touch-driven assertion
+   passes vacuously — this rule's real behaviour is only confirmed live. */
+[data-pk-pressable]:active {
+  background: var(--color-surface-2);
+}
+
+/* D-19o: where a pressable surface's press fill is instead a TRANSITIONED
+   pseudo-element (rather than a direct `background` swap above — e.g. an
+   overlay layered over existing content), the transition must not delay
+   entering the press state: a 120ms fade is slower than a quick tap and
+   would show only partly faded, or not at all. Only the exit transition
+   (leaving `:active`) may keep its normal duration; this rule targets
+   entry only, via the `:active` compound. */
+[data-pk-pressable]:active::before,
+[data-pk-pressable]:active::after {
+  transition-duration: 0s;
+}

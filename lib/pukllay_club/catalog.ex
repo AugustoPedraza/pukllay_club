@@ -357,16 +357,22 @@ defmodule PukllayClub.Catalog do
   end
 
   @doc """
-  Re-enqueues enrichment for a `"failed"` draft (D-03) — sets
-  `enrichment_status` back to `"pending"` and inserts a fresh
+  Re-enqueues enrichment for `game` (open item 3, D-38, plan 01.8.2-21) —
+  sets `enrichment_status` back to `"pending"` and inserts a fresh
   `EnrichGameWorker` job in one `Ecto.Multi`, so the row is never left
-  stuck between "failed" and "pending" if the insert somehow failed.
-  Returns `{:error, :not_failed}` for any other `enrichment_status`
-  without touching the row — Reintentar only ever applies to a genuinely
-  failed record.
+  stuck mid-transition if the insert somehow failed.
+
+  **Gate: "has a `bgg_id`", not `enrichment_status == "failed"`.** The
+  old `"failed"`-only gate matched **0 rows** in production (D-36's
+  backfill re-enriched everything), making the shipped `Reintentar`
+  control dead UI — see `01.8.2-CONTEXT.md`'s open item 3. Returns
+  `{:error, :no_bgg_id}` for a game with no `bgg_id` at all (there is
+  nothing BGG could re-fetch) without touching the row.
   """
-  @spec retry_enrichment(Game.t()) :: {:ok, Game.t()} | {:error, :not_failed}
-  def retry_enrichment(%Game{enrichment_status: "failed"} = game) do
+  @spec retry_enrichment(Game.t()) :: {:ok, Game.t()} | {:error, :no_bgg_id}
+  def retry_enrichment(%Game{bgg_id: nil}), do: {:error, :no_bgg_id}
+
+  def retry_enrichment(%Game{} = game) do
     Multi.new()
     |> Multi.update(:game, Game.enrichment_changeset(game, %{enrichment_status: "pending"}))
     |> Oban.insert(:enrich_job, fn %{game: game} ->
@@ -378,7 +384,87 @@ defmodule PukllayClub.Catalog do
     end
   end
 
-  def retry_enrichment(%Game{}), do: {:error, :not_failed}
+  @doc """
+  Links `bgg_id` (a pasted id or URL, `parse_bgg_input/1`) to `game`, an
+  ALREADY-EXISTING row that has none yet (open item 3, D-38, plan
+  01.8.2-21's editor). Mirrors `add_game_from_bgg/1`'s atomic shape
+  byte-for-byte: the SAME per-BGG-id `pg_advisory_xact_lock`, the SAME
+  editions re-check (D-03 — a shared id WARNS, it is not a hard reject;
+  `acknowledged_game_ids:` confirms an edition exactly as creation does),
+  and an `Ecto.Multi` that updates the game and enqueues
+  `EnrichGameWorker` together, so a duplicate id is rejected here
+  identically to how creation rejects it.
+
+  Sets `enrichment_status: "pending"` (there is a fresh id to fetch now)
+  but leaves every other field untouched — `Game.admin_changeset/2`'s
+  save-first write (D-38's ordering: the caller MUST persist any pending
+  draft edit before calling this, never after) already carried whatever
+  the staff member typed.
+  """
+  @spec link_bgg_id(Game.t(), String.t(), keyword()) ::
+          {:ok, Game.t()}
+          | {:existing_editions, [Game.t(), ...]}
+          | {:error, :invalid_bgg_id | Ecto.Changeset.t()}
+  def link_bgg_id(%Game{} = game, bgg_id, opts \\ []) when is_binary(bgg_id) do
+    acknowledged_game_ids = Keyword.get(opts, :acknowledged_game_ids, [])
+
+    case parse_bgg_input(bgg_id) do
+      {:ok, bgg_id_int} -> update_bgg_id_with_edition_check(game, bgg_id_int, acknowledged_game_ids)
+      :error -> {:error, :invalid_bgg_id}
+    end
+  end
+
+  defp update_bgg_id_with_edition_check(game, bgg_id_int, acknowledged_game_ids) do
+    Multi.new()
+    |> Multi.run(:bgg_id_lock, fn repo, _changes ->
+      repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@bgg_id_lock_namespace, bgg_id_int])
+      {:ok, :locked}
+    end)
+    |> Multi.run(:editions_check, fn repo, _changes ->
+      check_bgg_id_editions(repo, bgg_id_int, acknowledged_game_ids)
+    end)
+    |> Multi.update(:game, Ecto.Changeset.change(game, bgg_id: bgg_id_int, enrichment_status: "pending"))
+    |> Oban.insert(:enrich_job, fn %{game: game} ->
+      EnrichGameWorker.new(%{game_id: game.id})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{game: game}} ->
+        {:ok, game}
+
+      {:error, :editions_check, {:existing_editions, games}, _changes_so_far} ->
+        {:existing_editions, games}
+
+      {:error, :game, changeset, _changes_so_far} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Clears a stored `bgg_id` that never resolves (open item 3 — "the 8
+  `bgg_missing` games, where a stored id that never resolves is worse
+  than none"). Resets `enrichment_status` to `"no_bgg_id"`, the same
+  status a base game that never had an id carries — there is nothing
+  left to enrich once the id is gone. Casts neither `:name` nor
+  `:description`: this is a BGG-identity action, not a content edit.
+  """
+  @spec clear_bgg_id(Game.t()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
+  def clear_bgg_id(%Game{} = game) do
+    game
+    |> Ecto.Changeset.change(bgg_id: nil, enrichment_status: "no_bgg_id")
+    |> Repo.update()
+  end
+
+  @doc """
+  Restores a `bgg_id`/`enrichment_status` pair cleared by
+  `clear_bgg_id/1` — that action's own Deshacer.
+  """
+  @spec restore_bgg_id(Game.t(), integer(), String.t()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
+  def restore_bgg_id(%Game{} = game, bgg_id, enrichment_status) when is_integer(bgg_id) do
+    game
+    |> Ecto.Changeset.change(bgg_id: bgg_id, enrichment_status: enrichment_status)
+    |> Repo.update()
+  end
 
   @doc """
   Admin listing of games (D-09 Task 2) — unlike every public read path,
@@ -423,6 +509,51 @@ defmodule PukllayClub.Catalog do
     query
     |> maybe_filter_admin_status(Map.get(opts, :status))
     |> maybe_search_admin_name(Map.get(opts, :q))
+  end
+
+  @doc """
+  The admin Juegos list, grouped by `status` (D-25, plan 01.8.2-14) —
+  the partition the redesigned Juegos screen renders three sections from
+  (Borradores/Juegos del club/Retirados). Every game appears in EXACTLY
+  one of the three keys: the partition is guaranteed by the schema
+  (`Game.status` is an `Ecto.Enum` with three mutually exclusive values,
+  D-04) rather than by three independently-ordered predicates, so
+  `length(:draft) + length(:published) + length(:retired) ==
+  count_admin_games(opts)` always holds — assert it, don't just trust it.
+
+  Accepts the same `:q` `list_admin_games/1` does (case-insensitive
+  `ilike` name search, same escaping — T-01-20/T-01.8.1-23). Never accepts
+  `:status`: the whole point of this function is the status split, so a
+  `:status` opt here would fight its own return shape (silently dropped
+  rather than raising, matching `normalize_opts/1`'s permissive style).
+  Never accepts `:limit`/`:offset` either — D-25 replaces `Cargar más`
+  paging with one continuously-scrolled, grouped list; every matching row
+  is returned. Each group is ordered `[asc: g.name, asc: g.id]`, the same
+  tie-break `list_admin_games/1` uses.
+  """
+  @spec list_admin_games_by_status(keyword() | map()) :: %{
+          draft: [Game.t()],
+          published: [Game.t()],
+          retired: [Game.t()]
+        }
+  def list_admin_games_by_status(opts \\ []) do
+    opts =
+      opts
+      |> normalize_opts()
+      |> Map.drop([:status, :limit, :offset])
+
+    grouped =
+      Game
+      |> admin_filtered_query(opts)
+      |> order_by([g], asc: g.name, asc: g.id)
+      |> Repo.all()
+      |> Enum.group_by(& &1.status)
+
+    %{
+      draft: Map.get(grouped, :draft, []),
+      published: Map.get(grouped, :published, []),
+      retired: Map.get(grouped, :retired, [])
+    }
   end
 
   defp maybe_filter_admin_status(query, nil), do: query
@@ -482,28 +613,53 @@ defmodule PukllayClub.Catalog do
   defp fetch_published_by_id!(_out_of_range), do: raise(Ecto.NoResultsError, queryable: Game)
 
   @doc """
-  Moves `game` to `:published` from any other status (D-04, D-08) — used
-  both for a staff-drafted game's first publish and for un-retiring one
-  (though `restore_game/1` is the dedicated retired -> published entry
-  point for that second case). Returns `{:ok, game}` / `{:error, changeset}`.
+  Moves `game` to `:published` from `:draft` only (D-04, D-08, D-37 gate 1)
+  — a staff-drafted game's first publish. A retired game reaches
+  `:published` only through `restore_game/1`, the dedicated retired ->
+  published entry point; publishing it directly here would bypass that
+  function's guard, the exact gap sketch 078 proved was pure paint (a drawn
+  gate the code never enforced).
+
+  **D-30's nivel gate (plan 01.8.2-20):** a draft additionally needs
+  `Game.needs_nivel_to_publish?/1` to be false — a non-expansion draft with
+  no `weight_band` returns `{:error, :nivel_required}` instead of
+  publishing, since it would otherwise render in no weight-band row on the
+  home page (D-37). An expansion has no such condition (D-30 is explicit).
+  This lives HERE, not only in the draft sheet's UI (D-37: "078 proved the
+  drawn gate is pure paint by publishing through the other door") — every
+  caller of this function is gated, the button is a convenience, not the
+  control.
+
+  Returns `{:ok, game}` on a publishable draft, `{:error, :nivel_required}`
+  on a non-expansion draft with no nivel, or `{:error, :not_publishable}`
+  for any other origin status (leaving it unchanged in every error case).
   """
-  def publish_game(%Game{} = game) do
-    game
-    |> Game.status_changeset(%{status: :published})
-    |> Repo.update()
+  def publish_game(%Game{status: :draft} = game) do
+    if Game.needs_nivel_to_publish?(game) do
+      {:error, :nivel_required}
+    else
+      game
+      |> Game.status_changeset(%{status: :published})
+      |> Repo.update()
+    end
   end
 
+  def publish_game(%Game{}), do: {:error, :not_publishable}
+
   @doc """
-  Moves `game` to `:retired` from any status (D-08's soft delete) — a
-  retired game disappears from every public surface `:draft` already did
-  (T-01.8.1-12), restorable via `restore_game/1`. Returns `{:ok, game}` /
-  `{:error, changeset}`.
+  Moves `game` to `:retired` from `:published` only (D-08's soft delete,
+  D-37 gate 1) — a retired game disappears from every public surface
+  `:draft` already did (T-01.8.1-12), restorable via `restore_game/1`.
+  Returns `{:ok, game}` on a published game, or `{:error, :not_retirable}`
+  for any other origin status (leaving it unchanged).
   """
-  def retire_game(%Game{} = game) do
+  def retire_game(%Game{status: :published} = game) do
     game
     |> Game.status_changeset(%{status: :retired})
     |> Repo.update()
   end
+
+  def retire_game(%Game{}), do: {:error, :not_retirable}
 
   @doc """
   Restores a `:retired` game back to `:published` (D-08). A game that is
@@ -846,8 +1002,15 @@ defmodule PukllayClub.Catalog do
     )
   end
 
+  # D-37 gate 2: excludes expansions, mirroring the `:recent` clause below
+  # — this was masked only because every one of the catalog's 26
+  # expansions carries a NULL `weight_band` today, and D-30's editor flow
+  # (01.8.2) puts staff in front of that field for the first time.
   defp section_query(%Section{kind: :weight_band, rule_value: band, sort: sort}) do
-    automatic_order_by(from(g in Game, where: g.weight_band == ^band and g.status == :published), sort)
+    automatic_order_by(
+      from(g in Game, where: g.weight_band == ^band and g.status == :published and g.is_expansion == false),
+      sort
+    )
   end
 
   defp section_query(%Section{kind: :recent, sort: sort}) do

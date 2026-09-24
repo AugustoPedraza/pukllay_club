@@ -184,18 +184,74 @@ Plans:
 ### Phase 01.8.2: Admin UI/UX Redesign (INSERTED)
 
 **Goal:** The staff admin shipped in 01.8.1 is rebuilt to the design validated in sketches
-059–065 — every physical copy carries a real left-to-right shelf position (reversing 01.8.1 D-11), Estantes is one page
-with the Asignar screen retired, and every admin screen shares one shell, one save bar, one
-action system and one sheet.
-**Requirements**: TBD
+059–080 — every physical copy carries a real left-to-right shelf position (reversing 01.8.1 D-11), Estantes is one
+search-first page with the Asignar screen retired, the game editor is rebuilt around «la hoja PREPARA, el pie
+escribe», and every admin screen shares one shell, one save bar, one action system and one sheet.
+**Requirements**: none mapped — this phase's contract is `01.8.2-CONTEXT.md`'s decisions D-01..D-38 and its six open items
 **Depends on:** Phase 01.8.1
-**Context:** `.planning/notes/admin-redesign-scope.md`
+**Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 0 plans
+**Plans:** 21/22 plans executed
 
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.8.2 to break down)
+**Wave 1**
+
+- [x] 01.8.2-01-PLAN.md — TRACER: the copies table, per-copy position, the per-estante advisory lock and a rail that renders real left-to-right order (D-01..D-04, D-11); Asignar deleted
+- [x] 01.8.2-02-PLAN.md — D-34 token reconciliation: `--val` gets its own ramp stop (D-33), the press state lands (D-19o), and one table the UI slices read from
+- [x] 01.8.2-03-PLAN.md — D-17 `ui-design-system` two-scope rewrite, a fresh `01.8.2-UI-SPEC.md`, and the open-item-5 copy decisions
+- [x] 01.8.2-04-PLAN.md — D-37's three gates move into the functions, plus D-36's re-measured, reversible unpublish migration
+
+**Wave 2**
+
+- [x] 01.8.2-05-PLAN.md — D-31: `games.units` is dropped and every Copias read becomes `count(copies)`
+- [x] 01.8.2-06-PLAN.md — D-05/D-06: the counted clear-slate migration and the rollout runbook
+- [x] 01.8.2-07-PLAN.md — D-18 components part 1: the A1–A4 actions, field, panel, row, editable row, status dot, kind tag, count pill
+
+**Wave 3**
+
+- [x] 01.8.2-08-PLAN.md — D-18 components part 2: the sheet shell, the centred dialog, one snackbar, the fixed foot save bar, the pinned page bar
+- [x] 01.8.2-09-PLAN.md — D-12/D-19d/D-00b: the drawer opens and moves left site-wide, staff get the sectioned drawer, `/admin` loses its footer
+
+**Wave 4**
+
+- [x] 01.8.2-10-PLAN.md — D-13b's 5-tab bar on public pages, with open item 2 (D-14) decided by measurement and D-15's line guarded
+
+**Wave 5**
+
+- [x] 01.8.2-11-PLAN.md — Dashboard (060-B boxes with real numbers) and Staff rebuilt on the module, plus the composition guard
+
+**Wave 6**
+
+- [x] 01.8.2-12-PLAN.md — D-18's harness ported to `test/visual/admin_*.mjs`, and **open item 1's real-device pass** before the UI slices harden; open item 4's keel measured
+
+**Wave 7**
+
+- [x] 01.8.2-13-PLAN.md — Estantes search-first: idle prompt, suggestions, the rail opened at the game, Pendientes behind a badge (D-08, D-19g, D-19n)
+- [x] 01.8.2-14-PLAN.md — Juegos grouped by `status` (D-25), one section anatomy with collapsed exceptions (D-19g-bis), two pinned tiers (D-19n)
+- [x] 01.8.2-15-PLAN.md — Web (Secciones) and Niveles rebuilt: the destacada rail, «Quitar de la fila» with Deshacer, one Ordenar mode, «Pasar a …»
+
+**Wave 8**
+
+- [x] 01.8.2-16-PLAN.md — D-00c's «¿Dónde va?» and «¿Qué juego va acá?» sheets, the cover options sheet, place/move/remove with Deshacer
+- [x] 01.8.2-17-PLAN.md — the editor shell: the 56px top bar (D-27), the consequence franja (D-29), the fixed foot bar (D-28), the ficha-mirroring body (D-26)
+
+**Wave 9**
+
+- [x] 01.8.2-18-PLAN.md — Pendientes and Administrar estantes: the name sheet, Ordenar, D-09's first run, D-10's undoable delete
+- [x] 01.8.2-19-PLAN.md — the editor's field sheets (D-30's two patterns, never mixed) and the ⋮ status menu
+
+**Wave 10**
+
+- [x] 01.8.2-20-PLAN.md — D-30's draft sheet and row routing, with open item 6's live publish-gate explanation decided by measurement
+
+**Wave 11**
+
+- [x] 01.8.2-21-PLAN.md — the Copias stepper, D-32's ESTANTE sheet, and **open item 3**: link a BGG id, Reintentar, Borrar el ID, save-first-then-link
+
+**Wave 12**
+
+- [ ] 01.8.2-22-PLAN.md — rollout: the pre-deploy baseline (D-06), the same-deploy gate (D-07), the post-deploy smoke, D-20's Phase 4 scope note, D-21's UAT set
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 

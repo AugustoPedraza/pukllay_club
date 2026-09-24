@@ -1,0 +1,990 @@
+/* Admin component system (D-18) — the atoms every /admin screen composes
+   from. This file grows across plans 01.8.2-07 (Task 1: the A1-A4 action
+   system) and 01.8.2-08 (the composites: sheet, dialog, save bar,
+   snackbar, back row).
+
+   Every colour reference here resolves through `01.8.2-TOKENS.md`'s
+   reconciled tokens (`--color-surface`, `--color-surface-2`, `--val`,
+   `--stroke`) or a directly shipped `app.css` token (`--color-primary`,
+   `--color-base-content`, `--color-base-300`, `--color-success`,
+   `--color-warning`, `--color-error`, `--color-neutral`, `--pk-ramp-*`) —
+   never a literal hex. Geometry is `01.8.2-BENCHMARK.md`'s measured table,
+   verbatim.
+
+   Deliberately unlayered (no `@layer` wrapper), matching `admin/tokens.css`'s
+   own convention and `app.css`'s CASCADE-LAYER HAZARD note: a layered rule
+   here would silently lose to any unlayered Tailwind/daisyUI rule setting
+   the same property, with no warning and no specificity fight to notice. */
+
+:root {
+  /* Scope A's own radius token (8px) — distinct from daisyUI's
+     `--radius-box`/`--radius-field` (Scope B). Same numeric value as
+     `--radius-box` today is coincidence, not identity: the two scopes
+     never share a token name (`ui-design-system` SKILL.md, "Theme
+     tokens" — "two different radius tokens for two different scopes, not
+     a contradiction"). Not in `01.8.2-TOKENS.md`'s reconciliation table
+     because that table only diffs *colour* custom properties; this is the
+     first Scope A geometry constant to land, carried over verbatim from
+     the sketches' own `sources/themes/default.css`. */
+  --radius-md: 8px;
+}
+
+/* ============================================================
+   Task 1 — the A1-A4 action system (D-18, D-00a, 064 S3 Contorno)
+   One anatomy per context, four roles, paint only ever changes with role.
+   No filled button anywhere in this file (R7b / S3 Contorno) — every
+   anatomy below is outline, text, icon, or a full-bleed sheet row.
+   ============================================================ */
+
+.pk-admin-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  box-sizing: border-box;
+}
+
+.pk-admin-action svg,
+.pk-admin-action [class^="hero-"],
+.pk-admin-action [class*=" hero-"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* A1 — outlined: 44px, 16px side padding, 1px stroke, 8px radius, natural
+   width, inset 0 on both sides (065 R10 rule 7a — an outlined action never
+   pulls). Carries Principal and Secundaria only. */
+.pk-admin-action--a1 {
+  min-height: 44px;
+  width: fit-content;
+  padding: 0 16px;
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  background: var(--color-base-100);
+}
+
+.pk-admin-action--a1.pk-admin-action--principal {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* dark: --color-primary (#7B2DCE) on --color-base-100 (#2E154E) measures
+   2.33:1, under WCAG 1.4.11's 3:1 floor (admin-button-system.md). D-34
+   flagged this exact substitution as unresolved and delegated it to
+   "whichever slice implements the A1-A4 button system" — this task.
+   `--color-accent-text` never existed upstream (01.8.2-TOKENS.md DISCARD
+   row) so it is not a legal substitute. `--pk-ramp-400` is: it is the same
+   stop `--val` already resolves to in dark, and TOKENS.md's own "--val
+   contrast" section already measured it at 6.52:1 against
+   --color-base-100 — well past the 3:1 floor, on a real shipped token,
+   with no new alias invented. */
+:root[data-theme="dark"] .pk-admin-action--a1.pk-admin-action--principal {
+  border-color: var(--pk-ramp-400);
+  color: var(--pk-ramp-400);
+}
+
+.pk-admin-action--a1.pk-admin-action--secundaria {
+  border-color: var(--stroke);
+  color: var(--color-base-content);
+}
+
+/* A2 — text: 44px, 12px side padding, no stroke, pulled -12px so the
+   *label* lands on the content edge. Carries Terciaria and Peligro. */
+.pk-admin-action--a2 {
+  min-height: 44px;
+  padding: 0 12px;
+  margin-left: -12px;
+  border-radius: var(--radius-md);
+}
+
+.pk-admin-action--a2.pk-admin-action--terciaria {
+  color: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .pk-admin-action--a2.pk-admin-action--terciaria {
+  color: var(--color-neutral);
+}
+
+.pk-admin-action--a2.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* A3 — icon: 44x44 borderless circle, 18px glyph, pulled -12px so the
+   *glyph* lands on the content edge. Carries Terciaria and Peligro. */
+.pk-admin-action--a3 {
+  width: 44px;
+  height: 44px;
+  margin-left: -12px;
+  padding: 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pk-admin-action--a3 svg,
+.pk-admin-action--a3 [class^="hero-"],
+.pk-admin-action--a3 [class*=" hero-"] {
+  width: 18px;
+  height: 18px;
+}
+
+.pk-admin-action--a3.pk-admin-action--terciaria {
+  color: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .pk-admin-action--a3.pk-admin-action--terciaria {
+  color: var(--color-neutral);
+}
+
+.pk-admin-action--a3.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* A4 — sheet row: 48px, full-bleed, commit-first. A sheet has no buttons
+   at all (D-19e) — this anatomy is a row, left-aligned, 16px/400. */
+.pk-admin-action--a4 {
+  min-height: 48px;
+  width: 100%;
+  padding: 0 16px;
+  justify-content: flex-start;
+  font-size: 16px;
+  font-weight: 400;
+  border-radius: 0;
+  color: var(--color-base-content);
+}
+
+.pk-admin-action--a4.pk-admin-action--peligro {
+  color: var(--color-error);
+}
+
+/* Disabled (D-24): muted stops, NEVER opacity — opacity dims the label,
+   the only thing saying what the control does when it revives. Reachable
+   only through the `commit` gate `AdminComponents.action/1` enforces at
+   render time; there is no CSS-only path to this state. */
+.pk-admin-action[disabled],
+.pk-admin-action--disabled {
+  color: var(--color-neutral);
+  cursor: not-allowed;
+}
+
+.pk-admin-action--a1[disabled],
+.pk-admin-action--a1.pk-admin-action--disabled {
+  border-color: var(--color-neutral);
+  background: var(--color-base-100);
+}
+
+/* ============================================================
+   Task 2 — field, section panel, and the two label ranks
+   ============================================================ */
+
+.pk-admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk-admin-field__label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk-admin-field__control {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pk-admin-field__control:focus {
+  border-color: var(--color-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+:root[data-theme="dark"] .pk-admin-field__control:focus {
+  border-color: var(--pk-ramp-400);
+  outline-color: var(--pk-ramp-400);
+}
+
+.pk-admin-field__control--textarea {
+  min-height: 88px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.pk-admin-field__control--error {
+  border-color: var(--color-error);
+}
+
+/* 16px input text under a coarse (touch) pointer so iOS never zooms on
+   focus (BENCHMARK "Field" row). Desktop keeps the 14px scale above —
+   this rule intentionally lives in its own `@media` block, not merged
+   into the base rule, so the desktop scale is unaffected. */
+@media (pointer: coarse) {
+  .pk-admin-field__control {
+    font-size: 16px;
+  }
+}
+
+.pk-admin-field__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.pk-admin-field__error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin: 0;
+}
+
+/* Section panel: tonal fill, no border, 12px radius, 16px padding. */
+.pk-admin-section-panel {
+  background: var(--color-surface);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* The two label ranks (D-19j / D-19g-bis decision 20) — kept visibly
+   distinct on purpose. `--field` and `--group` are BENCHMARK's "Label
+   (field)" / "Label (group)" rows — both govern a FORM label. A list
+   section header is a different rank entirely: see
+   `.pk-admin-list-section-label` below, which must never collapse onto
+   either of these two. */
+.pk-admin-label {
+  display: block;
+  margin: 0;
+}
+
+.pk-admin-label--field {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutral);
+}
+
+.pk-admin-label--group {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* A LIST section label (D-19g-bis decision 20): 15/600 at full strength —
+   never smaller than the rows it heads (`.pk-admin-row__name`, 14px) and
+   never identical to a row's second line (`.pk-admin-row__meta`, 13px
+   muted). Conflating this with `.pk-admin-label--group` above (13/600
+   full-strength, a FORM label) is exactly the inverted-ladder bug
+   D-19g-bis decision 20 records and fixes. */
+.pk-admin-list-section-label {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* ============================================================
+   Task 3 — list row, editable-value row, status dot, kind tag, count pill
+   ============================================================ */
+
+.pk-admin-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  color: inherit;
+  text-decoration: none;
+}
+
+.pk-admin-row__cover {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.pk-admin-row__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pk-admin-row__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  overflow-wrap: break-word;
+}
+
+.pk-admin-row__meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+/* D-19i: a chevron means "this row opens another page", and nothing
+   else — `list_row/1` only renders this element when `opens_page` is
+   true. */
+.pk-admin-row__chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--color-neutral);
+}
+
+/* D-23: an editable value is a row that opens a sheet — line 1 label
+   (prominent), line 2 value (subordinate, carrying the `--val` tint).
+   No glyph at all: not `›` (D-19i reserves that for "opens a page") and
+   not the `⌄` that briefly replaced it. The tint marks the datum you are
+   about to change, never "this row is tappable" — `.pk-admin-row` above
+   is the contrasting, tappable-but-untinted case. */
+.pk-admin-editable-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pk-admin-editable-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-editable-row__value {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--val);
+}
+
+/* D-23/D-31, plan 01.8.2-21: a stepper is explicitly OUT of
+   `.pk-admin-editable-row`'s "row that opens a sheet" anatomy — it acts
+   in place, on both `−`/`+` taps, so it is styled as its own row shape
+   (label left, controls right) rather than the single-column editable
+   row above. Same 44px floor and 16px keel as every other admin row. */
+.pk-admin-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+}
+
+.pk-admin-stepper-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-stepper-row__control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* A8 — the drawn control is 32px (a visually compact stepper button), so
+   it needs a bleeding `::after` hit box to clear the 44px tap-target
+   floor without inflating what's drawn — the SAME technique
+   `.pk-editor-pill`/`.pk-editor-title` already use, found the same way:
+   `test/visual/admin_components.mjs`'s real-browser sweep measures the
+   hit box (bleeding pseudo-element included), not the drawn control. */
+.pk-admin-stepper-row__btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--stroke);
+  border-radius: 9999px;
+  background: none;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+.pk-admin-stepper-row__btn::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -6px;
+  bottom: -6px;
+}
+
+.pk-admin-stepper-row__value {
+  min-width: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* D-19h: a status is an 8px dot in the status colour before the word,
+   never a pill. The dot is decorative (drawn from `currentColor`); the
+   word is the accessible name. Per-status colour is not pinned by any
+   read_first source for this plan — chosen here from the already-
+   reconciled semantic tokens (`--color-success`/`--warning`/`--error`/
+   `--neutral`), documented so a future pass can retune deliberately
+   rather than rediscover the mapping from scratch. */
+.pk-admin-status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-status-dot__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.pk-admin-status-dot--draft {
+  color: var(--color-neutral);
+}
+
+.pk-admin-status-dot--published {
+  color: var(--color-success);
+}
+
+.pk-admin-status-dot--retired {
+  color: var(--color-error);
+}
+
+.pk-admin-status-dot--sin_lugar {
+  color: var(--color-warning);
+}
+
+.pk-admin-status-dot--afuera {
+  color: var(--color-neutral);
+}
+
+/* Plan 01.8.2-11: Staff's own status vocabulary (D-19h applied there —
+   see admin_components.ex's @status_words doc for why this reuses the
+   atom instead of a screen-local treatment). */
+.pk-admin-status-dot--owner {
+  color: var(--color-neutral);
+}
+
+.pk-admin-status-dot--active {
+  color: var(--color-success);
+}
+
+.pk-admin-status-dot--pending {
+  color: var(--color-warning);
+}
+
+/* D-19m: a kind is a quiet tag — 18px tall, 11px regular, lowercase, on a
+   hairline `--color-base-300` border (the shipped token
+   `01.8.2-TOKENS.md` maps the sketches' own invented `--color-border`
+   onto), muted text. Never competes with the row name. Not a status, so
+   D-19h's "never a pill" rule does not apply here — a rounded tag shape
+   is fine. */
+.pk-admin-kind-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--color-base-300);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: lowercase;
+  color: var(--color-neutral);
+}
+
+/* D-19m: a count is a neutral pill on the tile's bottom-right, page-
+   filled with a 1px `--stroke`, 11/600 muted — never the top-right filled
+   primary badge (that means pending work, D-19g). */
+.pk-admin-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  background: var(--color-base-100);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-neutral);
+}
+
+/* D-19g (plan 01.8.2-11): the pending-work accent pill — primary fill,
+   the SAME shape `chrome.css`'s `.pk-admin-tab-badge` paints for a tab's
+   pending count. Distinct from `.pk-admin-count-pill` above on purpose
+   (D-19m): this shape means "work waiting for you", that one means "here
+   is a count". */
+.pk-admin-pending-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+/* ============================================================
+   Plan 01.8.2-08 Task 1 — the bottom sheet shell and the centred
+   destructive dialog (D-19e, D-19f). Both share one overlay root
+   (`.pk-admin-overlay-root`/`.pk-admin-overlay-scrim`) and one open/close
+   class (`.pk-admin-overlay--open`), toggled by `assets/js/hooks/
+   admin_sheet.js` — never an inline `display` (T-01.8.2-32).
+   ============================================================ */
+
+/* FIX (plan 01.8.2-12 Task 3, deferred-items.md's other "SEVERE" finding):
+   was `z-index: 70` — IDENTICAL to `.pk-admin-tab-bar`'s (chrome.css). Both
+   are `bottom: 0`-anchored fixed elements, so a short sheet's bottom-most
+   row(s) sat in the tab bar's 67px band with no reliable stacking order
+   between the two, confirmed via a real coordinate click + elementFromPoint
+   landing on the tab bar instead of "Quitar del staff". `75` sits strictly
+   between the tab bar's `70` and the snackbar's `80` (components.css below)
+   — above the chrome it must cover, below the one component (the snackbar)
+   that already needs to paint over an open sheet/dialog too. */
+.pk-admin-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: none;
+}
+
+.pk-admin-overlay-root.pk-admin-overlay--open {
+  display: block;
+}
+
+/* 38% scrim per 01.8.2-BENCHMARK.md's "Bottom sheet"/"Confirmation" rows. */
+.pk-admin-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 38%);
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Sheet: pinned grabber + header, rows scroll underneath, capped at 85vh
+   (D-19e — a sheet taller than this scrolls its rows under the pinned
+   grabber+header so the ✕ never scrolls away). 18px top radius, 36×4
+   grabber — both BENCHMARK's measured figures, verbatim. */
+.pk-admin-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  background: var(--color-base-100);
+  border-radius: 18px 18px 0 0;
+  overflow: hidden;
+}
+
+.pk-admin-sheet__grabber {
+  flex-shrink: 0;
+  width: 36px;
+  height: 4px;
+  margin: 8px auto;
+  border-radius: 999px;
+  background: var(--color-base-300);
+  touch-action: none;
+}
+
+.pk-admin-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 0 16px 8px;
+}
+
+.pk-admin-sheet__cover {
+  width: 56px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.pk-admin-sheet__header-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pk-admin-sheet__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-sheet__subtitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+/* Full-width 1px divider, then 8px before the rows (D-19f's anatomy note,
+   shared by the sheet header). */
+.pk-admin-sheet__divider {
+  flex-shrink: 0;
+  height: 1px;
+  background: var(--color-base-300);
+}
+
+.pk-admin-sheet__commit {
+  flex-shrink: 0;
+  padding-top: 8px;
+}
+
+.pk-admin-sheet__rows {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Dialog: centred 312px M3 basic dialog, 16px radius (D-19f). */
+.pk-admin-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 312px;
+  max-width: calc(100vw - 32px);
+  padding: 24px 16px 16px;
+  background: var(--color-base-100);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.pk-admin-dialog__question {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-dialog__consequence {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-neutral);
+}
+
+.pk-admin-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+/* ============================================================
+   Plan 01.8.2-08 Task 2 — the one snackbar (D-19b, D-19c).
+   Bottom-anchored, above the tab bar — `--pk-tab-bar-h` is set by the
+   chrome slice (plan 01.8.2-10); the `0px` fallback keeps this component
+   correct (just flush with the viewport edge) until that slice lands.
+   Inverse surface: the theme's own base pair, swapped — no new token.
+   ============================================================ */
+.pk-admin-snackbar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--pk-tab-bar-h, 0px) + 12px);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  background: var(--color-base-content);
+  color: var(--color-base-100);
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.pk-admin-snackbar__message {
+  flex: 1 1 auto;
+}
+
+.pk-admin-snackbar__actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* The action/close controls sit on the snackbar's INVERSE surface, not the
+   page surface `action/1`'s own role colours assume — force both to the
+   snackbar's own foreground so they stay legible regardless of role/theme. */
+.pk-admin-snackbar .pk-admin-action {
+  color: inherit;
+}
+
+/* ============================================================
+   Plan 01.8.2-08 Task 3 — the fixed foot save bar, the back row and the
+   pinned page bar (D-28, D-19n).
+   ============================================================ */
+
+/* D-28's 77px is declared ONCE here — `.pk-admin-save-bar`'s own height
+   and `.pk-admin-has-save-bar`'s body clearance both `calc()` off this
+   SAME property, so the two can never independently drift (the exact
+   failure D-28 names: "an estimate hides the last block under a few
+   pixels and no check notices"). */
+:root {
+  --pk-save-bar-h: 77px;
+}
+
+/* Copies `.pk-mobile-cta-bar`'s geometry (`app.css:5375`) — fixed at the
+   foot, full width — but PAGE-coloured (`--color-base-100`, D-28), not
+   `.pk-mobile-cta-bar`'s tonal `--color-base-200`: D-28 measured that a
+   tonal bar gives a disabled button 1:1 (invisible) contrast against it,
+   so the bar's ground must match the disabled button's own ground. Opaque
+   with only a 1px top line — never a tonal band (sketch 080's negative
+   test 25, ported forward). */
+.pk-admin-save-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--pk-save-bar-h);
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-top: 1px solid var(--stroke);
+}
+
+.pk-admin-save-bar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-save-bar__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  flex-shrink: 0;
+}
+
+/* The action is A1 exactly (natural width, outline, never filled — that's
+   `action/1`'s own anatomy, reused verbatim) — this rule only pushes it to
+   the bar's right edge ("right-aligned on the keel", D-28). Deliberately
+   NO `width: 100%`/`flex: 1` here: sketch 080's negative test 23 (the
+   button must stay at its natural width, never stretch to fill the bar)
+   is exactly what a full-width rule here would violate. */
+.pk-admin-save-bar__action {
+  margin-left: auto;
+}
+
+/* Body clearance: the ONLY consumer of `--pk-save-bar-h` outside the bar
+   itself. A page rendering `save_bar/1` adds this class to its scroll
+   container so the last block is never hidden underneath the fixed bar —
+   derived via `calc()`, never a second literal pixel figure. */
+.pk-admin-has-save-bar {
+  padding-bottom: calc(var(--pk-save-bar-h) + 0px);
+}
+
+/* Back row: the in-page back control, D1/D2/D3's page-head rhythm — one
+   44px row, shared visual anatomy with `.pk-admin-page-bar__back` below so
+   the two read as the same control, never two independently-styled
+   "back" shapes. */
+.pk-admin-back-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  text-decoration: none;
+}
+
+/* Page bar (D-19n): an ABSOLUTE overlay, never `position: sticky` — this
+   is the mechanism that gives it zero layout cost at rest. An absolutely
+   positioned element is taken out of normal document flow unconditionally
+   (whether or not `--visible` is set), so there is no `display` toggle
+   step that could ever reserve or release layout height; a sticky child
+   would still occupy its slot in flow even while visually "at rest". */
+.pk-admin-page-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--color-base-100);
+  border-bottom: 1px solid var(--stroke);
+  /* `visibility`, never `opacity` — this module never declares a bare
+     `opacity` property anywhere (D-24's rule, generalised: opacity dims
+     content instead of cleanly presenting/absenting it). `visibility`
+     does not affect box generation for an absolutely-positioned element,
+     so this toggle still costs zero layout at rest either way. */
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Plan 01.8.2-14 (Rule 1 — bug): the base rule above is `position:
+   absolute` so the bar costs zero layout at rest (see its own comment) —
+   but nothing had ever made it actually PIN to the viewport while
+   visible, because no live call site existed to prove that half of the
+   contract before this plan's Juegos screen. `position: fixed` here,
+   scoped to the `--visible` modifier only, is the fix: both `absolute`
+   and `fixed` remove an element from normal flow identically, so this
+   transition still costs zero layout to sibling content either way — the
+   only thing it changes is which box the bar's own `top: 0` resolves
+   against (an ancestor vs. the viewport), which is exactly what "pins at
+   the top of the scroller" requires. `test/pukllay_club_web/components/
+   admin_components_test.exs`'s own `page_bar/1` tests only assert the
+   BASE rule stays `position: absolute` (never `sticky`) — untouched by
+   this addition. */
+.pk-admin-page-bar--visible {
+  position: fixed;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.pk-admin-page-bar__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin-left: -12px;
+  color: var(--color-base-content);
+}
+
+.pk-admin-page-bar__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Plan 01.8.2-15, Task 2 — the Ordenar→Listo mode (062-B; second
+   consumer is plan 01.8.2-18's Administrar estantes, per R7 #4: all
+   three ↑/↓-carrying screens move to this one shape together).
+   ============================================================ */
+
+/* Replaces whatever heading sits in this slot while the mode is active —
+   title at `page_bar/1`'s own 17/600 rank, so a mode header and a pinned
+   page bar title read as the same weight. */
+.pk-admin-reorder-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.pk-admin-reorder-header__title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+/* One row: a 44px drag handle (the WCAG 2.5.7 non-drag fallback — tapping
+   it reveals ↑/↓ on THIS row only), the caller's own content, and the
+   revealed arrow pair. No `[data-pk-pressable]` on the row itself — only
+   the handle and the two arrow buttons are pressable surfaces here. */
+.pk-admin-reorder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+}
+
+.pk-admin-reorder-row__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin-left: -12px;
+  border: 0;
+  background: transparent;
+  color: var(--color-neutral);
+}
+
+.pk-admin-reorder-row__content {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--color-base-content);
+}
+
+.pk-admin-reorder-row__arrows {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pk-admin-reorder-row__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-base-content);
+}

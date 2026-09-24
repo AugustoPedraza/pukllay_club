@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 5
 waived_count: 1
-fixed_count: 25
-total_count: 29
-last_updated: 2026-09-23T01:02:46.110Z
+fixed_count: 27
+total_count: 33
+last_updated: 2026-09-24T02:08:38.186Z
 ---
 
 # Broken Windows Ledger
@@ -44,6 +44,10 @@ last_updated: 2026-09-23T01:02:46.110Z
 | 27 | quick-260912-waa | deviation | assets/css/app.css |  | Pre-existing WCAG gap unrelated to sketch 058: light theme's --color-success-content (#FFFFFF) on --color-success (#3F8F6B) measures 3.92:1, below the 4.5:1 text floor. Neither role is touched by this task's ramp/hue rotation (D-Semantics, out of scope); logged as a documented exception in h300-audit.mjs --check rather than silently fixed. | open |  | 2026-09-13T02:42:53.734Z |  |
 | 28 | quick-260913-0h6 | deviation | test/pukllay_club_web/live/catalog_show_test.exs | 90 | Pre-existing flake, unrelated to this task: mechanic-chip-overflow test asserts absence of literal +7 in rendered HTML, but the page's CSP script nonce is a random base64 string that occasionally contains +7 by chance | open |  | 2026-09-13T03:59:03.929Z |  |
 | 29 | quick-260922-tum | deviation | lib/pukllay_club_web/game_text.ex |  | Plan's <=25-publisher acceptance threshold (Task 3 verify/done) does not hold against real post-fix data: 17 of 394 dev games legitimately carry 26-45 real, deduplicated international publishers (cross-checked against BGG raw XML). Not a defect -- see 260922-tum-SUMMARY.md Deviation 2 for full analysis and recommendation. | open |  | 2026-09-23T01:02:46.110Z |  |
+| 30 | 01.8.2 | deviation | assets/js/hooks/admin_sheet.js |  | isOpen() uses offsetParent, always null for position:fixed — Esc/drag-down close, focus-trap-on-open, focus-return-on-close all confirmed non-functional (see deferred-items.md plan 12) | fixed |  | 2026-09-23T18:28:51.686Z | 2026-09-23T19:04:49.371Z |
+| 31 | 01.8.2 | deviation | assets/css/admin/components.css |  | sheet/dialog root shares z-index:70 with the bottom-anchored tab bar (chrome.css) — a short sheet's last row can be untappable at any viewport height, confirmed via real elementFromPoint hit-test (see deferred-items.md plan 12) | fixed |  | 2026-09-23T18:28:57.298Z | 2026-09-23T19:05:06.597Z |
+| 32 | 01.8.2 | deviation | assets/css/admin/screens.css |  | pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12 | open |  | 2026-09-23T18:28:57.503Z |  |
+| 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
 
 ````json
 [
@@ -393,6 +397,58 @@ last_updated: 2026-09-23T01:02:46.110Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-23T01:02:46.110Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 30,
+    "kind": "deviation",
+    "phase": "01.8.2",
+    "file": "assets/js/hooks/admin_sheet.js",
+    "line": null,
+    "description": "isOpen() uses offsetParent, always null for position:fixed — Esc/drag-down close, focus-trap-on-open, focus-return-on-close all confirmed non-functional (see deferred-items.md plan 12)",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-09-23T18:28:51.686Z",
+    "resolved_at": "2026-09-23T19:04:49.371Z",
+    "milestone": "v1.1"
+  },
+  {
+    "id": 31,
+    "kind": "deviation",
+    "phase": "01.8.2",
+    "file": "assets/css/admin/components.css",
+    "line": null,
+    "description": "sheet/dialog root shares z-index:70 with the bottom-anchored tab bar (chrome.css) — a short sheet's last row can be untappable at any viewport height, confirmed via real elementFromPoint hit-test (see deferred-items.md plan 12)",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-09-23T18:28:57.298Z",
+    "resolved_at": "2026-09-23T19:05:06.597Z",
+    "milestone": "v1.1"
+  },
+  {
+    "id": 32,
+    "kind": "deviation",
+    "phase": "01.8.2",
+    "file": "assets/css/admin/screens.css",
+    "line": null,
+    "description": "pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-23T18:28:57.503Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 33,
+    "kind": "unrun-verify",
+    "phase": "01.8.2",
+    "file": "test/pukllay_club/catalog/bgg_editions_test.exs",
+    "line": null,
+    "description": "link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-24T02:08:38.186Z",
     "resolved_at": null,
     "milestone": "v1.1"
   }

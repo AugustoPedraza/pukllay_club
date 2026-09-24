@@ -10,32 +10,309 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
   alias PukllayClub.Catalog.Sections
   alias PukllayClub.Repo
 
+  defp featured_section, do: Repo.get_by!(Section, featured: true)
+
   describe "SectionLive.Index — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
       assert {:error, {:redirect, %{to: "/admin/ingresar"}}} = live(conn, ~p"/admin/secciones")
     end
   end
 
-  describe "SectionLive.Index — list (D-17, D-18, UI-SPEC E6)" do
+  describe "SectionLive.Index — Web opens on the destacada (D-00a, D-19l)" do
     setup :register_and_log_in_staff
 
-    test "shows every section with a kind hint, and Oculta/Destacada badges", %{conn: conn} do
-      # The migration's own D-22 backfill already seeds a featured
-      # section ("Destacados del club") and 3 weight_band + 1 recent
-      # section — the partial unique index allows only one featured
-      # section, so this test creates only a hidden manual section of
-      # its own and asserts against the pre-seeded rows for the rest.
-      section_fixture(%{name: "Vieja sección propia", hidden: true})
+    test "titles the page Web and shows the destacada's own name and games", %{conn: conn} do
+      featured = featured_section()
+      game = game_fixture(%{name: "Everdell"})
+      add_game_to_section(featured, game)
 
       {:ok, _lv, html} = live(conn, ~p"/admin/secciones")
 
-      assert html =~ "Destacados del club"
-      assert html =~ "Destacada"
-      assert html =~ "Vieja sección propia"
-      assert html =~ "Oculta"
-      assert html =~ "Elegida a mano"
-      assert html =~ "Por nivel"
-      assert html =~ "Recientes"
+      assert html =~ "Web"
+      assert html =~ featured.name
+      assert html =~ "Everdell"
+    end
+
+    test "an empty destacada shows the empty-rail note", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert html =~ "Sin juegos, no se ve en el inicio."
+    end
+
+    test "Otras filas lists the non-featured sections with a kind tag and, for a manual section, a count",
+         %{conn: conn} do
+      manual = section_fixture(%{name: "Otra fila a mano", kind: :manual, sort: :manual})
+      add_game_to_section(manual, game_fixture())
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert html =~ "Otras filas"
+      assert html =~ manual.name
+      assert html =~ "personalizada"
+      assert html =~ "pk-admin-kind-tag"
+      assert html =~ "pk-admin-count-pill"
+      # D-19m: the count/kind pair is the neutral shapes, never the
+      # top-right filled primary badge that means pending work (D-19g).
+      refute html =~ "pk-admin-pending-pill"
+    end
+
+    test "an automatic (weight_band/recent) Otras fila carries the automática tag, no count pill",
+         %{conn: conn} do
+      automatic =
+        section_fixture(%{name: "Nivel automático", kind: :weight_band, rule_value: "nivel_experto", sort: :name})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert html =~ automatic.name
+      assert html =~ "automática"
+    end
+
+    test "tapping an Otras fila row navigates to its own edit page", %{conn: conn} do
+      other = section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      {:ok, _edit_lv, edit_html} =
+        lv
+        |> element("#other-section-#{other.id}")
+        |> render_click()
+        |> follow_redirect(conn)
+
+      assert edit_html =~ "Movible"
+    end
+  end
+
+  describe "SectionLive.Index — Ordenar→Listo mode (062-B, R7 #4, T-01.8.2-68)" do
+    setup :register_and_log_in_staff
+
+    test "at rest no Otras fila row shows a reorder control", %{conn: conn} do
+      section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      refute has_element?(lv, "#web-otras-reorder")
+      refute has_element?(lv, "button[aria-label='Reordenar']")
+    end
+
+    test "Ordenar filas enters the mode: a drag handle per row and Listo in the header", %{conn: conn} do
+      section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      assert has_element?(lv, "#web-otras-reorder")
+      assert has_element?(lv, "#web-otras-reorder button[aria-label='Reordenar']")
+      assert has_element?(lv, "button", "Listo")
+      # the mode replaces the resting header — Otras filas and its own
+      # icon are gone while active
+      refute has_element?(lv, "button[aria-label='Ordenar filas']")
+    end
+
+    test "tapping a handle reveals ↑/↓ on that row only", %{conn: conn} do
+      a = section_fixture(%{name: "Sección A"})
+      b = section_fixture(%{name: "Sección B"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
+
+      assert has_element?(lv, "button[aria-label='Subir #{a.name}']")
+      assert has_element?(lv, "button[aria-label='Bajar #{a.name}']")
+      refute has_element?(lv, "button[aria-label='Subir #{b.name}']")
+      refute has_element?(lv, "button[aria-label='Bajar #{b.name}']")
+    end
+
+    test "↓ reorders the admin list and the home page's own order", %{conn: conn} do
+      a = section_fixture(%{name: "Sección A", position: 500})
+      b = section_fixture(%{name: "Sección B", position: 501})
+      add_game_to_section(a, game_fixture(%{name: "Juego A"}))
+      add_game_to_section(b, game_fixture(%{name: "Juego B"}))
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
+
+      lv
+      |> element("button[aria-label='Bajar #{a.name}']")
+      |> render_click()
+
+      assert Repo.get!(Section, a.id).position == 501
+      assert Repo.get!(Section, b.id).position == 500
+
+      home_titles =
+        Catalog.list_home_sections()
+        |> Enum.filter(&(&1.section_id in [a.id, b.id]))
+        |> Enum.map(& &1.title)
+
+      assert home_titles == ["Sección B", "Sección A"]
+    end
+
+    test "Listo exits the mode and shows Orden guardado with a Deshacer snackbar", %{conn: conn} do
+      section_fixture(%{name: "Movible"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+
+      refute has_element?(lv, "#web-otras-reorder")
+      assert html =~ "Orden guardado"
+      assert html =~ ~s(data-timeout="10000")
+    end
+
+    test "Deshacer restores the order in effect when Ordenar filas was entered", %{conn: conn} do
+      a = section_fixture(%{name: "Sección A", position: 500})
+      b = section_fixture(%{name: "Sección B", position: 501})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("button[aria-label='Ordenar filas']") |> render_click()
+      lv |> element("#reorder-section-#{a.id} button[aria-label='Reordenar']") |> render_click()
+
+      lv
+      |> element("button[aria-label='Bajar #{a.name}']")
+      |> render_click()
+
+      assert Repo.get!(Section, a.id).position == b.position
+
+      lv |> element("button", "Listo") |> render_click()
+      lv |> element("button[phx-click='undo-reorder']") |> render_click()
+
+      assert Repo.get!(Section, a.id).position == 500
+      assert Repo.get!(Section, b.id).position == 501
+    end
+  end
+
+  describe "SectionLive.Index — Ajustes «Mostrar en el inicio» (D-19l, T-01.8.2-65)" do
+    setup :register_and_log_in_staff
+
+    test "unchecking Mostrar en el inicio hides the destacada from the public home", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture())
+
+      {:ok, _home_lv, home_html_before} = live(build_conn(), ~p"/")
+      assert home_html_before =~ featured.name
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+      assert html =~ "Mostrar en el inicio"
+      refute html =~ "Ocultar en la home"
+
+      lv |> form("#web-ajustes-form", section: %{shown: "false"}) |> render_submit()
+
+      {:ok, _home_lv, home_html} = live(build_conn(), ~p"/")
+      refute home_html =~ featured.name
+    end
+
+    test "checking it back on shows it again", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture())
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> form("#web-ajustes-form", section: %{shown: "false"}) |> render_submit()
+
+      {:ok, _home_lv, hidden_html} = live(build_conn(), ~p"/")
+      refute hidden_html =~ featured.name
+
+      lv |> form("#web-ajustes-form", section: %{shown: "true"}) |> render_submit()
+
+      {:ok, _home_lv, home_html} = live(build_conn(), ~p"/")
+      assert home_html =~ featured.name
+    end
+  end
+
+  describe "SectionLive.Index — member add/remove on the destacada (D-19k)" do
+    setup :register_and_log_in_staff
+
+    test "typing a name lists matching non-member, non-retired games; tapping adds it", %{conn: conn} do
+      featured = featured_section()
+      already_in = game_fixture(%{name: "Carcassonne en la fila"})
+      add_game_to_section(featured, already_in)
+      matching = game_fixture(%{name: "Carcassonne"})
+      _retired = game_fixture(%{name: "Carcassonne Retirado", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      lv |> form("#web-search-form", %{q: "carc"}) |> render_change()
+
+      assert has_element?(lv, "#web-search-result-#{matching.id}")
+      refute has_element?(lv, "#web-search-result-#{already_in.id}")
+      refute has_element?(lv, "#web-search-results", "Carcassonne Retirado")
+
+      html =
+        lv
+        |> element("#web-search-result-#{matching.id}")
+        |> render_click()
+
+      assert html =~ "Carcassonne"
+    end
+
+    test "opening a cover's sheet and tapping Quitar de la fila removes it at once, no dialog, no Peligro",
+         %{conn: conn} do
+      featured = featured_section()
+      game = game_fixture(%{name: "Everdell"})
+      add_game_to_section(featured, game)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+      assert html =~ "Everdell"
+
+      sheet_html =
+        lv
+        |> element("#web-cover-#{game.id}")
+        |> render_click()
+
+      assert sheet_html =~ "Quitar de la fila"
+      refute sheet_html =~ "pk-admin-dialog"
+
+      html =
+        lv
+        |> element("button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+        |> render_click()
+
+      refute has_element?(lv, "#web-cover-#{game.id}")
+      assert html =~ "quitado de la fila"
+      assert html =~ ~s(data-timeout="10000")
+      refute html =~ "pk-admin-dialog"
+      refute html =~ "pk-admin-action--peligro"
+    end
+
+    test "Deshacer restores the removed game", %{conn: conn} do
+      featured = featured_section()
+      game = game_fixture(%{name: "Everdell"})
+      add_game_to_section(featured, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-cover-#{game.id}") |> render_click()
+
+      lv
+      |> element("button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+      |> render_click()
+
+      html = lv |> element("button[phx-click='undo-remove']") |> render_click()
+
+      assert has_element?(lv, "#web-cover-#{game.id}")
+      assert html =~ "Everdell"
+    end
+
+    test "at 20 members the featured screen shows the cap message", %{conn: conn} do
+      featured = featured_section()
+
+      for _ <- 1..20 do
+        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      end
+
+      extra = game_fixture(%{name: "Juego 21"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      lv |> form("#web-search-form", %{q: "Juego 21"}) |> render_change()
+
+      html =
+        lv
+        |> element("#web-search-result-#{extra.id}")
+        |> render_click()
+
+      assert html =~ "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
     end
   end
 
@@ -64,44 +341,6 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
-  describe "SectionLive.Index — reorder (D-18, D-19, UI-SPEC Visual Hierarchy)" do
-    setup :register_and_log_in_staff
-
-    test "the featured row has no ↑/↓ controls; a non-featured row does", %{conn: conn} do
-      section_fixture(%{name: "Movible"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
-
-      refute has_element?(lv, "button[aria-label='Subir Destacados del club']")
-      refute has_element?(lv, "button[aria-label='Bajar Destacados del club']")
-      assert has_element?(lv, "button[aria-label='Subir Movible']")
-      assert has_element?(lv, "button[aria-label='Bajar Movible']")
-    end
-
-    test "pressing ↓ reorders the admin list and the home page's own order", %{conn: conn} do
-      a = section_fixture(%{name: "Sección A", position: 500})
-      b = section_fixture(%{name: "Sección B", position: 501})
-      add_game_to_section(a, game_fixture(%{name: "Juego A"}))
-      add_game_to_section(b, game_fixture(%{name: "Juego B"}))
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
-
-      lv
-      |> element("button[phx-value-section-id='#{a.id}'][phx-click='move-down']")
-      |> render_click()
-
-      assert Repo.get!(Section, a.id).position == 501
-      assert Repo.get!(Section, b.id).position == 500
-
-      home_titles =
-        Catalog.list_home_sections()
-        |> Enum.filter(&(&1.section_id in [a.id, b.id]))
-        |> Enum.map(& &1.title)
-
-      assert home_titles == ["Sección B", "Sección A"]
-    end
-  end
-
   describe "SectionLive.Edit — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
       section = section_fixture()
@@ -111,24 +350,26 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
-  describe "SectionLive.Edit — rename and hide (D-17, UI-SPEC E6)" do
+  describe "SectionLive.Edit — rename and Ajustes «Mostrar en el inicio» (D-19l, T-01.8.2-65)" do
     setup :register_and_log_in_staff
 
     test "renaming a section makes the public home page render the new title", %{conn: conn} do
       section = section_fixture(%{name: "Vieja"})
       add_game_to_section(section, game_fixture(%{name: "Un juego"}))
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones/#{section.id}")
+      assert html =~ "Mostrar en el inicio"
+      refute html =~ "Ocultar en la home"
 
-      html = lv |> form("#section-form", section: %{name: "Para arrancar"}) |> render_submit()
-      assert html =~ "Sección guardada."
+      html = lv |> form("#section-form", section: %{name: "Para arrancar", shown: "true"}) |> render_submit()
+      assert html =~ "Fila guardada."
 
       {:ok, _home_lv, home_html} = live(build_conn(), ~p"/")
       assert home_html =~ "Para arrancar"
       refute home_html =~ "Vieja"
     end
 
-    test "hiding a section removes it from the public home page", %{conn: conn} do
+    test "unchecking Mostrar en el inicio removes the section from the public home page", %{conn: conn} do
       section = section_fixture(%{name: "Se oculta"})
       add_game_to_section(section, game_fixture(%{name: "Otro juego"}))
 
@@ -136,7 +377,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert home_html_before =~ "Se oculta"
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
-      lv |> form("#section-form", section: %{hidden: "true"}) |> render_submit()
+      lv |> form("#section-form", section: %{shown: "false"}) |> render_submit()
 
       {:ok, _home_lv, home_html} = live(build_conn(), ~p"/")
       refute home_html =~ "Se oculta"
@@ -148,7 +389,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
-      html = lv |> form("#section-form", section: %{name: too_long}) |> render_submit()
+      html = lv |> form("#section-form", section: %{name: too_long, shown: "true"}) |> render_submit()
 
       assert html =~ "should be at most 40 character(s)"
     end
@@ -206,14 +447,14 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
-      lv |> form("#section-form", section: %{sort: "name"}) |> render_submit()
+      lv |> form("#section-form", section: %{sort: "name", shown: "true"}) |> render_submit()
 
       home_row = Enum.find(Catalog.list_home_sections(), &(&1.section_id == section.id))
       assert Enum.map(home_row.games, & &1.name) == ["Alfa", "Zeta"]
     end
   end
 
-  describe "SectionLive.Edit — member picker (D-25)" do
+  describe "SectionLive.Edit — member picker (D-25) and Quitar de la fila (D-19k)" do
     setup :register_and_log_in_staff
 
     test "typing a name lists matching non-retired games not already a member; tapping adds it",
@@ -228,64 +469,115 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       lv |> form("#section-member-search", %{q: "carc"}) |> render_change()
 
-      # A search RESULT button (add-game) excludes both an existing
-      # member and a retired game — the member list below (unconditional)
-      # is a separate assertion.
-      assert has_element?(lv, "button[phx-click='add-game'][phx-value-game-id='#{matching.id}']")
-      refute has_element?(lv, "button[phx-click='add-game'][phx-value-game-id='#{already_in.id}']")
-      refute has_element?(lv, "button[phx-click='add-game']", "Carcassonne Retirado")
+      assert has_element?(lv, "#section-search-result-#{matching.id}")
+      refute has_element?(lv, "#section-search-result-#{already_in.id}")
+      refute has_element?(lv, "#section-search-results", "Carcassonne Retirado")
 
       html =
         lv
-        |> element("button[phx-value-game-id='#{matching.id}']", "Carcassonne")
+        |> element("#section-search-result-#{matching.id}")
         |> render_click()
 
       assert html =~ "Carcassonne en la sección"
       assert html =~ "Carcassonne"
     end
 
-    test "a member row shows ↑/↓ and Quitar when sort is manual", %{conn: conn} do
+    test "at rest a member row shows no reorder control; Ordenar juegos enters the mode when sort is manual",
+         %{conn: conn} do
       section = section_fixture(%{kind: :manual, sort: :manual})
       game = game_fixture(%{name: "Catán"})
       add_game_to_section(section, game)
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
+      refute has_element?(lv, "#section-members-reorder")
+      assert has_element?(lv, "button[aria-label='Ordenar juegos']")
+
+      lv |> element("button[aria-label='Ordenar juegos']") |> render_click()
+      lv |> element("#reorder-member-#{game.id} button[aria-label='Reordenar']") |> render_click()
+
       assert has_element?(lv, "button[aria-label='Subir Catán']")
       assert has_element?(lv, "button[aria-label='Bajar Catán']")
-      assert has_element?(lv, "button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
     end
 
-    test "a member row hides ↑/↓ when sort is not manual", %{conn: conn} do
+    test "no Ordenar juegos icon when sort is not manual", %{conn: conn} do
       section = section_fixture(%{kind: :manual, sort: :name})
       game = game_fixture(%{name: "Catán"})
       add_game_to_section(section, game)
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
 
-      refute has_element?(lv, "button[aria-label='Subir Catán']")
-      refute has_element?(lv, "button[aria-label='Bajar Catán']")
-      assert has_element?(lv, "button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+      refute has_element?(lv, "button[aria-label='Ordenar juegos']")
     end
 
-    test "Quitar removes the game without a confirmation", %{conn: conn} do
+    test "Listo exits the mode and Deshacer restores the prior order", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      first = game_fixture(%{name: "Primero"})
+      second = game_fixture(%{name: "Segundo"})
+      add_game_to_section(section, first, 1)
+      add_game_to_section(section, second, 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+      lv |> element("button[aria-label='Ordenar juegos']") |> render_click()
+      lv |> element("#reorder-member-#{first.id} button[aria-label='Reordenar']") |> render_click()
+
+      lv
+      |> element("button[aria-label='Bajar Primero']")
+      |> render_click()
+
+      html = lv |> element("button", "Listo") |> render_click()
+
+      refute has_element?(lv, "#section-members-reorder")
+      assert html =~ "Orden guardado"
+
+      order_after_move = Enum.map(Sections.section_members(section), & &1.game_id)
+      assert order_after_move == [second.id, first.id]
+
+      lv |> element("button[phx-click='undo-reorder']") |> render_click()
+
+      order_after_undo = Enum.map(Sections.section_members(section), & &1.game_id)
+      assert order_after_undo == [first.id, second.id]
+    end
+
+    test "Quitar de la fila removes at once, with a Deshacer snackbar and no dialog", %{conn: conn} do
       section = section_fixture(%{kind: :manual, sort: :manual})
       game = game_fixture(%{name: "Catán"})
       add_game_to_section(section, game)
 
       {:ok, lv, html} = live(conn, ~p"/admin/secciones/#{section.id}")
       assert html =~ "Catán"
+      assert html =~ "Quitar de la fila"
 
       html =
         lv
         |> element("button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
         |> render_click()
 
-      refute html =~ "Catán"
+      refute has_element?(lv, "#section-member-#{game.id}")
+      assert html =~ "quitado de la fila"
+      assert html =~ ~s(data-timeout="10000")
+      refute html =~ "pk-admin-dialog"
+      refute html =~ "pk-admin-action--peligro"
+    end
+
+    test "Deshacer restores the removed member", %{conn: conn} do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      game = game_fixture(%{name: "Catán"})
+      add_game_to_section(section, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones/#{section.id}")
+
+      lv
+      |> element("button[phx-click='remove-game'][phx-value-game-id='#{game.id}']")
+      |> render_click()
+
+      lv |> element("button[phx-click='undo-remove']") |> render_click()
+
+      assert has_element?(lv, "#section-member-#{game.id}")
     end
 
     test "at 20 members the featured screen shows the cap message", %{conn: conn} do
-      featured = Repo.get_by!(Section, featured: true)
+      featured = featured_section()
 
       for _ <- 1..20 do
         {:ok, _section} = Sections.add_game(featured, game_fixture().id)
@@ -299,7 +591,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       html =
         lv
-        |> element("button[phx-value-game-id='#{extra.id}']", "Juego 21")
+        |> element("#section-search-result-#{extra.id}")
         |> render_click()
 
       assert html =~ "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."

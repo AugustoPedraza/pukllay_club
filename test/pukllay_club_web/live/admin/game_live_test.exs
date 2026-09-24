@@ -1,213 +1,32 @@
 defmodule PukllayClubWeb.Admin.GameLiveTest do
-  # async: false (01.8.1-06 Task 2, Rule 3): the add-game/enrichment tests
-  # below stub `:catalog_storage`/`:enrichment_translate_call` via global
-  # `Application.put_env/3` — the same reason `OGCardBackfillTest` uses
-  # `async: false` — so this file can no longer safely run concurrently
-  # with itself under `async: true` without racing another async file that
-  # reads those same keys.
+  @moduledoc """
+  `Admin.GameLive.Form` (`/admin/juegos/:id/editar`) — the editor rebuilt by
+  plan 01.8.2-17: D-27's 56px top app bar, D-29's consequence franja,
+  D-28's fixed foot save bar, and D-26's ficha-mirroring body.
+
+  The old inline-form/Secciones-checkbox/`<.header>` tests this file
+  carried before plan 01.8.2-17 are gone along with the markup they tested
+  — see this plan's own SUMMARY for the two behaviour changes that removed
+  them (Publicar moves to the draft sheet per D-30; section membership is
+  now solely managed from `section_live/edit.ex`, per D-26's own "chip de
+  sección" being read-only here).
+  """
   use PukllayClubWeb.ConnCase, async: false
   use Oban.Testing, repo: PukllayClub.Repo
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
+  import PukllayClub.CopiesFixtures
   import PukllayClub.SectionsFixtures
   import PukllayClub.ShelvesFixtures
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Copy
   alias PukllayClub.Catalog.Game
-  alias PukllayClub.Catalog.Section
-  alias PukllayClub.Catalog.Sections
-  alias PukllayClub.Catalog.Seed.BggClient
-  alias PukllayClub.Catalog.Seed.ImagePipeline
-  alias PukllayClub.Catalog.Seed.TranslatedDescription
+  alias PukllayClub.Catalog.Shelves
+  alias PukllayClub.Catalog.Vocabulary
   alias PukllayClub.Repo
   alias PukllayClub.Workers.EnrichGameWorker
-
-  @bgg_fixture File.read!("test/support/fixtures/bgg_thing_on_mars.xml")
-
-  defmodule FakeStorage do
-    @moduledoc false
-    @behaviour PukllayClub.Catalog.Seed.Storage
-
-    @impl true
-    def put(_credentials, key, binary, _opts) do
-      Process.put({:fake_storage_put, key}, byte_size(binary))
-      {:ok, "https://images.test.invalid/#{key}"}
-    end
-
-    @impl true
-    def list_keys(_credentials, _prefix), do: {:ok, []}
-  end
-
-  describe "GameLive.Form — edit screen (D-07, T-01.8.1-21)" do
-    setup :register_and_log_in_staff
-
-    test "shows the game's name in the form and its BGG mechanics read-only", %{conn: conn} do
-      game = game_fixture(%{name: "Catán", mechanics: ["Dice Rolling", "Hand Management"]})
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      assert html =~ "Catán"
-      assert html =~ "Tira dados"
-      assert html =~ "Gestión de mano"
-    end
-
-    test "submitting a new name and units saves and the public page renders the new name", %{
-      conn: conn
-    } do
-      game = game_fixture(%{name: "Catán Viejo", units: 1})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      lv
-      |> form("#game-form", game: %{name: "Catán Nuevo", units: "3"})
-      |> render_submit()
-
-      updated = Catalog.get_game!(game.id)
-      assert updated.name == "Catán Nuevo"
-      assert updated.units == 3
-
-      conn = get(conn, ~p"/juegos/#{updated}")
-      assert html_response(conn, 200) =~ "Catán Nuevo"
-    end
-
-    test "submitting a blank name re-renders with a field error and does not save", %{conn: conn} do
-      game = game_fixture(%{name: "Catán"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      html =
-        lv
-        |> form("#game-form", game: %{name: ""})
-        |> render_submit()
-
-      assert html =~ "can&#39;t be blank"
-      assert Catalog.get_game!(game.id).name == "Catán"
-    end
-
-    test "attempting to submit bgg_weight or mechanics leaves those columns unchanged", %{
-      conn: conn
-    } do
-      game = game_fixture(%{bgg_weight: 2.3, mechanics: ["Dice Rolling"]})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      # A raw "save" push (not the form/3 helper, which validates params
-      # against the form's own rendered fields and would refuse a
-      # "mechanics" field that doesn't exist on the form) — this is the
-      # attacker-controlled-params scenario T-01.8.1-21 exists to cover.
-      render_submit(lv, "save", %{
-        "game" => %{
-          "name" => game.name,
-          "bgg_weight" => "4.9",
-          "mechanics" => ["Trading"]
-        }
-      })
-
-      updated = Catalog.get_game!(game.id)
-      assert updated.bgg_weight == 2.3
-      assert updated.mechanics == ["Dice Rolling"]
-    end
-
-    test "a draft game opens in the editor even though its public URL 404s", %{conn: conn} do
-      game = game_fixture(%{status: :draft})
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-      assert html =~ game.name
-
-      assert_raise Ecto.NoResultsError, fn ->
-        Catalog.get_published_game!(to_string(game.id))
-      end
-    end
-
-    test "the shelf select saves shelf_id and never leaks it onto the public page", %{
-      conn: conn
-    } do
-      shelf = shelf_fixture(%{name: "Estante-Test-Ludoteca"})
-      game = game_fixture()
-
-      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-      assert html =~ "Estante-Test-Ludoteca"
-
-      lv
-      |> form("#game-form", game: %{shelf_id: to_string(shelf.id)})
-      |> render_submit()
-
-      assert Catalog.get_game!(game.id).shelf_id == shelf.id
-
-      conn = get(conn, ~p"/juegos/#{game}")
-      refute html_response(conn, 200) =~ "Estante-Test-Ludoteca"
-    end
-  end
-
-  describe "GameLive.Form — Secciones checkboxes (D-07)" do
-    setup :register_and_log_in_staff
-
-    test "lists every manual section as a checkbox, pre-checked for current membership", %{
-      conn: conn
-    } do
-      section_a = section_fixture(%{name: "Sección A"})
-      section_b = section_fixture(%{name: "Sección B"})
-      game = game_fixture()
-      add_game_to_section(section_a, game)
-
-      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      assert html =~ "Sección A"
-      assert html =~ "Sección B"
-
-      assert has_element?(lv, "input[value='#{section_a.id}'][checked]")
-      refute has_element?(lv, "input[value='#{section_b.id}'][checked]")
-    end
-
-    test "checking two sections and saving makes the game a member of both", %{conn: conn} do
-      section_a = section_fixture(%{name: "Sección A"})
-      section_b = section_fixture(%{name: "Sección B"})
-      game = game_fixture()
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      lv
-      |> form("#game-form", game: %{section_ids: [to_string(section_a.id), to_string(section_b.id)]})
-      |> render_submit()
-
-      member_ids = Sections.member_section_ids(game.id)
-      assert Enum.sort(member_ids) == Enum.sort([section_a.id, section_b.id])
-    end
-
-    test "unchecking a section removes membership", %{conn: conn} do
-      section = section_fixture(%{name: "Sección Única"})
-      game = game_fixture()
-      add_game_to_section(section, game)
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      lv |> form("#game-form", game: %{section_ids: []}) |> render_submit()
-
-      assert Sections.member_section_ids(game.id) == []
-    end
-
-    test "a featured_full error surfaces as a form-level flash without reverting the game's own save",
-         %{conn: conn} do
-      featured = Repo.get_by!(Section, featured: true)
-
-      for _ <- 1..20 do
-        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
-      end
-
-      game = game_fixture(%{name: "Sin publicar todavía"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
-      html =
-        lv
-        |> form("#game-form", game: %{name: "Nombre nuevo", section_ids: [to_string(featured.id)]})
-        |> render_submit()
-
-      assert html =~ "La sección destacada ya tiene 20 juegos."
-      assert Catalog.get_game!(game.id).name == "Nombre nuevo"
-    end
-  end
 
   describe "GameLive.Form — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
@@ -218,73 +37,623 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
-  describe "GameLive.Form — status actions (D-04, D-08)" do
+  describe "GameLive.Form — the top app bar (D-27)" do
     setup :register_and_log_in_staff
 
-    test "on a draft's form, Publicar saves pending changes and publishes it", %{conn: conn} do
-      game = game_fixture(%{status: :draft, name: "Sin publicar"})
+    test "renders exactly one back control and one ⋮, and no other top-bar control", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Catán"})
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
 
-      html =
-        render_submit(lv, "save", %{
-          "game" => %{"name" => "Ya listo"},
-          "_action" => "publish"
-        })
-
-      assert html =~ "Juego publicado."
-      updated = Catalog.get_game!(game.id)
-      assert updated.status == :published
-      assert updated.name == "Ya listo"
+      assert lv |> element(".pk-editor-topbar__back") |> has_element?()
+      assert lv |> element(".pk-editor-topbar__menu") |> has_element?()
+      assert lv |> element(".pk-editor-topbar") |> render() =~ "Catán"
     end
 
-    test "on a published game, Retirar opens the confirmation and confirming retires it", %{
+    test "no Descartar control exists anywhere in the rendered page (D-27 deletes it)", %{
+      conn: conn
+    } do
+      game = game_fixture()
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      refute html =~ "Descartar"
+    end
+
+    test "a clean editor's back control navigates away silently", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert {:ok, _index_lv, index_html} =
+               lv |> render_click("back-clicked") |> follow_redirect(conn, ~p"/admin/juegos")
+
+      refute index_html =~ "¿Salir sin guardar?"
+    end
+
+    test "a dirty editor's back control opens the D-19f discard dialog instead of navigating", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Viejo"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Nuevo"})
+      html = render_click(lv, "back-clicked")
+
+      assert html =~ "¿Salir sin guardar?"
+      assert lv |> element("#editor-discard-dialog.pk-admin-overlay--open") |> has_element?()
+      assert lv |> element("#editor-discard-dialog") |> render() =~ "Los cambios que hiciste se pierden."
+    end
+
+    test "confirming the discard dialog navigates away, cancelling stays", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Otro"})
+      render_click(lv, "back-clicked")
+
+      render_click(lv, "cancel-discard")
+      refute lv |> element("#editor-discard-dialog.pk-admin-overlay--open") |> has_element?()
+
+      render_click(lv, "back-clicked")
+
+      assert {:ok, _index_lv, _index_html} =
+               lv |> render_click("confirm-discard") |> follow_redirect(conn, ~p"/admin/juegos")
+    end
+  end
+
+  describe "GameLive.Form — the D-29 consequence franja" do
+    setup :register_and_log_in_staff
+
+    test "a published game renders «Publicado · Así se ve en la web.»", %{conn: conn} do
+      game = game_fixture(%{status: :published})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Publicado · Así se ve en la web."
+    end
+
+    test "a retired game renders «Retirado · No se ve en la web ni está en el estante.»", %{
+      conn: conn
+    } do
+      game = game_fixture(%{status: :retired})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Retirado · No se ve en la web ni está en el estante."
+    end
+
+    @tag :draft_web_claim
+    test "neither status renders the retired 01.8.1 web-claim string", %{conn: conn} do
+      published = game_fixture(%{status: :published, name: "Publicado juego"})
+      retired = game_fixture(%{status: :retired, name: "Retirado juego"})
+
+      {:ok, _lv, published_html} = live(conn, ~p"/admin/juegos/#{published.id}/editar")
+      {:ok, _lv, retired_html} = live(conn, ~p"/admin/juegos/#{retired.id}/editar")
+
+      assert published_html =~ "Publicado · Así se ve en la web."
+      assert retired_html =~ "Retirado · No se ve en la web ni está en el estante."
+      refute published_html =~ "Se está viendo así en la web"
+      refute retired_html =~ "Se está viendo así en la web"
+    end
+  end
+
+  # D-30/plan 01.8.2-20: a draft no longer opens THIS LiveView at all — see
+  # `GameLive.Index`'s own "D-30 draft sheet" describe block for its own
+  # coverage of what a draft's URL opens instead.
+  describe "GameLive.Form — D-30 draft editor guard (plan 01.8.2-20)" do
+    setup :register_and_log_in_staff
+
+    test "a direct URL to a draft's editor redirects to the list with that draft's sheet open", %{
+      conn: conn
+    } do
+      draft = game_fixture(%{status: :draft, name: "Borrador"})
+
+      assert {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/admin/juegos/#{draft.id}/editar")
+      assert to == ~p"/admin/juegos?draft=#{draft.id}"
+
+      {:ok, lv, html} = live(conn, to)
+
+      assert html =~ draft.name
+      assert lv |> element("#draft-sheet.pk-admin-overlay--open") |> has_element?()
+      refute html =~ "Publicado · Así se ve en la web."
+      refute html =~ "Retirado · No se ve en la web ni está en el estante."
+      refute html =~ "Se está viendo así en la web"
+    end
+  end
+
+  describe "GameLive.Form — the write model (D-28, «la hoja PREPARA, el pie escribe»)" do
+    setup :register_and_log_in_staff
+
+    test "save_bar/1 renders on every editor render, dirty or clean", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "pk-admin-save-bar"
+      assert lv |> element("[data-pk-save-bar]") |> has_element?()
+    end
+
+    test "with no changes, Guardar is disabled and no Sin guardar text renders", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Guardar"
+      refute html =~ "Sin guardar"
+      assert html =~ "disabled"
+      assert html =~ "pk-admin-action--disabled"
+    end
+
+    test "after changing one value, Guardar is enabled and Sin guardar renders", %{conn: conn} do
+      game = game_fixture(%{name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      html = render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      assert html =~ "Sin guardar"
+      refute html =~ ~s(pk-admin-save-bar__action pk-admin-action--disabled)
+    end
+
+    test "Guardar persists the change through Game.admin_changeset/2 and leaves the editor clean", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      html = render_click(lv, "save")
+
+      assert html =~ "Cambios guardados."
+      refute html =~ "Sin guardar"
+      assert Catalog.get_game!(game.id).name == "Después"
+    end
+
+    test "attempting to change bgg_weight through draft-change is a no-op (T-01.8.1-21)", %{
+      conn: conn
+    } do
+      game = game_fixture(%{bgg_weight: 2.3})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "bgg_weight", "value" => "4.9"})
+      render_click(lv, "save")
+
+      assert Catalog.get_game!(game.id).bgg_weight == 2.3
+    end
+
+    test "the shelf select saves shelf_id and never leaks it onto the public page", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante-Test-Ludoteca"})
+      game = game_fixture()
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      assert html =~ "Sin ubicar"
+
+      render_change(lv, "draft-change", %{"field" => "shelf_id", "value" => to_string(shelf.id)})
+      render_click(lv, "save")
+
+      assert Catalog.get_game!(game.id).shelf_id == shelf.id
+
+      conn = get(conn, ~p"/juegos/#{game}")
+      refute html_response(conn, 200) =~ "Estante-Test-Ludoteca"
+    end
+
+    test "a blank name is rejected server-side and the editor flashes an error", %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => ""})
+      html = render_click(lv, "save")
+
+      assert html =~ "No se pudo guardar."
+      assert Catalog.get_game!(game.id).name == "Catán"
+    end
+  end
+
+  describe "GameLive.Form — status actions via the ⋮ lifecycle sheet (D-04, D-08)" do
+    setup :register_and_log_in_staff
+
+    test "on a published game, the menu opens the D-19f retire dialog and confirming retires it", %{
       conn: conn
     } do
       game = game_fixture(%{status: :published, name: "Se retira"})
 
-      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-      refute html =~ "¿Retirar"
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      refute lv |> element("#editor-retire-dialog.pk-admin-overlay--open") |> has_element?()
 
+      render_click(lv, "open-menu")
       html = render_click(lv, "retire")
       assert html =~ "¿Retirar Se retira?"
+      assert lv |> element("#editor-retire-dialog.pk-admin-overlay--open") |> has_element?()
 
       html = render_click(lv, "confirm-retire")
       assert html =~ "Juego retirado."
       assert Catalog.get_game!(game.id).status == :retired
     end
 
-    test "cancelling the retire confirmation leaves the game published", %{conn: conn} do
+    test "cancelling the retire dialog leaves the game published", %{conn: conn} do
       game = game_fixture(%{status: :published})
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu")
       render_click(lv, "retire")
       render_click(lv, "cancel-retire")
 
       assert Catalog.get_game!(game.id).status == :published
     end
 
-    test "on a retired game, Restaurar restores it", %{conn: conn} do
+    test "on a retired game, the menu's Restaurar restores it with no confirmation", %{conn: conn} do
       game = game_fixture(%{status: :retired})
 
       {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-
+      render_click(lv, "open-menu")
       html = render_click(lv, "restore")
 
       assert html =~ "Juego restaurado."
       assert Catalog.get_game!(game.id).status == :published
     end
+
+    test "a draft's public URL 404s (unaffected by D-30's editor guard, plan 01.8.2-20)", %{
+      conn: _conn
+    } do
+      game = game_fixture(%{status: :draft})
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Catalog.get_published_game!(to_string(game.id))
+      end
+    end
+
+    test "a status change with unsaved field edits leaves the draft intact and dirty? still true", %{
+      conn: conn
+    } do
+      game = game_fixture(%{status: :published, name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      render_click(lv, "open-menu")
+      render_click(lv, "retire")
+      html = render_click(lv, "confirm-retire")
+
+      assert html =~ "Después"
+      assert html =~ "Sin guardar"
+      refute html =~ ~s(pk-admin-save-bar__action pk-admin-action--disabled)
+      assert Catalog.get_game!(game.id).status == :retired
+      assert Catalog.get_game!(game.id).name == "Antes"
+    end
+
+    test "after retiring, the franja reads the D-29 retired consequence line", %{conn: conn} do
+      game = game_fixture(%{status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu")
+      render_click(lv, "retire")
+      html = render_click(lv, "confirm-retire")
+
+      assert html =~ "Retirado · No se ve en la web ni está en el estante."
+    end
+
+    test "a refused retire (already retired underneath the session) shows a snackbar and leaves the status alone", %{
+      conn: conn
+    } do
+      game = game_fixture(%{status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu")
+      render_click(lv, "retire")
+      render_click(lv, "confirm-retire")
+      assert Catalog.get_game!(game.id).status == :retired
+
+      # Fires the SAME event again — the game's own in-memory status in the
+      # LiveView is now :retired, so `Catalog.retire_game/1`'s origin guard
+      # refuses it (T-01.8.2-90's real refusal path, not a DB race).
+      html = render_click(lv, "confirm-retire")
+
+      assert html =~ "No se pudo retirar."
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
+    test "a refused restore (already restored underneath the session) shows a snackbar and leaves the status alone", %{
+      conn: conn
+    } do
+      game = game_fixture(%{status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu")
+      render_click(lv, "restore")
+      assert Catalog.get_game!(game.id).status == :published
+
+      html = render_click(lv, "restore")
+
+      assert html =~ "No se pudo restaurar."
+      assert Catalog.get_game!(game.id).status == :published
+    end
   end
 
+  describe "GameLive.Form — the ficha-mirroring body at rest (D-26)" do
+    setup :register_and_log_in_staff
+
+    test "renders the seven editable blocks' affordance and no chevron/caret on any of them", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Catán", description: "Una descripción de prueba."})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      # pills(nivel) + tapa + título + descripción = 4 hand-built editable
+      # affordances, plus the Copias STEPPER (D-31, plan 01.8.2-21 — out of
+      # `editable_row/1`'s scope per D-23) and the two remaining
+      # AdminComponents.editable_row/1 rows (Estante/Es una expansión) = 7
+      # total editable blocks.
+      pill_count = html |> String.split("pk-editor-pill--editable") |> length() |> Kernel.-(1)
+      assert pill_count == 1
+      assert lv |> element(".pk-editor-cover__pencil") |> has_element?()
+      assert lv |> element(".pk-editor-title") |> has_element?()
+      assert lv |> element(".pk-editor-desc") |> has_element?()
+      assert lv |> element(".pk-admin-stepper-row__label", "Copias") |> has_element?()
+
+      editable_row_count = ~r/pk-admin-editable-row__label/ |> Regex.scan(html) |> length()
+      assert editable_row_count == 2
+
+      refute html =~ "›"
+      refute html =~ "⌄"
+    end
+
+    test "renders D-26's order: título Bebas with no label, the five BGG facts, the divider group", %{
+      conn: conn
+    } do
+      game =
+        game_fixture(%{
+          name: "Catán",
+          year_published: 1995,
+          designers: ["Klaus Teuber"],
+          artists: ["Volkan Baga"],
+          mechanics: ["Trading"],
+          themes: ["Economic"]
+        })
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert html =~ "Catán"
+      assert html =~ "1995"
+      assert html =~ "Klaus Teuber"
+      assert html =~ "Volkan Baga"
+      assert html =~ "Copias"
+      assert html =~ "Estante"
+      assert html =~ "Es una expansión"
+
+      # D-26 overrides D-19j for the título only, but never through the
+      # Tailwind `font-display` utility CLASS the composition guard bans —
+      # `pk-editor-title` reaches Bebas through `var(--font-display)` in
+      # `editor.css` instead (see that rule's own comment).
+      title_html = lv |> element(".pk-editor-title") |> render()
+      refute title_html =~ "font-display"
+    end
+
+    test "the non-editable section chip carries no --val tint class (D-33)", %{conn: conn} do
+      section = section_fixture(%{name: "Estrategia"})
+      game = game_fixture()
+      add_game_to_section(section, game)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      chip_html = lv |> element(".pk-editor-section-chip") |> render()
+      assert chip_html =~ "Estrategia"
+      refute chip_html =~ "pk-editor-pill--editable"
+      refute chip_html =~ "--val"
+    end
+
+    test "the editor page renders no bottom tab bar (D-30, the D-13b exception)", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      refute html =~ "pk-admin-tab-bar"
+    end
+
+    test "the Copias value reads from Shelves.count_for_game/1, not a units column", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+      copy_fixture(%{game_id: game.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      assert Shelves.count_for_game(game.id) == 2
+      assert lv |> element(".pk-admin-stepper-row__value", "2") |> has_element?()
+    end
+  end
+
+  describe "GameLive.Form — the D-30 choice-field sheet (D-23's tick, not a tint)" do
+    setup :register_and_log_in_staff
+
+    test "opening the nivel sheet offers exactly the three vocabulary bands", %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      render_click(lv, "edit-field", %{"field" => "weight_band"})
+      sheet_html = lv |> element("#editor-weight-band-sheet") |> render()
+
+      opt_count = sheet_html |> String.split("pk-editor-opt\"") |> length() |> Kernel.-(1)
+      assert opt_count == length(Vocabulary.weight_bands())
+
+      for band <- Vocabulary.weight_bands() do
+        assert sheet_html =~ band.label
+      end
+    end
+
+    test "the selected option carries a tick and no option carries the --val tint", %{conn: conn} do
+      game = game_fixture(%{weight_band: "ingenio_estratega"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "weight_band"})
+      sheet_html = lv |> element("#editor-weight-band-sheet") |> render()
+
+      tick_count = sheet_html |> String.split("pk-editor-opt__tick") |> length() |> Kernel.-(1)
+      assert tick_count == 1
+      refute sheet_html =~ ~s(pk-editor-opt pk-editor-pill--editable)
+      refute sheet_html =~ ~s(pk-editor-opt--val)
+    end
+
+    test "a choice sheet's markup contains no Guardar control", %{conn: conn} do
+      game = game_fixture()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "weight_band"})
+
+      sheet_html = lv |> element("#editor-weight-band-sheet") |> render()
+      assert sheet_html =~ "Nivel"
+      refute sheet_html =~ "pk-editor-sheet-save"
+      refute sheet_html =~ ">Guardar<"
+    end
+
+    test "choosing an option updates the rendered row, enables Guardar, and writes nothing to the DB", %{
+      conn: conn
+    } do
+      game = game_fixture(%{weight_band: "descubre_el_hobby", name: "Catán"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "weight_band"})
+
+      html = render_click(lv, "choice-select", %{"field" => "weight_band", "choice" => "nivel_experto"})
+
+      assert html =~ "Nivel experto"
+      assert html =~ "Sin guardar"
+      refute html =~ ~s(id="editor-weight-band-sheet" class="pk-admin-overlay-root pk-admin-overlay--open")
+
+      # Nothing is persisted until the foot bar's Guardar is pressed.
+      assert Catalog.get_game!(game.id).weight_band == "descubre_el_hobby"
+    end
+
+    test "opening and dismissing a choice sheet with ✕ leaves the draft unchanged", %{conn: conn} do
+      game = game_fixture(%{weight_band: "descubre_el_hobby"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "weight_band"})
+      html = render_click(lv, "close-field-sheet")
+
+      assert html =~ "Descubre el hobby"
+      refute html =~ "Sin guardar"
+      assert html =~ "pk-admin-action--disabled"
+    end
+
+    test "choosing Es una expansión writes the boolean into the draft, not the DB", %{conn: conn} do
+      game = game_fixture(%{is_expansion: false})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "is_expansion"})
+      html = render_click(lv, "choice-select", %{"field" => "is_expansion", "choice" => "true"})
+
+      assert lv |> element(".pk-admin-editable-row__value", "Sí") |> has_element?()
+      assert html =~ "Sin guardar"
+      assert Catalog.get_game!(game.id).is_expansion == false
+    end
+  end
+
+  describe "GameLive.Form — the D-30 text-field sheet (its own wide Guardar, ✕ discards)" do
+    setup :register_and_log_in_staff
+
+    test "form.ex ships two distinctly named sheet renderers, one per D-30 pattern" do
+      source = File.read!("lib/pukllay_club_web/live/admin/game_live/form.ex")
+
+      assert source =~ "defp choice_sheet"
+      assert source =~ "defp text_sheet"
+      assert source =~ "D-30"
+    end
+
+    test "the in-sheet Guardar writes the typed name into the draft, not the DB", %{conn: conn} do
+      game = game_fixture(%{name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "name"})
+
+      html = render_submit(lv, "text-sheet-save", %{"field" => "name", "value" => "Después"})
+
+      assert html =~ "Después"
+      assert html =~ "Sin guardar"
+      assert Catalog.get_game!(game.id).name == "Antes"
+    end
+
+    test "closing the name sheet with ✕ discards the typed text, leaving the row unchanged", %{conn: conn} do
+      game = game_fixture(%{name: "Original"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "name"})
+      html = render_click(lv, "close-field-sheet")
+
+      assert html =~ "Original"
+      refute html =~ "Sin guardar"
+    end
+
+    test "a name over 255 characters surfaces its validation error inside the sheet, not a page flash", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Catán"})
+      too_long = String.duplicate("a", 256)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "name"})
+
+      html = render_submit(lv, "text-sheet-save", %{"field" => "name", "value" => too_long})
+
+      assert lv |> element("#editor-name-sheet.pk-admin-overlay--open") |> has_element?()
+      assert html =~ "pk-admin-field__error"
+      refute html =~ "Sin guardar"
+      assert Catalog.get_game!(game.id).name == "Catán"
+    end
+
+    test "the description sheet commits into the draft the same way", %{conn: conn} do
+      game = game_fixture(%{description: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "description"})
+      html = render_submit(lv, "text-sheet-save", %{"field" => "description", "value" => "Después"})
+
+      assert html =~ "Después"
+      assert Catalog.get_game!(game.id).description == "Antes"
+    end
+
+    test "typing a value live and closing with ✕ (not submitting) leaves the row and draft untouched", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Real"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "name"})
+      render_change(lv, "sheet-input", %{"field" => "name", "value" => "Nunca guardado"})
+
+      html = render_click(lv, "close-field-sheet")
+
+      assert html =~ "Real"
+      refute html =~ "Nunca guardado"
+      refute html =~ "Sin guardar"
+      assert Catalog.get_game!(game.id).name == "Real"
+    end
+  end
+
+  # D-30/plan 01.8.2-20: a DRAFT with a failed enrichment never reaches this
+  # LiveView any more (`GameLive.Index`'s own `failed_row/1` — unchanged by
+  # this plan — is that state's only surface now). This describe block's
+  # own code path (`failed?/1` + the Reintentar handler below) stays real
+  # for a game that reached `:published`/`:retired` carrying a stale
+  # `enrichment_status: "failed"` (`retry_enrichment/1` gates only on
+  # `enrichment_status`, never on `status` — publishing despite a failed
+  # BGG fetch is not blocked), so the fixtures below moved to `:published`
+  # rather than being deleted.
   describe "GameLive.Form — failed enrichment retry (D-03)" do
     setup :register_and_log_in_staff
 
-    test "a failed draft shows the error alert and Reintentar button", %{conn: conn} do
+    test "a published game with a stale failed enrichment shows the error alert and Reintentar",
+         %{conn: conn} do
       game =
         game_fixture(%{
           bgg_id: 184_267,
           name: "Juego #184267",
-          status: :draft,
+          status: :published,
           enrichment_status: "failed"
         })
 
@@ -299,7 +668,7 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
         game_fixture(%{
           bgg_id: 184_267,
           name: "Juego #184267",
-          status: :draft,
+          status: :published,
           enrichment_status: "failed"
         })
 
@@ -313,371 +682,316 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
-  describe "GameLive.Index — list, filter, search, load more (D-09 Task 2)" do
+  describe "GameLive.Form — the Copias stepper (D-31, plan 01.8.2-21)" do
     setup :register_and_log_in_staff
 
-    test "lists games by name with a status badge", %{conn: conn} do
-      game_fixture(%{name: "Borrador Uno", status: :draft})
-      game_fixture(%{name: "Publicado Uno", status: :published})
+    test "raising Copias creates an unplaced copy that appears in Shelves.unplaced_copies/0", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "copias-increment", %{})
 
-      assert html =~ "Borrador Uno"
-      assert html =~ "Publicado Uno"
-      assert html =~ "Borrador"
-      assert html =~ "Publicado"
+      assert Shelves.count_for_game(game.id) == 2
+      assert lv |> element(".pk-admin-stepper-row__value", "2") |> has_element?()
+      unplaced_ids = Enum.map(Shelves.unplaced_copies(), & &1.id)
+      assert unplaced_ids != []
+      refute html =~ "No se pudo agregar"
     end
 
-    test "?estado=borrador shows only drafts", %{conn: conn} do
-      game_fixture(%{name: "Borrador Uno", status: :draft})
-      game_fixture(%{name: "Publicado Uno", status: :published})
+    test "lowering Copias with one unplaced copy removes that one and leaves placed copies alone", %{conn: conn} do
+      shelf = shelf_fixture()
+      game = game_fixture()
+      placed = copy_fixture(%{game_id: game.id, number: 1, shelf_id: shelf.id, position: 0})
+      copy_fixture(%{game_id: game.id, number: 2})
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "copias-decrement", %{})
 
-      assert html =~ "Borrador Uno"
-      refute html =~ "Publicado Uno"
+      assert html =~ ">1<" or lv |> element(".pk-admin-stepper-row__value", "1") |> has_element?()
+      assert Shelves.count_for_game(game.id) == 1
+      assert Repo.get(Copy, placed.id)
     end
 
-    test "an unknown estado value shows all games", %{conn: conn} do
-      game_fixture(%{name: "Uno", status: :draft})
-      game_fixture(%{name: "Dos", status: :published})
+    test "lowering Copias with every copy placed opens the which-copy sheet, naming estante and box", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Test"})
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id, number: 1, shelf_id: shelf.id, position: 0})
+      copy_fixture(%{game_id: game.id, number: 2, shelf_id: shelf.id, position: 1})
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=bogus")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "copias-decrement", %{})
 
-      assert html =~ "Uno"
-      assert html =~ "Dos"
+      assert html =~ "¿Cuál copia sacamos?"
+      assert html =~ "Estante Test"
+      assert Shelves.count_for_game(game.id) == 2
     end
 
-    test "typing in the search box narrows by name case-insensitively", %{conn: conn} do
-      game_fixture(%{name: "Catán"})
-      game_fixture(%{name: "Carcassonne"})
+    test "picking a copy in the which-copy sheet removes it and reindexes the estante gap-free", %{conn: conn} do
+      shelf = shelf_fixture()
+      game = game_fixture()
+      c0 = copy_fixture(%{game_id: game.id, number: 1, shelf_id: shelf.id, position: 0})
+      c1 = copy_fixture(%{game_id: game.id, number: 2, shelf_id: shelf.id, position: 1})
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "copias-decrement", %{})
+      html = render_click(lv, "copias-remove-copy", %{"copy-id" => to_string(c0.id)})
 
-      html = lv |> form("#admin-games-search", q: "cat") |> render_change()
-
-      assert html =~ "Catán"
-      refute html =~ "Carcassonne"
+      refute html =~ "¿Cuál copia sacamos?"
+      assert Shelves.count_for_game(game.id) == 1
+      remaining = Shelves.copies_on_shelf(shelf.id)
+      assert Enum.map(remaining, & &1.id) == [c1.id]
+      assert Enum.map(remaining, & &1.position) == [0]
     end
 
-    test "with 60 games, the first render shows 50 rows and Cargar más appends the rest", %{
-      conn: conn
-    } do
-      for n <- 1..60 do
-        game_fixture(%{name: "Juego #{String.pad_leading(to_string(n), 3, "0")}"})
-      end
+    test "the stepper cannot reach 0 — decrementing a single-copy game is a no-op", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
 
-      {:ok, lv, html} = live(conn, ~p"/admin/juegos")
-      assert count_occurrences(html, "Juego ") == 50
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "copias-decrement", %{})
 
-      html = render_click(lv, "load-more")
-      assert count_occurrences(html, "Juego ") == 60
+      assert Shelves.count_for_game(game.id) == 1
     end
 
-    test "the Borradores filter with zero drafts shows the empty state", %{conn: conn} do
-      game_fixture(%{status: :published})
+    test "form.ex never references the dropped units column (D-31, this plan's own <verify>)" do
+      {output, _exit_status} =
+        System.shell(
+          "grep -vE '^\\s*#' lib/pukllay_club_web/live/admin/game_live/form.ex | grep -ciE \"units\"",
+          cd: File.cwd!()
+        )
 
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
-
-      assert html =~ "Ningún juego en borrador"
-      assert html =~ "Agregá un juego pegando su ID o link de BGG."
+      assert String.trim(output) == "0"
     end
   end
 
-  describe "GameLive.Index — add game by BGG id (D-01, 01.8.1-06)" do
+  describe "GameLive.Form — the ESTANTE block opens the real «¿Dónde va?» sheet (D-32, plan 01.8.2-21)" do
     setup :register_and_log_in_staff
 
-    setup do
-      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
-      previous_translate_call = Application.get_env(:pukllay_club, :enrichment_translate_call)
-      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+    test "a single-copy game opens the position-aware sheet directly, not a plain estante list", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+      shelf_fixture(%{name: "Estante Uno"})
 
-      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
-        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
-      end)
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "edit-field", %{"field" => "shelf_id"})
 
-      on_exit(fn ->
-        if previous_storage do
-          Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
-        else
-          Application.delete_env(:pukllay_club, :catalog_storage)
-        end
-
-        if previous_translate_call do
-          Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
-        else
-          Application.delete_env(:pukllay_club, :enrichment_translate_call)
-        end
-      end)
-
-      :ok
+      assert html =~ "¿Dónde va?"
+      assert lv |> element("#donde-va-estante-list") |> has_element?()
+      assert lv |> element("#donde-va-shelf-#{Shelves.list_shelves() |> hd() |> Map.get(:id)}") |> has_element?()
     end
 
-    defp stub_bgg_fixture do
-      Req.Test.stub(BggClient, fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("text/xml")
-        |> Plug.Conn.send_resp(200, @bgg_fixture)
-      end)
+    test "a multi-copy game with no copy context asks which copy before opening the sheet", %{conn: conn} do
+      game = game_fixture()
+      c1 = copy_fixture(%{game_id: game.id, number: 1})
+      _c2 = copy_fixture(%{game_id: game.id, number: 2})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "edit-field", %{"field" => "shelf_id"})
+
+      assert html =~ "¿Qué copia?"
+      refute html =~ "¿Dónde va?"
+
+      html = render_click(lv, "pick-copy-context", %{"copy-id" => to_string(c1.id)})
+      assert html =~ "¿Dónde va?"
     end
 
-    defp stub_cover_image do
-      Req.Test.stub(ImagePipeline, fn conn ->
-        png =
-          800
-          |> Image.new!(600, color: [10, 20, 30])
-          |> Image.write!(:memory, suffix: ".png")
+    test "?copy=<id> carries the copy identity through, matching a cover's options sheet handoff", %{conn: conn} do
+      game = game_fixture()
+      _c1 = copy_fixture(%{game_id: game.id, number: 1})
+      c2 = copy_fixture(%{game_id: game.id, number: 2})
 
-        conn
-        |> Plug.Conn.put_resp_content_type("image/png")
-        |> Plug.Conn.send_resp(200, png)
-      end)
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar?#{%{copy: c2.id}}")
+      html = render_click(lv, "edit-field", %{"field" => "shelf_id"})
+
+      assert html =~ "¿Dónde va?"
+      refute html =~ "¿Qué copia?"
     end
 
-    test "an invalid id shows a field error and adds nothing", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+    test "choosing an empty estante commits immediately and shows Juego ubicado with Deshacer", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+      shelf = shelf_fixture(%{name: "Vacío"})
 
-      html =
-        lv
-        |> form("#add-game-form", bgg_id: "not-a-number")
-        |> render_submit()
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "shelf_id"})
+      html = lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
 
-      assert html =~ "Pegá un número de BGG o el link del juego."
-      assert Catalog.count_admin_games() == 0
+      assert html =~ "Juego ubicado"
+      assert html =~ "Deshacer"
+      assert lv |> element(".pk-admin-editable-row__value", shelf.name) |> has_element?()
     end
 
-    test "a valid id adds a draft row showing the cargando placeholder and a skeleton", %{conn: conn} do
-      stub_bgg_fixture()
+    test "moving an already-placed copy shows Juego movido", %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id, shelf_id: shelf_a.id, position: 0})
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "shelf_id"})
+      html = lv |> element("#donde-va-shelf-#{shelf_b.id}") |> render_click()
 
-      html =
-        lv
-        |> form("#add-game-form", bgg_id: "184267")
-        |> render_submit()
-
-      assert html =~ "Juego agregado como borrador."
-      assert html =~ "Juego #184267 (cargando…)"
-      assert html =~ "skeleton"
+      assert html =~ "Juego movido"
     end
 
-    test "after perform_job runs the full pipeline, re-rendering (mount) shows the BGG name", %{
+    test "the ESTANTE block renders with the --val tint and pencil, matching the other editable blocks", %{
       conn: conn
     } do
-      stub_bgg_fixture()
-      stub_cover_image()
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
 
-      lv
-      |> form("#add-game-form", bgg_id: "184267")
-      |> render_submit()
+      assert lv |> element(".pk-admin-editable-row__label", "Estante") |> has_element?()
+    end
 
-      game = Repo.get_by!(Game, bgg_id: 184_267)
+    test "the «¿Dónde va?» sheet has one shared implementation, referenced by both EstanteLive.Index and GameLive.Form" do
+      # Mirrors this plan's own <verify> grep directly (avoids a shell
+      # dependency): at most 2 files carry the literal "dónde-va" or
+      # "donde_va" — three or more would mean the editor grew its own
+      # copy of the placement sheet, which D-32 forbids.
+      files =
+        "lib/pukllay_club_web/**/*.ex"
+        |> Path.wildcard()
+        |> Enum.filter(fn path ->
+          contents = File.read!(path)
+          contents =~ "dónde-va" or contents =~ "donde_va"
+        end)
+
+      assert length(files) <= 2
+    end
+  end
+
+  describe "GameLive.Form — the BGG-id lifecycle (open item 3, D-38, plan 01.8.2-21)" do
+    setup :register_and_log_in_staff
+
+    test "a game with no bgg_id offers Vincular con BGG in the ⋮ menu", %{conn: conn} do
+      game = game_fixture(%{bgg_id: nil, status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "open-menu", %{})
+
+      assert html =~ "Vincular con BGG"
+      refute html =~ ">Reintentar<"
+    end
+
+    test "linking with unsaved edits saves first, then links — the edit survives", %{conn: conn} do
+      game = game_fixture(%{bgg_id: nil, status: :published, name: "Antes"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Después"})
+
+      render_click(lv, "open-menu", %{})
+      render_click(lv, "open-bgg-link", %{})
+      html = render_submit(lv, "link-bgg-save", %{"bgg_id" => "184267"})
+
+      assert html =~ "BGG vinculado."
+      assert html =~ "Después"
+      updated = Catalog.get_game!(game.id)
+      assert updated.name == "Después"
+      assert updated.bgg_id == 184_267
+      assert updated.enrichment_status == "pending"
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
-
-      assert :ok = perform_job(EnrichGameWorker, %{"game_id" => game.id})
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos?estado=borrador")
-      assert html =~ "On Mars"
-      refute html =~ "cargando"
     end
 
-    test "a {:game_enriched, id} broadcast updates the open LiveView's row live, no reload", %{conn: conn} do
-      game =
-        game_fixture(%{
-          bgg_id: 184_267,
-          name: "Juego #184267",
-          enrichment_status: "pending",
-          status: :draft,
-          thumbnail_url: nil,
-          cover_url: nil
-        })
+    test "linking a duplicate bgg id is rejected the same way creation rejects it", %{conn: conn} do
+      existing = game_fixture(%{bgg_id: 163_412, name: "Patchwork", status: :published})
+      game = game_fixture(%{bgg_id: nil, name: "Patchwork Andino", status: :published})
 
-      {:ok, lv, html} = live(conn, ~p"/admin/juegos")
-      assert html =~ "Juego #184267 (cargando…)"
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu", %{})
+      render_click(lv, "open-bgg-link", %{})
+      html = render_submit(lv, "link-bgg-save", %{"bgg_id" => "163412"})
 
-      game
-      |> Ecto.Changeset.change(name: "On Mars", enrichment_status: "enriched")
-      |> Repo.update!()
-
-      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
-
-      html = render(lv)
-      assert html =~ "On Mars"
-      refute html =~ "cargando"
-    end
-  end
-
-  describe "GameLive.Index — known BGG id warns, then allows an edition (D-03 revised)" do
-    setup :register_and_log_in_staff
-
-    test "pasting a known BGG id warns, then Sí, agregar edición adds an edition", %{
-      conn: conn
-    } do
-      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      html =
-        lv
-        |> form("#add-game-form", bgg_id: "184267")
-        |> render_submit()
-
-      assert html =~ "Ya tenés Ya en la ludoteca con este BGG ID. ¿Es otra edición?"
-      assert html =~ ~p"/admin/juegos/#{existing.id}/editar"
-      assert Catalog.count_admin_games() == 1
-
-      html = lv |> element("#confirm-edition") |> render_click()
-
-      assert html =~ "Edición agregada como borrador."
-      assert Catalog.count_admin_games() == 2
-    end
-
-    test "pasting a BGG game URL adds a draft (D-01, not only a bare id)", %{conn: conn} do
-      stub_bgg_fixture()
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      html =
-        lv
-        |> form("#add-game-form", bgg_id: "https://boardgamegeek.com/boardgame/184267/on-mars")
-        |> render_submit()
-
-      assert html =~ "Juego agregado como borrador."
-      assert Catalog.count_admin_games() == 1
-    end
-
-    test "both add buttons carry phx-disable-with (IN-B-02)", %{conn: conn} do
-      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      assert has_element?(lv, "#add-game-form button[phx-disable-with]")
-
-      lv
-      |> form("#add-game-form", bgg_id: "184267")
-      |> render_submit()
-
-      assert has_element?(lv, "#confirm-edition[phx-disable-with]")
-    end
-
-    test "Cancelar removes the prompt without creating anything", %{conn: conn} do
-      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      lv
-      |> form("#add-game-form", bgg_id: "184267")
-      |> render_submit()
-
-      assert has_element?(lv, "#edition-prompt")
-
-      lv |> element("#cancel-edition") |> render_click()
-
-      refute has_element?(lv, "#edition-prompt")
-      assert Catalog.count_admin_games() == 1
-    end
-
-    test "multi-edition copy joins names naturally (Patchwork y Patchwork Andino)", %{
-      conn: conn
-    } do
-      _patchwork = game_fixture(%{bgg_id: 163_412, name: "Patchwork"})
-      _andino = game_fixture(%{bgg_id: 163_412, name: "Patchwork Andino"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      html =
-        lv
-        |> form("#add-game-form", bgg_id: "163412")
-        |> render_submit()
-
-      assert html =~ "Ya tenés Patchwork y Patchwork Andino con este BGG ID. ¿Es otra edición?"
-    end
-
-    test "a double-tap on confirm-edition creates exactly one new game", %{conn: conn} do
-      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
-      lv
-      |> form("#add-game-form", bgg_id: "184267")
-      |> render_submit()
-
-      render_click(lv, "confirm-edition", %{})
-      render_click(lv, "confirm-edition", %{})
-
-      assert Catalog.count_admin_games() == 2
-    end
-
-    test "a stale confirm in a second tab re-warns instead of duplicating", %{conn: conn} do
-      existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
-
-      {:ok, lv1, _html} = live(conn, ~p"/admin/juegos")
-      {:ok, lv2, _html} = live(conn, ~p"/admin/juegos")
-
-      lv1 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
-      lv2 |> form("#add-game-form", bgg_id: "184267") |> render_submit()
-
-      lv1 |> element("#confirm-edition") |> render_click()
-      assert Catalog.count_admin_games() == 2
-
-      html = lv2 |> element("#confirm-edition") |> render_click()
-      assert Catalog.count_admin_games() == 2
-
-      edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
       assert html =~ existing.name
-      assert html =~ edition.name
-    end
-  end
+      assert Catalog.get_game!(game.id).bgg_id == nil
 
-  describe "GameLive.Index — failed enrichment retry (D-03)" do
-    setup :register_and_log_in_staff
-
-    test "a failed draft's row shows the error alert and Reintentar button", %{conn: conn} do
-      game_fixture(%{
-        bgg_id: 184_267,
-        name: "Juego #184267",
-        status: :draft,
-        enrichment_status: "failed"
-      })
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
-
-      assert html =~ "Error al traer datos de BGG."
-      assert html =~ "Reintentar"
+      html = render_click(lv, "confirm-link-edition", %{})
+      assert html =~ "BGG vinculado."
+      assert Catalog.get_game!(game.id).bgg_id == 163_412
     end
 
-    test "clicking Reintentar re-enqueues enrichment and the row returns to the cargando state", %{
-      conn: conn
-    } do
-      game =
-        game_fixture(%{
-          bgg_id: 184_267,
-          name: "Juego #184267",
-          status: :draft,
-          enrichment_status: "failed"
-        })
+    test "Reintentar is reachable for a game with a bgg_id and any enrichment_status", %{conn: conn} do
+      game = game_fixture(%{bgg_id: 174_430, enrichment_status: "enriched", status: :published})
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
-
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "open-menu", %{})
       html = render_click(lv, "retry-enrichment", %{"game-id" => to_string(game.id)})
 
-      assert html =~ "Juego #184267 (cargando…)"
-      refute html =~ "Error al traer datos de BGG."
+      assert html =~ "Cambios guardados." or Catalog.get_game!(game.id).enrichment_status == "pending"
+      assert Catalog.get_game!(game.id).enrichment_status == "pending"
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
     end
 
-    test "an unparseable game-id is ignored rather than raising", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+    test "Borrar el ID is offered for a bgg_missing game and clears the stored id, with Deshacer", %{conn: conn} do
+      game = game_fixture(%{bgg_id: 999_999, enrichment_status: "bgg_missing", status: :published})
 
-      html = render_click(lv, "retry-enrichment", %{"game-id" => "not-a-number"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "open-menu", %{})
+      assert html =~ "Borrar el ID"
 
-      assert is_binary(html)
+      html = render_click(lv, "borrar-bgg-id", %{})
+      assert html =~ "ID de BGG borrado"
+      assert html =~ "Deshacer"
+      updated = Catalog.get_game!(game.id)
+      assert updated.bgg_id == nil
+      assert updated.enrichment_status == "no_bgg_id"
+
+      html = render_click(lv, "undo-borrar-bgg-id", %{})
+      refute html =~ "ID de BGG borrado"
+      restored = Catalog.get_game!(game.id)
+      assert restored.bgg_id == 999_999
+      assert restored.enrichment_status == "bgg_missing"
     end
-  end
 
-  defp count_occurrences(text, substring) do
-    text |> String.split(substring) |> length() |> Kernel.-(1)
+    test "Borrar el ID is NOT offered for a game with a healthy enrichment_status", %{conn: conn} do
+      game = game_fixture(%{bgg_id: 174_430, enrichment_status: "enriched", status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      html = render_click(lv, "open-menu", %{})
+
+      refute html =~ "Borrar el ID"
+    end
+
+    test "enrichment landing while the editor is open updates an untouched name", %{conn: conn} do
+      game = game_fixture(%{name: "Juego #184267", bgg_id: 184_267, status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+
+      send(lv.pid, {:game_enriched, game.id})
+      Catalog.update_game_admin(game, %{name: "Catán"})
+      send(lv.pid, {:game_enriched, game.id})
+      html = render(lv)
+
+      assert html =~ "Catán"
+    end
+
+    test "enrichment landing while the editor is open leaves a touched name alone", %{conn: conn} do
+      game = game_fixture(%{name: "Juego #184267", bgg_id: 184_267, status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_change(lv, "draft-change", %{"field" => "name", "value" => "Nombre elegido por staff"})
+
+      # Simulate BGG's own write landing underneath, then the broadcast.
+      game.id
+      |> Catalog.get_game!()
+      |> Game.enrichment_changeset(%{name: "Juego #184267"})
+      |> Repo.update()
+
+      send(lv.pid, {:game_enriched, game.id})
+      html = render(lv)
+
+      assert html =~ "Nombre elegido por staff"
+      assert html =~ "Sin guardar"
+    end
+
+    test "Catalog.retry_enrichment/1's has-a-bgg_id gate is not shipped as the old failed-only gate (grep)" do
+      catalog = File.read!("lib/pukllay_club/catalog.ex")
+      form = File.read!("lib/pukllay_club_web/live/admin/game_live/form.ex")
+
+      refute catalog =~ ~s(enrichment_status: "failed")
+      refute form =~ ~s(enrichment_status: "failed")
+    end
   end
 end

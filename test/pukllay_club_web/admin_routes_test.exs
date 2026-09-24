@@ -40,4 +40,24 @@ defmodule PukllayClubWeb.AdminRoutesTest do
       refute get_session(conn, :user_token)
     end
   end
+
+  describe "the superseded Asignar screen no longer routes (D-08, 01.8.2-01)" do
+    test "GET /admin/estantes/1/asignar returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/1/asignar")
+    end
+  end
+
+  describe "no per-estante page exists anywhere under /admin/estantes (D-08, plan 01.8.2-18)" do
+    test "GET /admin/estantes/1 returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/1")
+    end
+
+    test "GET /admin/estantes/administrar/1 returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/administrar/1")
+    end
+
+    test "GET /admin/estantes/pendientes/1 returns 404", %{conn: conn} do
+      assert %{status: 404} = get(conn, "/admin/estantes/pendientes/1")
+    end
+  end
 end

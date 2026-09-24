@@ -12,6 +12,17 @@ defmodule PukllayClub.CatalogTest do
   alias PukllayClub.Repo
   alias PukllayClub.Workers.EnrichGameWorker
 
+  # `priv/repo/migrations/*.exs` files are not part of the app's normal
+  # compilation path — `Ecto.Migrator` loads them dynamically at migrate
+  # time, not at `mix compile`/`mix test` — so
+  # `UnpublishStillEmptyGames.still_empty_query/0` (D-36 migration
+  # predicate test below) must be required explicitly. Guarded against
+  # redefinition warnings on a re-run within the same VM (`mix test.watch`,
+  # iex -S mix test).
+  if !Code.ensure_loaded?(PukllayClub.Repo.Migrations.UnpublishStillEmptyGames) do
+    Code.require_file("priv/repo/migrations/20260923122000_unpublish_still_empty_games.exs")
+  end
+
   describe "published-only public reads (D-04, D-08)" do
     # Table-driven over every public read function that must exclude
     # draft/retired games (RESEARCH.md Pitfall 2). Each case seeds one
@@ -154,11 +165,65 @@ defmodule PukllayClub.CatalogTest do
       assert game.id in Enum.map(Catalog.filter_games(), & &1.id)
     end
 
-    test "publish_game/1 moves a retired game to published" do
+    test "publish_game/1 on a retired game refuses, leaving status unchanged (D-37 gate 1)" do
       game = game_fixture(%{name: "Vuelve", status: :retired})
+
+      assert Catalog.publish_game(game) == {:error, :not_publishable}
+      assert Catalog.get_game!(game.id).status == :retired
+    end
+
+    test "publish_game/1 on an already-published game refuses (D-37 gate 1)" do
+      game = game_fixture(%{name: "Ya publicado", status: :published})
+
+      assert Catalog.publish_game(game) == {:error, :not_publishable}
+      assert Catalog.get_game!(game.id).status == :published
+    end
+
+    test "publish_game/1 on a nivel-less non-expansion draft refuses with :nivel_required (D-30/D-37)" do
+      game =
+        game_fixture(%{
+          name: "Sin nivel",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: false
+        })
+
+      assert Catalog.publish_game(game) == {:error, :nivel_required}
+      assert Catalog.get_game!(game.id).status == :draft
+    end
+
+    test "publish_game/1 on a nivel-less EXPANSION draft succeeds — D-30 has no nivel condition for an expansion" do
+      game =
+        game_fixture(%{
+          name: "Expansión sin nivel",
+          status: :draft,
+          weight_band: nil,
+          is_expansion: true
+        })
 
       assert {:ok, published} = Catalog.publish_game(game)
       assert published.status == :published
+    end
+
+    test "publish_game/1 on a draft that already carries a nivel succeeds" do
+      game =
+        game_fixture(%{
+          name: "Con nivel",
+          status: :draft,
+          weight_band: "descubre_el_hobby",
+          is_expansion: false
+        })
+
+      assert {:ok, published} = Catalog.publish_game(game)
+      assert published.status == :published
+    end
+
+    test "saving a nivel-less non-expansion draft succeeds — required to publish, never to save (D-30)" do
+      game = game_fixture(%{name: "Guardable", status: :draft, weight_band: nil, is_expansion: false})
+
+      assert {:ok, updated} = Catalog.update_game_admin(game, %{"description" => "Nueva descripción"})
+      assert updated.weight_band == nil
+      assert updated.description == "Nueva descripción"
     end
 
     test "retire_game/1 moves a published game to retired, removing it from filter_games/1" do
@@ -169,6 +234,13 @@ defmodule PukllayClub.CatalogTest do
       assert {:ok, retired} = Catalog.retire_game(game)
       assert retired.status == :retired
       refute game.id in Enum.map(Catalog.filter_games(), & &1.id)
+    end
+
+    test "retire_game/1 on a draft game refuses, leaving status unchanged (D-37 gate 1)" do
+      game = game_fixture(%{name: "Borrador", status: :draft})
+
+      assert Catalog.retire_game(game) == {:error, :not_retirable}
+      assert Catalog.get_game!(game.id).status == :draft
     end
 
     test "restore_game/1 on a retired game moves it back to published, reappearing in filter_games/1" do
@@ -191,6 +263,34 @@ defmodule PukllayClub.CatalogTest do
       game = game_fixture(%{name: "Sin status explícito"})
 
       assert game.status == :published
+    end
+  end
+
+  describe "enrichment_status validation (D-37 gate 3)" do
+    test "Game.enrichment_changeset/2 rejects an unknown enrichment_status" do
+      game = game_fixture(%{name: "Estado desconocido"})
+
+      changeset = Game.enrichment_changeset(game, %{enrichment_status: "nonsense"})
+
+      refute changeset.valid?
+      assert %{enrichment_status: ["is invalid"]} = errors_on(changeset)
+    end
+
+    test "Game.enrichment_changeset/2 accepts every known enrichment_status" do
+      game = game_fixture(%{name: "Estado conocido"})
+
+      for status <- ~w(pending enriched no_bgg_id bgg_missing failed) do
+        changeset = Game.enrichment_changeset(game, %{enrichment_status: status})
+        assert changeset.valid?, "expected #{status} to be valid: #{inspect(errors_on(changeset))}"
+      end
+    end
+
+    test "a raw SQL write of an unknown enrichment_status is rejected by the database CHECK constraint" do
+      game = game_fixture(%{name: "SQL directo"})
+
+      assert_raise Postgrex.Error, fn ->
+        Repo.query!("UPDATE games SET enrichment_status = 'nonsense' WHERE id = $1", [game.id])
+      end
     end
   end
 
@@ -674,7 +774,9 @@ defmodule PukllayClub.CatalogTest do
       assert Enum.all?(recent.games, &(&1.is_expansion == false))
     end
 
-    test "weight-band sections are unaffected by is_expansion" do
+    test "weight-band sections exclude expansions, even with a matching band (D-37 gate 2)" do
+      base = game_fixture(%{name: "Base Band Game", is_expansion: false, weight_band: "nivel_experto"})
+
       game_fixture(%{
         name: "Expansion Band Game(expa)",
         is_expansion: true,
@@ -682,7 +784,10 @@ defmodule PukllayClub.CatalogTest do
       })
 
       band_row = Enum.find(Catalog.list_home_sections(), &(&1.title == "Nivel experto"))
-      assert Enum.any?(band_row.games, &(&1.name == "Expansion Band Game(expa)"))
+      names = Enum.map(band_row.games, & &1.name)
+
+      assert base.name in names
+      refute "Expansion Band Game(expa)" in names
     end
   end
 
@@ -836,6 +941,20 @@ defmodule PukllayClub.CatalogTest do
 
       assert hobby_game.id in ids
       assert Enum.all?(games, &(&1.weight_band == "descubre_el_hobby"))
+    end
+
+    test "a weight_band section never contains an expansion, even with a matching band (D-37 gate 2)" do
+      hobby_section = Repo.get_by!(Section, name: "Descubre el hobby")
+      base = game_fixture(%{name: "Hobby Base", weight_band: "descubre_el_hobby", is_expansion: false})
+
+      expansion =
+        game_fixture(%{name: "Hobby Expansion(expa)", weight_band: "descubre_el_hobby", is_expansion: true})
+
+      {:ok, {games, _exhausted?}} = Catalog.section_page("section-#{hobby_section.id}", 0)
+      ids = Enum.map(games, & &1.id)
+
+      assert base.id in ids
+      refute expansion.id in ids
     end
 
     test "the recent section never contains an expansion" do
@@ -1230,15 +1349,15 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "retry_enrichment/1 (D-03)" do
-    test "on a non-failed game returns {:error, :not_failed} without touching the row" do
-      game = game_fixture(%{enrichment_status: "pending"})
+  describe "retry_enrichment/1 (D-03, open item 3/D-38 plan 01.8.2-21: gate moved to has-a-bgg_id)" do
+    test "on a game with no bgg_id returns {:error, :no_bgg_id} without touching the row" do
+      game = game_fixture(%{bgg_id: nil, enrichment_status: "no_bgg_id"})
 
-      assert Catalog.retry_enrichment(game) == {:error, :not_failed}
-      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+      assert Catalog.retry_enrichment(game) == {:error, :no_bgg_id}
+      assert Catalog.get_game!(game.id).enrichment_status == "no_bgg_id"
     end
 
-    test "on a failed game sets it back to pending and enqueues exactly one new enrichment job" do
+    test "on a failed game (bgg_id present) sets it back to pending and enqueues exactly one new enrichment job" do
       game =
         game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "failed"})
 
@@ -1246,6 +1365,83 @@ defmodule PukllayClub.CatalogTest do
       assert updated.enrichment_status == "pending"
 
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "reachable for a game with a bgg_id regardless of enrichment_status (the old gate matched 0 rows)" do
+      enriched = game_fixture(%{bgg_id: 174_430, enrichment_status: "enriched"})
+
+      assert {:ok, updated} = Catalog.retry_enrichment(enriched)
+      assert updated.enrichment_status == "pending"
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => enriched.id})
+    end
+  end
+
+  # link_bgg_id/3's own tests live in bgg_editions_test.exs (async: false)
+  # alongside add_game_from_bgg/2's — both take the SAME per-BGG-id
+  # `pg_advisory_xact_lock`, and that lock is held until the test's own
+  # sandbox transaction ends (see add_game_from_bgg/2's own @doc for why
+  # an async: true module is unsafe for it).
+
+  describe "clear_bgg_id/1, restore_bgg_id/3 (open item 3, plan 01.8.2-21)" do
+    test "clears bgg_id and resets enrichment_status to no_bgg_id" do
+      game = game_fixture(%{bgg_id: 184_267, enrichment_status: "bgg_missing"})
+
+      assert {:ok, updated} = Catalog.clear_bgg_id(game)
+      assert updated.bgg_id == nil
+      assert updated.enrichment_status == "no_bgg_id"
+    end
+
+    test "restore_bgg_id/3 puts the exact snapshotted id and status back" do
+      game = game_fixture(%{bgg_id: 184_267, enrichment_status: "bgg_missing"})
+      {:ok, cleared} = Catalog.clear_bgg_id(game)
+
+      assert {:ok, restored} = Catalog.restore_bgg_id(cleared, 184_267, "bgg_missing")
+      assert restored.bgg_id == 184_267
+      assert restored.enrichment_status == "bgg_missing"
+    end
+  end
+
+  describe "UnpublishStillEmptyGames.still_empty_query/0 (D-36 migration predicate)" do
+    alias PukllayClub.Repo.Migrations.UnpublishStillEmptyGames
+
+    test "selects a published game with no description and no cover" do
+      empty = game_fixture(%{name: "Vacío", status: :published, description: nil, cover_url: nil})
+
+      ids = Repo.all(UnpublishStillEmptyGames.still_empty_query())
+
+      assert ids == [empty.id]
+    end
+
+    test "treats a blank-string description the same as a nil one" do
+      empty = game_fixture(%{name: "Descripción vacía", status: :published, description: "", cover_url: nil})
+
+      ids = Repo.all(UnpublishStillEmptyGames.still_empty_query())
+
+      assert ids == [empty.id]
+    end
+
+    test "excludes a game with a description, even with no cover" do
+      game_fixture(%{name: "Con descripción", status: :published, description: "Algo", cover_url: nil})
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
+    end
+
+    test "excludes a game with a cover, even with no description" do
+      game_fixture(%{
+        name: "Con portada",
+        status: :published,
+        description: nil,
+        cover_url: "https://images.test.invalid/games/1/cover-large.webp"
+      })
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
+    end
+
+    test "excludes a draft or retired game even when empty (only :published rows are candidates)" do
+      game_fixture(%{name: "Borrador vacío", status: :draft, description: nil, cover_url: nil})
+      game_fixture(%{name: "Retirado vacío", status: :retired, description: nil, cover_url: nil})
+
+      assert Repo.all(UnpublishStillEmptyGames.still_empty_query()) == []
     end
   end
 
@@ -1297,6 +1493,70 @@ defmodule PukllayClub.CatalogTest do
       assert Enum.map(Catalog.list_admin_games(), & &1.name) == ["Alfa", "Medio", "Zeta"]
       assert [limit: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Alfa", "Medio"]
       assert [limit: 2, offset: 2] |> Catalog.list_admin_games() |> Enum.map(& &1.name) == ["Zeta"]
+    end
+  end
+
+  describe "list_admin_games_by_status/1 (D-25, plan 01.8.2-14)" do
+    test "returns a map with one key per status, every game in exactly one" do
+      draft = game_fixture(%{name: "Borrador", status: :draft})
+      published = game_fixture(%{name: "Publicado", status: :published})
+      retired = game_fixture(%{name: "Retirado", status: :retired})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert Enum.map(groups.draft, & &1.id) == [draft.id]
+      assert Enum.map(groups.published, & &1.id) == [published.id]
+      assert Enum.map(groups.retired, & &1.id) == [retired.id]
+    end
+
+    test "the partition sums to count_admin_games/1 — assert it, don't assume it" do
+      for n <- 1..5, do: game_fixture(%{name: "D#{n}", status: :draft})
+      for n <- 1..7, do: game_fixture(%{name: "P#{n}", status: :published})
+      for n <- 1..3, do: game_fixture(%{name: "R#{n}", status: :retired})
+
+      groups = Catalog.list_admin_games_by_status()
+      total = length(groups.draft) + length(groups.published) + length(groups.retired)
+
+      assert total == Catalog.count_admin_games()
+      assert total == 15
+    end
+
+    test "an empty status is simply an empty list, not a missing key" do
+      game_fixture(%{status: :published})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert groups.draft == []
+      assert groups.retired == []
+    end
+
+    test "each group is ordered by name then id, matching list_admin_games/1's tie-break" do
+      game_fixture(%{name: "Zeta", status: :draft})
+      game_fixture(%{name: "Alfa", status: :draft})
+
+      groups = Catalog.list_admin_games_by_status()
+
+      assert Enum.map(groups.draft, & &1.name) == ["Alfa", "Zeta"]
+    end
+
+    test ":q narrows every group by name, case-insensitively" do
+      game_fixture(%{name: "Catán", status: :draft})
+      game_fixture(%{name: "Carcassonne", status: :published})
+
+      groups = Catalog.list_admin_games_by_status(q: "cat")
+
+      assert Enum.map(groups.draft, & &1.name) == ["Catán"]
+      assert groups.published == []
+    end
+
+    test "a :status opt is ignored — the grouping IS the status split" do
+      game_fixture(%{name: "Borrador", status: :draft})
+      game_fixture(%{name: "Publicado", status: :published})
+
+      groups = Catalog.list_admin_games_by_status(status: :draft)
+
+      assert length(groups.draft) == 1
+      assert length(groups.published) == 1
     end
   end
 end
