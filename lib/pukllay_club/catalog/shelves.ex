@@ -207,19 +207,41 @@ defmodule PukllayClub.Catalog.Shelves do
   brand-new, previously-empty `shelf_id`) — a loop over `place_copy/3`
   would instead reindex the destination between each step and would not
   reproduce the exact recorded arrangement.
+
+  WR-05: locks the destination shelf plus every currently-distinct
+  `shelf_id` among the snapshotted copies' LIVE rows (mirroring
+  `lock_estantes/2`'s convention elsewhere in this module), then only
+  restores a copy whose live `shelf_id` is still `nil` — exactly what
+  `delete_shelf/1` leaves every one of its copies with. If a different
+  staff member independently placed one of these copies onto some other
+  real shelf in the window between the delete and this Deshacer (that
+  other write correctly reindexed around it via `place_copy/3`), this
+  function now skips that copy rather than unconditionally clobbering it
+  back — silently ripping it away from where the other staff member just
+  put it and leaving a gap on that other shelf with nothing left to
+  explain it.
   """
   @spec restore_deleted_shelf(%{name: String.t(), position: integer(), copies: [{integer(), integer()}]}) ::
           {:ok, Shelf.t()} | {:error, term()}
   def restore_deleted_shelf(%{name: name, position: position, copies: copies}) do
+    copy_ids = Enum.map(copies, fn {copy_id, _copy_position} -> copy_id end)
+
     Multi.new()
     |> Multi.run(:shelf, fn repo, _changes ->
       %Shelf{} |> Shelf.changeset(%{name: name, position: position}) |> repo.insert()
     end)
+    |> Multi.run(:lock, fn repo, %{shelf: shelf} ->
+      lock_estantes(repo, [shelf.id | live_shelf_ids(repo, copy_ids)])
+    end)
     |> Multi.run(:restored, fn repo, %{shelf: shelf} ->
+      live_by_id = live_shelf_by_copy(repo, copy_ids)
+
       Enum.each(copies, fn {copy_id, copy_position} ->
-        repo.update_all(from(c in Copy, where: c.id == ^copy_id),
-          set: [shelf_id: shelf.id, position: copy_position]
-        )
+        if Map.get(live_by_id, copy_id) == nil do
+          repo.update_all(from(c in Copy, where: c.id == ^copy_id),
+            set: [shelf_id: shelf.id, position: copy_position]
+          )
+        end
       end)
 
       {:ok, shelf}
@@ -233,6 +255,23 @@ defmodule PukllayClub.Catalog.Shelves do
       {:error, _step, reason, _changes} ->
         {:error, reason}
     end
+  end
+
+  defp live_shelf_ids(repo, copy_ids) do
+    Copy
+    |> where([c], c.id in ^copy_ids)
+    |> select([c], c.shelf_id)
+    |> repo.all()
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp live_shelf_by_copy(repo, copy_ids) do
+    Copy
+    |> where([c], c.id in ^copy_ids)
+    |> select([c], {c.id, c.shelf_id})
+    |> repo.all()
+    |> Map.new()
   end
 
   @doc """

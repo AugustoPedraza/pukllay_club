@@ -538,5 +538,39 @@ defmodule PukllayClub.Catalog.ShelvesTest do
       assert_received {:estante_updated, shelf_id}
       assert shelf_id == restored.id
     end
+
+    # WR-05 regression: a copy independently placed on a DIFFERENT, real
+    # shelf in the window between `delete_shelf/1` and this Deshacer must
+    # never be silently clobbered back onto the restored shelf — that
+    # write correctly reindexed the OTHER shelf around the copy's
+    # departure, so overwriting it here would both yank the copy away
+    # from where a different staff member just put it AND leave a gap on
+    # that other shelf with nothing left to explain it.
+    test "skips restoring a copy that was placed on a different real shelf in the interim, leaving it there" do
+      shelf = shelf_fixture(%{name: "Estante Sur"})
+      other_shelf = shelf_fixture(%{name: "Estante Otro"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      b = copy_fixture(%{game_id: game_fixture(%{name: "B"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+      {:ok, _} = Shelves.place_copy(b.id, shelf.id, 1)
+
+      {:ok, snapshot} = Shelves.delete_shelf(shelf)
+
+      # A different staff member independently places `a` onto
+      # `other_shelf` before "Deshacer" is tapped.
+      {:ok, _} = Shelves.place_copy(a.id, other_shelf.id, 0)
+
+      assert {:ok, restored} = Shelves.restore_deleted_shelf(snapshot)
+
+      # `a` stays exactly where the other staff member put it.
+      fresh_a = Repo.get!(Copy, a.id)
+      assert fresh_a.shelf_id == other_shelf.id
+      assert fresh_a.position == 0
+
+      # `b` (untouched since the delete) restores normally.
+      fresh_b = Repo.get!(Copy, b.id)
+      assert fresh_b.shelf_id == restored.id
+      assert fresh_b.position == 1
+    end
   end
 end
