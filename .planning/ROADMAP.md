@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 1/5 plans executed
+**Plans:** 3/5 plans executed
 
 Plans:
 **Wave 1**
@@ -282,8 +282,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
-- [ ] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
+- [x] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
+- [x] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
