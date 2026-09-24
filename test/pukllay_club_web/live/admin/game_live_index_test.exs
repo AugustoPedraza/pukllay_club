@@ -510,12 +510,35 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
-      assert has_element?(lv, "#edition-prompt")
+      assert has_element?(lv, "#add-game-sheet-edition-prompt")
 
       lv |> element("#cancel-edition") |> render_click()
 
-      refute has_element?(lv, "#edition-prompt")
+      refute has_element?(lv, "#add-game-sheet-edition-prompt")
       assert Catalog.count_admin_games() == 1
+    end
+
+    test "plan 01.8.3-04: the edition prompt renders inside the + sheet, not on the page behind it",
+         %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-sheet-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#add-game-sheet-edition-prompt")
+      refute has_element?(lv, "#edition-prompt")
+      refute has_element?(lv, "#add-game-sheet-form")
+      assert Catalog.count_admin_games() == count_before
+
+      html = lv |> element("#cancel-edition") |> render_click()
+
+      refute has_element?(lv, "#add-game-sheet-edition-prompt")
+      assert has_element?(lv, "#add-game-sheet-form")
+      assert html =~ "Número o link de BGG"
     end
 
     test "multi-edition copy joins names naturally (Patchwork y Patchwork Andino)", %{
@@ -661,6 +684,138 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — the enrichment-completion snackbar (D-11/D-17, plan 01.8.3-04)" do
+    test "a successful arrival shows a 10s Editar snackbar naming the game", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "On Mars agregado"
+      assert html =~ "Editar"
+      assert html =~ ~s(data-timeout="10000")
+    end
+
+    test "a failed arrival shows a snackbar naming the bgg_id, not the game's name", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "failed"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      html = render(lv)
+      assert html =~ "No pudimos traer los datos BGG de #184267"
+      assert html =~ "Editar"
+      assert html =~ ~s(data-timeout="10000")
+      refute html =~ "Juego #184267 agregado"
+    end
+
+    test "a {:game_enriched, id} for a still-pending game renders no snackbar", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "Juego #184267",
+          status: :draft,
+          enrichment_status: "pending"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+
+      refute has_element?(lv, "#enrichment-toast")
+    end
+
+    test "two arrivals in sequence leave exactly one snackbar, naming the second game", %{
+      conn: conn
+    } do
+      game1 =
+        game_fixture(%{
+          bgg_id: 111_111,
+          name: "Primero",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      game2 =
+        game_fixture(%{
+          bgg_id: 222_222,
+          name: "Segundo",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game1.id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game2.id})
+
+      html = render(lv)
+      assert count_occurrences(html, ~s(id="enrichment-toast")) == 1
+      assert html =~ "Segundo agregado"
+      refute html =~ "Primero agregado"
+    end
+
+    test "clicking Editar redirects to the game's editor", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+      render(lv)
+
+      assert {:error, {:live_redirect, %{to: to}}} =
+               lv
+               |> element("#enrichment-toast .pk-admin-snackbar__action")
+               |> render_click()
+
+      assert to == ~p"/admin/juegos/#{game.id}/editar"
+    end
+
+    test "dismiss-enrichment-toast removes the snackbar", %{conn: conn} do
+      game =
+        game_fixture(%{
+          bgg_id: 184_267,
+          name: "On Mars",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game.id})
+      render(lv)
+
+      html = render_click(lv, "dismiss-enrichment-toast", %{})
+      refute html =~ ~s(id="enrichment-toast")
+    end
+
+    test "edit-enriched-game with no toast assign neither redirects nor raises", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "edit-enriched-game", %{})
+      assert is_binary(html)
+    end
+  end
+
   describe "GameLive.Index — the pinned row's boundary and edge cases (plan 01.8.3-01)" do
     test "an empty catalog still renders the pinned search/+ row, so + stays reachable", %{
       conn: conn
@@ -747,6 +902,95 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
 
       assert has_element?(lv, "#juegos-search-wrap")
       refute has_element?(lv, "#juegos-search-wrap[data-pinned-hidden]")
+    end
+  end
+
+  describe "GameLive.Index — security & concurrency properties (T-01.8.3-01, plan 01.8.3-04)" do
+    test "confirm-edition with no prompt held inserts nothing, redirects nowhere, and the process stays alive",
+         %{conn: conn} do
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = render_click(lv, "confirm-edition", %{})
+
+      assert Catalog.count_admin_games() == count_before
+      assert is_binary(html)
+      assert Process.alive?(lv.pid)
+    end
+
+    test "confirm-edition with no prompt held ignores a fabricated game-id param and inserts nothing",
+         %{conn: conn} do
+      existing = game_fixture(%{name: "Un juego real", status: :published})
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      render_click(lv, "confirm-edition", %{"game-id" => to_string(existing.id)})
+
+      assert Catalog.count_admin_games() == count_before
+    end
+
+    test "two {:game_enriched} arrivals leave exactly one #enrichment-toast element", %{
+      conn: conn
+    } do
+      previous_storage = Application.get_env(:pukllay_club, :catalog_storage)
+
+      previous_translate_call =
+        Application.get_env(:pukllay_club, :enrichment_translate_call)
+
+      Application.put_env(:pukllay_club, :catalog_storage, FakeStorage)
+
+      Application.put_env(:pukllay_club, :enrichment_translate_call, fn _params, _opts ->
+        {:ok, %TranslatedDescription{description_es: "Descripción en español."}}
+      end)
+
+      game1 =
+        game_fixture(%{
+          bgg_id: 333_333,
+          name: "Cardal",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      game2 =
+        game_fixture(%{
+          bgg_id: 444_444,
+          name: "Marisco",
+          status: :draft,
+          enrichment_status: "enriched"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game1.id})
+      Phoenix.PubSub.broadcast(PukllayClub.PubSub, "admin:games", {:game_enriched, game2.id})
+
+      html = render(lv)
+      assert count_occurrences(html, ~s(id="enrichment-toast")) == 1
+      assert html =~ "Marisco agregado"
+
+      if previous_storage do
+        Application.put_env(:pukllay_club, :catalog_storage, previous_storage)
+      else
+        Application.delete_env(:pukllay_club, :catalog_storage)
+      end
+
+      if previous_translate_call do
+        Application.put_env(:pukllay_club, :enrichment_translate_call, previous_translate_call)
+      else
+        Application.delete_env(:pukllay_club, :enrichment_translate_call)
+      end
+    end
+
+    test "the rendered /admin/juegos HTML never contains phx-value-value", %{conn: conn} do
+      game_fixture(%{name: "Cualquiera", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+      html = render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      refute html =~ "phx-value-value"
     end
   end
 
