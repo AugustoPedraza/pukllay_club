@@ -140,3 +140,21 @@ from the harness's own headless-Chrome evidence.
   seed either on this plan's branch or on the pre-plan baseline. Logged as a pre-existing,
   non-deterministic flake (Scope Boundary rule: out of scope for this plan, not fixed) —
   worth a closer look if it recurs, but not blocking this plan's own verification.
+
+  **RESOLVED 2026-09-24 — it was not a flake, and it recurred in CI.** The PR's first CI run
+  (35959524325) failed on the same test. Root cause: `refute html =~ "+3"` / `"+7"` matched
+  against the WHOLE document, and the CSP nonce is random base64. The failing run's nonce was
+  `82PoRQZcd60mTOL/+3AFNPfQoKWq/G6i` — it contains `+3`, so the test went red for a reason with
+  nothing to do with mechanics chips. Non-reproducible under a fixed seed only because the nonce
+  is regenerated per request, not because the failure was random noise.
+
+  Fixed by scoping the refutation to `.pk-chip-row` (where `GameChips.chip_row/1` actually
+  renders the `<span class="pk-pill pk-pill-outline">+N</span>` cap) and matching `>\+\d+<`.
+  Negative-tested in both directions before committing: the new guard fires on a real overflow
+  chip (`true`), does not fire on a nonce containing `+3` (`false`), and the old assertion did
+  (`true`).
+
+  **Lesson worth keeping:** this is the same failure family as plan 01.8.2-13's SVG-path-data
+  substring collision and plan 01.8.2-08's Styler-underscore integer grep. A whole-document
+  substring assertion is not a guard — it is a coincidence detector. A guard that fails for the
+  wrong reason costs exactly as much trust as one that passes for the wrong reason.

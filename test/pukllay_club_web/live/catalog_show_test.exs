@@ -87,8 +87,24 @@ defmodule PukllayClubWeb.CatalogLive.ShowTest do
         assert html =~ label
       end
 
-      refute html =~ "+3"
-      refute html =~ "+7"
+      # The overflow cap renders as `<span class="pk-pill pk-pill-outline">+N</span>`
+      # inside `.pk-chip-row` (GameChips.chip_row/1). Scope the refutation THERE.
+      #
+      # A bare `refute html =~ "+3"` matches anywhere in the document, and the CSP
+      # nonce is random base64 — one like "82PoRQZcd60mTOL/+3AFNPfQoKWq/G6i"
+      # contains "+3" and turns this test red for a reason with nothing to do with
+      # chips. Observed in CI run 35959524325; it had been recorded as a
+      # "non-reproducible flake" in deferred-items.md before the real cause was
+      # found. Same failure family as the SVG-path-data substring collision noted
+      # in plan 01.8.2-13's summary: a guard that fails for the wrong reason is
+      # just as broken as one that passes for the wrong reason.
+      chip_rows_html =
+        html
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".pk-chip-row")
+        |> LazyHTML.to_html()
+
+      refute chip_rows_html =~ ~r/>\+\d+</
     end
 
     test "renders designers in the fact grid and description in the reading column, and players/duration once in the facts row; no minimum-age label renders (D-05, UAT gap G-01.3-1 item 2)",
