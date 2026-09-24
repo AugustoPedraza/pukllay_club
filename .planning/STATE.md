@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin UI/UX Redesign (INSERTED)
 status: executing
-stopped_at: Completed 01.8.2-20-PLAN.md
-last_updated: "2026-09-24T01:18:59.986Z"
+stopped_at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
+last_updated: "2026-09-24T02:09:14.377Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 01.8.2 execution started
-state_head: 05f68a3659f439f50278a6f2e8c257c5ffb13fc7
+state_head: 81f68849004937cdf272fdf0b860c9afa8df7e84
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 49
-  completed_plans: 47
+  completed_plans: 48
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.2 (Admin UI/UX Redesign (INSERTED)) — EXECUTING
-Plan: 21 of 22
+Plan: 22 of 22
 Status: Ready to execute
 Last activity: 2026-09-23 — Phase 01.8.2 execution started
 
@@ -152,6 +152,7 @@ Last activity: 2026-09-23 — Phase 01.8.2 execution started
 | Phase 01.8.2 P19 | ~25min | 3 tasks | 5 files |
 | Phase 01.8.2 P18 | ~100min | 3 tasks | 13 files |
 | Phase 01.8.2 P20 | ~55min | 3 tasks | 10 files |
+| Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -323,6 +324,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: Open item 6: the live-gate explanation is a persistent inline line under Publicar (b), chosen over a snackbar (a) and scroll-to-nivel (c) — real headless-Chrome measurement against sketch 078's own fixture found the nivel row already on screen at both 390x844 and 360x640
 - [Phase 01.8.2]: Game.needs_nivel_to_publish?/1 is the one shared predicate between Catalog.publish_game/1's function-level gate and the draft sheet's live Publicar-tap explanation — never duplicated
 - [Phase 01.8.2]: GameLive.Form's mount/3 redirects a draft's direct editor URL to /admin/juegos?draft=<id> BEFORE loading section names/shelves/copies, so the editor page renders only for an already-published or retired game
+- [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
+- [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
 
 ### Pending Todos
 
@@ -466,8 +469,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T01:18:59.852Z
-Stopped at: Completed 01.8.2-20-PLAN.md
+Last session: 2026-09-24T02:09:14.242Z
+Stopped at: Completed 01.8.2-21-PLAN.md (last build plan; plan 22 is the production rollout)
 Resume file: None
 
 ## Operator Next Steps

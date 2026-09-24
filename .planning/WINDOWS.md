@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 4
+open_count: 5
 waived_count: 1
 fixed_count: 27
-total_count: 32
-last_updated: 2026-09-23T19:05:06.597Z
+total_count: 33
+last_updated: 2026-09-24T02:08:38.186Z
 ---
 
 # Broken Windows Ledger
@@ -47,6 +47,7 @@ last_updated: 2026-09-23T19:05:06.597Z
 | 30 | 01.8.2 | deviation | assets/js/hooks/admin_sheet.js |  | isOpen() uses offsetParent, always null for position:fixed — Esc/drag-down close, focus-trap-on-open, focus-return-on-close all confirmed non-functional (see deferred-items.md plan 12) | fixed |  | 2026-09-23T18:28:51.686Z | 2026-09-23T19:04:49.371Z |
 | 31 | 01.8.2 | deviation | assets/css/admin/components.css |  | sheet/dialog root shares z-index:70 with the bottom-anchored tab bar (chrome.css) — a short sheet's last row can be untappable at any viewport height, confirmed via real elementFromPoint hit-test (see deferred-items.md plan 12) | fixed |  | 2026-09-23T18:28:57.298Z | 2026-09-23T19:05:06.597Z |
 | 32 | 01.8.2 | deviation | assets/css/admin/screens.css |  | pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12 | open |  | 2026-09-23T18:28:57.503Z |  |
+| 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
 
 ````json
 [
@@ -435,6 +436,19 @@ last_updated: 2026-09-23T19:05:06.597Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-23T18:28:57.503Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 33,
+    "kind": "unrun-verify",
+    "phase": "01.8.2",
+    "file": "test/pukllay_club/catalog/bgg_editions_test.exs",
+    "line": null,
+    "description": "link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-24T02:08:38.186Z",
     "resolved_at": null,
     "milestone": "v1.1"
   }

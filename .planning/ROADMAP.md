@@ -191,7 +191,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 20/22 plans executed
+**Plans:** 21/22 plans executed
 
 Plans:
 
@@ -247,7 +247,7 @@ Plans:
 
 **Wave 11**
 
-- [ ] 01.8.2-21-PLAN.md — the Copias stepper, D-32's ESTANTE sheet, and **open item 3**: link a BGG id, Reintentar, Borrar el ID, save-first-then-link
+- [x] 01.8.2-21-PLAN.md — the Copias stepper, D-32's ESTANTE sheet, and **open item 3**: link a BGG id, Reintentar, Borrar el ID, save-first-then-link
 
 **Wave 12**
 
