@@ -1,12 +1,14 @@
 // AdminList — the Juegos screen's own interaction layer (plan 01.8.2-14,
-// D-19g-bis/D-19n). Registered as a plain (non-colocated) hook in
-// `app.js`'s `hooks` object (`phx-hook="AdminList"`, no leading dot),
-// mirroring `AdminRail`'s own non-colocated convention: mounted once on
-// the page's stable wrapper (`#juegos-page`) rather than on any
-// conditionally-rendered child, since sections/rows come and go as
-// groups collapse/expand and as the search narrows the list.
+// D-19g-bis/D-19n; pinned row rebuilt by plan 01.8.3-01, D-06/D-07/D-09).
+// Registered as a plain (non-colocated) hook in `app.js`'s `hooks` object
+// (`phx-hook="AdminList"`, no leading dot), mirroring `AdminRail`'s own
+// non-colocated convention: mounted once on the page's stable wrapper
+// (`#juegos-page`) rather than on any conditionally-rendered child, since
+// sections/rows come and go as groups collapse/expand and as the search
+// narrows the list.
 //
-// Four independent jobs:
+// Three independent jobs (the page bar/back-row toggling this hook used
+// to own is gone — D-06/D-09 deleted both from this page's DOM):
 //   1. Expand-keeps-position (D-19g-bis decision 8/18): opening or
 //      closing a collapsible section keeps the TAPPED heading exactly
 //      where the finger left it — captured on click, corrected after the
@@ -16,19 +18,30 @@
 //      heading and toggles `data-pinned` on the heading wrap the instant
 //      the sentinel scrolls out of view above the fold — the heading
 //      gains its `--color-surface` fill ONLY while pinned (juegos.css).
-//   3. The pinned page bar (D-19n): `.pk-admin-page-bar` becomes visible
-//      (and, per this plan's `components.css` fix, `position: fixed`)
-//      once the page title has scrolled behind the 44px band it reserves;
-//      `inert` toggles between it and the in-page `back_row/1` so exactly
-//      one back control is ever focusable (T-01.8.2-64).
-//   4. Scroll a freshly-created draft's row into view once (D-37 gate 4,
-//      076's `.fresh` pattern) — the row's own `.pk-admin-juegos-row--fresh`
-//      class marks it.
+//      Kept byte-identical in plan 01.8.3-01 (D-15's fix is plan 03's
+//      job) — including its own use of `PAGE_BAR_BAND` below, which this
+//      plan therefore cannot delete despite the constant's stale name.
+//   3. D-08's pinned search row: the SAME `#juegos-search-wrap` (never a
+//      second, synced copy) hides on scroll-down and returns on
+//      scroll-up, never while `#juegos-search-input` is focused and never
+//      within 140px of the top — ported verbatim from
+//      `assets/js/hooks/admin_rail.js`'s own D-19n mechanism (D-18:
+//      per-screen-owns-its-hook, a copy, not a shared import).
 //
-// Purely client-driven presentational toggling (page-bar visibility,
-// pinned fill) — same shape as `AdminRail`'s `data-pinned-hidden` —
-// rather than a LiveView assign updated on every scroll tick, so scrolling
-// never costs a server round trip.
+// Plus one unrelated job kept from before: scroll a freshly-created
+// draft's row into view once (D-37 gate 4, 076's `.fresh` pattern) — the
+// row's own `.pk-admin-juegos-row--fresh` class marks it.
+//
+// Purely client-driven presentational toggling (pinned-row hide/return,
+// pinned-caption fill) — same shape as `AdminRail`'s `data-pinned-hidden`
+// — rather than a LiveView assign updated on every scroll tick, so
+// scrolling never costs a server round trip.
+//
+// `PAGE_BAR_BAND` is kept, not deleted, despite its name: `setupPinObserver`
+// below still reads it and is required to stay byte-identical in this
+// plan, so removing the declaration would throw a ReferenceError the
+// instant this hook mounts. Plan 03 owns renaming/repurposing it
+// alongside its own observer fix (D-15).
 const PAGE_BAR_BAND = 44
 
 export default {
@@ -44,23 +57,34 @@ export default {
     }
     this.el.addEventListener("click", this.onClick)
 
-    this.title = this.el.querySelector(".pk-admin-page-title")
-    this.pageBar = document.querySelector(".pk-admin-page-bar")
-    this.pageBarBack = this.pageBar?.querySelector(".pk-admin-page-bar__back")
-    this.backRow = this.el.querySelector(".pk-admin-back-row")
+    // D-08: the pinned search row — ported verbatim from
+    // `admin_rail.js`'s D-19n mechanism, Juegos-scoped ids.
+    this.searchWrap = this.el.querySelector("#juegos-search-wrap")
+    this.searchInput = this.el.querySelector("#juegos-search-input")
+    this.lastScrollY = window.scrollY
 
     this.onScroll = () => {
-      if (!this.title || !this.pageBar) return
-      const visible = this.title.getBoundingClientRect().bottom <= PAGE_BAR_BAND
-      this.pageBar.classList.toggle("pk-admin-page-bar--visible", visible)
-      this.pageBarBack?.toggleAttribute("inert", !visible)
-      this.backRow?.toggleAttribute("inert", visible)
+      if (!this.searchWrap) return
+
+      const y = window.scrollY
+      const goingDown = y > this.lastScrollY
+      this.lastScrollY = y
+
+      const focused = document.activeElement === this.searchInput
+      // Never within 140px of the top, regardless of scroll direction —
+      // a new screen always starts at scrollTop 0, so the pinned state
+      // never appears on a page nobody scrolled.
+      const nearTop = y <= 140
+
+      if (focused || nearTop) {
+        this.searchWrap.removeAttribute("data-pinned-hidden")
+      } else if (goingDown) {
+        this.searchWrap.setAttribute("data-pinned-hidden", "true")
+      } else {
+        this.searchWrap.removeAttribute("data-pinned-hidden")
+      }
     }
     window.addEventListener("scroll", this.onScroll, { passive: true })
-    // A freshly mounted screen always starts at scrollTop 0 (D-19n), so
-    // running this once at mount is a no-op in practice — kept for the
-    // case a browser restores a mid-scroll position on reconnect.
-    this.onScroll()
 
     this.setupPinObserver()
     this.scrollFreshIntoView()

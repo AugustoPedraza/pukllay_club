@@ -24,16 +24,63 @@
   position: relative;
 }
 
-.pk-admin-juegos-add-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+/* D-07/D-08 (plan 01.8.3-01): the page's one pinned row — a 48px search
+   field with `+` at its right end. Ported from
+   `estantes.css:115-128`'s shipped sticky-search-wrap mechanism (same
+   hide-on-scroll-down/return-on-scroll-up transform, owned client-side by
+   `assets/js/hooks/admin_list.js`, itself ported from `admin_rail.js`).
+   The wrap carries no horizontal padding of its own — the background is
+   full-bleed, the ink is inset by `.pk-admin-juegos-search-row`'s own
+   padding (D-16). */
+.pk-admin-juegos-search-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--color-base-100);
+  transition: transform var(--duration-fast) var(--ease-standard);
 }
 
-.pk-admin-juegos-add-form .pk-admin-field {
-  flex: 1 1 200px;
+.pk-admin-juegos-search-wrap[data-pinned-hidden] {
+  transform: translateY(-100%);
+}
+
+.pk-admin-juegos-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 8px;
+}
+
+#juegos-search-input {
+  flex: 1;
   min-width: 0;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+#juegos-search-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* D-10: the `+` sheet's own internals — vertical rhythm between the
+   field and the commit, and a full-width `Agregar` (071's own 271px
+   fixture), following `editor.css`'s `#editor-bgg-edition-prompt`
+   ID-scoped precedent for a sheet's own internals rather than a shared
+   class. */
+.pk-admin-juegos-sheet-body form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pk-admin-juegos-sheet-body .pk-admin-action {
+  width: 100%;
 }
 
 .pk-admin-juegos-edition-list {
