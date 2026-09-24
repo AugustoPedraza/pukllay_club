@@ -239,7 +239,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
       {int_id, ""} ->
         case int_id |> Catalog.get_game!() |> Catalog.retry_enrichment() do
           {:ok, _updated} -> {:noreply, load_groups(socket)}
-          {:error, :not_failed} -> {:noreply, socket}
+          {:error, :no_bgg_id} -> {:noreply, socket}
         end
 
       _not_an_integer ->

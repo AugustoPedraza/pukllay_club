@@ -1349,15 +1349,15 @@ defmodule PukllayClub.CatalogTest do
     end
   end
 
-  describe "retry_enrichment/1 (D-03)" do
-    test "on a non-failed game returns {:error, :not_failed} without touching the row" do
-      game = game_fixture(%{enrichment_status: "pending"})
+  describe "retry_enrichment/1 (D-03, open item 3/D-38 plan 01.8.2-21: gate moved to has-a-bgg_id)" do
+    test "on a game with no bgg_id returns {:error, :no_bgg_id} without touching the row" do
+      game = game_fixture(%{bgg_id: nil, enrichment_status: "no_bgg_id"})
 
-      assert Catalog.retry_enrichment(game) == {:error, :not_failed}
-      assert Catalog.get_game!(game.id).enrichment_status == "pending"
+      assert Catalog.retry_enrichment(game) == {:error, :no_bgg_id}
+      assert Catalog.get_game!(game.id).enrichment_status == "no_bgg_id"
     end
 
-    test "on a failed game sets it back to pending and enqueues exactly one new enrichment job" do
+    test "on a failed game (bgg_id present) sets it back to pending and enqueues exactly one new enrichment job" do
       game =
         game_fixture(%{bgg_id: 184_267, status: :draft, enrichment_status: "failed"})
 
@@ -1365,6 +1365,39 @@ defmodule PukllayClub.CatalogTest do
       assert updated.enrichment_status == "pending"
 
       assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => game.id})
+    end
+
+    test "reachable for a game with a bgg_id regardless of enrichment_status (the old gate matched 0 rows)" do
+      enriched = game_fixture(%{bgg_id: 174_430, enrichment_status: "enriched"})
+
+      assert {:ok, updated} = Catalog.retry_enrichment(enriched)
+      assert updated.enrichment_status == "pending"
+      assert_enqueued(worker: EnrichGameWorker, args: %{"game_id" => enriched.id})
+    end
+  end
+
+  # link_bgg_id/3's own tests live in bgg_editions_test.exs (async: false)
+  # alongside add_game_from_bgg/2's — both take the SAME per-BGG-id
+  # `pg_advisory_xact_lock`, and that lock is held until the test's own
+  # sandbox transaction ends (see add_game_from_bgg/2's own @doc for why
+  # an async: true module is unsafe for it).
+
+  describe "clear_bgg_id/1, restore_bgg_id/3 (open item 3, plan 01.8.2-21)" do
+    test "clears bgg_id and resets enrichment_status to no_bgg_id" do
+      game = game_fixture(%{bgg_id: 184_267, enrichment_status: "bgg_missing"})
+
+      assert {:ok, updated} = Catalog.clear_bgg_id(game)
+      assert updated.bgg_id == nil
+      assert updated.enrichment_status == "no_bgg_id"
+    end
+
+    test "restore_bgg_id/3 puts the exact snapshotted id and status back" do
+      game = game_fixture(%{bgg_id: 184_267, enrichment_status: "bgg_missing"})
+      {:ok, cleared} = Catalog.clear_bgg_id(game)
+
+      assert {:ok, restored} = Catalog.restore_bgg_id(cleared, 184_267, "bgg_missing")
+      assert restored.bgg_id == 184_267
+      assert restored.enrichment_status == "bgg_missing"
     end
   end
 

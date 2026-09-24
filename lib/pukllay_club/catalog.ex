@@ -357,16 +357,22 @@ defmodule PukllayClub.Catalog do
   end
 
   @doc """
-  Re-enqueues enrichment for a `"failed"` draft (D-03) — sets
-  `enrichment_status` back to `"pending"` and inserts a fresh
+  Re-enqueues enrichment for `game` (open item 3, D-38, plan 01.8.2-21) —
+  sets `enrichment_status` back to `"pending"` and inserts a fresh
   `EnrichGameWorker` job in one `Ecto.Multi`, so the row is never left
-  stuck between "failed" and "pending" if the insert somehow failed.
-  Returns `{:error, :not_failed}` for any other `enrichment_status`
-  without touching the row — Reintentar only ever applies to a genuinely
-  failed record.
+  stuck mid-transition if the insert somehow failed.
+
+  **Gate: "has a `bgg_id`", not `enrichment_status == "failed"`.** The
+  old `"failed"`-only gate matched **0 rows** in production (D-36's
+  backfill re-enriched everything), making the shipped `Reintentar`
+  control dead UI — see `01.8.2-CONTEXT.md`'s open item 3. Returns
+  `{:error, :no_bgg_id}` for a game with no `bgg_id` at all (there is
+  nothing BGG could re-fetch) without touching the row.
   """
-  @spec retry_enrichment(Game.t()) :: {:ok, Game.t()} | {:error, :not_failed}
-  def retry_enrichment(%Game{enrichment_status: "failed"} = game) do
+  @spec retry_enrichment(Game.t()) :: {:ok, Game.t()} | {:error, :no_bgg_id}
+  def retry_enrichment(%Game{bgg_id: nil}), do: {:error, :no_bgg_id}
+
+  def retry_enrichment(%Game{} = game) do
     Multi.new()
     |> Multi.update(:game, Game.enrichment_changeset(game, %{enrichment_status: "pending"}))
     |> Oban.insert(:enrich_job, fn %{game: game} ->
@@ -378,7 +384,87 @@ defmodule PukllayClub.Catalog do
     end
   end
 
-  def retry_enrichment(%Game{}), do: {:error, :not_failed}
+  @doc """
+  Links `bgg_id` (a pasted id or URL, `parse_bgg_input/1`) to `game`, an
+  ALREADY-EXISTING row that has none yet (open item 3, D-38, plan
+  01.8.2-21's editor). Mirrors `add_game_from_bgg/1`'s atomic shape
+  byte-for-byte: the SAME per-BGG-id `pg_advisory_xact_lock`, the SAME
+  editions re-check (D-03 — a shared id WARNS, it is not a hard reject;
+  `acknowledged_game_ids:` confirms an edition exactly as creation does),
+  and an `Ecto.Multi` that updates the game and enqueues
+  `EnrichGameWorker` together, so a duplicate id is rejected here
+  identically to how creation rejects it.
+
+  Sets `enrichment_status: "pending"` (there is a fresh id to fetch now)
+  but leaves every other field untouched — `Game.admin_changeset/2`'s
+  save-first write (D-38's ordering: the caller MUST persist any pending
+  draft edit before calling this, never after) already carried whatever
+  the staff member typed.
+  """
+  @spec link_bgg_id(Game.t(), String.t(), keyword()) ::
+          {:ok, Game.t()}
+          | {:existing_editions, [Game.t(), ...]}
+          | {:error, :invalid_bgg_id | Ecto.Changeset.t()}
+  def link_bgg_id(%Game{} = game, bgg_id, opts \\ []) when is_binary(bgg_id) do
+    acknowledged_game_ids = Keyword.get(opts, :acknowledged_game_ids, [])
+
+    case parse_bgg_input(bgg_id) do
+      {:ok, bgg_id_int} -> update_bgg_id_with_edition_check(game, bgg_id_int, acknowledged_game_ids)
+      :error -> {:error, :invalid_bgg_id}
+    end
+  end
+
+  defp update_bgg_id_with_edition_check(game, bgg_id_int, acknowledged_game_ids) do
+    Multi.new()
+    |> Multi.run(:bgg_id_lock, fn repo, _changes ->
+      repo.query!("SELECT pg_advisory_xact_lock($1, $2)", [@bgg_id_lock_namespace, bgg_id_int])
+      {:ok, :locked}
+    end)
+    |> Multi.run(:editions_check, fn repo, _changes ->
+      check_bgg_id_editions(repo, bgg_id_int, acknowledged_game_ids)
+    end)
+    |> Multi.update(:game, Ecto.Changeset.change(game, bgg_id: bgg_id_int, enrichment_status: "pending"))
+    |> Oban.insert(:enrich_job, fn %{game: game} ->
+      EnrichGameWorker.new(%{game_id: game.id})
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{game: game}} ->
+        {:ok, game}
+
+      {:error, :editions_check, {:existing_editions, games}, _changes_so_far} ->
+        {:existing_editions, games}
+
+      {:error, :game, changeset, _changes_so_far} ->
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Clears a stored `bgg_id` that never resolves (open item 3 — "the 8
+  `bgg_missing` games, where a stored id that never resolves is worse
+  than none"). Resets `enrichment_status` to `"no_bgg_id"`, the same
+  status a base game that never had an id carries — there is nothing
+  left to enrich once the id is gone. Casts neither `:name` nor
+  `:description`: this is a BGG-identity action, not a content edit.
+  """
+  @spec clear_bgg_id(Game.t()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
+  def clear_bgg_id(%Game{} = game) do
+    game
+    |> Ecto.Changeset.change(bgg_id: nil, enrichment_status: "no_bgg_id")
+    |> Repo.update()
+  end
+
+  @doc """
+  Restores a `bgg_id`/`enrichment_status` pair cleared by
+  `clear_bgg_id/1` — that action's own Deshacer.
+  """
+  @spec restore_bgg_id(Game.t(), integer(), String.t()) :: {:ok, Game.t()} | {:error, Ecto.Changeset.t()}
+  def restore_bgg_id(%Game{} = game, bgg_id, enrichment_status) when is_integer(bgg_id) do
+    game
+    |> Ecto.Changeset.change(bgg_id: bgg_id, enrichment_status: enrichment_status)
+    |> Repo.update()
+  end
 
   @doc """
   Admin listing of games (D-09 Task 2) — unlike every public read path,
