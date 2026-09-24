@@ -20,8 +20,17 @@
    admin stylesheet's convention — see `app.css`'s own CASCADE-LAYER
    HAZARD note. */
 
+/* D-15 (plan 01.8.3-03): the pinned search row's own height, expressed as
+   a custom property rather than a literal, so the section captions'
+   sticky offset (below) and the pin-observer's rootMargin
+   (assets/js/hooks/admin_list.js) both derive from the same declared
+   number instead of two independently copied `44`s. 60px is measured as
+   `4 + 48 + 8` — the row's own top padding, the 48px field (D-07), and
+   its bottom padding (`.pk-admin-juegos-search-row` below) — never the
+   deleted page bar's reserved band (D-09). */
 .pk-admin-juegos {
   position: relative;
+  --pk-juegos-pinned-h: 60px;
 }
 
 /* D-07/D-08 (plan 01.8.3-01): the page's one pinned row — a 48px search
@@ -140,63 +149,83 @@
 /* Zero-height scroll marker this section's own pinned state is measured
    from — `assets/js/hooks/admin_list.js`'s IntersectionObserver watches
    this element (not the sticky header itself, whose own rect never
-   leaves `top: 44px` once stuck) to know when the header ahead of it has
-   become pinned. */
+   leaves `top: var(--pk-juegos-pinned-h)` once stuck) to know when the
+   header ahead of it has become pinned. */
 .pk-admin-juegos-sentinel {
   height: 0;
 }
 
-/* Pins under the 44px page bar once the title row has scrolled behind it
-   (D-19n) — `top: 44px` reserves exactly that band regardless of whether
-   the page bar itself is currently visible. Full-bleed for free: this
-   wrapper and every ancestor up to the 16px-inset content keel carry no
-   horizontal padding of their own, so a 100%-width header already spans
-   edge to edge without a negative-margin trick. Gains `--color-surface`
-   ONLY while pinned (`[data-pinned="true"]`, JS-toggled) — at rest it is
-   fully transparent, the one moment nothing needs to terminate itself. */
+/* Pins under the pinned search row once the title row has scrolled behind
+   it (D-19n) — `top: var(--pk-juegos-pinned-h)` reserves exactly that
+   row's own rendered height, never the deleted page bar's reserved band
+   (D-09/D-15). Full-bleed for free: this wrapper and every ancestor up to
+   the 16px-inset content keel carry no horizontal padding of their own,
+   so a 100%-width header already spans edge to edge without a
+   negative-margin trick. The fill itself lives on the header's own
+   `::before` band below (D-15, 071 d29-31) — never a `background`
+   directly on this wrapper or on the header's own padded box; painting
+   the box is what produced the empty tint above the ink this fix
+   removes. */
 .pk-admin-juegos-section-heading-wrap {
   position: sticky;
-  top: 44px;
+  top: var(--pk-juegos-pinned-h);
   z-index: 10;
-}
-
-.pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header {
-  background: var(--color-surface);
 }
 
 /* One anatomy for every header — caption rank, keyline, height are
    identical whether it is a `<button>` (collapsible) or a `<div>` (the
    body section, D-19g-bis decision 15: it never collapses). Air above a
-   label and none below (decision 21, measured text-to-text): 26px of
-   top padding puts 26px of ink above the caption; the header's own
-   bottom padding stays 0 so the rows below sit welded against it. */
+   label and none below (decision 21, measured text-to-text): `--pt` of
+   top padding puts that much ink above the caption; the header's own
+   bottom padding stays 0 so the rows below sit welded against it.
+
+   The custom properties below drive the `::before` pinned band (D-15,
+   071 d29-31): `--pt` is the resting top padding (overridden per-section
+   below), `--band`/`--cap` are 071's own measured cap-height correction
+   constants (unchanged by the port), and `--cap-box` is the caption's own
+   single-line content-box height — `14px × 1.3`, the font-size and
+   line-height Task 3 (D-13) declares on `.pk-admin-list-section-label`
+   inside this scope; if that font-size or line-height ever changes,
+   `--cap-box` must change in the same edit. `--bandp` is then DERIVED
+   from a 44px pinned-band target and `--cap-box`, never copied from the
+   sketch's own fixture-measured constant (that value was measured
+   against the sketch's own 44px-tall search bar fixture, not this page's
+   real 48px row — copying it is the exact class of defect D-15 exists to
+   fix). By
+   construction, the rendered pinned band height is
+   `--cap-box + 2 × --bandp`. */
 .pk-admin-juegos-section-header {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 30.9px;
-  padding: 26px 16px 0;
+  padding: var(--pt) 16px 0;
   border: 0;
   background: transparent;
   color: inherit;
   text-align: left;
   position: relative;
+  --pt: 26px;
+  --band: 6px;
+  --cap: 0.6px;
+  --cap-box: 18.2px;
+  --bandp: calc((44px - var(--cap-box)) / 2);
   transition: background var(--duration-fast) var(--ease-standard);
 }
 
 /* The first section takes less leading air — the search/add block above
-   it already separates it (decision 21's stated exception). */
+   it already separates it (decision 21's stated exception) — now flowing
+   through the same `--pt` the band arithmetic above reads. */
 .pk-admin-juegos-section:first-child .pk-admin-juegos-section-header {
-  padding-top: 14px;
+  --pt: 14px;
 }
 
 .pk-admin-juegos-section-header--collapsible {
   cursor: pointer;
 }
 
-/* Below the 44px touch floor visually (30.9px) — stretched by a
-   pseudo-element rather than padding the visible row, so the touch floor
-   is met without loosening the list's rhythm (D-19g-bis decision 18). */
+/* Below the 44px touch floor visually — stretched by a pseudo-element
+   rather than padding the visible row, so the touch floor is met without
+   loosening the list's rhythm (D-19g-bis decision 18). */
 .pk-admin-juegos-section-header--collapsible::after {
   content: "";
   position: absolute;
@@ -205,6 +234,57 @@
   top: 50%;
   height: 44px;
   transform: translateY(-50%);
+}
+
+/* The pinned fill (D-15, 071 d29-31): a `::before` band anchored to the
+   header's own content box, grown by `--band` and nudged by `--cap` onto
+   the caption's cap-height — centred by construction in every state,
+   never a `background` on the header's own padded box (the rule this
+   replaced painted the box directly and produced the empty tint above
+   the ink). The resting rule below moves the BAND around the ink's
+   resting position; the pinned rule moves the INK's effective position
+   relative to a band fixed at the 44px target — mind the sign
+   convention, the same `--cap` appears in two opposite-looking
+   expressions on purpose. */
+.pk-admin-juegos-section-header::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: calc(var(--pt) - var(--band) - var(--cap));
+  bottom: calc(var(--cap) - var(--band));
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header::before {
+  top: calc(var(--pt) - var(--bandp) - var(--cap));
+  bottom: calc(var(--cap) - var(--bandp));
+  background: var(--color-surface);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk-admin-juegos-section-header::before {
+    transition: none;
+  }
+}
+
+/* Hover/active states paint the band, never the box — painting the box
+   instead is what made hover show the identical 14px-above defect the
+   pinned state had (admin-juegos.md "What to Avoid"), which is why this
+   fix is structural rather than a per-state patch. */
+.pk-admin-juegos-section-header--collapsible:hover::before {
+  background: var(--color-surface);
+}
+
+.pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header--collapsible:hover::before {
+  background: var(--color-surface-2);
+}
+
+.pk-admin-juegos-section-header--collapsible:active::before {
+  background: var(--color-surface-2);
+  transition-duration: 0s;
 }
 
 /* The count: same rank as the label but at normal weight, so it reads as
@@ -258,6 +338,66 @@
   right: 0;
   height: 1px;
   background: var(--stroke);
+}
+
+/* D-13 (plan 01.8.3-03): Juegos-scoped row anatomy overrides on the
+   shared `.pk-admin-row` atom (`components.css`) — 64px rows with 40px
+   covers, replacing the shared 44px/40px-cover defaults. Never edit
+   `components.css` directly: `AdminComponents.list_row/1` is called by
+   eight admin screens (Staff, Estantes x2, Band Audit, Section x2, plus
+   this page's own editor form), and a direct edit there would silently
+   reflow all of them (D-01, 01.8.3-RESEARCH.md "Two shared-component
+   blast-radius traps"). A plain class selector (no element type) already
+   covers both element shapes `.pk-admin-row` renders as (`<a>` via
+   `list_row/1`'s link branch, `<div>` via its non-link branch and the
+   pending/failed rows composed directly in `index.ex`), mirroring this
+   file's own divider-rule precedent above. */
+.pk-admin-juegos-rows > .pk-admin-row {
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+/* 15/400, wrapping mid-word rather than overflowing — a 435-game catalog
+   contains single tokens longer than the column. Overrides the shared
+   `.pk-admin-row__name`'s 14/600 (`components.css`). */
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__name {
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.pk-admin-juegos-rows > .pk-admin-row .pk-admin-row__meta {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* D-13/d28: Juegos captions are 14/600 uppercase tracked, superseding the
+   shared `.pk-admin-list-section-label`'s 15/600 sentence case
+   (`components.css`) — Juegos-scoped only, same reasoning as the row
+   override above (eight other screens share the label class untouched).
+   `font-size`/`line-height` here are exactly what `--cap-box: 18.2px`
+   above claims (`14 × 1.3`) — if either value changes, update
+   `--cap-box` in the same edit or Task 2's band arithmetic silently goes
+   wrong. `.pk-admin-juegos-count` (below) keeps its own `font-weight:
+   400` so the count reads as a modifier of the label rather than a
+   second label. */
+.pk-admin-juegos-section-header .pk-admin-list-section-label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-base-content);
 }
 
 /* D-37 gate 4 / 076's `.fresh`: the just-created row, held for one
