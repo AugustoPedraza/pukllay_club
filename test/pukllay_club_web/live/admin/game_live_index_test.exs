@@ -634,6 +634,130 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — the draft sheet and row routing (D-30, plan 01.8.2-20)" do
+    test "a draft row renders no chevron and opens the draft sheet, never navigating", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Un borrador", status: :draft})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "draft"})
+
+      refute has_element?(lv, "#game-row-#{game.id} .pk-admin-row__chevron")
+      html = render_click(lv, "open-draft-sheet", %{"game-id" => to_string(game.id)})
+
+      assert has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      assert html =~ "Un borrador"
+    end
+
+    test "a published row still renders a chevron and navigates to the editor", %{conn: conn} do
+      game = game_fixture(%{name: "Un publicado", status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, "#game-row-#{game.id} .pk-admin-row__chevron")
+      assert has_element?(lv, ~s(a#game-row-#{game.id}[href="/admin/juegos/#{game.id}/editar"]))
+    end
+
+    test "a retired row still renders a chevron and navigates to the editor", %{conn: conn} do
+      game = game_fixture(%{name: "Un retirado", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "toggle-section", %{"section-key" => "retired"})
+
+      assert has_element?(lv, "#game-row-#{game.id} .pk-admin-row__chevron")
+      assert has_element?(lv, ~s(a#game-row-#{game.id}[href="/admin/juegos/#{game.id}/editar"]))
+    end
+
+    test "the draft sheet renders exactly five rows for a non-expansion draft", %{conn: conn} do
+      game = game_fixture(%{name: "Cinco filas", status: :draft, is_expansion: false})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      assert has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      # Anchored on the opening `<div class="pk-draft-sheet-row` prefix —
+      # a plain count of the substring "pk-draft-sheet-row" would
+      # double-count the cover row, whose class is
+      # `"pk-draft-sheet-row pk-draft-sheet-row--cover"`.
+      assert count_occurrences(html, ~s(<div class="pk-draft-sheet-row)) == 5
+    end
+
+    test "the draft sheet hides the nivel row once Es una expansión is checked", %{conn: conn} do
+      game = game_fixture(%{name: "Expansión", status: :draft, is_expansion: false})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      html = render_change(lv, "draft-sheet-input", %{"is_expansion" => "true"})
+
+      refute html =~ "draft-sheet-weight-band"
+    end
+
+    test "closing the draft sheet with ✕ leaves the game unchanged in the database", %{
+      conn: conn
+    } do
+      game = game_fixture(%{name: "Sin tocar", status: :draft, description: "Original"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+      render_change(lv, "draft-sheet-input", %{"name" => "Nunca guardado"})
+      render_click(lv, "close-draft-sheet")
+
+      refute has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      reloaded = Catalog.get_game!(game.id)
+      assert reloaded.name == "Sin tocar"
+      assert reloaded.description == "Original"
+      assert reloaded.status == :draft
+    end
+
+    test "publishing closes the sheet and highlights the row in Juegos del club, not Borradores",
+         %{conn: conn} do
+      game =
+        game_fixture(%{
+          name: "Listo para publicar",
+          status: :draft,
+          weight_band: "ingenio_estratega",
+          is_expansion: false
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      html =
+        render_submit(lv, "publish-draft", %{
+          "name" => game.name,
+          "description" => game.description,
+          "is_expansion" => "false",
+          "weight_band" => "ingenio_estratega"
+        })
+
+      refute has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      assert Catalog.get_game!(game.id).status == :published
+      assert has_element?(lv, "#juegos-section-published .pk-admin-juegos-row--fresh##{"game-row-#{game.id}"}")
+      refute html =~ "Borradores"
+    end
+
+    test "visiting /admin/juegos?draft=<id> directly opens that draft's sheet", %{conn: conn} do
+      game = game_fixture(%{name: "Vía URL", status: :draft})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      assert has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+      assert html =~ "Vía URL"
+    end
+
+    test "?draft= pointing at a published game is ignored — no sheet opens", %{conn: conn} do
+      game = game_fixture(%{status: :published})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: game.id}}")
+
+      refute has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+    end
+
+    test "?draft= pointing at an unknown id is ignored rather than raising", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos?#{%{draft: 999_999_999}}")
+
+      refute has_element?(lv, "#draft-sheet.pk-admin-overlay--open")
+    end
+  end
+
   defp count_occurrences(text, substring) do
     text |> String.split(substring) |> length() |> Kernel.-(1)
   end

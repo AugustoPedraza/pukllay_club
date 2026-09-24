@@ -5,10 +5,14 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
   ficha-mirroring body (plan 01.8.2-17).
 
   `mount/3` loads via `Catalog.get_game!/1` — the unfiltered ADMIN read —
-  so a `:draft` or `:retired` game opens here exactly as readily as a
-  `:published` one (D-30's normal flow only ever routes a published game
-  here via the Juegos list's row chevron; a direct URL still resolves for
-  any status, matching every other admin fetch in this app).
+  so a `:retired` game opens here exactly as readily as a `:published` one.
+  A `:draft` game is different (plan 01.8.2-20, D-30): `mount/3` redirects
+  it straight back to `/admin/juegos?draft=<id>`, which reopens that
+  draft's own sheet on the list — this page renders ONLY for an
+  already-published (or retired) game, whether reached via the Juegos
+  list's row chevron or a direct URL to `/admin/juegos/:id/editar`. A
+  draft is edited in the list's own sheet, never here (see
+  `GameLive.Index`'s own moduledoc).
 
   **The write model — «la hoja PREPARA, el pie escribe» (080)**: the page
   holds a draft (`@draft`, a plain map of `Game.admin_changeset/2`'s five
@@ -65,23 +69,34 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    game = id |> Catalog.get_game!() |> Catalog.put_section_names()
-    draft = draft_from_game(game)
+    game = Catalog.get_game!(id)
 
-    {:ok,
-     socket
-     |> assign(:page_title, game.name)
-     |> assign(:game, game)
-     |> assign(:draft, draft)
-     |> assign(:saved, draft)
-     |> assign(:shelves, Shelves.list_shelves())
-     |> assign(:copies_count, Shelves.count_for_game(game.id))
-     |> assign(:menu_open, false)
-     |> assign(:confirm_retire, false)
-     |> assign(:confirm_discard, false)
-     |> assign(:open_sheet, nil)
-     |> assign(:sheet_value, nil)
-     |> assign(:sheet_error, nil)}
+    if game.status == :draft do
+      # D-30/plan 01.8.2-20: this page is for an already-published (or
+      # retired) game only. A direct URL to a draft's editor — the row no
+      # longer carries a chevron here (D-19i), but the URL is still
+      # guessable — never renders a half-editor; it hands the game straight
+      # back to the list, which opens the same draft's sheet.
+      {:ok, push_navigate(socket, to: ~p"/admin/juegos?#{%{draft: game.id}}")}
+    else
+      game = Catalog.put_section_names(game)
+      draft = draft_from_game(game)
+
+      {:ok,
+       socket
+       |> assign(:page_title, game.name)
+       |> assign(:game, game)
+       |> assign(:draft, draft)
+       |> assign(:saved, draft)
+       |> assign(:shelves, Shelves.list_shelves())
+       |> assign(:copies_count, Shelves.count_for_game(game.id))
+       |> assign(:menu_open, false)
+       |> assign(:confirm_retire, false)
+       |> assign(:confirm_discard, false)
+       |> assign(:open_sheet, nil)
+       |> assign(:sheet_value, nil)
+       |> assign(:sheet_error, nil)}
+    end
   end
 
   defp draft_from_game(game), do: Map.take(game, @draft_fields)

@@ -502,3 +502,70 @@ body:has(.pk-game-editor) main {
   width: 100%;
   margin-top: 8px;
 }
+
+/* ============================================================
+   Plan 01.8.2-20 — the draft sheet's classic-form CTA (D-30's OTHER
+   documented S3 Contorno exception, alongside D-27's top app bar above):
+   one FILLED, 52px, full-width `Publicar` — geometry taken from sketch
+   078's own `.cta` rule (`min-height: 52px`), the primary fill from
+   `--color-primary`/`--color-primary-content` (the same pair every other
+   filled-button EXCEPTION in this codebase already resolves through,
+   never a bespoke colour). Unlike 078's origin sketch, this button is
+   NEVER `[disabled]` (D-24 overturned that P2 choice) — `@error` renders
+   its own inline line instead (`.pk-draft-sheet-gate-line`, below), never
+   a dead control.
+   ============================================================ */
+
+.pk-draft-sheet-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.pk-draft-sheet-row {
+  margin-bottom: 16px;
+}
+
+.pk-draft-sheet-row--cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.pk-draft-sheet-cover {
+  width: 96px;
+  height: 128px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--color-surface);
+}
+
+.pk-draft-sheet-cover--placeholder {
+  display: block;
+}
+
+.pk-draft-sheet-cover-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-neutral);
+}
+
+.pk-draft-sheet-gate-line {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-error);
+}
+
+.pk-draft-sheet-cta {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-primary-content);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}

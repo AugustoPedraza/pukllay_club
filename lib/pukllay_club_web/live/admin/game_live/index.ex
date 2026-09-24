@@ -55,11 +55,33 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   (Rule 1 fix to `components.css`, documented in this plan's SUMMARY: no
   live call site had ever proven the pinning half of that component before
   this screen).
+
+  **The draft sheet and row routing (D-30, plan 01.8.2-20).** A draft row
+  carries no chevron (D-19i) and opens the draft sheet in place —
+  `"open-draft-sheet"` below — instead of navigating anywhere; a published
+  or retired row is unchanged (chevron, navigates to `GameLive.Form`). The
+  sheet is a classic form — cover, nombre, descripción, expansión, nivel —
+  with one filled, full-width, 52px `Publicar` CTA (the documented S3
+  Contorno exception this sheet carries, same shape as D-27's top app bar,
+  never a second licence to fill a button elsewhere). Nothing is written
+  until `Publicar` is pressed; ✕/Esc/scrim/drag-down all discard the local
+  in-sheet state untouched. `GameLive.Form`'s own `mount/3` redirects a
+  direct URL to a draft's editor back to `?draft=<id>` here, which this
+  module's `handle_params/3` picks up and opens the same sheet — so a
+  draft is edited from exactly one place, regardless of how staff arrive.
+  On a successful publish the sheet closes and the row is marked `fresh`
+  (076's pattern, reused via `assets/js/hooks/admin_list.js`'s existing
+  `scrollFreshIntoView`, unmodified) — the row has moved from Borradores
+  into Juegos del club, which is never collapsed (decision 15 above), so
+  the freshly published row is always on screen to scroll to.
   """
   use PukllayClubWeb, :live_view
 
+  alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Shelves
+  alias PukllayClub.Catalog.Vocabulary
   alias PukllayClubWeb.AdminComponents
 
   # D-19g-bis decision 18 / D-25: exceptions first, collapsed at rest;
@@ -89,7 +111,12 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:total, 0)
      |> assign(:bgg_id_input, "")
      |> assign(:bgg_id_error, nil)
-     |> assign(:edition_prompt, nil)}
+     |> assign(:edition_prompt, nil)
+     |> assign(:draft_sheet_open, false)
+     |> assign(:draft_sheet_game_id, nil)
+     |> assign(:draft_sheet_cover, nil)
+     |> assign(:draft_sheet, blank_draft_sheet())
+     |> assign(:draft_sheet_error, nil)}
   end
 
   @impl true
@@ -98,6 +125,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
       socket
       |> assign(:q, params["q"] || "")
       |> load_groups()
+      |> maybe_open_draft_from_param(params["draft"])
 
     {:noreply, socket}
   end
@@ -219,9 +247,159 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     end
   end
 
+  # ============================================================
+  # D-30/plan 01.8.2-20 — the draft sheet: a classic form, one filled CTA,
+  # nothing written until "publish-draft". Opened either by tapping a
+  # draft row (`"open-draft-sheet"`) or by `GameLive.Form`'s own mount
+  # guard redirecting a draft's direct editor URL back here via `?draft=`.
+  # Grouped with the OTHER `handle_event/3` clauses above (Elixir requires
+  # all clauses of a function share one contiguous definition block).
+  # ============================================================
+
+  @impl true
+  def handle_event("open-draft-sheet", %{"game-id" => game_id}, socket) do
+    case Integer.parse(game_id) do
+      {int_id, ""} ->
+        case safe_get_game(int_id) do
+          %Game{status: :draft} = game -> {:noreply, open_draft_sheet(socket, game)}
+          _not_an_open_draft -> {:noreply, socket}
+        end
+
+      _not_an_integer ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl true
+  def handle_event("close-draft-sheet", _params, socket) do
+    {:noreply, socket |> close_draft_sheet() |> push_patch(to: search_path(socket.assigns.q))}
+  end
+
+  # Live tracking only — nothing reaches `Catalog` here (D-30: "nothing is
+  # written until Publicar"). Fields not present in `params` (the nivel
+  # `<select>` is not rendered at all while `is_expansion` is checked) keep
+  # their prior value rather than being reset.
+  @impl true
+  def handle_event("draft-sheet-input", params, socket) do
+    {:noreply, assign(socket, :draft_sheet, draft_sheet_from_params(params, socket.assigns.draft_sheet))}
+  end
+
+  # The one write: persists the four admin-editable fields THEN attempts
+  # the status transition, both against the freshly re-read game (not a
+  # possibly-stale assign) — a failed publish (nivel_required, Task
+  # 01.8.2-20-3) still keeps whatever was typed, since D-30 draws the two
+  # as independent ("required to publish, never to save").
+  @impl true
+  def handle_event("publish-draft", params, socket) do
+    case socket.assigns.draft_sheet_game_id do
+      nil ->
+        {:noreply, socket}
+
+      game_id ->
+        game = Catalog.get_game!(game_id)
+        merged = draft_sheet_from_params(params, socket.assigns.draft_sheet)
+
+        case Catalog.update_game_admin(game, draft_sheet_admin_attrs(merged)) do
+          {:ok, updated} ->
+            handle_publish_after_save(socket, updated)
+
+          {:error, _changeset} ->
+            {:noreply,
+             socket
+             |> assign(:draft_sheet, merged)
+             |> assign(:draft_sheet_error, "No se pudo guardar. Revisá los datos.")}
+        end
+    end
+  end
+
   @impl true
   def handle_info({:game_enriched, _game_id}, socket) do
     {:noreply, load_groups(socket)}
+  end
+
+  defp handle_publish_after_save(socket, updated) do
+    case Catalog.publish_game(updated) do
+      {:ok, published} ->
+        {:noreply,
+         socket
+         |> close_draft_sheet()
+         |> assign(:fresh_game_id, published.id)
+         |> load_groups()
+         |> push_patch(to: search_path(socket.assigns.q))}
+
+      {:error, _reason} ->
+        {:noreply, assign(socket, :draft_sheet_error, "No se pudo publicar. Probá de nuevo.")}
+    end
+  end
+
+  defp maybe_open_draft_from_param(socket, nil), do: socket
+
+  defp maybe_open_draft_from_param(socket, draft_id) do
+    with {int_id, ""} <- Integer.parse(draft_id),
+         %Game{status: :draft} = game <- safe_get_game(int_id) do
+      open_draft_sheet(socket, game)
+    else
+      _not_an_open_draft -> socket
+    end
+  end
+
+  defp safe_get_game(id) do
+    Catalog.get_game!(id)
+  rescue
+    Ecto.NoResultsError -> nil
+  end
+
+  defp open_draft_sheet(socket, %Game{status: :draft} = game) do
+    socket
+    |> assign(:draft_sheet_open, true)
+    |> assign(:draft_sheet_game_id, game.id)
+    |> assign(:draft_sheet_cover, game.cover_url)
+    |> assign(:draft_sheet, draft_sheet_from_game(game))
+    |> assign(:draft_sheet_error, nil)
+  end
+
+  defp close_draft_sheet(socket) do
+    socket
+    |> assign(:draft_sheet_open, false)
+    |> assign(:draft_sheet_error, nil)
+  end
+
+  defp blank_draft_sheet, do: %{name: "", description: "", weight_band: nil, is_expansion: false}
+
+  defp draft_sheet_from_game(game) do
+    %{
+      name: game.name,
+      description: game.description || "",
+      weight_band: game.weight_band,
+      is_expansion: game.is_expansion
+    }
+  end
+
+  defp draft_sheet_from_params(params, fallback) do
+    %{
+      name: Map.get(params, "name", fallback.name),
+      description: Map.get(params, "description", fallback.description),
+      weight_band: draft_sheet_weight_band(params, fallback),
+      is_expansion: draft_sheet_is_expansion(params, fallback)
+    }
+  end
+
+  defp draft_sheet_weight_band(%{"weight_band" => value}, _fallback), do: normalize_blank(value)
+  defp draft_sheet_weight_band(_params, fallback), do: fallback.weight_band
+
+  defp draft_sheet_is_expansion(%{"is_expansion" => value}, _fallback), do: value == "true"
+  defp draft_sheet_is_expansion(_params, fallback), do: fallback.is_expansion
+
+  defp normalize_blank(""), do: nil
+  defp normalize_blank(value), do: value
+
+  defp draft_sheet_admin_attrs(merged) do
+    %{
+      "name" => merged.name,
+      "description" => merged.description,
+      "is_expansion" => merged.is_expansion,
+      "weight_band" => merged.weight_band
+    }
   end
 
   defp search_path(""), do: ~p"/admin/juegos"
@@ -420,7 +598,119 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
           <AdminComponents.page_bar title="Juegos" back_to={~p"/admin"} />
         </div>
       </div>
+
+      <.draft_sheet
+        id="draft-sheet"
+        open={@draft_sheet_open}
+        cover={@draft_sheet_cover}
+        draft={@draft_sheet}
+        error={@draft_sheet_error}
+      />
     </Layouts.app>
+    """
+  end
+
+  # ============================================================
+  # D-30's classic-form draft sheet — never mixed with the editor's two
+  # field-sheet patterns (`GameLive.Form`'s `choice_sheet/1`/`text_sheet/1`,
+  # plan 01.8.2-19): this sheet has exactly one commit control for all four
+  # editable fields at once, and nothing writes until it fires.
+  # ============================================================
+
+  attr :id, :string, required: true
+  attr :open, :boolean, required: true
+  attr :cover, :string, default: nil
+  attr :draft, :map, required: true
+  attr :error, :string, default: nil
+
+  defp draft_sheet(assigns) do
+    ~H"""
+    <AdminComponents.sheet
+      id={@id}
+      title="Publicar juego"
+      subtitle="Revisá que esté bien y publicalo."
+      open={@open}
+      on_close={JS.push("close-draft-sheet")}
+    >
+      <form
+        id="draft-sheet-form"
+        phx-change="draft-sheet-input"
+        phx-submit="publish-draft"
+        class="pk-draft-sheet-form"
+      >
+        <div class="pk-draft-sheet-row pk-draft-sheet-row--cover">
+          <img :if={@cover} src={@cover} alt="" class="pk-draft-sheet-cover" />
+          <span
+            :if={!@cover}
+            class="pk-draft-sheet-cover pk-draft-sheet-cover--placeholder"
+            aria-hidden="true"
+          ></span>
+          <p class="pk-draft-sheet-cover-hint">
+            La tapa la trajo BoardGameGeek. Si está mal, se corrige desde el juego.
+          </p>
+        </div>
+
+        <div class="pk-draft-sheet-row">
+          <AdminComponents.field
+            type="text"
+            id="draft-sheet-name"
+            name="name"
+            label="Nombre"
+            value={@draft.name}
+          />
+        </div>
+
+        <div class="pk-draft-sheet-row">
+          <AdminComponents.field
+            type="textarea"
+            id="draft-sheet-description"
+            name="description"
+            label="Descripción"
+            value={@draft.description}
+          />
+        </div>
+
+        <div class="pk-draft-sheet-row">
+          <AdminComponents.field
+            type="checkbox"
+            id="draft-sheet-is-expansion"
+            name="is_expansion"
+            label="Es una expansión"
+            checked={@draft.is_expansion}
+          />
+        </div>
+
+        <div :if={!@draft.is_expansion} class="pk-draft-sheet-row">
+          <AdminComponents.field
+            type="select"
+            id="draft-sheet-weight-band"
+            name="weight_band"
+            label="Nivel"
+            prompt="Sin nivel"
+            value={@draft.weight_band}
+            options={Enum.map(Vocabulary.weight_bands(), &{&1.label, &1.value})}
+          />
+        </div>
+
+        <p :if={@error} class="pk-draft-sheet-gate-line" role="alert" data-pk-draft-sheet-gate>
+          {@error}
+        </p>
+
+        <%!-- D-30's documented S3 Contorno exception, same shape as D-27's
+        top app bar: the one other filled, full-width control in the whole
+        admin. D-24 keeps it live at all times — a blocked publish is
+        explained by @error above, never by graying this button out. --%>
+        <button
+          type="submit"
+          id="draft-sheet-publish"
+          class="pk-draft-sheet-cta"
+          data-pk-pressable="true"
+          phx-disable-with="Publicando…"
+        >
+          Publicar
+        </button>
+      </form>
+    </AdminComponents.sheet>
     """
   end
 
@@ -483,6 +773,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     cond do
       pending?(assigns.game) -> pending_row(assigns)
       failed?(assigns.game) -> failed_row(assigns)
+      assigns.game.status == :draft -> draft_row(assigns)
       true -> normal_row(assigns)
     end
   end
@@ -529,6 +820,31 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
         </span>
       </span>
     </div>
+    """
+  end
+
+  # D-30/D-19i: a draft row acts in place (it opens the draft sheet, never
+  # navigates), so it carries no chevron — `list_row/1`'s `opens_page`
+  # stays at its `false` default. Distinct from `pending_row/1`/
+  # `failed_row/1` above (an unfinished BGG fetch): this is any draft whose
+  # enrichment already finished, so it renders through `list_row/1`
+  # unmodified, same as `normal_row/1` below.
+  defp draft_row(assigns) do
+    ~H"""
+    <AdminComponents.list_row
+      id={"game-row-#{@game.id}"}
+      cover={@game.thumbnail_url}
+      name={@game.name}
+      meta={@game.year_published && to_string(@game.year_published)}
+      phx-click="open-draft-sheet"
+      phx-value-game-id={@game.id}
+      class={@fresh && "pk-admin-juegos-row--fresh"}
+    >
+      <:trailing>
+        <AdminComponents.kind_tag :if={missing_data?(@game)} label="Sin datos" />
+        <AdminComponents.count_pill count={@copy_count} />
+      </:trailing>
+    </AdminComponents.list_row>
     """
   end
 

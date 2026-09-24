@@ -124,25 +124,41 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
 
     @tag :draft_web_claim
-    test "a draft renders neither consequence string — never «Se está viendo así en la web»", %{
-      conn: conn
-    } do
-      draft = game_fixture(%{status: :draft, name: "Borrador"})
+    test "neither status renders the retired 01.8.1 web-claim string", %{conn: conn} do
       published = game_fixture(%{status: :published, name: "Publicado juego"})
       retired = game_fixture(%{status: :retired, name: "Retirado juego"})
 
-      {:ok, _lv, draft_html} = live(conn, ~p"/admin/juegos/#{draft.id}/editar")
       {:ok, _lv, published_html} = live(conn, ~p"/admin/juegos/#{published.id}/editar")
       {:ok, _lv, retired_html} = live(conn, ~p"/admin/juegos/#{retired.id}/editar")
-
-      refute draft_html =~ "Publicado · Así se ve en la web."
-      refute draft_html =~ "Retirado · No se ve en la web ni está en el estante."
-      refute draft_html =~ "Se está viendo así en la web"
 
       assert published_html =~ "Publicado · Así se ve en la web."
       assert retired_html =~ "Retirado · No se ve en la web ni está en el estante."
       refute published_html =~ "Se está viendo así en la web"
       refute retired_html =~ "Se está viendo así en la web"
+    end
+  end
+
+  # D-30/plan 01.8.2-20: a draft no longer opens THIS LiveView at all — see
+  # `GameLive.Index`'s own "D-30 draft sheet" describe block for its own
+  # coverage of what a draft's URL opens instead.
+  describe "GameLive.Form — D-30 draft editor guard (plan 01.8.2-20)" do
+    setup :register_and_log_in_staff
+
+    test "a direct URL to a draft's editor redirects to the list with that draft's sheet open", %{
+      conn: conn
+    } do
+      draft = game_fixture(%{status: :draft, name: "Borrador"})
+
+      assert {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/admin/juegos/#{draft.id}/editar")
+      assert to == ~p"/admin/juegos?draft=#{draft.id}"
+
+      {:ok, lv, html} = live(conn, to)
+
+      assert html =~ draft.name
+      assert lv |> element("#draft-sheet.pk-admin-overlay--open") |> has_element?()
+      refute html =~ "Publicado · Así se ve en la web."
+      refute html =~ "Retirado · No se ve en la web ni está en el estante."
+      refute html =~ "Se está viendo así en la web"
     end
   end
 
@@ -278,11 +294,10 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert Catalog.get_game!(game.id).status == :published
     end
 
-    test "a draft game opens in the editor even though its public URL 404s", %{conn: conn} do
+    test "a draft's public URL 404s (unaffected by D-30's editor guard, plan 01.8.2-20)", %{
+      conn: _conn
+    } do
       game = game_fixture(%{status: :draft})
-
-      {:ok, _lv, html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
-      assert html =~ game.name
 
       assert_raise Ecto.NoResultsError, fn ->
         Catalog.get_published_game!(to_string(game.id))
@@ -614,15 +629,25 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
     end
   end
 
+  # D-30/plan 01.8.2-20: a DRAFT with a failed enrichment never reaches this
+  # LiveView any more (`GameLive.Index`'s own `failed_row/1` — unchanged by
+  # this plan — is that state's only surface now). This describe block's
+  # own code path (`failed?/1` + the Reintentar handler below) stays real
+  # for a game that reached `:published`/`:retired` carrying a stale
+  # `enrichment_status: "failed"` (`retry_enrichment/1` gates only on
+  # `enrichment_status`, never on `status` — publishing despite a failed
+  # BGG fetch is not blocked), so the fixtures below moved to `:published`
+  # rather than being deleted.
   describe "GameLive.Form — failed enrichment retry (D-03)" do
     setup :register_and_log_in_staff
 
-    test "a failed draft shows the error alert and Reintentar button", %{conn: conn} do
+    test "a published game with a stale failed enrichment shows the error alert and Reintentar",
+         %{conn: conn} do
       game =
         game_fixture(%{
           bgg_id: 184_267,
           name: "Juego #184267",
-          status: :draft,
+          status: :published,
           enrichment_status: "failed"
         })
 
@@ -637,7 +662,7 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
         game_fixture(%{
           bgg_id: 184_267,
           name: "Juego #184267",
-          status: :draft,
+          status: :published,
           enrichment_status: "failed"
         })
 
