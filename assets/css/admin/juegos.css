@@ -92,25 +92,40 @@
   width: 100%;
 }
 
-.pk-admin-juegos-edition-list {
+/* D-12 (plan 01.8.3-04): the `+` sheet's second state — the edition
+   prompt, relocated off the page and into the sheet. ID-scoped to
+   `#add-game-sheet-edition-prompt` following `editor.css:583-598`'s
+   `#editor-bgg-edition-prompt` precedent for a sheet's own internals,
+   replacing the four page-level `.pk-admin-juegos-edition-*` rules this
+   plan deletes. The principal/tertiary actions' full width already comes
+   free from `.pk-admin-juegos-sheet-body .pk-admin-action` above (both
+   controls render inside that same wrapper); only the gap between them
+   is declared here. */
+#add-game-sheet-edition-prompt p {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--color-base-content);
+}
+
+#add-game-sheet-edition-prompt ul {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin: 8px 0;
-  padding: 0;
+  margin: 0 0 16px;
+  padding: 0 0 0 14px;
   list-style: none;
+  font-size: 14px;
+  color: var(--color-neutral);
 }
 
-.pk-admin-juegos-edition-item {
+#add-game-sheet-edition-prompt li {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.pk-admin-juegos-edition-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+#add-game-sheet-edition-prompt #confirm-edition {
+  margin-bottom: 8px;
 }
 
 .pk-admin-juegos-empty {

@@ -595,7 +595,16 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
           and no hint line (d53 — the deleted hint wrongly promised "y el
           nivel", which enrichment never writes). Reuses `phx-submit="add-
           game"` verbatim so the existing handler and its
-          `Catalog.add_game_from_bgg/1` call are untouched. --%>
+          `Catalog.add_game_from_bgg/1` call are untouched.
+
+          D-12 (plan 01.8.3-04): the sheet has a SECOND state — the edition
+          prompt, swapped in place following `GameLive.Form`'s own
+          `bgg_link_sheet/1` precedent (`:if={@edition_prompt}` /
+          `:if={!@edition_prompt}`, never both). Nothing renders on the page
+          behind the sheet; the former page-level `#edition-prompt` block is
+          gone. `confirm-edition`'s server-side guard (T-01.8.1-69) is
+          untouched — only its render call site moved — and neither commit
+          control below carries a client-suppliable game-id attribute. --%>
           <AdminComponents.sheet
             id="add-game-sheet"
             title="Agregar juego"
@@ -603,7 +612,46 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
             on_close={JS.push("close-add-game-sheet")}
           >
             <div class="pk-admin-juegos-sheet-body">
-              <form id="add-game-sheet-form" phx-submit="add-game" phx-change="add-game-input">
+              <div :if={@edition_prompt} id="add-game-sheet-edition-prompt">
+                <p>
+                  Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?
+                </p>
+                <ul>
+                  <li :for={game <- @edition_prompt.games}>
+                    <AdminComponents.action
+                      anatomy="a2"
+                      role="terciaria"
+                      navigate={~p"/admin/juegos/#{game.id}/editar"}
+                    >
+                      {game.name}
+                    </AdminComponents.action>
+                    <AdminComponents.status_dot status={game.status} />
+                  </li>
+                </ul>
+                <AdminComponents.action
+                  id="confirm-edition"
+                  anatomy="a1"
+                  role="principal"
+                  phx-click="confirm-edition"
+                  phx-disable-with="Agregando…"
+                >
+                  Sí, agregar edición
+                </AdminComponents.action>
+                <AdminComponents.action
+                  id="cancel-edition"
+                  anatomy="a2"
+                  role="terciaria"
+                  phx-click="cancel-edition"
+                >
+                  Cancelar
+                </AdminComponents.action>
+              </div>
+              <form
+                :if={!@edition_prompt}
+                id="add-game-sheet-form"
+                phx-submit="add-game"
+                phx-change="add-game-input"
+              >
                 <AdminComponents.field
                   type="text"
                   id="add-game-sheet-input"
@@ -626,51 +674,6 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
               </form>
             </div>
           </AdminComponents.sheet>
-
-          <%!-- Unchanged from the shipped page (T-01.8.1-69's server-side
-          guard is untouched) — only its position moved, following D-06/
-          D-10's removal of the title row and the inline add-block that
-          used to sit above it. Plan 04 relocates this markup inside the
-          `+` sheet itself; this plan only guarantees the branch that sets
-          `:edition_prompt` still reaches an open sheet. --%>
-          <div :if={@edition_prompt} id="edition-prompt">
-            <AdminComponents.section_panel class="pk-admin-juegos-edition-prompt">
-              <p>
-                Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?
-              </p>
-              <ul class="pk-admin-juegos-edition-list">
-                <li :for={game <- @edition_prompt.games} class="pk-admin-juegos-edition-item">
-                  <AdminComponents.action
-                    anatomy="a2"
-                    role="terciaria"
-                    navigate={~p"/admin/juegos/#{game.id}/editar"}
-                  >
-                    {game.name}
-                  </AdminComponents.action>
-                  <AdminComponents.status_dot status={game.status} />
-                </li>
-              </ul>
-              <div class="pk-admin-juegos-edition-actions">
-                <AdminComponents.action
-                  id="confirm-edition"
-                  anatomy="a1"
-                  role="principal"
-                  phx-click="confirm-edition"
-                  phx-disable-with="Agregando…"
-                >
-                  Sí, agregar edición
-                </AdminComponents.action>
-                <AdminComponents.action
-                  id="cancel-edition"
-                  anatomy="a2"
-                  role="terciaria"
-                  phx-click="cancel-edition"
-                >
-                  Cancelar
-                </AdminComponents.action>
-              </div>
-            </AdminComponents.section_panel>
-          </div>
 
           <div :if={@loading} class="pk-admin-juegos-loading">
             <div :for={_n <- 1..8} class="skeleton h-10 w-full"></div>
