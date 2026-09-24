@@ -510,12 +510,35 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       |> form("#add-game-sheet-form", bgg_id: "184267")
       |> render_submit()
 
-      assert has_element?(lv, "#edition-prompt")
+      assert has_element?(lv, "#add-game-sheet-edition-prompt")
 
       lv |> element("#cancel-edition") |> render_click()
 
-      refute has_element?(lv, "#edition-prompt")
+      refute has_element?(lv, "#add-game-sheet-edition-prompt")
       assert Catalog.count_admin_games() == 1
+    end
+
+    test "plan 01.8.3-04: the edition prompt renders inside the + sheet, not on the page behind it",
+         %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      lv
+      |> form("#add-game-sheet-form", bgg_id: "184267")
+      |> render_submit()
+
+      assert has_element?(lv, "#add-game-sheet-edition-prompt")
+      refute has_element?(lv, "#edition-prompt")
+      refute has_element?(lv, "#add-game-sheet-form")
+      assert Catalog.count_admin_games() == count_before
+
+      html = lv |> element("#cancel-edition") |> render_click()
+
+      refute has_element?(lv, "#add-game-sheet-edition-prompt")
+      assert has_element?(lv, "#add-game-sheet-form")
+      assert html =~ "Número o link de BGG"
     end
 
     test "multi-edition copy joins names naturally (Patchwork y Patchwork Andino)", %{
