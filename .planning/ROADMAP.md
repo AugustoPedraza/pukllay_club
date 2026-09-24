@@ -273,12 +273,12 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
+- [x] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
