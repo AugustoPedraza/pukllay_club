@@ -761,11 +761,14 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   defp commit_shelf_sheet(socket, shelf_id, index) do
     copy = socket.assigns.shelf_sheet.copy
-    previous_shelf_id = copy.shelf_id
-    previous_position = copy.position
 
+    # WR-01: the previous location comes from `place_copy/3`'s own return
+    # (verified under its advisory lock), never from `copy` above — that
+    # struct was captured whenever the sheet OPENED, which can be stale by
+    # the time this commits if a different staff member moved this exact
+    # copy while the sheet was still open.
     case Shelves.place_copy(copy.id, shelf_id, index) do
-      {:ok, moved} ->
+      {:ok, %{moved: moved, previous_shelf_id: previous_shelf_id, previous_position: previous_position}} ->
         message = if is_nil(previous_shelf_id), do: "Juego ubicado", else: "Juego movido"
         socket = refresh_copies_and_context(socket)
         fresh = Enum.find(socket.assigns.copies, &(&1.id == moved.id)) || moved

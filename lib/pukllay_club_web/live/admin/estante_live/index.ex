@@ -452,19 +452,23 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   # snackbar wording, snapshots the undo, and refreshes whichever rail is
   # currently on screen.
   defp commit_placement(socket, copy, shelf_id, index) do
-    previous = %{shelf_id: copy.shelf_id, position: copy.position}
-
+    # WR-01: the previous location comes from `place_copy/3`'s own return
+    # (verified under its advisory lock), never from `copy` above — that
+    # struct can be stale by the time this commits if a different staff
+    # member moved this exact copy while the «¿Dónde va?»/«¿Qué juego va
+    # acá?» sheet was still open (PubSub reconciliation here only ever
+    # refreshes what's RENDERED, never this already-captured `copy`).
     case Shelves.place_copy(copy.id, shelf_id, index) do
-      {:ok, %{id: moved_id}} ->
-        fresh = Shelves.get_copy!(moved_id)
-        message = if is_nil(previous.shelf_id), do: "Juego ubicado", else: "Juego movido"
+      {:ok, %{moved: moved, previous_shelf_id: previous_shelf_id, previous_position: previous_position}} ->
+        fresh = Shelves.get_copy!(moved.id)
+        message = if is_nil(previous_shelf_id), do: "Juego ubicado", else: "Juego movido"
 
         socket
         |> refresh_after_write(fresh)
         |> assign(:undo_snapshot, %{
           copy_id: fresh.id,
-          shelf_id: previous.shelf_id,
-          position: previous.position
+          shelf_id: previous_shelf_id,
+          position: previous_position
         })
         |> assign(:action_snackbar, %{
           id: "estantes-action-snackbar",
