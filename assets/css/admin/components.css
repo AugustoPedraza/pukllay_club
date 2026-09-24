@@ -382,6 +382,72 @@
   color: var(--val);
 }
 
+/* D-23/D-31, plan 01.8.2-21: a stepper is explicitly OUT of
+   `.pk-admin-editable-row`'s "row that opens a sheet" anatomy — it acts
+   in place, on both `−`/`+` taps, so it is styled as its own row shape
+   (label left, controls right) rather than the single-column editable
+   row above. Same 44px floor and 16px keel as every other admin row. */
+.pk-admin-stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 16px;
+  box-sizing: border-box;
+}
+
+.pk-admin-stepper-row__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
+.pk-admin-stepper-row__control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* A8 — the drawn control is 32px (a visually compact stepper button), so
+   it needs a bleeding `::after` hit box to clear the 44px tap-target
+   floor without inflating what's drawn — the SAME technique
+   `.pk-editor-pill`/`.pk-editor-title` already use, found the same way:
+   `test/visual/admin_components.mjs`'s real-browser sweep measures the
+   hit box (bleeding pseudo-element included), not the drawn control. */
+.pk-admin-stepper-row__btn {
+  position: relative;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--stroke);
+  border-radius: 9999px;
+  background: none;
+  color: var(--color-base-content);
+  cursor: pointer;
+}
+
+.pk-admin-stepper-row__btn::after {
+  content: "";
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -6px;
+  bottom: -6px;
+}
+
+.pk-admin-stepper-row__value {
+  min-width: 20px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-base-content);
+}
+
 /* D-19h: a status is an 8px dot in the status colour before the word,
    never a pill. The dot is decorative (drawn from `currentColor`); the
    word is the accessible name. Per-status colour is not pinned by any

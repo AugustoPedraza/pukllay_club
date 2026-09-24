@@ -482,6 +482,131 @@ defmodule PukllayClub.Catalog.Shelves do
   end
 
   @doc """
+  Every copy of `game_id`, ordered by stable `number` (D-03) — the
+  Copias stepper's which-copy-to-remove sheet, and the editor's own
+  ESTANTE block (plan 01.8.2-21, D-31/D-32). `:shelf` AND `:game`
+  preloaded — `:game` because `PlacementSheet.open/1`'s resulting state
+  feeds `AdminComponents.placement_sheet/1`, which renders the sheet's
+  `subtitle`/`cover` off `state.copy.game`, the same shape
+  `Shelves.get_copy!/1` already returns for `EstanteLive.Index`'s own
+  identical usage. An unplaced copy's `:shelf` is `nil`.
+  """
+  @spec copies_for_game(integer()) :: [Copy.t()]
+  def copies_for_game(game_id) do
+    Copy
+    |> where([c], c.game_id == ^game_id)
+    |> order_by([c], asc: c.number)
+    |> Repo.all()
+    |> Repo.preload([:shelf, :game])
+  end
+
+  @doc """
+  Creates a new UNPLACED copy for `game_id` (D-02, D-31, plan 01.8.2-21)
+  — the Copias stepper's "raise" write. `number` is one past the current
+  maximum for this game (D-03: never a renumber; a gap left by a
+  previously removed copy is never reused). The new row appears in
+  `unplaced_copies/0` immediately, so it counts toward the Pendientes
+  badge — broadcasts `{:estante_updated, nil}` on `"admin:estantes"` (no
+  real estante is involved, but every open Estantes/Pendientes page
+  recomputes its Pendientes count on ANY broadcast regardless of
+  payload, per D-11) so a staff member with that page open sees the
+  count move without a manual refresh.
+  """
+  @spec add_copy(integer()) :: {:ok, Copy.t()} | {:error, Ecto.Changeset.t()}
+  def add_copy(game_id) do
+    case %Copy{} |> Copy.changeset(%{game_id: game_id, number: next_copy_number(game_id)}) |> Repo.insert() do
+      {:ok, copy} ->
+        broadcast(nil)
+        {:ok, copy}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp next_copy_number(game_id) do
+    case Repo.one(from(c in Copy, where: c.game_id == ^game_id, select: max(c.number))) do
+      nil -> 1
+      max -> max + 1
+    end
+  end
+
+  @doc """
+  Removes one copy of `game_id` (D-02, D-31, plan 01.8.2-21) — the
+  Copias stepper's "lower" write. Prefers an UNPLACED copy (the lowest
+  `number` one, deleted directly — no lock needed, nothing to reindex).
+  When `copy_id` is `nil` and every copy of this game is already placed,
+  returns `{:error, :no_unplaced_copy}` rather than guessing which
+  placed one to remove — the caller presents the which-copy-to-remove
+  sheet and calls back with an explicit `copy_id`, which is removed via
+  `delete_copy/1`'s locked, gap-free reindex.
+  """
+  @spec remove_copy_for_game(integer(), integer() | nil) ::
+          {:ok, Copy.t()} | {:error, :no_unplaced_copy | term()}
+  def remove_copy_for_game(game_id, copy_id \\ nil)
+
+  def remove_copy_for_game(game_id, nil) do
+    case unplaced_copy_for_game(game_id) do
+      nil -> {:error, :no_unplaced_copy}
+      copy -> delete_copy(copy)
+    end
+  end
+
+  def remove_copy_for_game(_game_id, copy_id) when is_integer(copy_id) do
+    delete_copy(get_copy!(copy_id))
+  end
+
+  defp unplaced_copy_for_game(game_id) do
+    Repo.one(
+      from(c in Copy,
+        where: c.game_id == ^game_id and is_nil(c.shelf_id),
+        order_by: [asc: c.number],
+        limit: 1
+      )
+    )
+  end
+
+  @doc """
+  Deletes `copy` outright (D-02, D-31, plan 01.8.2-21) —
+  `remove_copy_for_game/2`'s final step, also callable directly once a
+  which-copy-to-remove sheet names the exact placed copy. An unplaced
+  copy is deleted directly (nothing to reindex). A placed copy is
+  vacated from its estante — the SAME gap-free reindex
+  `remove_copy_from_shelf/1` performs, under the SAME per-estante
+  advisory lock — and deleted, in ONE transaction, never a two-step
+  remove-then-delete (a crash between the two could otherwise leave a
+  phantom placed row, or a gapped estante with no row left to explain
+  it).
+  """
+  @spec delete_copy(Copy.t()) :: {:ok, Copy.t()} | {:error, term()}
+  def delete_copy(%Copy{shelf_id: nil} = copy) do
+    case Repo.delete(copy) do
+      {:ok, deleted} ->
+        broadcast(nil)
+        {:ok, deleted}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  def delete_copy(%Copy{shelf_id: shelf_id} = copy) do
+    Multi.new()
+    |> Multi.run(:lock, fn repo, _changes -> lock_estantes(repo, [shelf_id]) end)
+    |> Multi.run(:vacated, fn repo, _changes -> vacate(repo, copy) end)
+    |> Multi.delete(:deleted, copy)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{deleted: deleted}} ->
+        broadcast(shelf_id)
+        {:ok, deleted}
+
+      {:error, _step, reason, _changes} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   Batch copies-count for several estantes at once (mirrors
   `counts_for_games/1`'s shape, plan 01.8.2-18) — avoids an N+1
   per-row query on Administrar estantes' `N juegos` meta. Returns a

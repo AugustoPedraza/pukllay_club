@@ -67,6 +67,7 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
 
   alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog.Shelves
+  alias PukllayClubWeb.Admin.PlacementSheet
   alias PukllayClubWeb.AdminComponents
 
   # D-08: "Últimas búsquedas (3)" — a per-session, in-memory recency list,
@@ -154,30 +155,24 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   @impl true
   def handle_event("donde-va-search", %{"q" => q}, socket) do
     query = String.slice(q, 0, 120)
-    moving_copy_id = socket.assigns.donde_va.copy.id
-    results = if query == "", do: [], else: Shelves.search_estantes_or_copies(query, moving_copy_id)
-
-    {:noreply,
-     update(socket, :donde_va, fn dv ->
-       %{dv | query: query, results: results, estante: nil, copies: []}
-     end)}
+    {:noreply, update(socket, :donde_va, &PlacementSheet.search(&1, query))}
   end
 
   @impl true
   def handle_event("donde-va-field-clear", _params, socket) do
-    {:noreply, update(socket, :donde_va, fn dv -> %{dv | query: "", results: [], estante: nil, copies: []} end)}
+    {:noreply, update(socket, :donde_va, &PlacementSheet.field_clear/1)}
   end
 
   @impl true
   def handle_event("donde-va-pick-estante", %{"shelf-id" => id}, socket) do
     shelf = Shelves.get_shelf!(String.to_integer(id))
-    {:noreply, pick_donde_va_estante(socket, shelf)}
+    {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_estante(socket.assigns.donde_va, shelf))}
   end
 
   @impl true
   def handle_event("donde-va-pick-copy", %{"copy-id" => id}, socket) do
     copy = Shelves.get_copy!(String.to_integer(id))
-    {:noreply, pick_donde_va_estante(socket, copy.shelf)}
+    {:noreply, apply_donde_va_pick(socket, PlacementSheet.pick_copy(socket.assigns.donde_va, copy))}
   end
 
   @impl true
@@ -428,27 +423,14 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
   end
 
   defp open_donde_va(socket, copy) do
-    assign(socket, :donde_va, %{copy: copy, query: "", results: [], estante: nil, copies: []})
+    assign(socket, :donde_va, PlacementSheet.open(copy))
   end
 
-  # Empty estante takes the copy directly as its first box (decision 35);
-  # a non-empty one renders the "+" slots for staff to pick from.
-  defp pick_donde_va_estante(socket, %{id: shelf_id} = shelf) do
-    moving_copy = socket.assigns.donde_va.copy
-
-    rail_copies =
-      shelf_id
-      |> Shelves.copies_on_shelf()
-      |> Enum.reject(&(&1.id == moving_copy.id))
-
-    if rail_copies == [] do
-      commit_donde_va(socket, shelf_id, 0)
-    else
-      update(socket, :donde_va, fn dv ->
-        %{dv | estante: shelf, copies: rail_copies, query: shelf.name, results: []}
-      end)
-    end
-  end
+  # `PlacementSheet.pick_estante/2`/`pick_copy/2` return `{:commit, ...}`
+  # for an empty estante (decision 35) or `{:choose_slot, state}` once
+  # the "+" rail is loaded for staff to pick the exact spot.
+  defp apply_donde_va_pick(socket, {:commit, shelf_id, index}), do: commit_donde_va(socket, shelf_id, index)
+  defp apply_donde_va_pick(socket, {:choose_slot, donde_va}), do: assign(socket, :donde_va, donde_va)
 
   defp commit_donde_va(socket, shelf_id, index) do
     copy = socket.assigns.donde_va.copy
@@ -574,13 +556,6 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
     before = Enum.at(copies, index - 1)
     after_ = Enum.at(copies, index)
     "Poner entre #{before.game.name} y #{after_.game.name}"
-  end
-
-  defp donde_va_shelf_meta(shelf) do
-    case Shelves.copies_on_shelf(shelf.id) do
-      [] -> "Vacío · va directo"
-      copies -> "#{length(copies)} juegos"
-    end
   end
 
   @impl true
@@ -774,101 +749,7 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
         </div>
       </div>
 
-      <AdminComponents.sheet
-        :if={@donde_va}
-        id="donde-va-sheet"
-        title="¿Dónde va?"
-        subtitle={@donde_va.copy.game.name}
-        cover={@donde_va.copy.game.thumbnail_url}
-        open
-        on_close={JS.push("donde-va-close")}
-        class="pk-estantes-sheet--full"
-      >
-        <div class="pk-donde-va-search">
-          <input
-            type="text"
-            id="donde-va-search-input"
-            name="q"
-            value={@donde_va.query}
-            placeholder="Buscá un estante o un juego"
-            aria-label="Buscá un estante o un juego"
-            autocomplete="off"
-            phx-change="donde-va-search"
-            phx-debounce="200"
-            onfocus="this.select()"
-          />
-          <button
-            :if={@donde_va.query != ""}
-            type="button"
-            class="pk-estantes-search__clear"
-            aria-label="Limpiar"
-            phx-click="donde-va-field-clear"
-          >
-            <.icon name="hero-x-mark" class="size-5" />
-          </button>
-        </div>
-
-        <div :if={is_nil(@donde_va.estante) and @donde_va.query == ""} id="donde-va-estante-list">
-          <AdminComponents.list_section_label>O elegí un estante</AdminComponents.list_section_label>
-          <AdminComponents.list_row
-            :for={shelf <- Shelves.list_shelves()}
-            id={"donde-va-shelf-#{shelf.id}"}
-            name={shelf.name}
-            meta={donde_va_shelf_meta(shelf)}
-            phx-click="donde-va-pick-estante"
-            phx-value-shelf-id={shelf.id}
-          />
-        </div>
-
-        <div
-          :if={is_nil(@donde_va.estante) and @donde_va.query != "" and @donde_va.results == []}
-          class="pk-estantes-no-match"
-        >
-          <p class="pk-estantes-no-match__hint">Ningún estante ni juego se llama así.</p>
-        </div>
-
-        <div :if={is_nil(@donde_va.estante) and @donde_va.results != []} id="donde-va-results">
-          <.donde_va_result_row :for={result <- @donde_va.results} result={result} />
-        </div>
-
-        <div :if={@donde_va.estante} id="donde-va-rail" class="pk-donde-va-rail">
-          <button
-            type="button"
-            class="pk-donde-va-slot"
-            data-pk-pressable="true"
-            phx-click="donde-va-commit"
-            phx-value-index="0"
-            aria-label={slot_label(@donde_va.copies, 0, @donde_va.estante.name)}
-          >
-            <span aria-hidden="true">+</span>
-          </button>
-          <%= for {copy, idx} <- Enum.with_index(@donde_va.copies) do %>
-            <span class="pk-poster-card pk-estantes-cover">
-              <span class="pk-estantes-cover__art">
-                <img
-                  :if={copy.game.thumbnail_url}
-                  src={copy.game.thumbnail_url}
-                  alt=""
-                  class="pk-estantes-cover__img"
-                />
-                <span :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
-                  <.icon name="hero-puzzle-piece" class="size-8" />
-                </span>
-              </span>
-            </span>
-            <button
-              type="button"
-              class="pk-donde-va-slot"
-              data-pk-pressable="true"
-              phx-click="donde-va-commit"
-              phx-value-index={idx + 1}
-              aria-label={slot_label(@donde_va.copies, idx + 1, @donde_va.estante.name)}
-            >
-              <span aria-hidden="true">+</span>
-            </button>
-          <% end %>
-        </div>
-      </AdminComponents.sheet>
+      <AdminComponents.placement_sheet :if={@donde_va} id="donde-va-sheet" state={@donde_va} />
 
       <AdminComponents.sheet
         :if={@que_va_aca}
@@ -1003,37 +884,6 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
         <AdminComponents.status_dot :if={is_nil(@copy.shelf_id)} status={:sin_lugar} />
       </:trailing>
     </AdminComponents.list_row>
-    """
-  end
-
-  attr :result, :any, required: true
-
-  defp donde_va_result_row(%{result: {:shelf, shelf}} = assigns) do
-    assigns = assign(assigns, :shelf, shelf)
-
-    ~H"""
-    <AdminComponents.list_row
-      id={"donde-va-result-shelf-#{@shelf.id}"}
-      name={@shelf.name}
-      meta={donde_va_shelf_meta(@shelf)}
-      phx-click="donde-va-pick-estante"
-      phx-value-shelf-id={@shelf.id}
-    />
-    """
-  end
-
-  defp donde_va_result_row(%{result: {:copy, copy}} = assigns) do
-    assigns = assign(assigns, :copy, copy)
-
-    ~H"""
-    <AdminComponents.list_row
-      id={"donde-va-result-copy-#{@copy.id}"}
-      cover={@copy.game.thumbnail_url}
-      name={@copy.game.name}
-      meta={@copy.shelf.name}
-      phx-click="donde-va-pick-copy"
-      phx-value-copy-id={@copy.id}
-    />
     """
   end
 end

@@ -40,6 +40,7 @@ defmodule PukllayClubWeb.AdminComponents do
   alias Phoenix.HTML.Form
   alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
+  alias PukllayClub.Catalog.Shelves
   alias PukllayClubWeb.CoreComponents
 
   # ============================================================
@@ -450,6 +451,250 @@ defmodule PukllayClubWeb.AdminComponents do
       <span class="pk-admin-editable-row__value">{@value}</span>
     </button>
     """
+  end
+
+  @doc """
+  Renders a stepper row (D-23 explicitly puts steppers OUT of
+  `editable_row/1`'s "row that opens a sheet" scope — a stepper acts in
+  place, on both taps, never opening anything itself). `−`/`+` are
+  plain buttons, never `action/1` (D-24's `disabled` contract governs
+  ONLY save/commit controls; a stepper floor is a structural bound, not
+  an empty diff) — per `Shelves.move_shelf/2`'s own documented
+  precedent, "prefer enabled-and-no-op over disabled" at either end, so
+  `−`/`+` are ALWAYS enabled and the caller's own handler no-ops at the
+  floor.
+  """
+  attr :label, :string, required: true
+  attr :value, :string, required: true
+  attr :decrement_event, :string, required: true
+  attr :increment_event, :string, required: true
+  attr :class, :any, default: nil
+
+  def stepper_row(assigns) do
+    ~H"""
+    <div class={["pk-admin-stepper-row", @class]}>
+      <span class="pk-admin-stepper-row__label">{@label}</span>
+      <div class="pk-admin-stepper-row__control">
+        <button
+          type="button"
+          class="pk-admin-stepper-row__btn"
+          data-pk-pressable="true"
+          aria-label={"Restar #{@label}"}
+          phx-click={@decrement_event}
+        >
+          <CoreComponents.icon name="hero-minus" class="size-4" />
+        </button>
+        <span class="pk-admin-stepper-row__value">{@value}</span>
+        <button
+          type="button"
+          class="pk-admin-stepper-row__btn"
+          data-pk-pressable="true"
+          aria-label={"Sumar #{@label}"}
+          phx-click={@increment_event}
+        >
+          <CoreComponents.icon name="hero-plus" class="size-4" />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  # ============================================================
+  # Plan 01.8.2-21, Task 2 (D-32) — the ONE shared "¿Dónde va?" placement
+  # sheet: originally built inline inside `EstanteLive.Index` (plan
+  # 01.8.2-16), extracted here so `GameLive.Form`'s ESTANTE block reuses
+  # the SAME position-aware sheet rather than growing a second,
+  # position-blind one. `PukllayClubWeb.Admin.PlacementSheet` holds the
+  # matching pure state-transition logic; this component is the render
+  # half only. Every event name below is a literal string BOTH callers
+  # implement identically in their own `handle_event/3` — this component
+  # does not own a `phx-target`, so the enclosing LiveView's own process
+  # receives every event, exactly as a plain function component's
+  # `phx-click`/`phx-change` always has.
+  # ============================================================
+
+  @doc """
+  Renders D-00c's full-height "¿Dónde va?" sheet: search-an-estante-or-
+  copy, an idle estante list, search results, and — once an estante is
+  chosen — its rail with N+1 "+" slots. `state` is
+  `PukllayClubWeb.Admin.PlacementSheet.open/1`'s own shape (`%{copy:,
+  query:, results:, estante:, copies:}`) or `nil` to render nothing
+  (the caller wraps the call site in `:if={@state}`, matching `sheet/1`'s
+  own convention elsewhere).
+
+  Wires the SAME event names `EstanteLive.Index` always used
+  (`donde-va-search`, `donde-va-field-clear`, `donde-va-pick-estante`,
+  `donde-va-pick-copy`, `donde-va-commit`, `donde-va-close`) — extracting
+  this component changed nothing about its wire contract, so
+  `estante_live_test.exs`'s existing `render_click`/`render_change`
+  calls against those literal event names stay valid unmodified.
+
+  `id` sets ONLY the outer sheet wrapper's own id — every INNER id is
+  the literal `donde-va-*` prefix the original `EstanteLive.Index`
+  implementation always used (`donde-va-search-input`,
+  `donde-va-shelf-<id>`, `donde-va-result-shelf-<id>`, ...), never
+  derived from `id`, so the extraction is byte-identical for
+  `EstanteLive.Index`'s existing element selectors. Both callers render
+  this sheet on mutually exclusive pages (never both mounted at once),
+  so the fixed inner-id convention cannot collide between them.
+  """
+  attr :id, :string, required: true
+  attr :state, :map, required: true
+
+  def placement_sheet(assigns) do
+    ~H"""
+    <.sheet
+      id={@id}
+      title="¿Dónde va?"
+      subtitle={@state.copy.game.name}
+      cover={@state.copy.game.thumbnail_url}
+      open
+      on_close={JS.push("donde-va-close")}
+      class="pk-estantes-sheet--full"
+    >
+      <div class="pk-donde-va-search">
+        <input
+          type="text"
+          id="donde-va-search-input"
+          name="q"
+          value={@state.query}
+          placeholder="Buscá un estante o un juego"
+          aria-label="Buscá un estante o un juego"
+          autocomplete="off"
+          phx-change="donde-va-search"
+          phx-debounce="200"
+          onfocus="this.select()"
+        />
+        <button
+          :if={@state.query != ""}
+          type="button"
+          class="pk-estantes-search__clear"
+          aria-label="Limpiar"
+          phx-click="donde-va-field-clear"
+        >
+          <CoreComponents.icon name="hero-x-mark" class="size-5" />
+        </button>
+      </div>
+
+      <div :if={is_nil(@state.estante) and @state.query == ""} id="donde-va-estante-list">
+        <.list_section_label>O elegí un estante</.list_section_label>
+        <.list_row
+          :for={shelf <- Shelves.list_shelves()}
+          id={"donde-va-shelf-#{shelf.id}"}
+          name={shelf.name}
+          meta={placement_shelf_meta(shelf)}
+          phx-click="donde-va-pick-estante"
+          phx-value-shelf-id={shelf.id}
+        />
+      </div>
+
+      <div
+        :if={is_nil(@state.estante) and @state.query != "" and @state.results == []}
+        class="pk-estantes-no-match"
+      >
+        <p class="pk-estantes-no-match__hint">Ningún estante ni juego se llama así.</p>
+      </div>
+
+      <div :if={is_nil(@state.estante) and @state.results != []} id="donde-va-results">
+        <.placement_result_row :for={result <- @state.results} result={result} />
+      </div>
+
+      <div :if={@state.estante} id="donde-va-rail" class="pk-donde-va-rail">
+        <button
+          type="button"
+          class="pk-donde-va-slot"
+          data-pk-pressable="true"
+          phx-click="donde-va-commit"
+          phx-value-index="0"
+          aria-label={placement_slot_label(@state.copies, 0, @state.estante.name)}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+        <%= for {copy, idx} <- Enum.with_index(@state.copies) do %>
+          <span class="pk-poster-card pk-estantes-cover">
+            <span class="pk-estantes-cover__art">
+              <img
+                :if={copy.game.thumbnail_url}
+                src={copy.game.thumbnail_url}
+                alt=""
+                class="pk-estantes-cover__img"
+              />
+              <span :if={!copy.game.thumbnail_url} class="pk-estantes-cover__fallback">
+                <CoreComponents.icon name="hero-puzzle-piece" class="size-8" />
+              </span>
+            </span>
+          </span>
+          <button
+            type="button"
+            class="pk-donde-va-slot"
+            data-pk-pressable="true"
+            phx-click="donde-va-commit"
+            phx-value-index={idx + 1}
+            aria-label={placement_slot_label(@state.copies, idx + 1, @state.estante.name)}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        <% end %>
+      </div>
+    </.sheet>
+    """
+  end
+
+  defp placement_shelf_meta(shelf) do
+    case Shelves.copies_on_shelf(shelf.id) do
+      [] -> "Vacío · va directo"
+      copies -> "#{length(copies)} juegos"
+    end
+  end
+
+  attr :result, :any, required: true
+
+  defp placement_result_row(%{result: {:shelf, shelf}} = assigns) do
+    assigns = assign(assigns, :shelf, shelf)
+
+    ~H"""
+    <.list_row
+      id={"donde-va-result-shelf-#{@shelf.id}"}
+      name={@shelf.name}
+      meta={placement_shelf_meta(@shelf)}
+      phx-click="donde-va-pick-estante"
+      phx-value-shelf-id={@shelf.id}
+    />
+    """
+  end
+
+  defp placement_result_row(%{result: {:copy, copy}} = assigns) do
+    assigns = assign(assigns, :copy, copy)
+
+    ~H"""
+    <.list_row
+      id={"donde-va-result-copy-#{@copy.id}"}
+      cover={@copy.game.thumbnail_url}
+      name={@copy.game.name}
+      meta={@copy.shelf.name}
+      phx-click="donde-va-pick-copy"
+      phx-value-copy-id={@copy.id}
+    />
+    """
+  end
+
+  # A "+" slot's accessible name (sketch 069, "Poner un juego entre X y
+  # Y" / "...al principio de..." / "...al final de..."). `copies` is
+  # whichever rail the slot sits in.
+  defp placement_slot_label([], _index, estante_name), do: "Poner al principio de #{estante_name}"
+
+  defp placement_slot_label(copies, 0, _estante_name) do
+    "Poner antes de #{hd(copies).game.name}"
+  end
+
+  defp placement_slot_label(copies, index, estante_name) when index == length(copies) do
+    "Poner después de #{List.last(copies).game.name} en #{estante_name}"
+  end
+
+  defp placement_slot_label(copies, index, _estante_name) do
+    before = Enum.at(copies, index - 1)
+    after_ = Enum.at(copies, index)
+    "Poner entre #{before.game.name} y #{after_.game.name}"
   end
 
   @status_words %{
