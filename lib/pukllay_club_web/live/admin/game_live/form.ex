@@ -311,20 +311,42 @@ defmodule PukllayClubWeb.Admin.GameLive.Form do
 
   @impl true
   def handle_event("donde-va-pick-estante", %{"shelf-id" => id}, socket) do
-    shelf = Shelves.get_shelf!(String.to_integer(id))
-    {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_estante(socket.assigns.shelf_sheet, shelf))}
+    # WR-03: a raising `String.to_integer/1` crashes the LiveView on a
+    # forged/tampered client payload — route through the same
+    # `parse_copy_id/1` + no-op-on-`nil` fallback convention this file
+    # already uses for `?copy=` query params.
+    case parse_copy_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      shelf_id ->
+        shelf = Shelves.get_shelf!(shelf_id)
+        {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_estante(socket.assigns.shelf_sheet, shelf))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-pick-copy", %{"copy-id" => id}, socket) do
-    copy = Shelves.get_copy!(String.to_integer(id))
-    {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_copy(socket.assigns.shelf_sheet, copy))}
+    case parse_copy_id(id) do
+      nil ->
+        {:noreply, socket}
+
+      copy_id ->
+        copy = Shelves.get_copy!(copy_id)
+        {:noreply, apply_shelf_pick(socket, PlacementSheet.pick_copy(socket.assigns.shelf_sheet, copy))}
+    end
   end
 
   @impl true
   def handle_event("donde-va-commit", %{"index" => idx}, socket) do
-    shelf = socket.assigns.shelf_sheet.estante
-    {:noreply, commit_shelf_sheet(socket, shelf.id, String.to_integer(idx))}
+    case parse_copy_id(idx) do
+      nil ->
+        {:noreply, socket}
+
+      index ->
+        shelf = socket.assigns.shelf_sheet.estante
+        {:noreply, commit_shelf_sheet(socket, shelf.id, index)}
+    end
   end
 
   @impl true

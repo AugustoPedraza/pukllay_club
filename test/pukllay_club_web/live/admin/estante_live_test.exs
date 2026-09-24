@@ -413,6 +413,32 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert positions == [{a.id, 0}, {new_copy.id, 1}, {b.id, 2}]
     end
 
+    # WR-03 regression: these events are normally fired only with server-
+    # rendered ids, but a forged/tampered client payload must degrade to a
+    # no-op instead of crashing the LiveView on a raising `String.to_integer/1`.
+    test "a malformed donde-va-commit index degrades to a no-op instead of crashing the LiveView", %{conn: conn} do
+      shelf = shelf_fixture(%{name: "Estante Lleno"})
+      a = copy_fixture(%{game_id: game_fixture(%{name: "A"}).id})
+      {:ok, _} = Shelves.place_copy(a.id, shelf.id, 0)
+
+      new_copy = copy_fixture(%{game_id: game_fixture(%{name: "Nueva llegada"}).id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "nueva llegada"})
+      lv |> element("#suggestion-#{new_copy.id}") |> render_click()
+      lv |> element("#donde-va-shelf-#{shelf.id}") |> render_click()
+
+      html = render_click(lv, "donde-va-commit", %{"index" => "not-a-number"})
+      assert html =~ "pk-donde-va-slot"
+
+      # Nothing committed — the copy sheet is still open, and the LiveView
+      # keeps working after the bad payload.
+      render_click(lv, "donde-va-commit", %{"index" => "0"})
+
+      positions = shelf.id |> Shelves.copies_on_shelf() |> Enum.map(&{&1.id, &1.position})
+      assert positions == [{new_copy.id, 0}, {a.id, 1}]
+    end
+
     test "a move keeps the copy in its old spot until the new one is chosen; cancelling changes nothing",
          %{conn: conn} do
       shelf_a = shelf_fixture(%{name: "Origen"})
