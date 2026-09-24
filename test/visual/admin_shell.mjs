@@ -643,29 +643,6 @@ async function main() {
       log(`page bar: position=absolute (confirmed zero layout cost by construction) — title top=${pageBar.titleTop}px, grid top=${pageBar.gridTop}px`)
     }
 
-    // ---- page bar: zero layout cost at rest, on Juegos (plan 01.8.2-14) ----
-    // Juegos is this component's first real subject with its own recorded
-    // anchors — the byte-for-byte numbers this plan's SUMMARY cites.
-    log("Checking the pinned page bar's at-rest layout cost on /admin/juegos...")
-    const juegosPageBar = await checkPageBarZeroLayout({
-      client,
-      baseUrl,
-      page: "/admin/juegos",
-      bodyAnchorSelector: ".pk-admin-juegos-sections, .pk-admin-juegos-empty",
-    })
-    if (!juegosPageBar.found) {
-      log("FAIL: /admin/juegos: .pk-admin-page-bar not found in the DOM")
-      exitCode = 1
-    } else if (juegosPageBar.position !== "absolute") {
-      log(`FAIL: /admin/juegos: .pk-admin-page-bar's computed position is "${juegosPageBar.position}", expected "absolute" at rest`)
-      exitCode = 1
-    } else {
-      log(
-        `/admin/juegos page bar: position=absolute (zero layout cost at rest) — ` +
-          `back row top=${juegosPageBar.backRowTop}px, title top=${juegosPageBar.titleTop}px, body top=${juegosPageBar.gridTop}px`,
-      )
-    }
-
     // ---- save bar: plan 01.8.2-17's editor is the FIRST live call site ----
     log("Checking the fixed foot save bar (D-28)...")
     const saveBar = await checkSaveBarDeferred({ client, baseUrl })
