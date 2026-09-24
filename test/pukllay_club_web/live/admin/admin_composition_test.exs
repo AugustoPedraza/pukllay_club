@@ -74,7 +74,7 @@ defmodule PukllayClubWeb.Admin.AdminCompositionTest do
   @component_names ~w(
     action field section_panel form_label list_section_label list_row
     editable_row status_dot kind_tag count_pill pending_pill sheet dialog
-    snackbar save_bar back_row page_bar
+    snackbar save_bar back_row
   )
 
   describe "D-18 composition guard" do
