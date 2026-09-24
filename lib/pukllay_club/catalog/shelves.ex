@@ -144,6 +144,98 @@ defmodule PukllayClub.Catalog.Shelves do
   end
 
   @doc """
+  Deletes `shelf` in one locked transaction (D-10, plan 01.8.2-18) —
+  every copy currently on it is snapshotted as `{copy_id, position}`
+  BEFORE anything is written, both halves of a copy's location
+  (`shelf_id` AND `position`) are nilified explicitly, and only then is
+  the `shelves` row itself deleted. Returns `{:ok, snapshot}`, a plain
+  map `%{name: ..., position: ..., copies: [{copy_id, position}, ...]}`
+  — exactly what `restore_deleted_shelf/1` needs to put the whole
+  arrangement back.
+
+  T-01.8.2-81: never trusts `copies.shelf_id`'s `on_delete: :nilify_all`
+  FK alone to leave copies in a consistent "Sin ubicar" state — that
+  clause (verified directly, not assumed, by `shelves_test.exs`) only
+  touches `shelf_id`; `position` carries no FK of its own and would
+  otherwise survive deletion as a stale, meaningless value on a copy
+  that reads as unplaced everywhere else. This function's own explicit
+  `update_all` is therefore the primary guarantee, with the FK as a
+  second line of defense. Never deletes a `Copy` row.
+  """
+  @spec delete_shelf(Shelf.t()) ::
+          {:ok, %{name: String.t(), position: integer(), copies: [{integer(), integer()}]}}
+          | {:error, term()}
+  def delete_shelf(%Shelf{id: shelf_id, name: name, position: position} = shelf) do
+    Multi.new()
+    |> Multi.run(:lock, fn repo, _changes -> lock_estantes(repo, [shelf_id]) end)
+    |> Multi.run(:snapshot, fn repo, _changes -> {:ok, snapshot_shelf_copies(repo, shelf_id)} end)
+    |> Multi.run(:cleared, fn repo, _changes ->
+      repo.update_all(from(c in Copy, where: c.shelf_id == ^shelf_id), set: [shelf_id: nil, position: nil])
+      {:ok, :cleared}
+    end)
+    |> Multi.run(:deleted, fn repo, _changes -> repo.delete(shelf) end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{snapshot: copies}} ->
+        broadcast(shelf_id)
+        {:ok, %{name: name, position: position, copies: copies}}
+
+      {:error, _step, reason, _changes} ->
+        {:error, reason}
+    end
+  end
+
+  defp snapshot_shelf_copies(repo, shelf_id) do
+    Copy
+    |> where([c], c.shelf_id == ^shelf_id)
+    |> select([c], {c.id, c.position})
+    |> repo.all()
+  end
+
+  @doc """
+  Restores a shelf deleted by `delete_shelf/1` from its own snapshot map
+  (Deshacer, D-10) — re-inserts a shelf row (a **new** id; the deleted
+  row is truly gone) at its former walking-order `position`, then writes
+  every snapshotted copy's `{shelf_id, position}` back in one pass.
+
+  A distinct function rather than looping `restore_position/3`
+  (`place_copy/3`) once per copy, deliberately: the freshly inserted
+  shelf starts with zero copies of its own, so writing every
+  snapshotted copy directly onto it can never collide with
+  `copies_shelf_position_unique` (that index only guards copies sharing
+  ONE `shelf_id`, and every one of these copies is landing on the SAME
+  brand-new, previously-empty `shelf_id`) — a loop over `place_copy/3`
+  would instead reindex the destination between each step and would not
+  reproduce the exact recorded arrangement.
+  """
+  @spec restore_deleted_shelf(%{name: String.t(), position: integer(), copies: [{integer(), integer()}]}) ::
+          {:ok, Shelf.t()} | {:error, term()}
+  def restore_deleted_shelf(%{name: name, position: position, copies: copies}) do
+    Multi.new()
+    |> Multi.run(:shelf, fn repo, _changes ->
+      %Shelf{} |> Shelf.changeset(%{name: name, position: position}) |> repo.insert()
+    end)
+    |> Multi.run(:restored, fn repo, %{shelf: shelf} ->
+      Enum.each(copies, fn {copy_id, copy_position} ->
+        repo.update_all(from(c in Copy, where: c.id == ^copy_id),
+          set: [shelf_id: shelf.id, position: copy_position]
+        )
+      end)
+
+      {:ok, shelf}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{shelf: shelf}} ->
+        broadcast(shelf.id)
+        {:ok, shelf}
+
+      {:error, _step, reason, _changes} ->
+        {:error, reason}
+    end
+  end
+
+  @doc """
   `{placed, total}` — count of non-retired games with a shelf assigned vs.
   every non-retired game (D-12). The denominator excludes retired games:
   there is nothing to place for a game no one can rent. Drives the
@@ -385,6 +477,24 @@ defmodule PukllayClub.Catalog.Shelves do
     |> where([c], c.game_id in ^game_ids)
     |> group_by([c], c.game_id)
     |> select([c], {c.game_id, count(c.id)})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Batch copies-count for several estantes at once (mirrors
+  `counts_for_games/1`'s shape, plan 01.8.2-18) — avoids an N+1
+  per-row query on Administrar estantes' `N juegos` meta. Returns a
+  map of `shelf_id => count`; a `shelf_id` with zero copies is simply
+  absent from the map (callers should read it with `Map.get(counts,
+  shelf_id, 0)`).
+  """
+  @spec counts_for_shelves([integer()]) :: %{integer() => non_neg_integer()}
+  def counts_for_shelves(shelf_ids) do
+    Copy
+    |> where([c], c.shelf_id in ^shelf_ids)
+    |> group_by([c], c.shelf_id)
+    |> select([c], {c.shelf_id, count(c.id)})
     |> Repo.all()
     |> Map.new()
   end
