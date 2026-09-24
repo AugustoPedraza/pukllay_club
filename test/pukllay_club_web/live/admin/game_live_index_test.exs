@@ -661,6 +661,95 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
     end
   end
 
+  describe "GameLive.Index — the pinned row's boundary and edge cases (plan 01.8.3-01)" do
+    test "an empty catalog still renders the pinned search/+ row, so + stays reachable", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, ".pk-admin-juegos-empty")
+      assert has_element?(lv, "#juegos-search-wrap")
+      assert has_element?(lv, "#juegos-add-action")
+    end
+
+    test "a status group with 0 rows renders no caption, and present captions keep source order",
+         %{conn: conn} do
+      game_fixture(%{name: "Solo borrador", status: :draft})
+
+      {:ok, _lv, html} = live(conn, ~p"/admin/juegos")
+
+      assert html =~ "Borradores"
+      refute html =~ "Juegos del club"
+      refute html =~ "Retirados"
+
+      game_fixture(%{name: "Publicado", status: :published})
+      game_fixture(%{name: "Retirado", status: :retired})
+
+      {:ok, _lv2, html2} = live(conn, ~p"/admin/juegos")
+
+      draft_pos = html2 |> :binary.match("Borradores") |> elem(0)
+      published_pos = html2 |> :binary.match("Juegos del club") |> elem(0)
+      retired_pos = html2 |> :binary.match("Retirados") |> elem(0)
+      assert draft_pos < published_pos
+      assert published_pos < retired_pos
+    end
+
+    test "submitting a BGG id an existing game already holds does not insert a duplicate", %{
+      conn: conn
+    } do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :published, name: "Ya en la ludoteca"})
+      count_before = Catalog.count_admin_games()
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html =
+        lv
+        |> form("#add-game-sheet-form", bgg_id: "184267")
+        |> render_submit()
+
+      assert Catalog.count_admin_games() == count_before
+      assert html =~ "¿Es otra edición?"
+    end
+
+    test "closing the sheet after an invalid submit and reopening clears the error and the field",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+
+      html =
+        lv
+        |> form("#add-game-sheet-form", bgg_id: "no-es-un-id")
+        |> render_submit()
+
+      assert html =~ "Pegá un número de BGG o el link del juego."
+
+      render_click(lv, "close-add-game-sheet", %{})
+      html = render_click(lv, "open-add-game-sheet", %{})
+
+      refute html =~ "Pegá un número de BGG o el link del juego."
+      refute has_element?(lv, ~s(#add-game-sheet-input[value="no-es-un-id"]))
+    end
+
+    test "the pinned search input narrows the rendered rows", %{conn: conn} do
+      game_fixture(%{name: "Catán"})
+      game_fixture(%{name: "Carcassonne"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      html = lv |> form("#juegos-search-form", q: "cat") |> render_change()
+
+      assert html =~ "Catán"
+      refute html =~ "Carcassonne"
+    end
+
+    test "the search wrap carries no data-pinned-hidden attribute at rest", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+
+      assert has_element?(lv, "#juegos-search-wrap")
+      refute has_element?(lv, "#juegos-search-wrap[data-pinned-hidden]")
+    end
+  end
+
   describe "GameLive.Index — failed enrichment retry (D-03)" do
     test "a failed draft's row shows the error alert and Reintentar button", %{conn: conn} do
       game_fixture(%{
