@@ -2,7 +2,7 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 01.8.2
+current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
 stopped_at: Completed 01.8.3-07-PLAN.md
@@ -334,8 +334,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: GameLive.Form's mount/3 redirects a draft's direct editor URL to /admin/juegos?draft=<id> BEFORE loading section names/shelves/copies, so the editor page renders only for an already-published or retired game
 - [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
-- [Phase 01.8.2]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
-- [Phase 01.8.2]: [Phase 01.8.3] 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
+- [Phase 01.8.3]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
+- [Phase 01.8.3]: 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
 
 ### Pending Todos
 
