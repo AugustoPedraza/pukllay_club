@@ -578,9 +578,29 @@
    between the tab bar's `70` and the snackbar's `80` (components.css below)
    — above the chrome it must cover, below the one component (the snackbar)
    that already needs to paint over an open sheet/dialog too. */
+/* FIX (plan 01.8.3-07, G-01.8.3-2b): a `position: fixed; inset: 0`
+   element's USED height is SHRUNK by a block-end margin rather than
+   offset by it. A parent Tailwind v4 `space-y-*` utility (compiled as
+   `:where(& > :not(:last-child))`) gives any non-last flow child a
+   `margin-block-end` — `#add-game-sheet` is not `#juegos-page`'s last
+   child, so it inherited 24px and measured 820px against an 844px ICB,
+   leaving the bottom 24px of the admin tab bar visible and clickable
+   under an open, `aria-modal="true"` sheet (a real CDP click at that
+   point navigated `/admin/juegos` -> `/admin/estantes` with the modal
+   still open). An identical sibling (`#draft-sheet`) escaped purely by
+   being last-child — a call-site fix would leave that trap armed on
+   every other admin screen, where a sheet's own `:if` mounting means
+   this was never observed at rest. `margin: 0` here, on the shared
+   overlay root both `sheet/1` and `dialog/1` mount, closes it for every
+   call site at once — no forced-priority modifier, no doubled selector: this file's
+   own unlayered `.pk-*` rules already beat Tailwind's `@layer utilities`
+   output regardless of specificity (see app.css's "CASCADE-LAYER
+   HAZARD" comment), and `:where()` contributes zero specificity of its
+   own besides. */
 .pk-admin-overlay-root {
   position: fixed;
   inset: 0;
+  margin: 0;
   z-index: 75;
   display: none;
 }
@@ -845,75 +865,6 @@
   font-weight: 600;
   color: var(--color-base-content);
   text-decoration: none;
-}
-
-/* Page bar (D-19n): an ABSOLUTE overlay, never `position: sticky` — this
-   is the mechanism that gives it zero layout cost at rest. An absolutely
-   positioned element is taken out of normal document flow unconditionally
-   (whether or not `--visible` is set), so there is no `display` toggle
-   step that could ever reserve or release layout height; a sticky child
-   would still occupy its slot in flow even while visually "at rest". */
-.pk-admin-page-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 55;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 44px;
-  padding: 0 16px;
-  box-sizing: border-box;
-  background: var(--color-base-100);
-  border-bottom: 1px solid var(--stroke);
-  /* `visibility`, never `opacity` — this module never declares a bare
-     `opacity` property anywhere (D-24's rule, generalised: opacity dims
-     content instead of cleanly presenting/absenting it). `visibility`
-     does not affect box generation for an absolutely-positioned element,
-     so this toggle still costs zero layout at rest either way. */
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Plan 01.8.2-14 (Rule 1 — bug): the base rule above is `position:
-   absolute` so the bar costs zero layout at rest (see its own comment) —
-   but nothing had ever made it actually PIN to the viewport while
-   visible, because no live call site existed to prove that half of the
-   contract before this plan's Juegos screen. `position: fixed` here,
-   scoped to the `--visible` modifier only, is the fix: both `absolute`
-   and `fixed` remove an element from normal flow identically, so this
-   transition still costs zero layout to sibling content either way — the
-   only thing it changes is which box the bar's own `top: 0` resolves
-   against (an ancestor vs. the viewport), which is exactly what "pins at
-   the top of the scroller" requires. `test/pukllay_club_web/components/
-   admin_components_test.exs`'s own `page_bar/1` tests only assert the
-   BASE rule stays `position: absolute` (never `sticky`) — untouched by
-   this addition. */
-.pk-admin-page-bar--visible {
-  position: fixed;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.pk-admin-page-bar__back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  margin-left: -12px;
-  color: var(--color-base-content);
-}
-
-.pk-admin-page-bar__title {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--color-base-content);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* ============================================================

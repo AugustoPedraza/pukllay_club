@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 01.8.2
+current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Phase 01.8.3 context gathered
-last_updated: "2026-09-24T21:25:43.902Z"
-last_activity: 2026-09-24
-last_activity_desc: Phase 01.8.2 UAT paused; Phase 01.8.3 inserted
-state_head: 73e9ee415bc5db77008a0e343ed28e9c2ce64ecb
+stopped_at: Completed 01.8.3-07-PLAN.md
+last_updated: "2026-09-25T21:02:54.724Z"
+last_activity: 2026-09-25
+last_activity_desc: Phase 01.8.3 execution started
+state_head: 410bd4fb97c3129b33dfdd0bce6cceb065ee7e44
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 54
-  completed_plans: 49
+  total_plans: 56
+  completed_plans: 56
 ---
 
 Total Phases: 9
@@ -33,10 +33,10 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — READY TO EXECUTE
-Plan: 0 of 0
-Status: Ready to plan — `/gsd-plan-phase 01.8.3`
-Last activity: 2026-09-24 — Phase 01.8.2 UAT paused after test 7 (6 passed, 1 issue, 3 gaps, 19 outstanding); Phase 01.8.3 inserted to work the admin screens one at a time
+Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
+Plan: 3 of 7
+Status: Ready to execute
+Last activity: 2026-09-25 — Phase 01.8.3 execution started
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -159,6 +159,8 @@ covered screens 01.8.3 will change.
 | Phase 01.8.2 P18 | ~100min | 3 tasks | 13 files |
 | Phase 01.8.2 P20 | ~55min | 3 tasks | 10 files |
 | Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
+| Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
+| Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -332,6 +334,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: GameLive.Form's mount/3 redirects a draft's direct editor URL to /admin/juegos?draft=<id> BEFORE loading section names/shelves/copies, so the editor page renders only for an already-published or retired game
 - [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
+- [Phase 01.8.3]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
+- [Phase 01.8.3]: 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
 
 ### Pending Todos
 
@@ -428,6 +432,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
 | 260922-veq | Added `Release.enrich_bgg_stats/1` + `StatsAudit.report/0`/`Release.bgg_stats_report/0` so the BGG re-enrichment can be invoked and measured on a production release (Mix is absent from a release). Code + runbook only; production repair subsequently run by the operator on 2026-09-23 and verified (178→45, 385→0 duplicates) | 2026-09-22 | 029f2c4 | complete | [260922-veq-add-release-enrich-bgg-stats-so-bgg-stat](./quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/) |
 | 260922-w5o | Corrected the production invocation for the BGG re-enrichment entrypoints from `rpc` (verified unavailable on the prod container — `:noconnection`, root cause not established) to `eval` plus an explicit `:req`/`:ecto_sql`/`Repo.start_link` preamble, across release.ex, the runbook, AGENTS.md and the guard's pinned test assertion | 2026-09-22 | 1e57d6a | complete | [260922-w5o-correct-the-production-invocation-docs-f](./quick/260922-w5o-correct-the-production-invocation-docs-f/) |
+| 260925-f94 | Closed 01.8.3 verification gap CR-01: `confirm-edition`'s success clause now assigns `add_game_sheet_open: false`, so the `+` sheet closes on both of its success paths instead of hiding the Borradores draft it just created — landed RED-then-GREEN as separate commits because the four pre-existing `confirm-edition` tests never open the sheet and so could never have caught it; review finding WR-01 assessed in the same task and dismissed as documented intent (D-19h constrains the fresh tint's colour, not its duration) | 2026-09-25 | 2655d6f4 | complete | [260925-f94-close-01-8-3-gap-cr-01-confirm-edition-s](./quick/260925-f94-close-01-8-3-gap-cr-01-confirm-edition-s/) |
 
 ### Roadmap Evolution
 
@@ -476,9 +481,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T20:01:50.539Z
-Stopped at: Phase 01.8.3 context gathered
-Resume file: .planning/phases/01.8.3-admin-screen-by-screen-refinement/01.8.3-CONTEXT.md
+Last session: 2026-09-25T21:02:54.556Z
+Stopped at: Completed 01.8.3-07-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

@@ -1087,40 +1087,6 @@ defmodule PukllayClubWeb.AdminComponents do
     """
   end
 
-  @doc """
-  Renders D-19n's pinned page bar: a 44px `‹ back` + `title` (17/600) that
-  pins at the top of a long list's scroller once the in-page title row has
-  gone behind it. Rendered as an **absolute overlay, not a sticky child**
-  (`position: absolute` in `components.css`) — this is what gives it zero
-  layout cost at rest: an absolutely-positioned element is removed from
-  normal flow regardless of its `visible` state, so there is no toggled
-  `display:none`/`display:block` step that could ever leave a layout gap
-  or a jump. `visible` toggles `inert` on this bar's own back link —
-  `back_row/1` alongside it should pass the OPPOSITE of this attr's value
-  so exactly one back control is ever focusable (D-19n).
-  """
-  attr :title, :string, required: true
-  attr :back_to, :string, required: true
-  attr :visible, :boolean, default: false
-  attr :class, :any, default: nil
-
-  def page_bar(assigns) do
-    ~H"""
-    <div class={["pk-admin-page-bar", @visible && "pk-admin-page-bar--visible", @class]}>
-      <.link
-        navigate={@back_to}
-        class="pk-admin-page-bar__back"
-        aria-label="Volver"
-        data-pk-pressable="true"
-        inert={!@visible}
-      >
-        <CoreComponents.icon name="hero-chevron-left-mini" class="size-5" />
-      </.link>
-      <span class="pk-admin-page-bar__title">{@title}</span>
-    </div>
-    """
-  end
-
   # ============================================================
   # Plan 01.8.2-15, Task 2 — the Ordenar→Listo mode (062-B, R7 #4). The
   # SECOND consumer is plan 01.8.2-18's Administrar estantes — R7 #4's

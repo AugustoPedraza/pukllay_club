@@ -48,13 +48,18 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
   allows an edition** — unchanged by this plan, see
   `Catalog.add_game_from_bgg/2`.
 
-  D-19n's scrolled context (the pinned page bar + the pinned section
-  caption) is wired via `AdminComponents.page_bar/1`/`back_row/1` and
-  `assets/js/hooks/admin_list.js` — see that hook's own header comment for
-  the position:absolute-at-rest/position:fixed-while-visible mechanism
-  (Rule 1 fix to `components.css`, documented in this plan's SUMMARY: no
-  live call site had ever proven the pinning half of that component before
-  this screen).
+  **Plan 01.8.3-01 — no back row, no visible title, one pinned search/`+`
+  row (D-06/D-07/D-09).** This screen is a tab-bar destination
+  (`active_tab={:juegos}` below already labels and highlights it
+  persistently), so it renders neither `AdminComponents.back_row/1` nor
+  `AdminComponents.page_bar/1` — `Juegos` survives only as an
+  `h1.sr-only`. The page's one leading row is a 48px search field with
+  the `+` at its right end (`#juegos-search-wrap`), which hides on
+  scroll-down and returns on scroll-up; `+` opens the `add-game-sheet`
+  bottom sheet on the existing `Catalog.add_game_from_bgg/1` path. The
+  pinned SECTION caption (D-19n's other half) is unaffected by this plan
+  — see `assets/js/hooks/admin_list.js`'s own header comment for that
+  mechanism.
 
   **The draft sheet and row routing (D-30, plan 01.8.2-20).** A draft row
   carries no chevron (D-19i) and opens the draft sheet in place —
@@ -112,6 +117,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
      |> assign(:bgg_id_input, "")
      |> assign(:bgg_id_error, nil)
      |> assign(:edition_prompt, nil)
+     |> assign(:enrichment_toast, nil)
+     |> assign(:add_game_sheet_open, false)
      |> assign(:draft_sheet_open, false)
      |> assign(:draft_sheet_game_id, nil)
      |> assign(:draft_sheet_cover, nil)
@@ -167,7 +174,8 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          |> assign(:bgg_id_input, "")
          |> assign(:bgg_id_error, nil)
          |> assign(:edition_prompt, nil)
-         |> put_flash(:info, "Juego agregado como borrador.")
+         |> assign(:add_game_sheet_open, false)
+         |> put_flash(:info, "Buscando info desde BGG")
          |> land_on_fresh_draft(game)}
 
       # D-03 (revised 2026-09-14): a BGG id already claimed by any game
@@ -190,6 +198,43 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     end
   end
 
+  # D-07/D-10 (plan 01.8.3-01) — the pinned row's own `+` action. Opening
+  # always resets whatever the sheet held from a previous session so a
+  # stale error never greets a fresh open; closing does the same, since
+  # the sheet always renders (its `open` attr only toggles a CSS class —
+  # `AdminComponents.sheet/1`, T-01.8.2-32) rather than being removed from
+  # the DOM.
+  @impl true
+  def handle_event("open-add-game-sheet", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:add_game_sheet_open, true)
+     |> assign(:bgg_id_input, "")
+     |> assign(:bgg_id_error, nil)
+     |> assign(:edition_prompt, nil)}
+  end
+
+  @impl true
+  def handle_event("close-add-game-sheet", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:add_game_sheet_open, false)
+     |> assign(:bgg_id_input, "")
+     |> assign(:bgg_id_error, nil)
+     |> assign(:edition_prompt, nil)}
+  end
+
+  # Live-tracks the field so `Agregar`'s `disabled={@bgg_id_input == ""}`
+  # (D-10/d52) actually reacts as the field is typed into — the shipped
+  # form only had `phx-submit`, never `phx-change`.
+  @impl true
+  def handle_event("add-game-input", %{"bgg_id" => bgg_id}, socket) do
+    {:noreply,
+     socket
+     |> assign(:bgg_id_input, bgg_id)
+     |> assign(:bgg_id_error, nil)}
+  end
+
   # T-01.8.1-69: acknowledged ids come ONLY from the server-side
   # `:edition_prompt` assign — never from client params — so a forged
   # `confirm-edition` payload can't claim an id it was never shown.
@@ -208,6 +253,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          |> assign(:bgg_id_input, "")
          |> assign(:bgg_id_error, nil)
          |> assign(:edition_prompt, nil)
+         |> assign(:add_game_sheet_open, false)
          |> put_flash(:info, "Edición agregada como borrador.")
          |> land_on_fresh_draft(game)}
 
@@ -245,6 +291,31 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
       _not_an_integer ->
         {:noreply, socket}
     end
+  end
+
+  # D-11/D-17 (plan 01.8.3-04): dismiss just clears the toast; edit reads the
+  # target id from the server-held `:enrichment_toast` assign (never from
+  # client params — `snackbar/1`'s `action` renders no value attributes at
+  # all), so a forged payload cannot navigate to a caller-chosen id. A `nil`
+  # assign — the toast already dismissed, or a stale double-click — leaves
+  # the socket unchanged rather than navigating anywhere.
+  @impl true
+  def handle_event("dismiss-enrichment-toast", _params, socket) do
+    {:noreply, assign(socket, :enrichment_toast, nil)}
+  end
+
+  @impl true
+  def handle_event("edit-enriched-game", _params, %{assigns: %{enrichment_toast: nil}} = socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("edit-enriched-game", _params, socket) do
+    %{enrichment_toast: toast} = socket.assigns
+
+    {:noreply,
+     socket
+     |> assign(:enrichment_toast, nil)
+     |> push_navigate(to: ~p"/admin/juegos/#{toast.game_id}/editar")}
   end
 
   # ============================================================
@@ -312,10 +383,57 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     end
   end
 
+  # D-11/D-17 (plan 01.8.3-04): the arrival of a background enrichment now
+  # speaks, off the SAME `{:game_enriched, id}` signal this handler already
+  # consumed silently — no new PubSub topic/message/broadcast. The row
+  # refresh (`load_groups/1`) is existing behaviour and always runs;
+  # `enrichment_toast_for/1` returns `nil` for anything other than the two
+  # terminal `enrichment_status` values (`"enriched"`/`"failed"`) — a race
+  # (row deleted between the worker's broadcast and this handler) or a
+  # transient status neither assigns nor clears whatever toast is showing.
   @impl true
-  def handle_info({:game_enriched, _game_id}, socket) do
-    {:noreply, load_groups(socket)}
+  def handle_info({:game_enriched, game_id}, socket) do
+    socket = load_groups(socket)
+
+    case safe_get_game(game_id) do
+      nil ->
+        {:noreply, socket}
+
+      game ->
+        case enrichment_toast_for(game) do
+          nil -> {:noreply, socket}
+          toast -> {:noreply, assign(socket, :enrichment_toast, toast)}
+        end
+    end
   end
+
+  # D-17's exact copy. Success: `game.name` alone — `Enrichment.build_attrs/4`
+  # already overwrites the `Juego #<bgg_id>` placeholder with the real BGG
+  # title BEFORE `enrichment_status` flips to `"enriched"`, so no special-
+  # casing is needed here. Failure: the `bgg_id`, never `name` — on a
+  # failure path the placeholder was never overwritten, so naming it would
+  # read as a real title. The single stable `"enrichment-toast"` id means a
+  # second arrival's patch replaces the first's DOM outright (`snackbar/1`'s
+  # own doc), never stacking two announcements.
+  defp enrichment_toast_for(%Game{enrichment_status: "enriched"} = game) do
+    %{
+      id: "enrichment-toast",
+      message: "#{game.name} agregado",
+      action: %{label: "Editar", event: "edit-enriched-game"},
+      game_id: game.id
+    }
+  end
+
+  defp enrichment_toast_for(%Game{enrichment_status: "failed"} = game) do
+    %{
+      id: "enrichment-toast",
+      message: "No pudimos traer los datos BGG de ##{game.bgg_id}",
+      action: %{label: "Editar", event: "edit-enriched-game"},
+      game_id: game.id
+    }
+  end
+
+  defp enrichment_toast_for(_game), do: nil
 
   defp handle_publish_after_save(socket, updated) do
     case Catalog.publish_game(updated) do
@@ -504,56 +622,86 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
     >
       <div class="mx-auto w-full max-w-3xl space-y-6">
         <div id="juegos-page" phx-hook="AdminList" class="pk-admin-juegos space-y-6">
-          <%!-- T-01.8.2-64: this in-page back row and `page_bar/1` below
-          are the two halves of D-19n's ONE focusable back control. Neither
-          passes `inert` explicitly — `back_row/1` defaults `inert={false}`
-          (focusable at rest, matching `page_bar/1`'s own default
-          `visible={false}` → its internal back link computes
-          `inert={true}`), and `assets/js/hooks/admin_list.js` flips both
-          `inert` attributes together whenever the page bar's visibility
-          toggles, so exactly one is ever focusable. --%>
-          <AdminComponents.back_row to={~p"/admin"} />
-          <h1 class="pk-admin-page-title">Juegos</h1>
+          <%!-- D-06: no back row, no visible title row. `Juegos` survives
+          only as an accessible-name-only h1 — the tab bar (active_tab
+          above) already names and highlights this page persistently. --%>
+          <h1 class="sr-only">Juegos</h1>
 
-          <div class="pk-admin-juegos-add">
-            <form id="add-game-form" phx-submit="add-game" class="pk-admin-juegos-add-form">
-              <AdminComponents.field
-                type="text"
-                id="add-game-bgg-id"
-                name="bgg_id"
-                value={@bgg_id_input}
-                label="ID o link de BGG"
-                errors={if @bgg_id_error, do: [@bgg_id_error], else: []}
-              />
+          <%!-- D-07/D-08: the page's one pinned row — a 48px search field
+          with the `+` at its right end. Hides on scroll-down, returns on
+          scroll-up (assets/js/hooks/admin_list.js, ported from
+          admin_rail.js), never while `#juegos-search-input` is focused or
+          within 140px of the top. A raw `<input>`, not
+          `AdminComponents.field/1`: `field/1`'s control is its own 44px
+          label-wrapped block, unsuited to sitting inline with a 44px A3
+          icon action in one 48px row (estante_live/index.ex:657-669's own
+          shipped precedent). --%>
+          <div id="juegos-search-wrap" class="pk-admin-juegos-search-wrap">
+            <div class="pk-admin-juegos-search-row">
+              <form id="juegos-search-form" phx-change="search">
+                <input
+                  type="text"
+                  id="juegos-search-input"
+                  name="q"
+                  value={@q}
+                  placeholder="Buscá un juego"
+                  aria-label="Buscá un juego"
+                  autocomplete="off"
+                  phx-debounce="300"
+                  onfocus="this.select()"
+                />
+              </form>
               <AdminComponents.action
-                anatomy="a1"
-                role="principal"
-                type="submit"
-                phx-disable-with="Agregando…"
+                anatomy="a3"
+                role="terciaria"
+                id="juegos-add-action"
+                aria-label="Agregar juego"
+                phx-click="open-add-game-sheet"
               >
-                Agregar juego
+                <.icon name="hero-plus" class="size-5" />
               </AdminComponents.action>
-            </form>
+            </div>
           </div>
 
-          <div :if={@edition_prompt} id="edition-prompt">
-            <AdminComponents.section_panel class="pk-admin-juegos-edition-prompt">
-              <p>
-                Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?
-              </p>
-              <ul class="pk-admin-juegos-edition-list">
-                <li :for={game <- @edition_prompt.games} class="pk-admin-juegos-edition-item">
-                  <AdminComponents.action
-                    anatomy="a2"
-                    role="terciaria"
-                    navigate={~p"/admin/juegos/#{game.id}/editar"}
-                  >
-                    {game.name}
-                  </AdminComponents.action>
-                  <AdminComponents.status_dot status={game.status} />
-                </li>
-              </ul>
-              <div class="pk-admin-juegos-edition-actions">
+          <%!-- D-10: the `+` sheet — verbatim per 076: header, one field,
+          one commit. No `Crear a mano` (d51 — `Game.draft_changeset` does
+          `validate_required([:bgg_id])`, there is no by-name insert path)
+          and no hint line (d53 — the deleted hint wrongly promised "y el
+          nivel", which enrichment never writes). Reuses `phx-submit="add-
+          game"` verbatim so the existing handler and its
+          `Catalog.add_game_from_bgg/1` call are untouched.
+
+          D-12 (plan 01.8.3-04): the sheet has a SECOND state — the edition
+          prompt, swapped in place following `GameLive.Form`'s own
+          `bgg_link_sheet/1` precedent (`:if={@edition_prompt}` /
+          `:if={!@edition_prompt}`, never both). Nothing renders on the page
+          behind the sheet; the former page-level `#edition-prompt` block is
+          gone. `confirm-edition`'s server-side guard (T-01.8.1-69) is
+          untouched — only its render call site moved — and neither commit
+          control below carries a client-suppliable game-id attribute. --%>
+          <AdminComponents.sheet
+            id="add-game-sheet"
+            title="Agregar juego"
+            open={@add_game_sheet_open}
+            on_close={JS.push("close-add-game-sheet")}
+          >
+            <div class="pk-admin-juegos-sheet-body">
+              <div :if={@edition_prompt} id="add-game-sheet-edition-prompt">
+                <p>
+                  Ya tenés {edition_names(@edition_prompt.games)} con este BGG ID. ¿Es otra edición?
+                </p>
+                <ul>
+                  <li :for={game <- @edition_prompt.games}>
+                    <AdminComponents.action
+                      anatomy="a2"
+                      role="terciaria"
+                      navigate={~p"/admin/juegos/#{game.id}/editar"}
+                    >
+                      {game.name}
+                    </AdminComponents.action>
+                    <AdminComponents.status_dot status={game.status} />
+                  </li>
+                </ul>
                 <AdminComponents.action
                   id="confirm-edition"
                   anatomy="a1"
@@ -572,19 +720,34 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
                   Cancelar
                 </AdminComponents.action>
               </div>
-            </AdminComponents.section_panel>
-          </div>
-
-          <form id="admin-games-search" phx-change="search" class="pk-admin-juegos-search">
-            <AdminComponents.field
-              type="text"
-              id="admin-games-search-input"
-              name="q"
-              value={@q}
-              label="Buscar por nombre"
-              phx-debounce="300"
-            />
-          </form>
+              <form
+                :if={!@edition_prompt}
+                id="add-game-sheet-form"
+                phx-submit="add-game"
+                phx-change="add-game-input"
+              >
+                <AdminComponents.field
+                  type="text"
+                  id="add-game-sheet-input"
+                  name="bgg_id"
+                  label="Número o link de BGG"
+                  placeholder="342942"
+                  value={@bgg_id_input}
+                  errors={if @bgg_id_error, do: [@bgg_id_error], else: []}
+                />
+                <AdminComponents.action
+                  anatomy="a1"
+                  role="principal"
+                  type="submit"
+                  commit
+                  disabled={@bgg_id_input == ""}
+                  phx-disable-with="Agregando…"
+                >
+                  Agregar
+                </AdminComponents.action>
+              </form>
+            </div>
+          </AdminComponents.sheet>
 
           <div :if={@loading} class="pk-admin-juegos-loading">
             <div :for={_n <- 1..8} class="skeleton h-10 w-full"></div>
@@ -607,8 +770,6 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
               fresh_game_id={@fresh_game_id}
             />
           </div>
-
-          <AdminComponents.page_bar title="Juegos" back_to={~p"/admin"} />
         </div>
       </div>
 
@@ -618,6 +779,18 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
         cover={@draft_sheet_cover}
         draft={@draft_sheet}
         error={@draft_sheet_error}
+      />
+
+      <%!-- D-11/D-17 (plan 01.8.3-04): the enrichment-arrival snackbar, off
+      the existing {:game_enriched, id} signal — no new PubSub topic. Placed
+      as a sibling of the page content, following estante_live/index.ex's
+      own @action_snackbar call site. --%>
+      <AdminComponents.snackbar
+        :if={@enrichment_toast}
+        id={@enrichment_toast.id}
+        message={@enrichment_toast.message}
+        action={@enrichment_toast.action}
+        on_close={JS.push("dismiss-enrichment-toast")}
       />
     </Layouts.app>
     """

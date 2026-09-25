@@ -1,12 +1,15 @@
 // AdminList — the Juegos screen's own interaction layer (plan 01.8.2-14,
-// D-19g-bis/D-19n). Registered as a plain (non-colocated) hook in
-// `app.js`'s `hooks` object (`phx-hook="AdminList"`, no leading dot),
-// mirroring `AdminRail`'s own non-colocated convention: mounted once on
-// the page's stable wrapper (`#juegos-page`) rather than on any
-// conditionally-rendered child, since sections/rows come and go as
-// groups collapse/expand and as the search narrows the list.
+// D-19g-bis/D-19n; pinned row rebuilt by plan 01.8.3-01, D-06/D-07/D-09;
+// pin-observer/sticky-offset fix by plan 01.8.3-03, D-15).
+// Registered as a plain (non-colocated) hook in `app.js`'s `hooks` object
+// (`phx-hook="AdminList"`, no leading dot), mirroring `AdminRail`'s own
+// non-colocated convention: mounted once on the page's stable wrapper
+// (`#juegos-page`) rather than on any conditionally-rendered child, since
+// sections/rows come and go as groups collapse/expand and as the search
+// narrows the list.
 //
-// Four independent jobs:
+// Three independent jobs (the page bar/back-row toggling this hook used
+// to own is gone — D-06/D-09 deleted both from this page's DOM):
 //   1. Expand-keeps-position (D-19g-bis decision 8/18): opening or
 //      closing a collapsible section keeps the TAPPED heading exactly
 //      where the finger left it — captured on click, corrected after the
@@ -14,22 +17,30 @@
 //   2. Pinned section captions (D-19n): an IntersectionObserver watches a
 //      zero-height sentinel placed just before each section's sticky
 //      heading and toggles `data-pinned` on the heading wrap the instant
-//      the sentinel scrolls out of view above the fold — the heading
-//      gains its `--color-surface` fill ONLY while pinned (juegos.css).
-//   3. The pinned page bar (D-19n): `.pk-admin-page-bar` becomes visible
-//      (and, per this plan's `components.css` fix, `position: fixed`)
-//      once the page title has scrolled behind the 44px band it reserves;
-//      `inert` toggles between it and the in-page `back_row/1` so exactly
-//      one back control is ever focusable (T-01.8.2-64).
-//   4. Scroll a freshly-created draft's row into view once (D-37 gate 4,
-//      076's `.fresh` pattern) — the row's own `.pk-admin-juegos-row--fresh`
-//      class marks it.
+//      the sentinel scrolls above the pinned search row — the heading
+//      gains its `::before` band fill (juegos.css) ONLY while pinned. The
+//      pin predicate is `!entry.isIntersecting` alone: 01.8.3-RESEARCH.md
+//      found the prior real-viewport rect comparison (a second, stricter
+//      AND-clause) dominated a correctly-sized `rootMargin` and re-opened
+//      the ~45px window the `rootMargin` already compensated for — an
+//      IntersectionObserverEntry's real-viewport rect is never affected
+//      by `rootMargin`, so ANDing a check against it back in always fires
+//      later than the `rootMargin`'s own compensation (D-15).
+//   3. D-08's pinned search row: the SAME `#juegos-search-wrap` (never a
+//      second, synced copy) hides on scroll-down and returns on
+//      scroll-up, never while `#juegos-search-input` is focused and never
+//      within 140px of the top — ported verbatim from
+//      `assets/js/hooks/admin_rail.js`'s own D-19n mechanism (D-18:
+//      per-screen-owns-its-hook, a copy, not a shared import).
 //
-// Purely client-driven presentational toggling (page-bar visibility,
-// pinned fill) — same shape as `AdminRail`'s `data-pinned-hidden` —
-// rather than a LiveView assign updated on every scroll tick, so scrolling
-// never costs a server round trip.
-const PAGE_BAR_BAND = 44
+// Plus one unrelated job kept from before: scroll a freshly-created
+// draft's row into view once (D-37 gate 4, 076's `.fresh` pattern) — the
+// row's own `.pk-admin-juegos-row--fresh` class marks it.
+//
+// Purely client-driven presentational toggling (pinned-row hide/return,
+// pinned-caption fill) — same shape as `AdminRail`'s `data-pinned-hidden`
+// — rather than a LiveView assign updated on every scroll tick, so
+// scrolling never costs a server round trip.
 
 export default {
   mounted() {
@@ -44,23 +55,49 @@ export default {
     }
     this.el.addEventListener("click", this.onClick)
 
-    this.title = this.el.querySelector(".pk-admin-page-title")
-    this.pageBar = document.querySelector(".pk-admin-page-bar")
-    this.pageBarBack = this.pageBar?.querySelector(".pk-admin-page-bar__back")
-    this.backRow = this.el.querySelector(".pk-admin-back-row")
+    // D-08: the pinned search row — ported verbatim from
+    // `admin_rail.js`'s D-19n mechanism, Juegos-scoped ids.
+    this.searchWrap = this.el.querySelector("#juegos-search-wrap")
+    this.searchInput = this.el.querySelector("#juegos-search-input")
+    this.lastScrollY = window.scrollY
+
+    // D-15: the pin-observer's rootMargin must track the REAL pinned
+    // search row's rendered height, not a literal — measured once here
+    // from the same wrap juegos.css's own `--pk-juegos-pinned-h` declares
+    // the section captions' sticky offset from. If the wrap cannot be
+    // measured (absent, or its height rounds to 0), fall back to a single
+    // declared default rather than to 0 — a 0 inset would silently
+    // re-open the window this fix closes. 60 is `4 + 48 + 8`: the row's
+    // own top padding, the 48px field (D-07), and its bottom padding
+    // (`.pk-admin-juegos-search-row` in juegos.css) — traceable to the
+    // stylesheet, not arbitrary.
+    const measuredHeight = this.searchWrap
+      ? Math.round(this.searchWrap.getBoundingClientRect().height)
+      : 0
+    this.pinnedBandPx = measuredHeight > 0 ? measuredHeight : 60
 
     this.onScroll = () => {
-      if (!this.title || !this.pageBar) return
-      const visible = this.title.getBoundingClientRect().bottom <= PAGE_BAR_BAND
-      this.pageBar.classList.toggle("pk-admin-page-bar--visible", visible)
-      this.pageBarBack?.toggleAttribute("inert", !visible)
-      this.backRow?.toggleAttribute("inert", visible)
+      if (!this.searchWrap) return
+
+      const y = window.scrollY
+      const goingDown = y > this.lastScrollY
+      this.lastScrollY = y
+
+      const focused = document.activeElement === this.searchInput
+      // Never within 140px of the top, regardless of scroll direction —
+      // a new screen always starts at scrollTop 0, so the pinned state
+      // never appears on a page nobody scrolled.
+      const nearTop = y <= 140
+
+      if (focused || nearTop) {
+        this.searchWrap.removeAttribute("data-pinned-hidden")
+      } else if (goingDown) {
+        this.searchWrap.setAttribute("data-pinned-hidden", "true")
+      } else {
+        this.searchWrap.removeAttribute("data-pinned-hidden")
+      }
     }
     window.addEventListener("scroll", this.onScroll, { passive: true })
-    // A freshly mounted screen always starts at scrollTop 0 (D-19n), so
-    // running this once at mount is a no-op in practice — kept for the
-    // case a browser restores a mid-scroll position on reconnect.
-    this.onScroll()
 
     this.setupPinObserver()
     this.scrollFreshIntoView()
@@ -97,15 +134,58 @@ export default {
         for (const entry of entries) {
           const wrap = entry.target.nextElementSibling
           if (!wrap) continue
-          // Pinned means: the sentinel has scrolled fully above the
-          // reserved band (not merely "not intersecting" — an element
-          // below the viewport is also "not intersecting" and must NOT
-          // read as pinned).
-          const pinned = !entry.isIntersecting && entry.boundingClientRect.top < 0
-          wrap.toggleAttribute("data-pinned", pinned)
+          // Plan 01.8.3-05 [Rule 1 - Bug]: `!entry.isIntersecting` ALONE
+          // (01.8.3-03's fix, following 01.8.3-RESEARCH.md's diagnosis)
+          // is true in TWO cases IntersectionObserver cannot itself tell
+          // apart: the sentinel has scrolled UP past the pinned row (the
+          // case this whole mechanism exists for), and the sentinel has
+          // never yet been scrolled TO — still below the fold, e.g. right
+          // after a collapsed section above it (Borradores) is expanded
+          // and pushes this section's heading further down. Confirmed live
+          // in headless Chrome: expanding Borradores re-triggers
+          // `setupPinObserver()` (a fresh `IntersectionObserver` fires an
+          // immediate entry for its CURRENT geometry), and Juegos del
+          // club's now-far-below-viewport sentinel reported
+          // `isIntersecting: false` — correct for "not currently on
+          // screen," wrong for this hook's own "has scrolled past" meaning
+          // — setting `data-pinned="true"` before the page had scrolled at
+          // all. `entry.boundingClientRect.top` DOES distinguish the two
+          // (a large positive value when still below the fold, at-or-below
+          // `pinnedBandPx` once genuinely stuck) — 01.8.3-03 removed that
+          // clause because the ORIGINAL literal `< 0` threshold didn't
+          // match `rootMargin`'s own `pinnedBandPx`-derived inset, dominating
+          // it and re-opening the ~44px delayed-pin window (the original
+          // G-01.8.2-4 report). The fix is not to drop the clause, but to
+          // give it the SAME threshold `rootMargin` already uses, so both
+          // conditions agree on where "pinned" begins instead of one
+          // silently overriding the other.
+          //
+          // Plan 01.8.3-05 [Rule 1 - Bug]: `toggleAttribute(name, force)`
+          // always sets an EMPTY-STRING value when `force` is true — it can
+          // never produce the literal string "true" `setAttribute` would.
+          // `juegos.css`'s own pinned-band rules select on
+          // `[data-pinned="true"]` (an exact-value match, not a presence
+          // selector), so the attribute this line wrote could never match
+          // that selector: the pinned caption fill has never actually
+          // painted since plan 01.8.3-03 shipped it, confirmed via a real
+          // headless-Chrome scroll (`data-pinned` read back as `""`, not
+          // `"true"`, at every observed pin). Fixed by mirroring this same
+          // function's own sibling convention two lines above
+          // (`data-pinned-hidden` uses `setAttribute`/`removeAttribute`,
+          // never `toggleAttribute`) rather than loosening the CSS
+          // selector to presence-only — the exact-value form was written
+          // deliberately (twice) and a plain rename carries lower risk of
+          // silently also matching some OTHER future `data-pinned="false"`
+          // producer.
+          const pinned = !entry.isIntersecting && entry.boundingClientRect.top < this.pinnedBandPx + 1
+          if (pinned) {
+            wrap.setAttribute("data-pinned", "true")
+          } else {
+            wrap.removeAttribute("data-pinned")
+          }
         }
       },
-      { rootMargin: `-${PAGE_BAR_BAND + 1}px 0px 0px 0px`, threshold: [0, 1] },
+      { rootMargin: `-${this.pinnedBandPx + 1}px 0px 0px 0px`, threshold: [0, 1] },
     )
     sentinels.forEach((s) => this.pinObserver.observe(s))
   },

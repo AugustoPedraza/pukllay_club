@@ -273,25 +273,30 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 5 plans
+**Plans:** 7/7 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`)
 
 Plans:
 **Wave 1**
 
-- [ ] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
+- [x] 01.8.3-01-PLAN.md — TRACER: the page leads with the pinned 48px search/`+` row and the `+` sheet creates a draft, end to end
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
-- [ ] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
+- [x] 01.8.3-02-PLAN.md — Delete `page_bar/1` and its CSS, test and harness scaffolding (D-09)
+- [x] 01.8.3-03-PLAN.md — The `::before` pinned band, the measured sticky offset and the Juegos-scoped row/caption anatomy (G-01.8.2-4, D-13/D-15/D-16)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
+- [x] 01.8.3-04-PLAN.md — The edition prompt inside the `+` sheet and the enrichment-completion toast (D-12, D-11/D-17)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
+- [x] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
+
+**Gap closure** *(added 2026-09-25 from the 01.8.3 UAT walk; plans 01-05 unchanged)*
+
+- [x] 01.8.3-06-PLAN.md — `G-01.8.3-2a`: the pinned caption band is re-coupled to its ink for every `--pt`, with an ink-position probe assertion negative-tested against the unfixed CSS and an ExUnit tripwire (D-15/D-13/D-16)
+- [x] 01.8.3-07-PLAN.md — `G-01.8.3-2b`: `.pk-admin-overlay-root` neutralises its own margin so an open sheet covers the viewport, proven by a synthetic component control plus a real-open walk over six sheet/dialog call sites (D-19e/D-19f)
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
