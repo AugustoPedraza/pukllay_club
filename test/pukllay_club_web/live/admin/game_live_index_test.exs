@@ -682,6 +682,27 @@ defmodule PukllayClubWeb.Admin.GameLiveIndexTest do
       assert has_element?(lv, "#game-row-#{game.id}")
       assert html =~ "pk-admin-juegos-row--fresh"
     end
+
+    test "confirming an edition from an opened sheet lands the draft AND closes the sheet (CR-01)",
+         %{conn: conn} do
+      _existing = game_fixture(%{bgg_id: 184_267, status: :retired, name: "Ya en la ludoteca"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos")
+      render_click(lv, "open-add-game-sheet", %{})
+
+      lv |> form("#add-game-sheet-form", bgg_id: "184267") |> render_submit()
+      assert has_element?(lv, "#add-game-sheet-edition-prompt")
+
+      html = lv |> element("#confirm-edition") |> render_click()
+
+      edition = Repo.get_by!(Game, bgg_id: 184_267, status: :draft)
+
+      assert Catalog.count_admin_games() == 2
+      assert html =~ "Edición agregada como borrador."
+      assert has_element?(lv, "#game-row-#{edition.id}")
+      assert html =~ "pk-admin-juegos-row--fresh"
+      refute has_element?(lv, "#add-game-sheet.pk-admin-overlay--open")
+    end
   end
 
   describe "GameLive.Index — the enrichment-completion snackbar (D-11/D-17, plan 01.8.3-04)" do
