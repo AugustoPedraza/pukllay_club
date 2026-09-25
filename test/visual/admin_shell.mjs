@@ -35,10 +35,10 @@
 //     always `0` relative to its positioning context; what must be
 //     measured is whether OTHER elements' rects move when the bar's
 //     `visible` state flips, not the bar's own position.
-//   - `offsetParent` is unconditionally `null` for a `position: fixed`
-//     element in Chrome (confirmed empirically in `admin_components.mjs`)
-//     — this file never uses it either; visibility reads go through
-//     resolved `display`/rect presence instead.
+//   - a `position: fixed` element's DOM offset-parent reference is
+//     unconditionally null in Chrome (confirmed empirically in
+//     `admin_components.mjs`) — this file never reads that property either;
+//     visibility reads go through resolved `display`/rect presence instead.
 //
 // Developer-invoked only — not wired into `mix quality` or CI. See
 // `test/visual/README.md`.
@@ -284,6 +284,349 @@ async function loginAsStaff(client, baseUrl) {
     { timeoutMs: 6000, intervalMs: 150 },
   )
   if (!confirmed) throw new Error("login: post-login page does not render the admin tab bar — login did not complete")
+}
+
+// ---------------------------------------------------------------------------
+// Plan 01.8.3-07 — G-01.8.3-2b: an open aria-modal sheet must actually
+// cover the viewport. `.pk-admin-overlay-root` is `position: fixed; inset:
+// 0`, which should mean full-viewport by construction — but a flow child
+// that is not its parent's LAST child inherits Tailwind v4's `space-y-*`
+// `margin-block-end`, which SHRINKS a fixed, `inset: 0` element's used
+// height rather than offsetting it (confirmed: `#add-game-sheet` measured
+// 820px against an 844px ICB, the bottom 24px of the admin tab bar left
+// visible and clickable under an open, `aria-modal="true"` sheet — a real
+// CDP click at that point navigated away with the modal still open).
+//
+// Two independent proofs, both required by the gap:
+//   1. `checkSyntheticOverlayControl` — a synthetic overlay clone injected
+//      as a NON-LAST child of every `[class*="space-y-"]` container on
+//      every admin page in `PAGES`. Data-independent: it reaches every
+//      call site's real parent, even pages this script never opens a real
+//      sheet on. The trailing empty sibling is NOT decorative — Tailwind
+//      v4's `space-y-*` compiles to a `:where(& > :not(:last-child))`
+//      form, so an overlay injected as the LAST child would be exempted
+//      from the margin entirely and this control would pass vacuously,
+//      exactly the class of defect this whole gap is made of.
+//   2. `checkOverlayRealOpenWalk` — real clicks through real controls that
+//      open real sheets/dialogs (`OVERLAY_CALL_SITES` below), hit-tested
+//      via `elementFromPoint` at their own viewport corners (guard rule 2:
+//      read what is actually painted at a point, never node existence).
+// ---------------------------------------------------------------------------
+
+// Ported from `admin_components.mjs`'s own `isOverlayOpen` — module-level
+// here (that file's version is a closure) since this file's `main()` and
+// the walk below both call it directly. A DOM offset-parent reference is
+// unconditionally null for a `position: fixed` element in Chrome
+// regardless of visibility (confirmed empirically in
+// `admin_components.mjs`) — `.pk-admin-overlay-root` is always
+// `position: fixed`, so an open check based on that property can never
+// pass. Reads the RESOLVED `display` instead (guard rule 2: resolved
+// style, not node existence). A `:if`-mounted overlay entirely absent from
+// the DOM also counts as closed.
+async function isOverlayOpen(client, rootId) {
+  return evalJS(
+    client,
+    `(() => { const el = document.getElementById(${JSON.stringify(rootId)}); return !!el && getComputedStyle(el).display !== 'none'; })()`,
+  )
+}
+
+// Ported from `admin_components.mjs`'s own `clickCenterOf` — a real
+// `Input.dispatchMouseEvent` at the target's own centre, with an
+// `elementFromPoint` reachability pre-check (guard rule 2). On an
+// obstruction it still delivers the click via a direct `.click()` so the
+// opener chains below (testing whether an overlay OPENS and COVERS, not
+// whether its OPENER is itself reachable) can keep running; the caller
+// decides whether the obstruction is itself reportable.
+async function clickCenterOf(client, selector) {
+  const info = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return { found: false };
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2, y = r.y + r.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      const reachable = !!hit && (hit === el || el.contains(hit));
+      return {
+        found: true,
+        x, y,
+        reachable,
+        hitDescription: hit ? (hit.id ? '#' + hit.id : (hit.className || hit.tagName)) : '(nothing)',
+      };
+    })())
+  `,
+  )
+  const point = JSON.parse(info)
+  if (!point.found) throw new Error(`clickCenterOf: ${selector} not found`)
+
+  if (point.reachable) {
+    await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y })
+    await client.send("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 })
+    await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", clickCount: 1 })
+    return { obstructed: false, hitDescription: point.hitDescription }
+  }
+
+  log(`clickCenterOf: ${selector} is obstructed at its own centre point — a real tap there would hit ${point.hitDescription} instead. Falling back to a direct .click().`)
+  await evalJS(client, `document.querySelector(${JSON.stringify(selector)}).click(); true`)
+  return { obstructed: true, hitDescription: point.hitDescription }
+}
+
+// The declared call-site table (plan 01.8.3-07 Task 1: one row, the
+// defect's own — `add-game-sheet`. Task 3 expands this to six rows
+// spanning both `sheet/1` and `dialog/1`). Each row starts from a fresh
+// navigation. `dataIndependent: true` rows render their opener
+// UNCONDITIONALLY — a missing opener there means the walk itself is
+// broken, not that the dev catalog is thin, so it is a FAIL. A missing
+// opener on a data-dependent row (`dataIndependent: false`) is printed as
+// an explicit not-openable verdict, never a FAIL and never counted as
+// coverage. Each row's `steps` are run in order by `runOpenerSteps`: a
+// `type` step fills an input and dispatches a bubbling `input` event (so a
+// LiveView `phx-change` fires); a `click` step performs a real
+// `clickCenterOf` click. Every step polls for its own selector's presence
+// first, rather than sleeping a fixed interval.
+const OVERLAY_CALL_SITES = [
+  {
+    page: "/admin/juegos",
+    overlayId: "add-game-sheet",
+    dataIndependent: true,
+    steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+]
+
+// Injects a synthetic overlay clone (plus a trailing empty sibling so the
+// overlay is never the container's last child) into EVERY
+// `[class*="space-y-"]` container on the current page, measures each, and
+// removes both in a `finally` — all inside one `evalJS` expression so the
+// DOM is never left mutated across a network round trip and a thrown error
+// cannot leave debris behind for the next page.
+async function measureSyntheticOverlaySpaceY(client) {
+  return evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const containers = [...document.querySelectorAll('[class*="space-y-"]')];
+      const records = [];
+      for (const container of containers) {
+        const overlay = document.createElement('div');
+        overlay.className = 'pk-admin-overlay-root pk-admin-overlay--open';
+        const sibling = document.createElement('div');
+        try {
+          container.appendChild(overlay);
+          container.appendChild(sibling);
+          const r = overlay.getBoundingClientRect();
+          const cs = getComputedStyle(overlay);
+          records.push({
+            containerClass: container.className,
+            width: Math.round(r.width * 10) / 10,
+            height: Math.round(r.height * 10) / 10,
+            top: Math.round(r.top * 10) / 10,
+            left: Math.round(r.left * 10) / 10,
+            marginTop: cs.marginTop,
+            marginRight: cs.marginRight,
+            marginBottom: cs.marginBottom,
+            marginLeft: cs.marginLeft,
+          });
+        } finally {
+          overlay.remove();
+          sibling.remove();
+        }
+      }
+      return { records, innerWidth: window.innerWidth, innerHeight: window.innerHeight };
+    })())
+  `,
+  )
+}
+
+async function checkSyntheticOverlayControl({ client, baseUrl }) {
+  const fails = []
+  for (const page of PAGES) {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}${page}`)
+    await new Promise((r) => setTimeout(r, 200))
+    const { records, innerWidth, innerHeight } = JSON.parse(await measureSyntheticOverlaySpaceY(client))
+    if (records.length === 0) {
+      log(`synthetic overlay control ${page}: no [class*="space-y-"] container found — nothing to check`)
+      continue
+    }
+    let pagePassed = true
+    for (const r of records) {
+      const marginsZero = ["marginTop", "marginRight", "marginBottom", "marginLeft"].every((k) => r[k] === "0px")
+      const covers =
+        Math.abs(r.height - innerHeight) <= 0.5 &&
+        Math.abs(r.width - innerWidth) <= 0.5 &&
+        Math.abs(r.top) <= 0.5 &&
+        Math.abs(r.left) <= 0.5
+      if (!covers || !marginsZero) {
+        pagePassed = false
+        const msg = `synthetic overlay control ${page} container=${JSON.stringify(r.containerClass)}: rect ${r.width}x${r.height} @ (${r.left},${r.top}) vs ICB ${innerWidth}x${innerHeight}, margins ${r.marginTop}/${r.marginRight}/${r.marginBottom}/${r.marginLeft}`
+        fails.push(msg)
+        log(`FAIL: ${msg}`)
+      }
+    }
+    if (pagePassed) {
+      log(`synthetic overlay control ${page}: full-ICB overlay for all ${records.length} container(s), margins 0px`)
+    }
+  }
+  return { fails }
+}
+
+// Runs a call-site row's opener chain in order. Polls for each step's own
+// target selector before acting on it (never a fixed sleep). Returns
+// `{ openable: false, missingSelector }` the moment a step's selector never
+// appears — the caller decides whether that is a FAIL (a data-independent
+// row) or a printed not-openable verdict (a data-dependent one).
+async function runOpenerSteps(client, steps) {
+  for (const step of steps) {
+    const present = await pollUntil(() => evalJS(client, `!!document.querySelector(${JSON.stringify(step.selector)})`))
+    if (!present) return { openable: false, missingSelector: step.selector }
+    if (step.kind === "type") {
+      await evalJS(
+        client,
+        `
+        (() => {
+          const el = document.querySelector(${JSON.stringify(step.selector)});
+          el.value = ${JSON.stringify(step.value)};
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          return true;
+        })()
+      `,
+      )
+    } else {
+      await clickCenterOf(client, step.selector)
+    }
+  }
+  return { openable: true }
+}
+
+// The real-open walk's own measurement body: the overlay root's own rect
+// against the ICB, its four computed margins, and five `elementFromPoint`
+// probes — each viewport corner inset 4px, plus the bottom-centre point
+// (`innerWidth / 2`, `innerHeight - 12`) — the exact point family the UAT's
+// own coordinate (195, 832 at 390x844) belongs to. `elementFromPoint`
+// reads what is ACTUALLY painted at a point (guard rule 2), never node
+// existence — this is what proves nothing outside the overlay is
+// reachable, not just that the overlay node exists somewhere in the DOM.
+async function measureOverlayCoverage(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const el = document.getElementById(${JSON.stringify(overlayId)});
+      if (!el) return { found: false };
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      const w = window.innerWidth, h = window.innerHeight;
+      const points = [
+        [4, 4],
+        [w - 4, 4],
+        [4, h - 4],
+        [w - 4, h - 4],
+        [w / 2, h - 12],
+      ];
+      const hits = points.map(([x, y]) => {
+        const hit = document.elementFromPoint(x, y);
+        const inside = !!hit && (hit === el || el.contains(hit));
+        return {
+          x, y, inside,
+          description: hit ? (hit.id ? '#' + hit.id : (hit.className || hit.tagName)) : '(nothing)',
+        };
+      });
+      return {
+        found: true,
+        rect: { top: Math.round(r.top * 10) / 10, left: Math.round(r.left * 10) / 10, width: Math.round(r.width * 10) / 10, height: Math.round(r.height * 10) / 10 },
+        icb: { width: w, height: h },
+        margins: { top: cs.marginTop, right: cs.marginRight, bottom: cs.marginBottom, left: cs.marginLeft },
+        hits,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// Drives `OVERLAY_CALL_SITES` end to end: for each row, navigate fresh,
+// run its opener steps, poll until its overlay's resolved `display` is not
+// `none`, then measure coverage. Prints exactly one verdict line per row —
+// covered, a coverage failure, or not-openable — and a summary naming how
+// many rows were attempted vs. covered, so an absent opener can never
+// silently shrink the reported row count.
+async function checkOverlayRealOpenWalk({ client, baseUrl, rows }) {
+  const fails = []
+  const notOpenable = []
+  let covered = 0
+
+  for (const row of rows) {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}${row.page}`)
+    await new Promise((r) => setTimeout(r, 250))
+
+    const openResult = await runOpenerSteps(client, row.steps)
+    if (!openResult.openable) {
+      if (row.dataIndependent) {
+        const msg = `${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`
+        fails.push(msg)
+        log(`FAIL: ${msg}`)
+      } else {
+        notOpenable.push({ page: row.page, overlayId: row.overlayId, missingSelector: openResult.missingSelector })
+        log(`NOT-OPENABLE: ${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — dev data is likely too thin for this row`)
+      }
+      continue
+    }
+
+    const opened = await pollUntil(() => isOverlayOpen(client, row.overlayId))
+    if (!opened) {
+      const msg = `${row.page} ${row.overlayId}: opener steps completed but the overlay never reached a resolved display other than 'none'`
+      fails.push(msg)
+      log(`FAIL: ${msg}`)
+      continue
+    }
+
+    const m = await measureOverlayCoverage(client, row.overlayId)
+    if (!m.found) {
+      const msg = `${row.page} ${row.overlayId}: overlay reported open but #${row.overlayId} is not in the DOM`
+      fails.push(msg)
+      log(`FAIL: ${msg}`)
+      continue
+    }
+
+    const { rect, icb, margins, hits } = m
+    const coversRect =
+      Math.abs(rect.width - icb.width) <= 0.5 &&
+      Math.abs(rect.height - icb.height) <= 0.5 &&
+      Math.abs(rect.top) <= 0.5 &&
+      Math.abs(rect.left) <= 0.5
+    const marginsZero = margins.top === "0px" && margins.right === "0px" && margins.bottom === "0px" && margins.left === "0px"
+    const badHits = hits.filter((h) => !h.inside)
+
+    if (coversRect && marginsZero && badHits.length === 0) {
+      covered++
+      log(`COVERED: ${row.page} ${row.overlayId}: rect ${rect.width}x${rect.height} @ (${rect.left},${rect.top}) covers ICB ${icb.width}x${icb.height}, margins 0px, all ${hits.length} hit tests inside`)
+    } else {
+      const hitMsg = badHits.length ? `; hit test(s) missed: ${badHits.map((h) => `(${h.x},${h.y})->${h.description}`).join(", ")}` : ""
+      const msg = `${row.page} ${row.overlayId}: coverage failure — rect ${rect.width}x${rect.height} @ (${rect.left},${rect.top}) vs ICB ${icb.width}x${icb.height}, margins ${margins.top}/${margins.right}/${margins.bottom}/${margins.left}${hitMsg}`
+      fails.push(msg)
+      log(`FAIL: ${msg}`)
+    }
+
+    // Fresh navigation so no residual overlay/LiveView state leaks into
+    // the next row's measurement.
+    await navigate(client, `${baseUrl}${row.page}`)
+  }
+
+  log(`overlay real-open walk: attempted=${rows.length} covered=${covered} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable, covered, attempted: rows.length }
+}
+
+async function checkOverlayCoversViewport({ client, baseUrl }) {
+  const synthetic = await checkSyntheticOverlayControl({ client, baseUrl })
+  const walk = await checkOverlayRealOpenWalk({ client, baseUrl, rows: OVERLAY_CALL_SITES })
+  return {
+    fails: [...synthetic.fails, ...walk.fails],
+    notOpenable: walk.notOpenable,
+    covered: walk.covered,
+    attempted: walk.attempted,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1217,6 +1560,13 @@ async function main() {
     log("Measuring the Juegos list/caption geometry...")
     const juegosGeometry = await checkJuegosListGeometry({ client, baseUrl })
     if (juegosGeometry.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- overlay coverage (plan 01.8.3-07, G-01.8.3-2b) ----
+    log("Measuring overlay coverage (synthetic control + real-open call-site walk)...")
+    const overlayCoverage = await checkOverlayCoversViewport({ client, baseUrl })
+    if (overlayCoverage.fails.length > 0) {
       exitCode = 1
     }
   } finally {
