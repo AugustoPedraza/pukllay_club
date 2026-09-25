@@ -63,6 +63,57 @@ defmodule PukllayClubWeb.AdminPinnedBandTest do
     to_float(raw)
   end
 
+  # Resolves what `--bandp` ACTUALLY evaluates to, by reading its declared
+  # calc() out of the stylesheet and doing the arithmetic — never by
+  # recomputing the intended formula in Elixir.
+  #
+  # This distinction is the whole point (CR-02, 01.8.3-REVIEW.md). An earlier
+  # version of this file derived `bandp` as `(44.0 - cap_box) / 2` on the
+  # Elixir side and then asserted `cap_box + 2 * bandp == 44`, which is
+  # algebraically true for every input and therefore could not fail. It was
+  # proven blind by mutating the stylesheet's own divisor from `/ 2` to
+  # `/ 3` — a real 35.4px band instead of the required 44px, the same class
+  # of defect as the shipped 32.2px/44.2px bug — with every assertion in
+  # this file still green. Reading the declared expression is what makes the
+  # band-height and `--pt` floor tests below falsifiable.
+  #
+  # Only the canonical shape `calc((<target>px - var(--cap-box)) / <divisor>)`
+  # is accepted. A restructured or literalised `--bandp` fails here rather
+  # than being silently approximated — an unparseable derivation is itself
+  # the signal, since this guard exists to pin that derivation in source.
+  defp declared_bandp_px(src) do
+    body = rule_body(src, @base_header_selector)
+    raw = body && declared_value(body, "--bandp")
+
+    assert raw,
+           "Expected a `--bandp` declaration in `#{@base_header_selector}`, found none."
+
+    pattern = ~r/^calc\(\s*\(\s*([\d.]+)px\s*-\s*var\(\s*--cap-box\s*\)\s*\)\s*\/\s*([\d.]+)\s*\)$/
+
+    case Regex.run(pattern, String.trim(raw)) do
+      [_, target, divisor] ->
+        d = to_float(divisor)
+
+        assert d != 0.0,
+               "`--bandp`'s calc() divides by zero: `#{raw}`."
+
+        (to_float(target) - numeric_value(src, "--cap-box")) / d
+
+      nil ->
+        flunk("""
+        `--bandp` is declared as `#{raw}`, which does not match the canonical
+        derivation `calc((<target>px - var(--cap-box)) / 2)`.
+
+        The pinned band's height invariant (D-15, 01.8.3-05) requires --bandp to
+        be HALF the leftover air once the caption box is removed from the 44px
+        target, derived from --cap-box rather than measured or hard-coded. If
+        this derivation genuinely needs a new shape, update this parser in the
+        same edit — do not loosen it to a substring match, which is exactly the
+        blindness CR-02 recorded.
+        """)
+    end
+  end
+
   test "the pinned header rule declares padding-top and padding-bottom, both referencing --bandp" do
     body = juegos_source() |> strip_comments() |> rule_body(@pinned_header_selector)
 
@@ -117,7 +168,9 @@ defmodule PukllayClubWeb.AdminPinnedBandTest do
 
     cap_box = numeric_value(src, "--cap-box")
     cap = numeric_value(src, "--cap")
-    bandp = (44.0 - cap_box) / 2
+    # The DECLARED --bandp, not a recomputed one — a wrong derivation must move
+    # this floor, or the floor check is blind in the same way CR-02 recorded.
+    bandp = declared_bandp_px(src)
     floor = bandp + cap
 
     pts =
@@ -143,13 +196,16 @@ defmodule PukllayClubWeb.AdminPinnedBandTest do
     src = strip_comments(juegos_source())
 
     cap_box = numeric_value(src, "--cap-box")
-    bandp = (44.0 - cap_box) / 2
+    # Evaluated from the stylesheet's own declared calc() — see
+    # declared_bandp_px/1's comment for why recomputing it here made this
+    # assertion a tautology that could not fail (CR-02).
+    bandp = declared_bandp_px(src)
 
     assert_in_delta cap_box + 2 * bandp,
                     44.0,
                     0.05,
-                    "--cap-box (#{cap_box}px) + 2 * --bandp (#{bandp}px) does not resolve to " <>
-                      "44px — the pinned band's own height invariant (D-15, 01.8.3-05) no " <>
-                      "longer holds."
+                    "--cap-box (#{cap_box}px) + 2 * --bandp (#{bandp}px, as DECLARED in " <>
+                      "juegos.css) does not resolve to 44px — the pinned band's own height " <>
+                      "invariant (D-15, 01.8.3-05) no longer holds."
   end
 end
