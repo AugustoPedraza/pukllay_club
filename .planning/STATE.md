@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.2
-current_phase_name: admin-screen-by-screen-refinement
+current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Phase 01.8.3 context gathered
-last_updated: "2026-09-25T19:51:28.134Z"
+stopped_at: Completed 01.8.3-06-PLAN.md
+last_updated: "2026-09-25T20:20:53.622Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 6be725ce1d383d6652f99bce40d7f2f534b6a295
+state_head: 5c7b1a8ac231efef0d3244c1412245a153964ec1
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 56
-  completed_plans: 49
+  completed_plans: 54
 ---
 
 Total Phases: 9
@@ -33,10 +33,10 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.3 (admin-screen-by-screen-refinement) — READY TO EXECUTE
-Plan: 1 of 5
+Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-09-25 - Completed quick task 260925-f94: Close 01.8.3 gap CR-01: confirm-edition success must close the + sheet
+Last activity: 2026-09-25 — Phase 01.8.3 execution started
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -159,6 +159,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.2 P18 | ~100min | 3 tasks | 13 files |
 | Phase 01.8.2 P20 | ~55min | 3 tasks | 10 files |
 | Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
+| Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -332,6 +333,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: GameLive.Form's mount/3 redirects a draft's direct editor URL to /admin/juegos?draft=<id> BEFORE loading section names/shelves/copies, so the editor page renders only for an already-published or retired game
 - [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
+- [Phase 01.8.2]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
 
 ### Pending Todos
 
@@ -477,9 +479,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-24T20:01:50.539Z
-Stopped at: Phase 01.8.3 context gathered
-Resume file: .planning/phases/01.8.3-admin-screen-by-screen-refinement/01.8.3-CONTEXT.md
+Last session: 2026-09-25T20:20:53.476Z
+Stopped at: Completed 01.8.3-06-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
