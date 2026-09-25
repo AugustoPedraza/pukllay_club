@@ -36,7 +36,7 @@ ahead of Phase 2, which keeps its number and scope.
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
 Plan: 1 of 5
 Status: Executing Phase 01.8.3
-Last activity: 2026-09-24 — Phase 01.8.3 execution started
+Last activity: 2026-09-25 - Completed quick task 260925-f94: Close 01.8.3 gap CR-01: confirm-edition success must close the + sheet
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -428,6 +428,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 | 260922-tum | Fixed BggClient.parse_items xpath scoping (`.//` → `./`) so nested boardgameversion links no longer fold into the base game, added `:publishers` to StatsEnricher's cast allowlist, and re-enriched dev (394 rows; worst publisher list 178 → 45, duplicate entries → 0). Prod still contaminated — repair pending deploy | 2026-09-22 | 2a54e81 | complete | [260922-tum-fix-the-bgg-xpath-bug-and-re-enrich](./quick/260922-tum-fix-the-bgg-xpath-bug-and-re-enrich/) |
 | 260922-veq | Added `Release.enrich_bgg_stats/1` + `StatsAudit.report/0`/`Release.bgg_stats_report/0` so the BGG re-enrichment can be invoked and measured on a production release (Mix is absent from a release). Code + runbook only; production repair subsequently run by the operator on 2026-09-23 and verified (178→45, 385→0 duplicates) | 2026-09-22 | 029f2c4 | complete | [260922-veq-add-release-enrich-bgg-stats-so-bgg-stat](./quick/260922-veq-add-release-enrich-bgg-stats-so-bgg-stat/) |
 | 260922-w5o | Corrected the production invocation for the BGG re-enrichment entrypoints from `rpc` (verified unavailable on the prod container — `:noconnection`, root cause not established) to `eval` plus an explicit `:req`/`:ecto_sql`/`Repo.start_link` preamble, across release.ex, the runbook, AGENTS.md and the guard's pinned test assertion | 2026-09-22 | 1e57d6a | complete | [260922-w5o-correct-the-production-invocation-docs-f](./quick/260922-w5o-correct-the-production-invocation-docs-f/) |
+| 260925-f94 | Closed 01.8.3 verification gap CR-01: `confirm-edition`'s success clause now assigns `add_game_sheet_open: false`, so the `+` sheet closes on both of its success paths instead of hiding the Borradores draft it just created — landed RED-then-GREEN as separate commits because the four pre-existing `confirm-edition` tests never open the sheet and so could never have caught it; review finding WR-01 assessed in the same task and dismissed as documented intent (D-19h constrains the fresh tint's colour, not its duration) | 2026-09-25 | 2655d6f4 | complete | [260925-f94-close-01-8-3-gap-cr-01-confirm-edition-s](./quick/260925-f94-close-01-8-3-gap-cr-01-confirm-edition-s/) |
 
 ### Roadmap Evolution
 
