@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.2
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-06-PLAN.md
-last_updated: "2026-09-25T20:20:53.622Z"
+stopped_at: Completed 01.8.3-07-PLAN.md
+last_updated: "2026-09-25T21:02:54.724Z"
 last_activity: 2026-09-25
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 5c7b1a8ac231efef0d3244c1412245a153964ec1
+state_head: 410bd4fb97c3129b33dfdd0bce6cceb065ee7e44
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 56
-  completed_plans: 54
+  completed_plans: 56
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-09-25 — Phase 01.8.3 execution started
 
@@ -160,6 +160,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.2 P20 | ~55min | 3 tasks | 10 files |
 | Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
 | Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
+| Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -334,6 +335,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: Extracted EstanteLive.Index's «¿Dónde va?» sheet into a shared PlacementSheet module + AdminComponents.placement_sheet/1, reused by GameLive.Form's ESTANTE block — D-32 requires ONE implementation; the extraction kept EstanteLive.Index's own event names/DOM ids byte-identical, so its 66-test suite needed no changes
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
 - [Phase 01.8.2]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
+- [Phase 01.8.2]: [Phase 01.8.3] 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
 
 ### Pending Todos
 
@@ -479,8 +481,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T20:20:53.476Z
-Stopped at: Completed 01.8.3-06-PLAN.md
+Last session: 2026-09-25T21:02:54.556Z
+Stopped at: Completed 01.8.3-07-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
