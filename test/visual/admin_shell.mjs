@@ -372,25 +372,104 @@ async function clickCenterOf(client, selector) {
   return { obstructed: true, hitDescription: point.hitDescription }
 }
 
-// The declared call-site table (plan 01.8.3-07 Task 1: one row, the
-// defect's own — `add-game-sheet`. Task 3 expands this to six rows
-// spanning both `sheet/1` and `dialog/1`). Each row starts from a fresh
-// navigation. `dataIndependent: true` rows render their opener
-// UNCONDITIONALLY — a missing opener there means the walk itself is
-// broken, not that the dev catalog is thin, so it is a FAIL. A missing
-// opener on a data-dependent row (`dataIndependent: false`) is printed as
-// an explicit not-openable verdict, never a FAIL and never counted as
-// coverage. Each row's `steps` are run in order by `runOpenerSteps`: a
-// `type` step fills an input and dispatches a bubbling `input` event (so a
-// LiveView `phx-change` fires); a `click` step performs a real
-// `clickCenterOf` click. Every step polls for its own selector's presence
-// first, rather than sleeping a fixed interval.
+// The declared call-site table (plan 01.8.3-07 Task 3 — expanded from
+// Task 1's single `add-game-sheet` row to six, spanning both `sheet/1` and
+// `dialog/1`, closing the gap's own third `missing:` bullet). Each row
+// starts from a fresh navigation. `dataIndependent: true` rows render
+// their opener UNCONDITIONALLY — a missing opener there means the walk
+// itself is broken, not that the dev catalog is thin, so it is a FAIL. A
+// missing opener on a data-dependent row (`dataIndependent: false`) is
+// printed as an explicit not-openable verdict, never a FAIL and never
+// counted as coverage. Each row's `steps` are run in order by
+// `runOpenerSteps`: a `type` step fills an input and dispatches a bubbling
+// `input` event (so a LiveView `phx-change` fires); a `click` step
+// performs a real `clickCenterOf` click. Every step polls for its own
+// selector's presence first, rather than sleeping a fixed interval.
+//
+// Destructive-path guard: `/admin/estantes/administrar`'s delete dialog
+// and `/admin/estantes`'s remove-from-shelf dialog are reached ONLY as far
+// as opening + measuring them — this walk must NEVER click either
+// dialog's own commit control, `[phx-click="confirm-delete"]` or
+// `[phx-click="confirm-quitar"]` (`EstanteLive.Administrar`'s
+// `confirm-delete` handler deletes a real shelf; `EstanteLive.Index`'s
+// `confirm-quitar` handler un-places a real copy). No step below targets
+// either selector — `confirm-delete-shelf-dialog`'s own steps stop at
+// `ask-delete`, which only OPENS the dialog. Each row's selectors are also
+// scoped to that row's own named overlay/opener context so a later row can
+// never accidentally resolve inside an earlier row's leftover markup.
 const OVERLAY_CALL_SITES = [
   {
     page: "/admin/juegos",
     overlayId: "add-game-sheet",
     dataIndependent: true,
     steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+  {
+    // `open-new-shelf` renders unconditionally in the header actions
+    // regardless of shelf count (only "Ordenar" is gated on
+    // `@shelves != []`) — data-independent.
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-name-sheet",
+    dataIndependent: true,
+    steps: [{ kind: "click", selector: '[phx-click="open-new-shelf"]' }],
+  },
+  {
+    // Requires at least one real shelf row in `#administrar-rows` — data-
+    // dependent (see this task's own precondition: seed one if the dev DB
+    // has none).
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-options-sheet",
+    dataIndependent: false,
+    steps: [{ kind: "click", selector: "#administrar-rows .pk-admin-row" }],
+  },
+  {
+    // Opens the SAME shelf row's options sheet, then its `ask-delete`
+    // control — which only OPENS `dialog/1`'s `confirm-delete-shelf-
+    // dialog`, never commits it. The confirm control itself
+    // (`[phx-click="confirm-delete"]`) is never targeted by this walk.
+    page: "/admin/estantes/administrar",
+    overlayId: "confirm-delete-shelf-dialog",
+    dataIndependent: false,
+    steps: [
+      { kind: "click", selector: "#administrar-rows .pk-admin-row" },
+      { kind: "click", selector: '#shelf-options-sheet [phx-click="ask-delete"]' },
+    ],
+  },
+  {
+    // Requires a real search hit, and the picked copy must already be
+    // PLACED on a shelf (`select_copy_struct/2` opens «¿Dónde va?»
+    // instead of the rail for an unplaced copy) — data-dependent on both
+    // counts. `[data-pk-rail-selected="true"]` is the rail's own marker
+    // for "this is the currently selected copy" (`estante_live/index.ex`'s
+    // `data-pk-rail-selected={to_string(copy.id == @selected_copy.id)}`)
+    // — it resolves to whichever copy was just picked without hard-coding
+    // a copy id, satisfying this row's own "derive from the DOM" contract.
+    // Once the copy is selected, that SAME button's `phx-click` flips from
+    // `pick-copy` to `open-cover-options`, so clicking it a second time
+    // opens the sheet. The query below deliberately names a real game
+    // rather than a bare single letter: a one-letter query against a dev
+    // catalog with only ONE placed copy is very likely to surface an
+    // UNPLACED game first (`search_copies/1` orders by name, not by
+    // placement) — which opens «¿Dónde va?» instead, a false not-openable
+    // that says nothing about this call site's real coverage. Naming the
+    // one seeded, placed copy's own game removes that ambiguity; if the
+    // dev catalog has no placed copies at all, this row still correctly
+    // reports not-openable (see this task's own precondition).
+    page: "/admin/estantes",
+    overlayId: "cover-options-sheet",
+    dataIndependent: false,
+    steps: [
+      { kind: "type", selector: "#estantes-search-input", value: "carcassonne" },
+      { kind: "click", selector: "#estantes-suggestions [data-pk-pressable]" },
+      { kind: "click", selector: '[data-pk-rail-selected="true"]' },
+    ],
+  },
+  {
+    // Requires at least one weight-band mismatch in the dev catalog.
+    page: "/admin/niveles",
+    overlayId: "niveles-sheet",
+    dataIndependent: false,
+    steps: [{ kind: "click", selector: "#band-mismatches .pk-admin-row" }],
   },
 ]
 
