@@ -43,7 +43,7 @@ Omit `PROBE_BASE_URL` and a script will boot (and later tear down) its own
 | `about_geometry.mjs` | The public About page's vertical rhythm (band adjacency, `#cierre`'s gaps, the Sumate CTA) | Public site (01.5-06/07/08/13) |
 | `about_map_attribution.mjs` | The About page's live Google Maps embed (CSP, geometry, dark-mode filter) | Public site (01.4-12) |
 | `admin_components.mjs` | The admin's measurable design-system rules (A1-A9 action anatomies, D1-D3 page-head rhythm, K1's 16px-field-on-touch rule, the 44px hit-box floor), plus D-19o's real press state and the `admin_sheet.js` interaction hook (Esc, scrim tap, drag-down, focus trap, focus return) driven against the real Staff screen | Admin (01.8.2-12) |
-| `admin_shell.mjs` | The admin shell chrome every screen sits inside: the fixed foot save bar (D-28), the pinned page bar's zero-layout-cost-at-rest guarantee (D-19n), the tab bar (D-13b), and the shell's content keel (open item 4) | Admin (01.8.2-12) |
+| `admin_shell.mjs` | The admin shell chrome every screen sits inside: the fixed foot save bar (D-28), the pinned page bar's zero-layout-cost-at-rest guarantee (D-19n), the tab bar (D-13b), the shell's content keel (open item 4), and (plan 01.8.3-05) the Juegos-specific list/caption pixel geometry — the 16px content keel, both section pinned-band heights and their flush adjacency to the pinned search row, a list row's 64px floor, and the caption's ink-to-ink air ratio (D-13/D-15/D-16) | Admin (01.8.2-12, 01.8.3-05) |
 
 ## Structure convention
 

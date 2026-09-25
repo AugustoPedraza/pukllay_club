@@ -273,9 +273,36 @@
   transition: background var(--duration-fast) var(--ease-standard);
 }
 
+/* Plan 01.8.3-05 [Rule 1 - Bug]: the pinned rule's `top` offset, unlike its
+   height, was NOT actually independent of `--pt`. Every header pins at the
+   SAME sticky viewport offset (`top: var(--pk-juegos-pinned-h)` above)
+   regardless of section, so a band whose `top` still varies with `--pt`
+   (26px for every non-first section, 14px only for the first) renders at a
+   DIFFERENT absolute distance below the pinned search row per section —
+   confirmed live in headless Chrome: the first section's band sat flush
+   (0.5px gap, `--pt: 14` happens to nearly cancel the arithmetic below by
+   coincidence) while a later section's band sat 12.5px below the search
+   row's own bottom edge (exactly `26 - 14`, the `--pt` delta leaking
+   straight into the gap). Fixed by setting `top: 0` — the band's top edge
+   now equals the header's own top edge exactly, matching the search row's
+   bottom edge for every section — and re-deriving `bottom` so the band's
+   HEIGHT invariant (`--cap-box + 2 × --bandp` = 44px for every section,
+   already correct and unaffected by this fix) still holds: since the
+   header's own rendered height is `--pt + --cap-box` and `bottom` is
+   measured from that box's own bottom edge, `bottom` must equal
+   `--pt + --cap-box - 44px` — i.e. `--pt - 2 × --bandp` (algebraically
+   identical, since `2 × --bandp = 44px - --cap-box`) — for
+   `height - bottom - top` to reduce to the same `--cap-box + 2 × --bandp`
+   the un-pinned math already proves. For the FIRST section this correctly
+   yields a NEGATIVE `bottom` (the band extends past the header's own,
+   shorter box into the row below) — the exact same overflow shape the
+   PRE-EXISTING code already relied on for the `bottom` side of the FIRST
+   section (its own `bottom` was already negative under the old formula:
+   `--cap - --bandp` = `0.6 - 12.9` = `-12.3`), so this is not a new class
+   of rendering, only a relocation of which edge carries it per section. */
 .pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header::before {
-  top: calc(var(--pt) - var(--bandp) - var(--cap));
-  bottom: calc(var(--cap) - var(--bandp));
+  top: 0;
+  bottom: calc(var(--pt) - 2 * var(--bandp));
   background: var(--color-surface);
 }
 

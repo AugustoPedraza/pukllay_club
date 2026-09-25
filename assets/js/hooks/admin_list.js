@@ -134,15 +134,55 @@ export default {
         for (const entry of entries) {
           const wrap = entry.target.nextElementSibling
           if (!wrap) continue
-          // Pinned means: the sentinel is no longer intersecting the
-          // rootMargin-shrunk viewport. `rootMargin`'s top inset already
-          // matches the pinned search row's real height (D-15) — do NOT
-          // additionally gate on the entry's real-viewport rect, which
-          // rootMargin never affects: ANDing a check against it back in
-          // re-opens the exact window this rootMargin exists to close
-          // (01.8.3-RESEARCH.md).
-          const pinned = !entry.isIntersecting
-          wrap.toggleAttribute("data-pinned", pinned)
+          // Plan 01.8.3-05 [Rule 1 - Bug]: `!entry.isIntersecting` ALONE
+          // (01.8.3-03's fix, following 01.8.3-RESEARCH.md's diagnosis)
+          // is true in TWO cases IntersectionObserver cannot itself tell
+          // apart: the sentinel has scrolled UP past the pinned row (the
+          // case this whole mechanism exists for), and the sentinel has
+          // never yet been scrolled TO — still below the fold, e.g. right
+          // after a collapsed section above it (Borradores) is expanded
+          // and pushes this section's heading further down. Confirmed live
+          // in headless Chrome: expanding Borradores re-triggers
+          // `setupPinObserver()` (a fresh `IntersectionObserver` fires an
+          // immediate entry for its CURRENT geometry), and Juegos del
+          // club's now-far-below-viewport sentinel reported
+          // `isIntersecting: false` — correct for "not currently on
+          // screen," wrong for this hook's own "has scrolled past" meaning
+          // — setting `data-pinned="true"` before the page had scrolled at
+          // all. `entry.boundingClientRect.top` DOES distinguish the two
+          // (a large positive value when still below the fold, at-or-below
+          // `pinnedBandPx` once genuinely stuck) — 01.8.3-03 removed that
+          // clause because the ORIGINAL literal `< 0` threshold didn't
+          // match `rootMargin`'s own `pinnedBandPx`-derived inset, dominating
+          // it and re-opening the ~44px delayed-pin window (the original
+          // G-01.8.2-4 report). The fix is not to drop the clause, but to
+          // give it the SAME threshold `rootMargin` already uses, so both
+          // conditions agree on where "pinned" begins instead of one
+          // silently overriding the other.
+          //
+          // Plan 01.8.3-05 [Rule 1 - Bug]: `toggleAttribute(name, force)`
+          // always sets an EMPTY-STRING value when `force` is true — it can
+          // never produce the literal string "true" `setAttribute` would.
+          // `juegos.css`'s own pinned-band rules select on
+          // `[data-pinned="true"]` (an exact-value match, not a presence
+          // selector), so the attribute this line wrote could never match
+          // that selector: the pinned caption fill has never actually
+          // painted since plan 01.8.3-03 shipped it, confirmed via a real
+          // headless-Chrome scroll (`data-pinned` read back as `""`, not
+          // `"true"`, at every observed pin). Fixed by mirroring this same
+          // function's own sibling convention two lines above
+          // (`data-pinned-hidden` uses `setAttribute`/`removeAttribute`,
+          // never `toggleAttribute`) rather than loosening the CSS
+          // selector to presence-only — the exact-value form was written
+          // deliberately (twice) and a plain rename carries lower risk of
+          // silently also matching some OTHER future `data-pinned="false"`
+          // producer.
+          const pinned = !entry.isIntersecting && entry.boundingClientRect.top < this.pinnedBandPx + 1
+          if (pinned) {
+            wrap.setAttribute("data-pinned", "true")
+          } else {
+            wrap.removeAttribute("data-pinned")
+          }
         }
       },
       { rootMargin: `-${this.pinnedBandPx + 1}px 0px 0px 0px`, threshold: [0, 1] },
