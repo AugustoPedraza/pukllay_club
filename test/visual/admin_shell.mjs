@@ -274,8 +274,15 @@ async function loginAsStaff(client, baseUrl) {
   await navigate(client, magicLinks[magicLinks.length - 1])
   await new Promise((r) => setTimeout(r, 400))
   await evalJS(client, `(() => { const btn = document.querySelector('button[type="submit"], form button'); if (btn) btn.click(); return !!btn; })()`)
-  await new Promise((r) => setTimeout(r, 1200))
-  const confirmed = await evalJS(client, `document.body ? document.body.innerHTML.includes('pk-admin-tab-bar') : false`)
+  // Plan 01.8.3-06: replaces a fixed 1200ms post-confirm sleep, which
+  // `01.8.3-UAT.md` recorded as flaking on a cold first boot (observed
+  // needing ~1500ms there). Polls the same `pk-admin-tab-bar` presence
+  // expression the confirmation check below already evaluates, with a
+  // timeout comfortably above that observed cold-boot latency.
+  const confirmed = await pollUntil(
+    () => evalJS(client, `document.body ? document.body.innerHTML.includes('pk-admin-tab-bar') : false`),
+    { timeoutMs: 6000, intervalMs: 150 },
+  )
   if (!confirmed) throw new Error("login: post-login page does not render the admin tab bar — login did not complete")
 }
 
@@ -824,6 +831,14 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       }
       if (searchInputEl) searchInputEl.blur();
 
+      // Plan 01.8.3-06: the caption's ink rect a SECOND time, now that the
+      // section is confirmed pinned — a distinct reading from capInk
+      // above, which is the RESTING-layout measurement the D-13 air-ratio
+      // assertions depend on and must not be disturbed. Read via the same
+      // textInk helper, on the same label element, so both readings are
+      // directly comparable.
+      const pinnedInk = textInk(labelElForInk);
+
       const searchWrap = document.querySelector('#juegos-search-wrap');
       const searchHidden = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
       const searchRect = searchWrap ? searchWrap.getBoundingClientRect() : null;
@@ -838,6 +853,16 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       const bandBg = beforeCs.backgroundColor;
       const bandSearchGap = searchRect ? Math.round((bandTop - searchRect.bottom) * 10) / 10 : null;
 
+      // Plan 01.8.3-06: where the pinned caption's own ink sits INSIDE the
+      // band — bandTop/bandBottom above are read off the ::before
+      // pseudo-element's own resolved geometry, never the header's box,
+      // exactly like the band-height reading a few lines up. A null
+      // pinnedInk (ink could not be measured) propagates as null gaps
+      // rather than a false zero, which would otherwise read as a perfect
+      // pass.
+      const inkGapAbove = pinnedInk ? Math.round((pinnedInk.top - bandTop) * 10) / 10 : null;
+      const inkGapBelow = pinnedInk ? Math.round((bandBottom - pinnedInk.bottom) * 10) / 10 : null;
+
       const rowsWrap = section.querySelector('.pk-admin-juegos-rows');
       const firstRowBelow = rowsWrap ? rowsWrap.querySelector('.pk-admin-row') : null;
       const rowHeight = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
@@ -845,6 +870,7 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       return JSON.stringify({
         pinned, searchHidden, bandTop, bandBottom, bandHeight, bandBg, bandSearchGap,
         rowHeight, hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
+        inkGapAbove, inkGapBelow,
       });
     })()
   `,
@@ -858,6 +884,28 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
   const fail = (msg) => {
     fails.push(msg)
     log(`FAIL: ${msg}`)
+  }
+
+  // Plan 01.8.3-06: the pinned caption's ink position INSIDE its 44px band
+  // — a class of defect band-height/background/adjacency checks alone
+  // cannot see, since the band can stay 44px and opaque while its ink
+  // slides to an edge. Logs both gaps for a section and applies the
+  // null-guard + per-section symmetry gate; the cross-section `--pt`
+  // independence gate lives separately, below, where both sections' own
+  // results are already in scope together.
+  const checkInkInBand = (label, result) => {
+    log(`juegos ${label} ink-in-band: above=${result.inkGapAbove}px below=${result.inkGapBelow}px`)
+    if (result.inkGapAbove == null || result.inkGapBelow == null) {
+      fail(`juegos ${label} ink-in-band: could not measure the pinned ink position (inkGapAbove=${result.inkGapAbove}, inkGapBelow=${result.inkGapBelow})`)
+      return
+    }
+    if (result.inkGapAbove <= 0 || result.inkGapBelow <= 0) {
+      fail(`juegos ${label} ink-in-band: ink is outside or flush against the band edge (above=${result.inkGapAbove}px, below=${result.inkGapBelow}px)`)
+    }
+    const diff = Math.round(Math.abs(result.inkGapAbove - result.inkGapBelow) * 10) / 10
+    if (diff > 2.0) {
+      fail(`juegos ${label} ink-in-band: asymmetric by ${diff}px (above=${result.inkGapAbove}px, below=${result.inkGapBelow}px), expected within 2.0px of each other`)
+    }
   }
 
   // ---- keel: a list row vs the pinned search row, at 375/360/390 ----
@@ -909,6 +957,7 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     }
     if (isFullyTransparent(first.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.bandBg})`)
     if (first.rowHeight === null || first.rowHeight < 64) fail(`juegos first-section row height ${first.rowHeight}px, expected >= 64px`)
+    checkInkInBand("first-section (Borradores)", first)
   }
 
   const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
@@ -934,12 +983,26 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
       log(`juegos ink-to-ink: above=${later.airAbove}px below=${later.airBelow}px ratio=${later.airRatio}:1`)
       if (later.airRatio < 2.5) fail(`juegos ink-to-ink ratio ${later.airRatio}:1 is below the 2.5:1 floor (above=${later.airAbove}px, below=${later.airBelow}px)`)
     }
+    checkInkInBand("later-section (Juegos del club)", later)
   }
 
   if (!first.error && !later.error) {
     const delta = Math.round((first.bandHeight - later.bandHeight) * 10) / 10
     log(`juegos band heights: first=${first.bandHeight}px later=${later.bandHeight}px delta=${delta}px`)
     if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.bandHeight}px, later=${later.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
+
+    // Plan 01.8.3-06: the assertion that directly names the root cause — a
+    // band whose ink offset tracks `--pt` reads 14 against 26 today, even
+    // though the band's own HEIGHT is identical (44px) for both sections.
+    if (first.inkGapAbove == null || later.inkGapAbove == null) {
+      fail(`juegos ink gap-above cross-section: could not measure inkGapAbove for one or both sections (first=${first.inkGapAbove}, later=${later.inkGapAbove})`)
+    } else {
+      const crossDelta = Math.round(Math.abs(first.inkGapAbove - later.inkGapAbove) * 10) / 10
+      log(`juegos ink gap-above cross-section: first=${first.inkGapAbove}px later=${later.inkGapAbove}px delta=${crossDelta}px`)
+      if (crossDelta > 1.0) {
+        fail(`juegos ink gap-above disagrees between sections by ${crossDelta}px (first=${first.inkGapAbove}px, later=${later.inkGapAbove}px) — the band's ink offset tracks --pt instead of staying fixed`)
+      }
+    }
   }
 
   return { fails }
