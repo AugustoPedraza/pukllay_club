@@ -19,6 +19,11 @@
 //   - the keel (open item 4): the admin shell's real content edges at 375
 //     and 360, so the CONTEXT.md-flagged 16-vs-14 decision is recorded
 //     against a measurement, not a preference
+//   - (plan 01.8.3-05) Juegos-specific list/caption geometry: the 16px
+//     content keel of a list row and the pinned search row, both section
+//     pinned-band heights and their flush adjacency to the pinned search
+//     row (D-15), a list row's 64px floor, and the caption's ink-to-ink
+//     air ratio (D-13) — see the Juegos list-geometry check below
 //
 // Guard-writing rules: see `admin_components.mjs`'s own header comment for
 // the full seven-rule list this whole directory follows — not restated
@@ -567,6 +572,394 @@ async function measureKeel({ client, baseUrl, width }) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.3-05 — the Juegos list/caption geometry check below: the
+// Juegos-specific pixel claims D-13/D-15/D-16 make and `LiveViewTest`
+// cannot prove (no browser, no
+// scroll, no `getBoundingClientRect`). Measures, against a real staff
+// session on /admin/juegos:
+//   - the 16px content keel of a list row and of the pinned search row, at
+//     375/360/390px, and that the two agree with each other (D-16)
+//   - the pinned `::before` band's own height while a section caption is
+//     actually pinned — read off the pseudo-element's own box, never the
+//     header's padded box — compared between the FIRST section
+//     (`--pt: 14px`) and a LATER one (`--pt: 26px`), exactly the axis the
+//     shipped 32.2px/44.2px defect varied on (D-15, 01.8.3-RESEARCH.md)
+//   - that the band's top edge sits flush against the pinned search row's
+//     own bottom edge (neither gap nor overlap), and that its resolved
+//     background is not fully transparent while pinned — a height-only
+//     check would pass against a band that exists but paints nothing, the
+//     original G-01.8.2-4 report
+//   - a list row's rendered height (D-13's 64px floor)
+//   - the ink-to-ink air ratio around a pinned caption (D-13's 27px-above /
+//     9px-below, 2.5:1+ floor), via a `Range` over each side's own text
+//     node — this file's rule 7. Juegos captions render uppercase-
+//     transformed (`text-transform: uppercase`), so their glyphs carry no
+//     descenders regardless of the underlying text content ("Juegos" has a
+//     lowercase `j`, but the rendered capital `J` does not descend) — a
+//     plain text-node Range already reports cap-height ink without needing
+//     a synthetic "H" fixture glyph.
+//
+// R2 landmine: every list cover is an R2 thumbnail. `forceEagerDecodeCovers`
+// below runs before every measurement in this function — an undecoded cover
+// renders as an empty box and silently shortens every row height and
+// ink-to-ink distance measured here.
+// ---------------------------------------------------------------------------
+async function forceEagerDecodeCovers(client) {
+  await evalJS(
+    client,
+    `
+    (async () => {
+      const imgs = [...document.querySelectorAll('.pk-admin-row__cover')];
+      imgs.forEach((img) => { img.loading = 'eager'; });
+      await Promise.race([
+        Promise.all(imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()))),
+        new Promise((r) => setTimeout(r, 5000)),
+      ]);
+      return imgs.length;
+    })()
+  `,
+  )
+}
+
+// "Content edge" is measured relative to `.pk-admin-juegos`'s OWN box, not
+// the viewport — `<main>`'s site-wide 16px horizontal padding (the shared
+// admin keel `measureKeel` above already independently verifies) would
+// otherwise get counted a second time on top of the row's/search-row's own
+// `padding-left`, silently doubling every reading to 32px. D-16's own
+// language is explicit that this is a per-CHILD self-inset ("rows self-
+// inset 16px") layered on a container that itself has none — this function
+// nets the container's contribution back out so the reported number is
+// each element's OWN contribution, which is what D-16 requires to be 16
+// and consistent between the two.
+async function measureJuegosKeelAt({ client, baseUrl, width }) {
+  await setViewport(client, width, 844)
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  const json = await pollUntil(async () => {
+    const raw = await evalJS(
+      client,
+      `
+      JSON.stringify((() => {
+        const container = document.querySelector('.pk-admin-juegos');
+        const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
+        if (!container || !row) return null;
+        return true;
+      })())
+    `,
+    )
+    return raw === "true" ? raw : null
+  })
+  if (!json) return { row: null, searchRow: null }
+  await forceEagerDecodeCovers(client)
+  const measured = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const container = document.querySelector('.pk-admin-juegos');
+      const cRect = container ? container.getBoundingClientRect() : null;
+      function edges(el) {
+        if (!el || !cRect) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return {
+          left: Math.round(((r.left - cRect.left) + pl) * 10) / 10,
+          right: Math.round(((cRect.right - r.right) + pr) * 10) / 10,
+        };
+      }
+      const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
+      const searchRow = document.querySelector('.pk-admin-juegos-search-row');
+      return { row: edges(row), searchRow: edges(searchRow) };
+    })())
+  `,
+  )
+  return JSON.parse(measured)
+}
+
+// Borradores/Retirados start collapsed (index.ex's `collapsed_sections`
+// default) — expand a collapsible section via a REAL click on its own
+// toggle button (never a direct assign/attribute poke) so the LiveView
+// round trip that actually re-renders `.pk-admin-juegos-rows` happens.
+async function expandJuegosSection(client, key) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const btn = document.getElementById(${JSON.stringify(`juegos-section-toggle-${key}`)});
+      if (!btn) return { found: false };
+      if (btn.getAttribute('aria-expanded') === 'false') {
+        btn.click();
+        return { found: true, clicked: true };
+      }
+      return { found: true, clicked: false };
+    })())
+  `,
+  )
+  const result = JSON.parse(json)
+  if (result.clicked) await new Promise((r) => setTimeout(r, 300))
+  return result
+}
+
+// Scrolls the given section's caption into its pinned state (overshooting
+// so its own rows are visible below it too), nudges the scroll back up a
+// few px so `admin_list.js`'s onScroll sees `goingDown === false` and
+// un-hides the pinned search row (needed for the band/search-row adjacency
+// measurement below), then reads every geometry fact this check needs off
+// the real, currently-pinned DOM.
+async function measureJuegosSectionPinned(client, sectionSelector) {
+  const json = await evalJS(
+    client,
+    `
+    (async () => {
+      const section = document.querySelector(${JSON.stringify(sectionSelector)});
+      if (!section) return JSON.stringify({ error: "section not found: ${sectionSelector}" });
+      const wrap = section.querySelector('.pk-admin-juegos-section-heading-wrap');
+      const header = wrap ? wrap.querySelector('.pk-admin-juegos-section-header') : null;
+      const sentinel = section.querySelector('[data-pk-section-sentinel]');
+      if (!wrap || !header || !sentinel) return JSON.stringify({ error: 'heading wrap/header/sentinel not found' });
+
+      const pinnedHRaw = getComputedStyle(document.querySelector('.pk-admin-juegos')).getPropertyValue('--pk-juegos-pinned-h');
+      const pinnedH = parseFloat(pinnedHRaw) || 60;
+
+      // Ink-to-ink air ratio is a RESTING-layout property (D-13's 27px-
+      // above/9px-below anatomy is about normal document flow, not the
+      // pinned overlay) and MUST be measured here, before any pin-
+      // triggering scroll — confirmed empirically that measuring it AFTER
+      // pinning reads nonsense (a negative "below" distance), because a
+      // pinned header visually overlaps (z-index above) whatever content
+      // has scrolled up underneath it, corrupting the "row below" reading.
+      // getBoundingClientRect() works regardless of whether these elements
+      // are currently within the viewport, so this reads correctly even
+      // while the page is unscrolled and this section is far off-screen.
+      function textInk(el) {
+        if (!el) return null;
+        const target = el.querySelector ? (el.querySelector('.pk-admin-row__name') || el) : el;
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+        const node = walker.nextNode();
+        if (!node || !node.nodeValue || !node.nodeValue.trim()) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const r = range.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom };
+      }
+      const rowsWrapForInk = section.querySelector('.pk-admin-juegos-rows');
+      const firstRowBelowForInk = rowsWrapForInk ? rowsWrapForInk.querySelector('.pk-admin-row') : null;
+      const prevSectionForInk = section.previousElementSibling;
+      const prevRowsWrapForInk = prevSectionForInk ? prevSectionForInk.querySelector('.pk-admin-juegos-rows') : null;
+      const prevRowsForInk = prevRowsWrapForInk ? [...prevRowsWrapForInk.querySelectorAll('.pk-admin-row')] : [];
+      const lastRowAboveForInk = prevRowsForInk.length ? prevRowsForInk[prevRowsForInk.length - 1] : null;
+      const labelElForInk = header.querySelector('.pk-admin-list-section-label');
+      const capInk = textInk(labelElForInk);
+      const inkAbove = textInk(lastRowAboveForInk);
+      const inkBelow = textInk(firstRowBelowForInk);
+      let airAbove = null, airBelow = null, airRatio = null;
+      if (inkAbove && capInk) airAbove = Math.round((capInk.top - inkAbove.bottom) * 10) / 10;
+      if (capInk && inkBelow) airBelow = Math.round((inkBelow.top - capInk.bottom) * 10) / 10;
+      if (airAbove != null && airBelow != null && airBelow > 0) airRatio = Math.round((airAbove / airBelow) * 100) / 100;
+      const hasRowAboveForInk = !!lastRowAboveForInk;
+
+      // The wrap itself is position:sticky — once scrolled past its own
+      // pin threshold, its getBoundingClientRect().top reports its STUCK
+      // viewport position (pinnedH), not its natural document-flow
+      // position, so recomputing "naturalTop" from the WRAP on every loop
+      // iteration drifts upward without bound the moment it first pins
+      // (confirmed empirically: lastScrollY grew unbounded across 60
+      // tries). The sentinel immediately before it is a normal-flow,
+      // zero-height element (never sticky), so its document-absolute
+      // position is stable regardless of current scroll — read it exactly
+      // ONCE, before any scrolling, and reuse that fixed value.
+      const naturalTop = sentinel.getBoundingClientRect().top + window.scrollY;
+
+      let pinned = false;
+      let tries = 0;
+      let lastScrollY = -1;
+      while (!pinned && tries < 60) {
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const target = Math.min(Math.max(0, naturalTop - pinnedH + 250), maxScroll);
+        window.scrollTo(0, target);
+        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => setTimeout(r, 80));
+        lastScrollY = window.scrollY;
+        pinned = wrap.getAttribute('data-pinned') === 'true';
+        tries++;
+      }
+      if (!pinned) {
+        return JSON.stringify({
+          error: 'section never reached data-pinned="true" after scrolling',
+          debug: {
+            pinnedH, naturalTop, tries, lastScrollY,
+            sentinelCount: document.querySelectorAll('[data-pk-section-sentinel]').length,
+            sectionOuterHTMLLen: section.outerHTML.length,
+            wrapAttrs: wrap.getAttributeNames(),
+          },
+        });
+      }
+
+      // Now that the caption is confirmed pinned, un-hide the pinned search
+      // row WITHOUT touching scroll position at all: a scroll-position nudge
+      // risks crossing back over the observer's own pin threshold near the
+      // boundary (observed empirically — a bare -5px nudge intermittently
+      // un-pinned the caption). admin_list.js's onScroll only re-evaluates
+      // on a real 'scroll' event, but its un-hide branch is
+      // (focused OR nearTop) — focusing the search input and firing a
+      // synthetic scroll event (net scrollY delta zero) satisfies that
+      // branch without moving the page at all — the preventScroll focus
+      // option below is required, not decorative: the search input is
+      // visually translated off-screen while data-pinned-hidden is set
+      // (its layout box still sits at its own sticky top:0, unaffected by
+      // the transform), so a bare, option-less focus() call made the
+      // browser "helpfully" scroll the whole page back toward that layout
+      // box's natural position near the top of the document — observed
+      // empirically resetting scrollY to near-zero and reading a stale
+      // pinned attribute back before the observer had a chance to correct
+      // it for the new, no-longer-pinned scroll position.
+      const searchInputEl = document.querySelector('#juegos-search-input');
+      if (searchInputEl) searchInputEl.focus({ preventScroll: true });
+      window.dispatchEvent(new Event('scroll'));
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => setTimeout(r, 150));
+      pinned = wrap.getAttribute('data-pinned') === 'true';
+      if (!pinned) {
+        return JSON.stringify({ error: 'section un-pinned after focusing the search input — unexpected' });
+      }
+      if (searchInputEl) searchInputEl.blur();
+
+      const searchWrap = document.querySelector('#juegos-search-wrap');
+      const searchHidden = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      const searchRect = searchWrap ? searchWrap.getBoundingClientRect() : null;
+
+      const headerRect = header.getBoundingClientRect();
+      const beforeCs = getComputedStyle(header, '::before');
+      const topOffset = parseFloat(beforeCs.top) || 0;
+      const bottomOffset = parseFloat(beforeCs.bottom) || 0;
+      const bandTop = Math.round((headerRect.top + topOffset) * 10) / 10;
+      const bandBottom = Math.round((headerRect.bottom - bottomOffset) * 10) / 10;
+      const bandHeight = Math.round((bandBottom - bandTop) * 10) / 10;
+      const bandBg = beforeCs.backgroundColor;
+      const bandSearchGap = searchRect ? Math.round((bandTop - searchRect.bottom) * 10) / 10 : null;
+
+      const rowsWrap = section.querySelector('.pk-admin-juegos-rows');
+      const firstRowBelow = rowsWrap ? rowsWrap.querySelector('.pk-admin-row') : null;
+      const rowHeight = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
+
+      return JSON.stringify({
+        pinned, searchHidden, bandTop, bandBottom, bandHeight, bandBg, bandSearchGap,
+        rowHeight, hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
+      });
+    })()
+  `,
+    true,
+  )
+  return JSON.parse(json)
+}
+
+async function checkJuegosListGeometry({ client, baseUrl }) {
+  const fails = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  // ---- keel: a list row vs the pinned search row, at 375/360/390 ----
+  const keelByWidth = {}
+  for (const width of KEEL_VIEWPORTS) {
+    keelByWidth[width] = await measureJuegosKeelAt({ client, baseUrl, width })
+    const { row, searchRow } = keelByWidth[width]
+    if (!row || !searchRow) {
+      fail(`juegos keel @ ${width}px: row or search-row not found (row=${!!row}, searchRow=${!!searchRow})`)
+      continue
+    }
+    log(`juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}`)
+    if (row.left !== 16 || row.right !== 16) {
+      fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 16/16`)
+    }
+    if (searchRow.left !== 16 || searchRow.right !== 16) {
+      fail(`juegos keel @ ${width}px: search row content edges left=${searchRow.left} right=${searchRow.right}, expected 16/16`)
+    }
+    if (row.left !== searchRow.left || row.right !== searchRow.right) {
+      fail(`juegos keel @ ${width}px: row and search row disagree (row=${JSON.stringify(row)}, searchRow=${JSON.stringify(searchRow)})`)
+    }
+  }
+
+  // ---- band height / adjacency / row height / ink ratio, at 375px ----
+  await setViewport(client, 375, 844)
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  await new Promise((r) => setTimeout(r, 300))
+  await forceEagerDecodeCovers(client)
+
+  // Borradores (`draft`) starts collapsed (index.ex's default
+  // `collapsed_sections`) — expand it via a real click so its rows exist
+  // to measure. Juegos del club (`published`) is never collapsible.
+  const expandResult = await expandJuegosSection(client, "draft")
+  if (!expandResult.found) {
+    fail("juegos sections: #juegos-section-toggle-draft not found — is Borradores empty in this dev catalog?")
+  }
+
+  const first = await measureJuegosSectionPinned(client, "#juegos-section-draft")
+  if (first.error) {
+    fail(`juegos first-section (Borradores) band: ${first.error}`)
+  } else {
+    log(
+      `juegos first-section (Borradores) band: height=${first.bandHeight}px (top=${first.bandTop} bottom=${first.bandBottom}) ` +
+        `bg=${first.bandBg} search-row gap=${first.bandSearchGap}px row-height=${first.rowHeight}px searchHidden=${first.searchHidden}`,
+    )
+    if (Math.abs(first.bandHeight - 44.0) > 0.5) fail(`juegos first-section band height ${first.bandHeight}px, expected 44.0 ±0.5px`)
+    if (first.bandSearchGap === null || Math.abs(first.bandSearchGap) > 0.5) {
+      fail(`juegos first-section band-to-search-row gap is ${first.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
+    }
+    if (isFullyTransparent(first.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.bandBg})`)
+    if (first.rowHeight === null || first.rowHeight < 64) fail(`juegos first-section row height ${first.rowHeight}px, expected >= 64px`)
+  }
+
+  const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
+  if (later.error) {
+    fail(`juegos later-section (Juegos del club) band: ${later.error}`)
+  } else {
+    log(
+      `juegos later-section (Juegos del club) band: height=${later.bandHeight}px (top=${later.bandTop} bottom=${later.bandBottom}) ` +
+        `bg=${later.bandBg} search-row gap=${later.bandSearchGap}px row-height=${later.rowHeight}px searchHidden=${later.searchHidden}`,
+    )
+    if (Math.abs(later.bandHeight - 44.0) > 0.5) fail(`juegos later-section band height ${later.bandHeight}px, expected 44.0 ±0.5px`)
+    if (later.bandSearchGap === null || Math.abs(later.bandSearchGap) > 0.5) {
+      fail(`juegos later-section band-to-search-row gap is ${later.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
+    }
+    if (isFullyTransparent(later.bandBg)) fail(`juegos later-section band background is fully transparent while pinned (${later.bandBg})`)
+    if (later.rowHeight === null || later.rowHeight < 64) fail(`juegos later-section row height ${later.rowHeight}px, expected >= 64px`)
+
+    if (!later.hasRowAbove) {
+      fail("juegos ink ratio: later section has no row above it to measure — expected Borradores' last row above Juegos del club's caption")
+    } else if (later.airAbove == null || later.airBelow == null || later.airRatio == null) {
+      fail(`juegos ink ratio: could not measure both sides (airAbove=${later.airAbove}, airBelow=${later.airBelow})`)
+    } else {
+      log(`juegos ink-to-ink: above=${later.airAbove}px below=${later.airBelow}px ratio=${later.airRatio}:1`)
+      if (later.airRatio < 2.5) fail(`juegos ink-to-ink ratio ${later.airRatio}:1 is below the 2.5:1 floor (above=${later.airAbove}px, below=${later.airBelow}px)`)
+    }
+  }
+
+  if (!first.error && !later.error) {
+    const delta = Math.round((first.bandHeight - later.bandHeight) * 10) / 10
+    log(`juegos band heights: first=${first.bandHeight}px later=${later.bandHeight}px delta=${delta}px`)
+    if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.bandHeight}px, later=${later.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
+  }
+
+  return { fails }
+}
+
+// `background-color` reports as `rgba(r, g, b, a)` (4-component) when any
+// transparency is involved, or `rgb(r, g, b)` (3-component, always opaque)
+// otherwise — checking the parsed alpha component directly, rather than
+// string-matching `"rgba(0, 0, 0, 0)"`, survives a themed (non-black)
+// transparent colour.
+function isFullyTransparent(colorStr) {
+  if (!colorStr) return true
+  const m = colorStr.match(/rgba?\(([^)]+)\)/)
+  if (!m) return false
+  const parts = m[1].split(",").map((s) => Number.parseFloat(s.trim()))
+  if (parts.length < 4) return false
+  return parts[3] === 0
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -631,16 +1024,34 @@ async function main() {
       }
     }
 
-    // ---- page bar: zero layout cost at rest ----
-    log("Checking the pinned page bar's at-rest layout cost...")
+    // ---- page bar: confirmed deleted (plan 01.8.3-02, D-09) ----
+    // `AdminComponents.page_bar/1` and its four `.pk-admin-page-bar` CSS
+    // rule blocks were deleted OUTRIGHT in plan 01.8.3-02 — not merely
+    // hidden — so `.pk-admin-page-bar` can never match on ANY page again
+    // (confirmed: `grep -rn "pk-admin-page-bar" assets/ lib/` finds only a
+    // prose mention inside an unrelated component's doc comment). Before
+    // that plan, `!pageBar.found` was a benign, expected branch on `/admin`
+    // specifically (the bar existed in the DOM but this page's content
+    // never scrolled behind it at rest). That framing is now permanently
+    // false everywhere, and the check could never fail again for any
+    // reason — a guard that cannot fail is indistinguishable from a guard
+    // that was never wired up. Repurposed (not deleted — see plan
+    // 01.8.3-05's own SUMMARY for why the function definition itself is
+    // kept intact) into the opposite assertion: `.pk-admin-page-bar`
+    // resurfacing on `/admin` is now itself the regression this checks
+    // for, since nothing in the deleted component's call graph can ever
+    // legitimately render it again.
+    log("Confirming the deleted page bar has not resurfaced on /admin...")
     const pageBar = await checkPageBarZeroLayout({ client, baseUrl })
-    if (!pageBar.found) {
-      log("page bar: not found on /admin (this page's title row never scrolls behind it at rest — expected; the bar exists in the DOM regardless per components.css, gated `:visible` toggles `inert` only, never presence)")
-    } else if (pageBar.position !== "absolute") {
-      log(`FAIL: .pk-admin-page-bar's computed position is "${pageBar.position}", expected "absolute" — this is the SOLE mechanism giving it zero layout cost at rest (a sticky child still occupies its flow slot even while visually at rest)`)
+    if (pageBar.found) {
+      log(
+        `FAIL: .pk-admin-page-bar found on /admin — AdminComponents.page_bar/1 and its CSS were deleted outright in plan 01.8.3-02 (D-09); its reappearance is a regression, not an expected state`,
+      )
       exitCode = 1
     } else {
-      log(`page bar: position=absolute (confirmed zero layout cost by construction) — title top=${pageBar.titleTop}px, grid top=${pageBar.gridTop}px`)
+      log(
+        "page bar: absent on /admin, as expected — AdminComponents.page_bar/1 and its CSS were deleted outright in plan 01.8.3-02 (D-09); this check now guards against its return rather than measuring its (now nonexistent) at-rest layout cost",
+      )
     }
 
     // ---- save bar: plan 01.8.2-17's editor is the FIRST live call site ----
@@ -737,6 +1148,13 @@ async function main() {
       } else if (pages.length > 0) {
         log(`KEEL @ ${width}px (consistent across ${pages.length} page(s)): left=${distinctLeft[0]}px right=${distinctRight[0]}px`)
       }
+    }
+
+    // ---- Juegos list geometry (plan 01.8.3-05, D-13/D-15/D-16) ----
+    log("Measuring the Juegos list/caption geometry...")
+    const juegosGeometry = await checkJuegosListGeometry({ client, baseUrl })
+    if (juegosGeometry.fails.length > 0) {
+      exitCode = 1
     }
   } finally {
     await stopChrome(chrome)
