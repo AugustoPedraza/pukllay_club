@@ -578,9 +578,29 @@
    between the tab bar's `70` and the snackbar's `80` (components.css below)
    — above the chrome it must cover, below the one component (the snackbar)
    that already needs to paint over an open sheet/dialog too. */
+/* FIX (plan 01.8.3-07, G-01.8.3-2b): a `position: fixed; inset: 0`
+   element's USED height is SHRUNK by a block-end margin rather than
+   offset by it. A parent Tailwind v4 `space-y-*` utility (compiled as
+   `:where(& > :not(:last-child))`) gives any non-last flow child a
+   `margin-block-end` — `#add-game-sheet` is not `#juegos-page`'s last
+   child, so it inherited 24px and measured 820px against an 844px ICB,
+   leaving the bottom 24px of the admin tab bar visible and clickable
+   under an open, `aria-modal="true"` sheet (a real CDP click at that
+   point navigated `/admin/juegos` -> `/admin/estantes` with the modal
+   still open). An identical sibling (`#draft-sheet`) escaped purely by
+   being last-child — a call-site fix would leave that trap armed on
+   every other admin screen, where a sheet's own `:if` mounting means
+   this was never observed at rest. `margin: 0` here, on the shared
+   overlay root both `sheet/1` and `dialog/1` mount, closes it for every
+   call site at once — no forced-priority modifier, no doubled selector: this file's
+   own unlayered `.pk-*` rules already beat Tailwind's `@layer utilities`
+   output regardless of specificity (see app.css's "CASCADE-LAYER
+   HAZARD" comment), and `:where()` contributes zero specificity of its
+   own besides. */
 .pk-admin-overlay-root {
   position: fixed;
   inset: 0;
+  margin: 0;
   z-index: 75;
   display: none;
 }
