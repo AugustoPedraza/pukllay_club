@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans executed
 
 Plans:
 **Wave 1**
@@ -291,7 +291,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
+- [x] 01.8.3-05-PLAN.md — The Juegos geometry probe and the UAT test 3/25 rewrites (D-05); records `G-01.8.2-7` as deferred
 
 ### Phase 2: Natural-Language Spanish Search + Auth
 
