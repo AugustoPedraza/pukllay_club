@@ -257,10 +257,16 @@
    never a `background` on the header's own padded box (the rule this
    replaced painted the box directly and produced the empty tint above
    the ink). The resting rule below moves the BAND around the ink's
-   resting position; the pinned rule moves the INK's effective position
-   relative to a band fixed at the 44px target — mind the sign
-   convention, the same `--cap` appears in two opposite-looking
-   expressions on purpose. */
+   resting position. Once pinned, the band's own top/bottom lock to the
+   44px target (the `[data-pinned="true"] ...::before` rule further below,
+   D-15/01.8.3-05) — a separate pinned-state rule on the header ITSELF
+   (01.8.3-06, further below) then moves the INK to that fixed band's
+   centre via padding, since nothing here can move the band to chase the
+   ink once its geometry is pinned. (Plan 01.8.3-06 [Rule 1 - Bug]: an
+   earlier version of this comment claimed the pinned `::before` rule
+   itself repositioned the ink — no rule did, which is exactly how the
+   ink drifted off-centre for every `--pt` other than the one value that
+   happened to cancel the arithmetic by coincidence.) */
 .pk-admin-juegos-section-header::before {
   content: "";
   position: absolute;
@@ -271,6 +277,34 @@
   bottom: calc(var(--cap) - var(--band));
   background: transparent;
   transition: background var(--duration-fast) var(--ease-standard);
+}
+
+/* Plan 01.8.3-06 [Rule 1 - Bug]: with the band's own top pinned flush to
+   the header's top edge (the `top: 0` fix below, 01.8.3-05), the ink is
+   centred in the resulting 44px band only if it begins `--bandp` (plus
+   the `--cap` optical nudge, 071 d29-31) below that same top edge — i.e.
+   only if the header's PINNED `padding-top` is `--bandp + --cap`, not
+   `--pt`. The `--cap` nudge is carried HERE, into `padding-top`, rather
+   than left on the band, so the deliberate cap-height correction still
+   applies to where the INK sits, not to the band's own (now fixed)
+   geometry.
+
+   Reducing `padding-top` alone would shrink the header's own flow box by
+   ~13px the instant a section pins, shifting every row below it.
+   Compensating with an equal `padding-bottom` keeps the header's total
+   vertical padding — and therefore its border-box height — identical
+   pinned and unpinned, so the existing
+   `bottom: calc(var(--pt) - 2 * var(--bandp))` below continues to
+   resolve to a 44px band with no edit of its own.
+
+   Precondition: every declared `--pt` (the base rule and the
+   `:first-child` override) must be at least `--bandp + --cap`, or this
+   rule's `padding-bottom` resolves negative and the declaration is
+   dropped — `admin_pinned_band_test.exs` (01.8.3-06) gates this in
+   source. */
+.pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header {
+  padding-top: calc(var(--bandp) + var(--cap));
+  padding-bottom: calc(var(--pt) - var(--bandp) - var(--cap));
 }
 
 /* Plan 01.8.3-05 [Rule 1 - Bug]: the pinned rule's `top` offset, unlike its
