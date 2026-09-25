@@ -253,6 +253,7 @@ defmodule PukllayClubWeb.Admin.GameLive.Index do
          |> assign(:bgg_id_input, "")
          |> assign(:bgg_id_error, nil)
          |> assign(:edition_prompt, nil)
+         |> assign(:add_game_sheet_open, false)
          |> put_flash(:info, "Edición agregada como borrador.")
          |> land_on_fresh_draft(game)}
 
