@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 5
+open_count: 6
 waived_count: 1
 fixed_count: 27
-total_count: 33
-last_updated: 2026-09-24T02:08:38.186Z
+total_count: 34
+last_updated: 2026-09-25T00:11:01.471Z
 ---
 
 # Broken Windows Ledger
@@ -48,6 +48,7 @@ last_updated: 2026-09-24T02:08:38.186Z
 | 31 | 01.8.2 | deviation | assets/css/admin/components.css |  | sheet/dialog root shares z-index:70 with the bottom-anchored tab bar (chrome.css) — a short sheet's last row can be untappable at any viewport height, confirmed via real elementFromPoint hit-test (see deferred-items.md plan 12) | fixed |  | 2026-09-23T18:28:57.298Z | 2026-09-23T19:05:06.597Z |
 | 32 | 01.8.2 | deviation | assets/css/admin/screens.css |  | pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12 | open |  | 2026-09-23T18:28:57.503Z |  |
 | 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
+| 34 | 01.8.3 | deviation | .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md |  | Task 2's acceptance criteria expects grep -c "Crear «" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required. | open |  | 2026-09-25T00:11:01.471Z |  |
 
 ````json
 [
@@ -449,6 +450,19 @@ last_updated: 2026-09-24T02:08:38.186Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-24T02:08:38.186Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 34,
+    "kind": "deviation",
+    "phase": "01.8.3",
+    "file": ".planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md",
+    "line": null,
+    "description": "Task 2's acceptance criteria expects grep -c \"Crear «\" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-25T00:11:01.471Z",
     "resolved_at": null,
     "milestone": "v1.1"
   }
