@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-10-PLAN.md
-last_updated: "2026-09-27T22:24:10.038Z"
+stopped_at: Completed 01.8.3-11-PLAN.md
+last_updated: "2026-09-27T23:03:25.659Z"
 last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: a70981a6094fcf73e94fa3cb7599d3ecddf8533e
+state_head: 2a49cf9f2e08e09c222e9a1b92b024b7cc0587e1
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 63
-  completed_plans: 59
+  completed_plans: 60
 ---
 
 Total Phases: 9
@@ -34,8 +34,19 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 4 of 14
+Plan: 12 of 14
 Status: Ready to execute
+
+Note (2026-09-27, this plan's executor): this field drifted stale across
+plans 06-10 (it read "Plan: 4 of 14" immediately before this correction,
+despite 01.8.3-01 through -10-SUMMARY.md already existing on disk) — the
+documented "GSD Decimal-Phase Resume Bug" in this repo's CLAUDE.md
+(`gsd_run query state.advance-plan` increments from whatever stale value
+is here rather than recomputing from the phase directory's real PLAN/
+SUMMARY counts on a decimal phase number). Corrected by hand per that
+note's own recovery path ("inspect commits, write SUMMARY.md, then update
+STATE/ROADMAP manually") — 11 summaries exist on disk
+(01.8.3-01 through 01.8.3-11), 14 plans total, so 12 is next.
 Last activity: 2026-09-27 — Phase 01.8.3 execution started
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
@@ -164,6 +175,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.3 P08 | ~50min | 3 tasks | 6 files |
 | Phase 01.8.3 P09 | 28min | 2 tasks | 2 files |
 | Phase 01.8.3 P10 | 54min | 3 tasks | 7 files |
+| Phase 01.8.3 P11 | 65min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -345,6 +357,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-10: Sheet body keel test axis is the header's own content edge (padding-derived), not the header title's own ink — a leading cover image can legitimately push the title text right without moving the header's established alignment axis
 - [Phase 01.8.3]: 01.8.3-10: Full-bleed sheet-row anatomies need an explicit calc(100% + 2*keel) width alongside their negative-margin compensation — width:auto alone is insufficient for inline-flex anatomies (a4/pk-editor-opt), only for block-level flex (.pk-admin-row)
 - [Phase 01.8.3]: 01.8.3-10: Nested list_row elements inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet's estante-list state) are NOT reached by the direct-child-only sheet-row compensation — recorded as an open finding (WINDOWS.md #35), not fixed, since widening the selector is a separate architectural decision outside this plan's scope
+- [Phase 01.8.3]: 01.8.3-11: pinned caption's sticky offset made dynamic (D-20a) -- admin_list.js writes an effective reservation (0 or the row's full height) to --pk-juegos-pinned-h in lockstep with the search row's hide attribute; growth deferred to the row's own transitionend with a computed-duration fallback; closes G-01.8.3-2d and G-01.8.3-3's primary cause.
 
 ### Pending Todos
 
@@ -490,8 +503,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T22:24:09.878Z
-Stopped at: Completed 01.8.3-10-PLAN.md
+Last session: 2026-09-27T23:03:15.220Z
+Stopped at: Completed 01.8.3-11-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
