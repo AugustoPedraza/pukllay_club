@@ -723,14 +723,28 @@ async function checkOverlayCoversViewport({ client, baseUrl }) {
 // a second opener mechanism.
 // ---------------------------------------------------------------------------
 
-// Same row shape as `OVERLAY_CALL_SITES` plus `bodyShape` ('form' | 'row') —
-// which of Task 2's two governing declarations this call site's body falls
-// under. `staff-options-sheet` requires a staff-role user other than the
-// operator (this task's own precondition): `phx-click` is only rendered on
-// a row when `user.role == :staff` (`staff_live/index.ex`), so
-// `[phx-click]` is present ONLY for such rows — if the dev DB has none, the
-// selector never appears and the walk correctly reports NOT-OPENABLE
-// (dataIndependent: false) rather than a false FAIL or a silent skip.
+// Same row shape as `OVERLAY_CALL_SITES` plus `bodyShape` ('form' | 'row' |
+// 'mixed') — which of Task 2's two governing declarations this call site's
+// body falls under ('mixed' names a body this plan's fix does not fully
+// reach — see `donde-va-sheet` below). `staff-options-sheet` requires a
+// staff-role user other than the operator (this task's own precondition):
+// `phx-click` is only rendered on a row when `user.role == :staff`
+// (`staff_live/index.ex`), so `[phx-click]` is present ONLY for such rows —
+// if the dev DB has none, the selector never appears and the walk correctly
+// reports NOT-OPENABLE (dataIndependent: false) rather than a false FAIL or
+// a silent skip.
+//
+// Task 3 (the sweep) added `donde-va-sheet` below and a dynamically-
+// resolved editor sheet (built in `main()`, since its URL is a real game
+// id resolved off `/admin/juegos`, not a static route). Destructive events
+// this whole table's steps must NEVER reach, taken from the templates read
+// for this sweep: `add-game` (submits a game), `confirm-delete`/`confirm-
+// quitar`/`confirm-remove` (deletes a shelf / un-places a copy / removes
+// staff), `donde-va-commit` (commits a placement), `choice-select` (D-30:
+// choosing IN a `.pk-editor-opt` sheet commits and closes immediately —
+// no row inside an opened editor sheet is ever clicked here), and
+// `confirm-discard`/`confirm-retire`. Every row below stops at OPENING its
+// sheet.
 const SHEET_KEEL_CALL_SITES = [
   {
     page: "/admin/juegos",
@@ -770,15 +784,42 @@ const SHEET_KEEL_CALL_SITES = [
     bodyShape: "row",
     steps: [{ kind: "click", selector: "#staff-list .pk-admin-row[phx-click]" }],
   },
+  {
+    // Task 3 — `placement_sheet/1`'s «¿Dónde va?», the `.pk-donde-va-search`
+    // change's own call site. `pick-copy` on an UNPLACED copy opens THIS
+    // sheet (`estante_live/index.ex`'s `open_donde_va/2`) rather than
+    // `cover-options-sheet` (which needs an already-PLACED copy — see
+    // `OVERLAY_CALL_SITES`'s own comment for why that row searches
+    // "carcassonne" specifically). The dev catalog has 435 copies and only
+    // 1 placed, so almost any other real game name resolves to an
+    // unplaced copy — data-dependent since it still needs a search hit.
+    // `bodyShape: "mixed"`: the search field is a direct child (governed
+    // by Task 2's `.pk-donde-va-search` fix) but its estante-list rows
+    // render inside a plain, unpadded wrapper div (`#donde-va-estante-
+    // list`) — a GRANDCHILD of `.pk-admin-sheet__rows`, not a direct
+    // child, so Task 2's direct-child-only compensation does not reach
+    // them. See this sweep's own recorded finding below.
+    page: "/admin/estantes",
+    overlayId: "donde-va-sheet",
+    dataIndependent: false,
+    bodyShape: "mixed",
+    steps: [
+      { kind: "type", selector: "#estantes-search-input", value: "catan" },
+      { kind: "click", selector: "#estantes-suggestions [data-pk-pressable]" },
+    ],
+  },
 ]
 
-// A row-shaped body's own full-bleed children (D-19e/A4's declared
-// anatomy) — excluded from Test 3 (nothing [non-full-bleed] reaches the
-// panel edge) and the SUBJECT of Test 5 (the full-bleed press surface
-// positive control) instead. Shared as a literal string (not a helper) per
-// this file's established convention of a self-contained `evalJS` body per
-// function.
-const SHEET_FULL_BLEED_SELECTOR = ".pk-admin-row, .pk-admin-action--a4"
+// A row-shaped body's own full-bleed children — excluded from Test 3
+// (nothing [non-full-bleed] reaches the panel edge) and the SUBJECT of
+// Test 5 (the full-bleed press surface positive control) instead. Covers
+// both D-19e/A4's shared anatomy AND `.pk-editor-opt` (Task 3's editor
+// choice sheet — a distinct class, same full-bleed contract: `editor.css`
+// re-expresses its `margin`/`padding` through the same keel property this
+// plan's components.css fix uses). Shared as a literal string (not a
+// helper) per this file's established convention of a self-contained
+// `evalJS` body per function.
+const SHEET_FULL_BLEED_SELECTOR = ".pk-admin-row, .pk-admin-action--a4, .pk-editor-opt"
 
 // The measurement body for one already-open sheet: the panel's own border
 // box; the header's content box (`edges()`-shaped: left absolute, right an
@@ -814,8 +855,17 @@ async function measureSheetKeel(client, overlayId) {
       function textInk(el) {
         if (!el) return null;
         const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        const node = walker.nextNode();
-        if (!node || !node.nodeValue || !node.nodeValue.trim()) return null;
+        // Skip whitespace-only text nodes rather than giving up on the
+        // first one found (Rule 1 — found via Task 3's own sweep run):
+        // .pk-editor-opt's real label text sits two levels deep
+        // (<button><span class="pk-editor-opt__text"><span
+        // class="pk-editor-opt__label">Ligero</span>...) and the FIRST
+        // text node in document order can be a template-emitted blank one.
+        let node = walker.nextNode();
+        while (node && (!node.nodeValue || !node.nodeValue.trim())) {
+          node = walker.nextNode();
+        }
+        if (!node) return null;
         const range = document.createRange();
         range.selectNodeContents(node);
         return range.getBoundingClientRect();
@@ -878,7 +928,18 @@ async function measureSheetKeel(client, overlayId) {
             if (ink && ink.width > 0) {
               candidates.push({ left: ink.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'ink' });
             }
-          } else if (node.matches(FOCUSABLE_SELECTOR)) {
+          } else if (node.matches(FOCUSABLE_SELECTOR) && !node.matches(FULL_BLEED_SELECTOR)) {
+            // A full-bleed control (.pk-editor-opt is the case that
+            // surfaced this — Rule 1, Task 3's sweep) is EXCLUDED here even
+            // when its own immediate children carry no direct text node:
+            // its border box is deliberately edge-to-edge, and its real
+            // ink sits two levels deeper (a nested label span) — the
+            // TreeWalker continues into that subtree on its own next
+            // iterations, where the label's own hasOwnText branch above
+            // picks up the real ink. Treating the full-bleed node itself
+            // as a "control" here would report its edge-to-edge BOX as if
+            // it were content, exactly the same misreading Test 3 already
+            // guards against on the other axis.
             const r = node.getBoundingClientRect();
             candidates.push({ left: r.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'control' });
           }
@@ -982,15 +1043,26 @@ async function checkSheetKeel({ client, baseUrl, rows }) {
     }
 
     // Test 2 — ink agrees with ink: the leftmost ink/control edge inside
-    // the body equals the header title's own ink left. FAILS today for a
-    // form-shaped body (its leftmost control sits at x=0); a row-shaped
-    // body's own full-bleed child already self-insets to 16px and PASSES
-    // today.
-    if (m.titleInkLeft == null || !m.leftmost) {
-      fail(`${row.page} ${row.overlayId} test2: could not measure the header title ink (${m.titleInkLeft}) or the body's leftmost ink/control (${m.leftmost})`)
-    } else if (Math.abs(m.titleInkLeft - m.leftmost.left) > 0.5) {
+    // the body equals the header's OWN CONTENT EDGE — not the title
+    // glyph's own ink specifically (Rule 1, found via Task 3's own sweep
+    // run: `placement_sheet/1` renders a leading `cover` image, which
+    // pushes the title text itself right of the header's content edge
+    // by the cover's own width+gap — 84px, not 16 — even though the
+    // header's content edge, per Test 1, is still 16 there. Comparing
+    // against the title's own ink specifically would report a cover-
+    // bearing sheet as misaligned when it is not; `m.headerEdges.left`
+    // is cover-invariant and is what G-01.8.3-4b's own truth actually
+    // names — "the title AND the close X share one left/right
+    // alignment" is the header's established axis, which the title
+    // happens to sit flush against only when nothing precedes it).
+    // FAILS today for a form-shaped body (its leftmost control sits at
+    // x=0); a row-shaped body's own full-bleed child already self-insets
+    // to 16px and PASSES today.
+    if (m.headerEdges.left == null || !m.leftmost) {
+      fail(`${row.page} ${row.overlayId} test2: could not measure the header content edge (${m.headerEdges.left}) or the body's leftmost ink/control (${m.leftmost})`)
+    } else if (Math.abs(m.headerEdges.left - m.leftmost.left) > 0.5) {
       fail(
-        `${row.page} ${row.overlayId} test2 (ink-vs-ink): header title ink left=${m.titleInkLeft}px, body leftmost ${m.leftmost.kind}${nameOf(m.leftmost)} left=${m.leftmost.left}px, expected within 0.5px`,
+        `${row.page} ${row.overlayId} test2 (ink-vs-ink): header content edge left=${m.headerEdges.left}px, body leftmost ${m.leftmost.kind}${nameOf(m.leftmost)} left=${m.leftmost.left}px, expected within 0.5px`,
       )
     }
 
@@ -1035,11 +1107,14 @@ async function checkSheetKeel({ client, baseUrl, rows }) {
             `${row.page} ${row.overlayId} test5 (full-bleed press surface): row/action box=[${m.fullBleedBox.left},${m.fullBleedBox.right}] vs panel=[${m.panelBox.left},${m.panelBox.right}], expected edge-to-edge within 0.5px`,
           )
         }
-        if (m.fullBleedInkLeft == null || m.titleInkLeft == null) {
-          fail(`${row.page} ${row.overlayId} test5: could not measure the row/action's own ink (${m.fullBleedInkLeft}) or the header title ink (${m.titleInkLeft})`)
-        } else if (Math.abs(m.fullBleedInkLeft - m.titleInkLeft) > 0.5) {
+        // Header's own content edge, not the title glyph's ink — see
+        // Test 2's own comment for why (cover-bearing sheets push the
+        // title right without moving the header's established axis).
+        if (m.fullBleedInkLeft == null || m.headerEdges.left == null) {
+          fail(`${row.page} ${row.overlayId} test5: could not measure the row/action's own ink (${m.fullBleedInkLeft}) or the header content edge (${m.headerEdges.left})`)
+        } else if (Math.abs(m.fullBleedInkLeft - m.headerEdges.left) > 0.5) {
           fail(
-            `${row.page} ${row.overlayId} test5 (ink on header axis): row/action ink left=${m.fullBleedInkLeft}px header title ink left=${m.titleInkLeft}px, expected within 0.5px`,
+            `${row.page} ${row.overlayId} test5 (ink on header axis): row/action ink left=${m.fullBleedInkLeft}px header content edge left=${m.headerEdges.left}px, expected within 0.5px`,
           )
         }
       }
@@ -2358,7 +2433,28 @@ async function main() {
 
     // ---- sheet body keel (plan 01.8.3-10, G-01.8.3-4b) ----
     log("Measuring the sheet body's own keel against its header...")
-    const sheetKeel = await checkSheetKeel({ client, baseUrl, rows: SHEET_KEEL_CALL_SITES })
+    // Task 3: the editor's own choice sheet (`form.ex:1035`'s
+    // `.pk-editor-opt`, the call site this plan's editor.css fix re-
+    // expressed — "must be measured, not reasoned about"). Its URL is a
+    // real game id, resolved fresh here off `/admin/juegos` (same
+    // mechanism `resolveEditorUrl` uses for the save-bar check above) —
+    // not a static route, so it is built here rather than as a
+    // `SHEET_KEEL_CALL_SITES` literal. `edit-field`/`weight_band` renders
+    // unconditionally on the editor page — data-independent.
+    const sheetKeelRows = [...SHEET_KEEL_CALL_SITES]
+    const sheetKeelEditorUrl = await resolveEditorUrl(client, baseUrl)
+    if (sheetKeelEditorUrl) {
+      sheetKeelRows.push({
+        page: sheetKeelEditorUrl,
+        overlayId: "editor-weight-band-sheet",
+        dataIndependent: true,
+        bodyShape: "row",
+        steps: [{ kind: "click", selector: '[phx-click="edit-field"][phx-value-field="weight_band"]' }],
+      })
+    } else {
+      log("sheet keel: could not resolve an editor URL — skipping editor-weight-band-sheet (is the dev catalog empty?)")
+    }
+    const sheetKeel = await checkSheetKeel({ client, baseUrl, rows: sheetKeelRows })
     if (sheetKeel.fails.length > 0) {
       exitCode = 1
     }
