@@ -1682,12 +1682,29 @@ async function expandJuegosSection(client, key) {
   return result
 }
 
-// Scrolls the given section's caption into its pinned state (overshooting
-// so its own rows are visible below it too), nudges the scroll back up a
-// few px so `admin_list.js`'s onScroll sees `goingDown === false` and
-// un-hides the pinned search row (needed for the band/search-row adjacency
-// measurement below), then reads every geometry fact this check needs off
-// the real, currently-pinned DOM.
+// Scrolls the given section's caption into its pinned state via a REAL
+// incremental scroll-down (never a single jump — admin_list.js's onScroll
+// only sees a real `goingDown` direction across successive scroll events,
+// exactly what a finger does), reads every DOWN-state geometry fact a real
+// scrolling user actually sees, then scrolls back UP in real increments
+// (the scroll-up differential control, same session, same section) and
+// reads the UP-state geometry too — both states returned from one call so
+// the differential between them is never assembled from two independent
+// runs.
+//
+// Plan 01.8.3-11 [T-01.8.3-34]: this function used to drive the page OUT
+// of the hidden state before measuring — `searchInputEl.focus({
+// preventScroll: true })` plus a synthetic `new Event('scroll')`,
+// justified by its own comment as "needed for the band/search-row
+// adjacency measurement". That hack manufactured the passing condition for
+// EVERY band and search-row number this function ever reported (rule 8's
+// first mechanism, test/visual/README.md) and is the direct cause of
+// G-01.8.3-2d/G-01.8.3-3's blind spot: `searchHidden` and the absolute
+// `bandTop` were already measured and printed on every run, and nothing
+// ever asserted on them. Both are deleted. Any future edit needing the
+// un-hidden state must reach it by a REAL scroll-up, exactly as the
+// differential control below does — never by focusing the input or
+// dispatching a synthetic event.
 async function measureJuegosSectionPinned(client, sectionSelector) {
   const json = await evalJS(
     client,
@@ -1752,13 +1769,44 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       // ONCE, before any scrolling, and reuse that fixed value.
       const naturalTop = sentinel.getBoundingClientRect().top + window.scrollY;
 
-      let pinned = false;
+      // Plan 01.8.3-11: real incremental scroll, never a single jump. A
+      // bare window.scrollTo(0, target) reaches the target in one paint —
+      // exactly the "single jump" the plan's own <behavior> rules out,
+      // since it is not what a finger does across successive real scroll
+      // events. This helper walks toward targetY in steps no larger than
+      // maxStep, yielding a frame plus a short settle between each one.
+      async function scrollStep(targetY, maxStep) {
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const clamped = Math.min(Math.max(0, targetY), maxScroll);
+        let guard = 0;
+        while (Math.abs(window.scrollY - clamped) > 0.5 && guard < 500) {
+          const remaining = clamped - window.scrollY;
+          const delta = Math.abs(remaining) > maxStep ? Math.sign(remaining) * maxStep : remaining;
+          window.scrollTo(0, window.scrollY + delta);
+          await new Promise((r) => requestAnimationFrame(r));
+          await new Promise((r) => setTimeout(r, 40));
+          guard++;
+        }
+        return window.scrollY;
+      }
+
+      // Phase 1: walk incrementally to roughly 250px past the section's
+      // own natural top (the same overshoot the old single-jump target
+      // used, now reached via real steps instead of one paint).
+      const phase1Target = naturalTop - pinnedH + 250;
+      await scrollStep(phase1Target, 45);
+
+      // Phase 2: creep the rest of the way in <=45px steps until the wrap
+      // itself reports pinned — the try cap and rich error payload for the
+      // never-pinned case are unchanged from before this plan.
+      let pinned = wrap.getAttribute('data-pinned') === 'true';
       let tries = 0;
-      let lastScrollY = -1;
+      let lastScrollY = window.scrollY;
       while (!pinned && tries < 60) {
         const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const target = Math.min(Math.max(0, naturalTop - pinnedH + 250), maxScroll);
-        window.scrollTo(0, target);
+        const nextY = Math.min(window.scrollY + 45, maxScroll);
+        if (nextY === window.scrollY) break;
+        window.scrollTo(0, nextY);
         await new Promise((r) => requestAnimationFrame(r));
         await new Promise((r) => setTimeout(r, 80));
         lastScrollY = window.scrollY;
@@ -1769,7 +1817,7 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         return JSON.stringify({
           error: 'section never reached data-pinned="true" after scrolling',
           debug: {
-            pinnedH, naturalTop, tries, lastScrollY,
+            pinnedH, naturalTop, phase1Target, tries, lastScrollY,
             sentinelCount: document.querySelectorAll('[data-pk-section-sentinel]').length,
             sectionOuterHTMLLen: section.outerHTML.length,
             wrapAttrs: wrap.getAttributeNames(),
@@ -1777,82 +1825,53 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         });
       }
 
-      // Now that the caption is confirmed pinned, un-hide the pinned search
-      // row WITHOUT touching scroll position at all: a scroll-position nudge
-      // risks crossing back over the observer's own pin threshold near the
-      // boundary (observed empirically — a bare -5px nudge intermittently
-      // un-pinned the caption). admin_list.js's onScroll only re-evaluates
-      // on a real 'scroll' event, but its un-hide branch is
-      // (focused OR nearTop) — focusing the search input and firing a
-      // synthetic scroll event (net scrollY delta zero) satisfies that
-      // branch without moving the page at all — the preventScroll focus
-      // option below is required, not decorative: the search input is
-      // visually translated off-screen while data-pinned-hidden is set
-      // (its layout box still sits at its own sticky top:0, unaffected by
-      // the transform), so a bare, option-less focus() call made the
-      // browser "helpfully" scroll the whole page back toward that layout
-      // box's natural position near the top of the document — observed
-      // empirically resetting scrollY to near-zero and reading a stale
-      // pinned attribute back before the observer had a chance to correct
-      // it for the new, no-longer-pinned scroll position.
-      const searchInputEl = document.querySelector('#juegos-search-input');
-      if (searchInputEl) searchInputEl.focus({ preventScroll: true });
-      window.dispatchEvent(new Event('scroll'));
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 150));
-      pinned = wrap.getAttribute('data-pinned') === 'true';
-      if (!pinned) {
-        return JSON.stringify({ error: 'section un-pinned after focusing the search input — unexpected' });
+      // ---- DOWN state: measured exactly where the real scroll left it.
+      // No focus, no synthetic scroll event, no un-hide of any kind — this
+      // is the state a scrolling user actually occupies. ----
+      function textInkFull(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && (!node.nodeValue || !node.nodeValue.trim())) node = walker.nextNode();
+        if (!node) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
       }
-      if (searchInputEl) searchInputEl.blur();
-
-      // Plan 01.8.3-06: the caption's ink rect a SECOND time, now that the
-      // section is confirmed pinned — a distinct reading from capInk
-      // above, which is the RESTING-layout measurement the D-13 air-ratio
-      // assertions depend on and must not be disturbed. Read via the same
-      // textInk helper, on the same label element, so both readings are
-      // directly comparable.
-      const pinnedInk = textInk(labelElForInk);
 
       const searchWrap = document.querySelector('#juegos-search-wrap');
-      const searchHidden = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
-      const searchRect = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchHiddenDown = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      const searchRectRawDown = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchRectDown = searchRectRawDown
+        ? { top: Math.round(searchRectRawDown.top * 10) / 10, bottom: Math.round(searchRectRawDown.bottom * 10) / 10 }
+        : null;
+      const transformDown = searchWrap ? getComputedStyle(searchWrap).transform : null;
 
-      const headerRect = header.getBoundingClientRect();
-      const beforeCs = getComputedStyle(header, '::before');
-      const topOffset = parseFloat(beforeCs.top) || 0;
-      const bottomOffset = parseFloat(beforeCs.bottom) || 0;
-      const bandTop = Math.round((headerRect.top + topOffset) * 10) / 10;
-      const bandBottom = Math.round((headerRect.bottom - bottomOffset) * 10) / 10;
-      const bandHeight = Math.round((bandBottom - bandTop) * 10) / 10;
-      const bandBg = beforeCs.backgroundColor;
-      const bandSearchGap = searchRect ? Math.round((bandTop - searchRect.bottom) * 10) / 10 : null;
+      const headerRectDown = header.getBoundingClientRect();
+      const beforeCsDown = getComputedStyle(header, '::before');
+      const topOffsetDown = parseFloat(beforeCsDown.top) || 0;
+      const bottomOffsetDown = parseFloat(beforeCsDown.bottom) || 0;
+      const bandTopDown = Math.round((headerRectDown.top + topOffsetDown) * 10) / 10;
+      const bandBottomDown = Math.round((headerRectDown.bottom - bottomOffsetDown) * 10) / 10;
+      const bandHeightDown = Math.round((bandBottomDown - bandTopDown) * 10) / 10;
+      const bandBgDown = beforeCsDown.backgroundColor;
+      const bandSearchGapDown = searchRectDown ? Math.round((bandTopDown - searchRectDown.bottom) * 10) / 10 : null;
 
-      // Plan 01.8.3-06: where the pinned caption's own ink sits INSIDE the
-      // band — bandTop/bandBottom above are read off the ::before
-      // pseudo-element's own resolved geometry, never the header's box,
-      // exactly like the band-height reading a few lines up. A null
-      // pinnedInk (ink could not be measured) propagates as null gaps
-      // rather than a false zero, which would otherwise read as a perfect
-      // pass.
-      const inkGapAbove = pinnedInk ? Math.round((pinnedInk.top - bandTop) * 10) / 10 : null;
-      const inkGapBelow = pinnedInk ? Math.round((bandBottom - pinnedInk.bottom) * 10) / 10 : null;
+      // Plan 01.8.3-06's ink-inside-band reading, now taken in the DOWN
+      // state (what a user actually sees while scrolling down) rather than
+      // the old manufactured un-hidden state — algebraically the same
+      // number either way (it depends only on header padding, never on the
+      // search row's own visibility), but measured where it is claimed.
+      const pinnedInkDown = textInkFull(labelElForInk);
+      const inkGapAboveDown = pinnedInkDown ? Math.round((pinnedInkDown.top - bandTopDown) * 10) / 10 : null;
+      const inkGapBelowDown = pinnedInkDown ? Math.round((bandBottomDown - pinnedInkDown.bottom) * 10) / 10 : null;
 
       const rowsWrap = section.querySelector('.pk-admin-juegos-rows');
       const rowsList = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
       const firstRowBelow = rowsList[0] || null;
       const secondRowBelow = rowsList[1] || null;
-      const rowHeight = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
+      const rowHeightDown = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
 
-      // Plan 01.8.3-08 [G-01.8.3-2c]: repeat the band-vs-row and
-      // divider-vs-row measurement a SECOND time here, with the section
-      // really pinned (via the incremental real scroll already performed
-      // above) — never a synthetic class poke. Same viewport-relative
-      // derivation as measureJuegosKeelAt's resting-state reading: the
-      // band's edges from the header's own rect plus its ::before used
-      // left/right, the divider's edges from the SECOND row's own rect
-      // plus ITS ::before used left/right (only rows after the first carry
-      // the hairline).
       function rowContentEdges(el) {
         if (!el) return null;
         const r = el.getBoundingClientRect();
@@ -1865,10 +1884,12 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         };
       }
       const rowContentPinned = rowContentEdges(firstRowBelow);
-      const beforeLeftRaw = parseFloat(beforeCs.left);
-      const beforeRightRaw = parseFloat(beforeCs.right);
-      const bandLeftPinned = Math.round((headerRect.left + (Number.isNaN(beforeLeftRaw) ? 0 : beforeLeftRaw)) * 10) / 10;
-      const bandRightInsetPinned = Math.round((window.innerWidth - (headerRect.right - (Number.isNaN(beforeRightRaw) ? 0 : beforeRightRaw))) * 10) / 10;
+      const beforeLeftRawDown = parseFloat(beforeCsDown.left);
+      const beforeRightRawDown = parseFloat(beforeCsDown.right);
+      const bandLeftPinned = Math.round((headerRectDown.left + (Number.isNaN(beforeLeftRawDown) ? 0 : beforeLeftRawDown)) * 10) / 10;
+      const bandRightInsetPinned = Math.round(
+        (window.innerWidth - (headerRectDown.right - (Number.isNaN(beforeRightRawDown) ? 0 : beforeRightRawDown))) * 10,
+      ) / 10;
       let dividerLeftPinned = null, dividerRightInsetPinned = null;
       if (secondRowBelow) {
         const dr = secondRowBelow.getBoundingClientRect();
@@ -1879,12 +1900,100 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         dividerRightInsetPinned = Math.round((window.innerWidth - (dr.right - (Number.isNaN(dRightRaw) ? 0 : dRightRaw))) * 10) / 10;
       }
 
+      // Test 3: an elementFromPoint sweep of the strip between the
+      // viewport top and the band's own top — every whole pixel when that
+      // strip is <=60px tall (the shipped defect's own magnitude), or at
+      // least 12 evenly-spaced points otherwise, since a fixed 5-point
+      // sample can straddle a row boundary and miss.
+      const bandTopFloorDown = Math.floor(bandTopDown);
+      const sweepYs = [];
+      if (bandTopFloorDown > 0) {
+        if (bandTopFloorDown <= 60) {
+          for (let y = 1; y < bandTopFloorDown; y++) sweepYs.push(y);
+        } else {
+          const n = 12;
+          for (let i = 1; i <= n; i++) sweepYs.push(Math.round((bandTopFloorDown * i) / (n + 1)));
+        }
+      }
+      const sweepX = Math.round(window.innerWidth / 2);
+      const sweep = sweepYs.map((y) => {
+        const el = document.elementFromPoint(sweepX, y);
+        const rowEl = el ? el.closest('.pk-admin-row') : null;
+        const hit = el ? (typeof el.className === 'string' && el.className ? el.tagName.toLowerCase() + '.' + el.className.split(' ')[0] : el.tagName.toLowerCase()) : null;
+        return { y, insideRow: !!rowEl, hit };
+      });
+      const offendingYs = sweep.filter((s) => s.insideRow);
+
+      // ---- UP state: the scroll-up differential control, same session,
+      // same section. Scroll back up in REAL increments (never a jump)
+      // until the hide attribute is gone, wait for the row's transform
+      // transition to settle, then measure. ----
+      function transformIsIdentity(transformStr) {
+        if (!transformStr || transformStr === 'none') return true;
+        try {
+          const m = new DOMMatrixReadOnly(transformStr);
+          return Math.abs(m.m41) < 0.5 && Math.abs(m.m42) < 0.5;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      let upTries = 0;
+      let searchHiddenNow = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      while (searchHiddenNow && upTries < 20) {
+        const nextY = Math.max(0, window.scrollY - 45);
+        if (nextY === window.scrollY) break;
+        window.scrollTo(0, nextY);
+        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => setTimeout(r, 80));
+        searchHiddenNow = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+        upTries++;
+      }
+      let settleTries = 0;
+      while (searchWrap && settleTries < 30) {
+        if (transformIsIdentity(getComputedStyle(searchWrap).transform)) break;
+        await new Promise((r) => setTimeout(r, 30));
+        settleTries++;
+      }
+
+      const stillPinned = wrap.getAttribute('data-pinned') === 'true';
+      if (!stillPinned) {
+        return JSON.stringify({ error: 'section un-pinned while scrolling up for the differential control' });
+      }
+
+      const searchHiddenUp = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      const searchRectRawUp = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchRectUp = searchRectRawUp
+        ? { top: Math.round(searchRectRawUp.top * 10) / 10, bottom: Math.round(searchRectRawUp.bottom * 10) / 10 }
+        : null;
+      const headerRectUp = header.getBoundingClientRect();
+      const beforeCsUp = getComputedStyle(header, '::before');
+      const topOffsetUp = parseFloat(beforeCsUp.top) || 0;
+      const bottomOffsetUp = parseFloat(beforeCsUp.bottom) || 0;
+      const bandTopUp = Math.round((headerRectUp.top + topOffsetUp) * 10) / 10;
+      const bandSearchGapUp = searchRectUp ? Math.round((bandTopUp - searchRectUp.bottom) * 10) / 10 : null;
+
       return JSON.stringify({
-        pinned, searchHidden, bandTop, bandBottom, bandHeight, bandBg, bandSearchGap,
-        rowHeight, hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
-        inkGapAbove, inkGapBelow,
-        rowContentPinned, bandLeftPinned, bandRightInsetPinned,
-        dividerLeftPinned, dividerRightInsetPinned,
+        pinned, pinnedH,
+        hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
+        down: {
+          searchHidden: searchHiddenDown,
+          searchRect: searchRectDown,
+          transform: transformDown,
+          bandTop: bandTopDown, bandBottom: bandBottomDown, bandHeight: bandHeightDown,
+          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown,
+          rowHeight: rowHeightDown,
+          inkGapAbove: inkGapAboveDown, inkGapBelow: inkGapBelowDown,
+          rowContentPinned, bandLeftPinned, bandRightInsetPinned,
+          dividerLeftPinned, dividerRightInsetPinned,
+          sweep, offendingYs,
+        },
+        up: {
+          searchHidden: searchHiddenUp,
+          searchRect: searchRectUp,
+          bandTop: bandTopUp,
+          bandSearchGap: bandSearchGapUp,
+        },
       });
     })()
   `,
@@ -2114,21 +2223,80 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     fail("juegos sections: #juegos-section-toggle-draft not found — is Borradores empty in this dev catalog?")
   }
 
+  // Plan 01.8.3-11 [T-01.8.3-34/G-01.8.3-2d/G-01.8.3-3]: the pinned-offset
+  // guard — tests 1/2/3/4/5 against `measureJuegosSectionPinned`'s DOWN and
+  // UP sub-objects. Test 1: the row really is hidden in the DOWN state
+  // (every other DOWN assertion is meaningless otherwise). Test 2: the
+  // band is at the viewport top in the DOWN state. Test 3: nothing renders
+  // above the band (the elementFromPoint sweep). Test 4: the band stays
+  // flush to the row's own bottom in BOTH states — the pre-existing
+  // adjacency assertion, restated against the wrap's measured bottom
+  // instead of a constant. Test 5: the scroll-up differential control —
+  // proves the offset now tracks the row rather than having simply moved
+  // to a different constant.
+  const checkPinnedOffset = (label, result) => {
+    if (!result.down) {
+      fail(`juegos ${label} pinned-offset: down-state measurement missing`)
+      return
+    }
+    const { down, up, pinnedH } = result
+
+    if (down.searchHidden !== true) {
+      fail(`juegos ${label} pinned-offset test1: search row is NOT hidden in the DOWN state (searchHidden=${down.searchHidden})`)
+    }
+
+    if (down.bandTop == null || down.bandTop > 0.5) {
+      fail(`juegos ${label} pinned-offset test2: band top=${down.bandTop}px in the DOWN state, expected at or below 0.5px`)
+    }
+
+    if (down.offendingYs && down.offendingYs.length > 0) {
+      const named = down.offendingYs.map((o) => `y=${o.y}(${o.hit})`).join(", ")
+      fail(`juegos ${label} pinned-offset test3: ${down.offendingYs.length} sampled y value(s) above the band resolve inside a .pk-admin-row: ${named}`)
+    }
+
+    if (down.bandSearchGap == null || Math.abs(down.bandSearchGap) > 0.5) {
+      fail(`juegos ${label} pinned-offset test4 (DOWN): band-to-row gap=${down.bandSearchGap}px, expected within ±0.5px of 0`)
+    }
+    if (!up || up.bandSearchGap == null || Math.abs(up.bandSearchGap) > 0.5) {
+      fail(`juegos ${label} pinned-offset test4 (UP): band-to-row gap=${up ? up.bandSearchGap : null}px, expected within ±0.5px of 0`)
+    }
+
+    if (!up) {
+      fail(`juegos ${label} pinned-offset test5: UP-state measurement missing`)
+    } else {
+      if (up.searchHidden !== false) {
+        fail(`juegos ${label} pinned-offset test5: search row still hidden after scrolling up (searchHidden=${up.searchHidden})`)
+      }
+      if (!up.searchRect || Math.abs(up.searchRect.top - 0) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP wrap rect top=${up.searchRect ? up.searchRect.top : null}px, expected within ±0.5px of 0`)
+      }
+      if (!up.searchRect || pinnedH == null || Math.abs(up.searchRect.bottom - pinnedH) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP wrap rect bottom=${up.searchRect ? up.searchRect.bottom : null}px, expected within ±0.5px of its own measured height (${pinnedH}px)`)
+      }
+      if (up.bandTop == null || !up.searchRect || Math.abs(up.bandTop - up.searchRect.bottom) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP band top=${up.bandTop}px does not equal wrap bottom=${up.searchRect ? up.searchRect.bottom : null}px within ±0.5px`)
+      }
+    }
+
+    log(
+      `juegos ${label} pinned-offset: DOWN bandTop=${down.bandTop} searchHidden=${down.searchHidden} offendingYs=${down.offendingYs ? down.offendingYs.length : "n/a"}; ` +
+        `UP bandTop=${up ? up.bandTop : null} searchHidden=${up ? up.searchHidden : null} searchRect=${up ? JSON.stringify(up.searchRect) : null} pinnedH=${pinnedH}`,
+    )
+  }
+
   const first = await measureJuegosSectionPinned(client, "#juegos-section-draft")
   if (first.error) {
     fail(`juegos first-section (Borradores) band: ${first.error}`)
   } else {
     log(
-      `juegos first-section (Borradores) band: height=${first.bandHeight}px (top=${first.bandTop} bottom=${first.bandBottom}) ` +
-        `bg=${first.bandBg} search-row gap=${first.bandSearchGap}px row-height=${first.rowHeight}px searchHidden=${first.searchHidden}`,
+      `juegos first-section (Borradores) band: height=${first.down.bandHeight}px (top=${first.down.bandTop} bottom=${first.down.bandBottom}) ` +
+        `bg=${first.down.bandBg} search-row gap=${first.down.bandSearchGap}px row-height=${first.down.rowHeight}px searchHidden=${first.down.searchHidden}`,
     )
-    if (Math.abs(first.bandHeight - 44.0) > 0.5) fail(`juegos first-section band height ${first.bandHeight}px, expected 44.0 ±0.5px`)
-    if (first.bandSearchGap === null || Math.abs(first.bandSearchGap) > 0.5) {
-      fail(`juegos first-section band-to-search-row gap is ${first.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
-    }
-    if (isFullyTransparent(first.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.bandBg})`)
-    if (first.rowHeight === null || first.rowHeight < 64) fail(`juegos first-section row height ${first.rowHeight}px, expected >= 64px`)
-    checkInkInBand("first-section (Borradores)", first)
+    if (Math.abs(first.down.bandHeight - 44.0) > 0.5) fail(`juegos first-section band height ${first.down.bandHeight}px, expected 44.0 ±0.5px`)
+    if (isFullyTransparent(first.down.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.down.bandBg})`)
+    if (first.down.rowHeight === null || first.down.rowHeight < 64) fail(`juegos first-section row height ${first.down.rowHeight}px, expected >= 64px`)
+    checkInkInBand("first-section (Borradores)", first.down)
+    checkPinnedOffset("first-section (Borradores)", first)
   }
 
   const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
@@ -2136,15 +2304,12 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     fail(`juegos later-section (Juegos del club) band: ${later.error}`)
   } else {
     log(
-      `juegos later-section (Juegos del club) band: height=${later.bandHeight}px (top=${later.bandTop} bottom=${later.bandBottom}) ` +
-        `bg=${later.bandBg} search-row gap=${later.bandSearchGap}px row-height=${later.rowHeight}px searchHidden=${later.searchHidden}`,
+      `juegos later-section (Juegos del club) band: height=${later.down.bandHeight}px (top=${later.down.bandTop} bottom=${later.down.bandBottom}) ` +
+        `bg=${later.down.bandBg} search-row gap=${later.down.bandSearchGap}px row-height=${later.down.rowHeight}px searchHidden=${later.down.searchHidden}`,
     )
-    if (Math.abs(later.bandHeight - 44.0) > 0.5) fail(`juegos later-section band height ${later.bandHeight}px, expected 44.0 ±0.5px`)
-    if (later.bandSearchGap === null || Math.abs(later.bandSearchGap) > 0.5) {
-      fail(`juegos later-section band-to-search-row gap is ${later.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
-    }
-    if (isFullyTransparent(later.bandBg)) fail(`juegos later-section band background is fully transparent while pinned (${later.bandBg})`)
-    if (later.rowHeight === null || later.rowHeight < 64) fail(`juegos later-section row height ${later.rowHeight}px, expected >= 64px`)
+    if (Math.abs(later.down.bandHeight - 44.0) > 0.5) fail(`juegos later-section band height ${later.down.bandHeight}px, expected 44.0 ±0.5px`)
+    if (isFullyTransparent(later.down.bandBg)) fail(`juegos later-section band background is fully transparent while pinned (${later.down.bandBg})`)
+    if (later.down.rowHeight === null || later.down.rowHeight < 64) fail(`juegos later-section row height ${later.down.rowHeight}px, expected >= 64px`)
 
     if (!later.hasRowAbove) {
       fail("juegos ink ratio: later section has no row above it to measure — expected Borradores' last row above Juegos del club's caption")
@@ -2154,7 +2319,8 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
       log(`juegos ink-to-ink: above=${later.airAbove}px below=${later.airBelow}px ratio=${later.airRatio}:1`)
       if (later.airRatio < 2.5) fail(`juegos ink-to-ink ratio ${later.airRatio}:1 is below the 2.5:1 floor (above=${later.airAbove}px, below=${later.airBelow}px)`)
     }
-    checkInkInBand("later-section (Juegos del club)", later)
+    checkInkInBand("later-section (Juegos del club)", later.down)
+    checkPinnedOffset("later-section (Juegos del club)", later)
 
     // Plan 01.8.3-08 [G-01.8.3-2c]: repeat Test 1 (band-vs-row) and Test 2
     // (divider-vs-row) from the resting-state loop above, but now with the
@@ -2163,47 +2329,47 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     // the diagnosis proved horizontal geometry is scroll-state independent,
     // so a divergence between the resting and pinned readings is itself a
     // finding, never a synthetic class poke.
-    if (!later.rowContentPinned) {
+    if (!later.down.rowContentPinned) {
       fail("juegos pinned band/divider: could not measure the pinned section's own row content edges")
     } else {
       log(
-        `juegos pinned band-vs-row: band left=${later.bandLeftPinned} right inset=${later.bandRightInsetPinned}; ` +
-          `divider left=${later.dividerLeftPinned} right inset=${later.dividerRightInsetPinned}; ` +
-          `row left=${later.rowContentPinned.left} right=${later.rowContentPinned.right}`,
+        `juegos pinned band-vs-row: band left=${later.down.bandLeftPinned} right inset=${later.down.bandRightInsetPinned}; ` +
+          `divider left=${later.down.dividerLeftPinned} right inset=${later.down.dividerRightInsetPinned}; ` +
+          `row left=${later.down.rowContentPinned.left} right=${later.down.rowContentPinned.right}`,
       )
-      if (later.bandLeftPinned == null || later.bandRightInsetPinned == null) {
+      if (later.down.bandLeftPinned == null || later.down.bandRightInsetPinned == null) {
         fail("juegos pinned band-vs-row: band ::before geometry could not be measured while pinned")
       } else {
-        if (Math.abs(later.bandLeftPinned - later.rowContentPinned.left) > 0.5) {
-          fail(`juegos pinned band-vs-row left: band=${later.bandLeftPinned}px row=${later.rowContentPinned.left}px, expected within 0.5px`)
+        if (Math.abs(later.down.bandLeftPinned - later.down.rowContentPinned.left) > 0.5) {
+          fail(`juegos pinned band-vs-row left: band=${later.down.bandLeftPinned}px row=${later.down.rowContentPinned.left}px, expected within 0.5px`)
         }
-        if (Math.abs(later.bandRightInsetPinned - later.rowContentPinned.right) > 0.5) {
-          fail(`juegos pinned band-vs-row right inset: band=${later.bandRightInsetPinned}px row=${later.rowContentPinned.right}px, expected within 0.5px`)
+        if (Math.abs(later.down.bandRightInsetPinned - later.down.rowContentPinned.right) > 0.5) {
+          fail(`juegos pinned band-vs-row right inset: band=${later.down.bandRightInsetPinned}px row=${later.down.rowContentPinned.right}px, expected within 0.5px`)
         }
       }
-      if (later.dividerRightInsetPinned == null) {
+      if (later.down.dividerRightInsetPinned == null) {
         fail("juegos pinned divider-vs-row: divider ::before geometry could not be measured while pinned (fewer than two rows in the section?)")
-      } else if (Math.abs(later.dividerRightInsetPinned - later.rowContentPinned.right) > 0.5) {
-        fail(`juegos pinned divider-vs-row right inset: divider=${later.dividerRightInsetPinned}px row=${later.rowContentPinned.right}px, expected within 0.5px`)
+      } else if (Math.abs(later.down.dividerRightInsetPinned - later.down.rowContentPinned.right) > 0.5) {
+        fail(`juegos pinned divider-vs-row right inset: divider=${later.down.dividerRightInsetPinned}px row=${later.down.rowContentPinned.right}px, expected within 0.5px`)
       }
     }
   }
 
   if (!first.error && !later.error) {
-    const delta = Math.round((first.bandHeight - later.bandHeight) * 10) / 10
-    log(`juegos band heights: first=${first.bandHeight}px later=${later.bandHeight}px delta=${delta}px`)
-    if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.bandHeight}px, later=${later.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
+    const delta = Math.round((first.down.bandHeight - later.down.bandHeight) * 10) / 10
+    log(`juegos band heights: first=${first.down.bandHeight}px later=${later.down.bandHeight}px delta=${delta}px`)
+    if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.down.bandHeight}px, later=${later.down.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
 
     // Plan 01.8.3-06: the assertion that directly names the root cause — a
     // band whose ink offset tracks `--pt` reads 14 against 26 today, even
     // though the band's own HEIGHT is identical (44px) for both sections.
-    if (first.inkGapAbove == null || later.inkGapAbove == null) {
-      fail(`juegos ink gap-above cross-section: could not measure inkGapAbove for one or both sections (first=${first.inkGapAbove}, later=${later.inkGapAbove})`)
+    if (first.down.inkGapAbove == null || later.down.inkGapAbove == null) {
+      fail(`juegos ink gap-above cross-section: could not measure inkGapAbove for one or both sections (first=${first.down.inkGapAbove}, later=${later.down.inkGapAbove})`)
     } else {
-      const crossDelta = Math.round(Math.abs(first.inkGapAbove - later.inkGapAbove) * 10) / 10
-      log(`juegos ink gap-above cross-section: first=${first.inkGapAbove}px later=${later.inkGapAbove}px delta=${crossDelta}px`)
+      const crossDelta = Math.round(Math.abs(first.down.inkGapAbove - later.down.inkGapAbove) * 10) / 10
+      log(`juegos ink gap-above cross-section: first=${first.down.inkGapAbove}px later=${later.down.inkGapAbove}px delta=${crossDelta}px`)
       if (crossDelta > 1.0) {
-        fail(`juegos ink gap-above disagrees between sections by ${crossDelta}px (first=${first.inkGapAbove}px, later=${later.inkGapAbove}px) — the band's ink offset tracks --pt instead of staying fixed`)
+        fail(`juegos ink gap-above disagrees between sections by ${crossDelta}px (first=${first.down.inkGapAbove}px, later=${later.down.inkGapAbove}px) — the band's ink offset tracks --pt instead of staying fixed`)
       }
     }
   }
