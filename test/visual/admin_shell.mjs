@@ -1141,6 +1141,24 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
         return range.getBoundingClientRect();
       }
 
+      // Plan 01.8.3-09 [G-01.8.3-2e]: viewport-relative BORDER-BOX rects for
+      // the search cluster's own visible controls — never the search row
+      // CONTAINER's content box ('searchRow' above already agrees with the
+      // rows at 32/32 and is exactly why the shipped probe reported this
+      // screen as passing; the defect lives on boxes this function never
+      // read until now). 'left'/'right' here are the box's own edges in
+      // viewport coordinates (no padding math — border-box, not content-box)
+      // and 'width' is the box's own rendered width.
+      function borderBoxEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return {
+          left: Math.round(r.left * 10) / 10,
+          right: Math.round((window.innerWidth - r.right) * 10) / 10,
+          width: Math.round(r.width * 10) / 10,
+        };
+      }
+
       const rowsWrap = document.querySelector('.pk-admin-juegos-rows');
       const rows = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
       const row = rows[0] || null;
@@ -1152,6 +1170,24 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
       const cover = row ? row.querySelector('.pk-admin-row__cover') : null;
       const chevron = row ? row.querySelector('.pk-admin-row__chevron') : null;
       const rowCs = row ? getComputedStyle(row) : null;
+
+      // Plan 01.8.3-09 [G-01.8.3-2e]: the field, the '+' button, and the
+      // '+'s own glyph — the three boxes the fix actually changes. The
+      // glyph lookup mirrors the A3 glyph rule's own selector
+      // ('.pk-admin-action--a3 [class^="hero-"], .pk-admin-action--a3
+      // [class*=" hero-"]', components.css); icon/1 (core_components.ex)
+      // renders a span, never an svg. Falls back to the button's
+      // first element child, reporting the fallback rather than silently
+      // measuring the box instead of the glyph (rule 8's substitution
+      // mechanism).
+      const searchInput = document.getElementById('juegos-search-input');
+      const addAction = document.getElementById('juegos-add-action');
+      let glyph = addAction ? addAction.querySelector('[class^="hero-"], [class*=" hero-"]') : null;
+      let glyphIsFallback = false;
+      if (addAction && !glyph) {
+        glyph = addAction.firstElementChild;
+        glyphIsFallback = true;
+      }
 
       let bandLeft = null, bandRightInset = null;
       if (header) {
@@ -1185,6 +1221,10 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
         columnGap: rowCs ? (parseFloat(rowCs.columnGap) || 0) : null,
         bandLeft, bandRightInset,
         dividerLeft, dividerRightInset,
+        searchInput: borderBoxEdges(searchInput),
+        addAction: borderBoxEdges(addAction),
+        glyph: borderBoxEdges(glyph),
+        glyphIsFallback,
       };
     })())
   `,
@@ -1463,8 +1503,23 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
   const keelByWidth = {}
   for (const width of KEEL_VIEWPORTS) {
     keelByWidth[width] = await measureJuegosKeelAt({ client, baseUrl, width })
-    const { row, searchRow, coverLeft, coverWidth, chevronRightInset, captionInkLeft, columnGap, bandLeft, bandRightInset, dividerLeft, dividerRightInset } =
-      keelByWidth[width]
+    const {
+      row,
+      searchRow,
+      coverLeft,
+      coverWidth,
+      chevronRightInset,
+      captionInkLeft,
+      columnGap,
+      bandLeft,
+      bandRightInset,
+      dividerLeft,
+      dividerRightInset,
+      searchInput,
+      addAction,
+      glyph,
+      glyphIsFallback,
+    } = keelByWidth[width]
     if (!row || !searchRow) {
       fail(`juegos keel @ ${width}px: row or search-row not found (row=${!!row}, searchRow=${!!searchRow})`)
       continue
@@ -1472,7 +1527,10 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     log(
       `juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}; ` +
         `cover left=${coverLeft} width=${coverWidth}; chevron right inset=${chevronRightInset}; caption ink left=${captionInkLeft}; ` +
-        `row column-gap=${columnGap}; band left=${bandLeft} right inset=${bandRightInset}; divider left=${dividerLeft} right inset=${dividerRightInset}`,
+        `row column-gap=${columnGap}; band left=${bandLeft} right inset=${bandRightInset}; divider left=${dividerLeft} right inset=${dividerRightInset}; ` +
+        `search input left=${searchInput?.left} right inset=${searchInput?.right} width=${searchInput?.width}; ` +
+        `add action left=${addAction?.left} right inset=${addAction?.right} width=${addAction?.width}; ` +
+        `glyph left=${glyph?.left} right inset=${glyph?.right} width=${glyph?.width} (fallback=${glyphIsFallback})`,
     )
     if (row.left !== 32 || row.right !== 32) {
       fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 32/32 (D-20b)`)
@@ -1482,6 +1540,59 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     }
     if (row.left !== searchRow.left || row.right !== searchRow.right) {
       fail(`juegos keel @ ${width}px: row and search row disagree (row=${JSON.stringify(row)}, searchRow=${JSON.stringify(searchRow)})`)
+    }
+
+    // ---- G-01.8.3-2e: the search field and the `+` themselves, never the
+    // search row CONTAINER (already asserted 32/32 above and unchanged by
+    // this gap's fix). ----
+
+    // Test 1 (G-01.8.3-2e) — left agreement, positive control: the field's
+    // own border-box left must equal the row's content left. PASSES today
+    // (both 32) — proves the cluster's left edge was never the defect; only
+    // the right-hand side (the `+`) and the field's responsiveness are.
+    if (!searchInput) {
+      fail(`juegos keel @ ${width}px: #juegos-search-input not found`)
+    } else if (Math.abs(searchInput.left - row.left) > 0.5) {
+      fail(`juegos keel @ ${width}px search field left agreement: field=${searchInput.left}px row=${row.left}px, expected within 0.5px`)
+    }
+
+    // Test 2 (G-01.8.3-2e) — the `+`'s glyph is on the rows' axis: the
+    // glyph span's right inset must equal the row chevron's right inset,
+    // asserted against the MEASURED chevron inset (never a literal 32) so
+    // the guard retains the ability to disagree with the stylesheet. FAILS
+    // today at every width (`.pk-admin-action--a3`'s `margin-left: -12px`
+    // is a leading-icon pull applied to a trailing action).
+    if (!glyph || chevronRightInset == null) {
+      fail(`juegos keel @ ${width}px: could not measure the +'s glyph or the row chevron (glyph=${!!glyph}, chevronRightInset=${chevronRightInset})`)
+    } else {
+      if (glyphIsFallback) {
+        log(`juegos keel @ ${width}px: +'s glyph lookup fell back to the button's first element child (no [class^="hero-"]/[class*=" hero-"] descendant found)`)
+      }
+      if (Math.abs(glyph.right - chevronRightInset) > 0.5) {
+        fail(`juegos keel @ ${width}px +'s glyph vs chevron: glyph right inset=${glyph.right}px chevron right inset=${chevronRightInset}px, expected within 0.5px`)
+      }
+    }
+
+    // Test 3 (G-01.8.3-2e) — nothing spills: the `+`'s border-box right
+    // inset must be >= the row's own content right inset minus half the
+    // difference between the A3 box width and its glyph width — both
+    // derived from the MEASURED rects here, never from the `-12px`/`-13px`
+    // a stylesheet declares. In plainer terms, the button's box may
+    // overhang the content edge by exactly the amount that centres its
+    // glyph on that edge, and by no more. FAILS today at 360, where the
+    // box already spills past the row's own content box.
+    if (!addAction || !glyph) {
+      fail(`juegos keel @ ${width}px: could not measure the +'s own box or glyph for the spill check (addAction=${!!addAction}, glyph=${!!glyph})`)
+    } else {
+      const allowance = Math.round(((addAction.width - glyph.width) / 2) * 10) / 10
+      const minRightInset = Math.round((row.right - allowance) * 10) / 10
+      if (addAction.right < minRightInset) {
+        fail(
+          `juegos keel @ ${width}px +'s spill: add-action right inset=${addAction.right}px, row content right inset=${row.right}px, ` +
+            `allowance=${allowance}px (half of add-action width=${addAction.width}px minus glyph width=${glyph.width}px), ` +
+            `expected right inset >= ${minRightInset}px`,
+        )
+      }
     }
 
     // Test 1 (G-01.8.3-2c): the pinned caption band's painted edges must
@@ -1532,6 +1643,34 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
       fail(`juegos keel @ ${width}px: caption ink left could not be measured`)
     } else if (Math.abs(captionInkLeft - row.left) > 0.5) {
       fail(`juegos keel @ ${width}px: caption ink left ${captionInkLeft}px does not match row content left ${row.left}px`)
+    }
+  }
+
+  // Test 4 (G-01.8.3-2e) — the cluster is responsive: cross-width, so it
+  // runs once after the loop against the collected `keelByWidth` map. The
+  // field's border-box width at 390 minus its width at 360 must equal 30px
+  // within 1px, and its width at 375 minus its width at 360 must equal
+  // 15px within 1px. FAILS today — the field's `flex: 1` has always been
+  // inert (its parent, `#juegos-search-form`, is `display: block`), so all
+  // three widths measure the same intrinsic `size=20` width and both
+  // deltas are 0. Fails loudly (never silently skips) if any width's
+  // measurement is missing.
+  const widths390 = keelByWidth[390]?.searchInput?.width ?? null
+  const widths375 = keelByWidth[375]?.searchInput?.width ?? null
+  const widths360 = keelByWidth[360]?.searchInput?.width ?? null
+  if (widths390 == null || widths375 == null || widths360 == null) {
+    fail(
+      `juegos keel search field responsiveness: missing a width measurement (390px=${widths390}, 375px=${widths375}, 360px=${widths360})`,
+    )
+  } else {
+    log(`juegos keel search field widths: 360px=${widths360} 375px=${widths375} 390px=${widths390}`)
+    const delta390v360 = Math.round((widths390 - widths360) * 10) / 10
+    const delta375v360 = Math.round((widths375 - widths360) * 10) / 10
+    if (Math.abs(delta390v360 - 30) > 1) {
+      fail(`juegos keel search field responsiveness: width@390 - width@360 = ${delta390v360}px, expected 30px ±1px`)
+    }
+    if (Math.abs(delta375v360 - 15) > 1) {
+      fail(`juegos keel search field responsiveness: width@375 - width@360 = ${delta375v360}px, expected 15px ±1px`)
     }
   }
 
