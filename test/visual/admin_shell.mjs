@@ -973,10 +973,21 @@ async function measureSaveBarLive({ client, baseUrl, editorUrl, width }) {
 }
 
 // ---------------------------------------------------------------------------
-// The keel (open item 4) — the shell's real content edges. Measured on
-// each page's own `.mx-auto.w-full.max-w-3xl` content wrapper (the D-18
-// shared shape both live screens render), at each of D-19n's/079's named
-// widths.
+// Plan 01.8.3-08 [Rule 1 - Bug]: this function measures `<main>`'s OWN
+// horizontal padding (`main .mx-auto.w-full.max-w-3xl`'s rect, at each of
+// D-19n's/079's named widths) — it is NOT "the content keel" despite the
+// name below, and it can say nothing about content-level insets. D-20b
+// (G-01.8.3-2c, DEBUG-juegos-horizontal-keel-three-axes.md) proved that
+// page content on every non-fullbleed admin page actually renders at 32px
+// viewport-relative (this same 16px padding PLUS each component's own 16px
+// self-inset) — a quantity this function structurally cannot see, since it
+// only reads the padding being doubled, not the doubled result. `PAGES`
+// (above) EXCLUDES the one fullbleed admin page (the editor, `form.ex:1177`)
+// BY CONSTRUCTION, where `main` contributes 0px and the same components
+// land on 16px instead — so this check can say nothing about the editor
+// either. See `measureJuegosKeelAt` below for the viewport-relative,
+// D-20b-accurate content-keel measurement this function's own name used to
+// falsely promise.
 // ---------------------------------------------------------------------------
 async function measureKeel({ client, baseUrl, width }) {
   await setViewport(client, width, 844)
@@ -1050,16 +1061,38 @@ async function forceEagerDecodeCovers(client) {
   )
 }
 
-// "Content edge" is measured relative to `.pk-admin-juegos`'s OWN box, not
-// the viewport — `<main>`'s site-wide 16px horizontal padding (the shared
-// admin keel `measureKeel` above already independently verifies) would
-// otherwise get counted a second time on top of the row's/search-row's own
-// `padding-left`, silently doubling every reading to 32px. D-16's own
-// language is explicit that this is a per-CHILD self-inset ("rows self-
-// inset 16px") layered on a container that itself has none — this function
-// nets the container's contribution back out so the reported number is
-// each element's OWN contribution, which is what D-16 requires to be 16
-// and consistent between the two.
+// Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: every number below is
+// VIEWPORT-relative — for each measured element, `left` is its own
+// content-box left edge in viewport coordinates and `right` is
+// `window.innerWidth` minus its content-box right edge. NO container rect
+// is subtracted and NO padding is added back. The PREVIOUS form of this
+// function measured relative to `.pk-admin-juegos`'s own box and added the
+// element's own padding back, on the theory that `<main>`'s 16px would
+// otherwise "silently double every reading to 32px" — but D-20b
+// (DEBUG-juegos-horizontal-keel-three-axes.md, `probe_vs_eye`) proved that
+// container-relative 16 was a quantity that existed NOWHERE on the
+// rendered page: the caption band painted at 16 while the row it should
+// match painted at 32, and this function's own netted-out reading of "16"
+// for both was exactly what let that regression ship past a passing guard.
+// D-20b declares the admin's keel as 32px measured exactly this way, on
+// any page that is not `fullbleed` (the one exception is the editor,
+// `form.ex:1177`, which this function does not visit).
+//
+// The band's and the divider's painted edges are both derived the same
+// way: `hostRect.left + used(::before left)` for the left edge, and
+// `innerWidth - (hostRect.right - used(::before right))` for the right
+// inset — read off `getComputedStyle(host, '::before')`, the SAME
+// mechanism `measureJuegosSectionPinned` below already trusts for the
+// band's own `top`/`bottom`. The band's host is the section's own header
+// (`.pk-admin-juegos-section-header`, `position: relative`, the `::before`
+// pseudo-element's containing block); the divider's host is the SECOND row
+// in the same section's rows list (`.pk-admin-row + .pk-admin-row`, the
+// only rows that carry the hairline `::before`) — both resolved from the
+// SAME section as the measured row/searchRow, via `.closest(...)`, so a
+// page where a different section happens to be the one currently expanded
+// (Borradores/Retirados start collapsed; only Juegos del club never is)
+// never silently compares one section's band against a different
+// section's rows.
 async function measureJuegosKeelAt({ client, baseUrl, width }) {
   await setViewport(client, width, 844)
   await navigate(client, `${baseUrl}/admin/juegos`)
@@ -1068,9 +1101,9 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
       client,
       `
       JSON.stringify((() => {
-        const container = document.querySelector('.pk-admin-juegos');
         const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
-        if (!container || !row) return null;
+        const searchRow = document.querySelector('.pk-admin-juegos-search-row');
+        if (!row || !searchRow) return null;
         return true;
       })())
     `,
@@ -1083,22 +1116,76 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
     client,
     `
     JSON.stringify((() => {
-      const container = document.querySelector('.pk-admin-juegos');
-      const cRect = container ? container.getBoundingClientRect() : null;
       function edges(el) {
-        if (!el || !cRect) return null;
+        if (!el) return null;
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         const pl = parseFloat(cs.paddingLeft) || 0;
         const pr = parseFloat(cs.paddingRight) || 0;
         return {
-          left: Math.round(((r.left - cRect.left) + pl) * 10) / 10,
-          right: Math.round(((cRect.right - r.right) + pr) * 10) / 10,
+          left: Math.round((r.left + pl) * 10) / 10,
+          right: Math.round((window.innerWidth - (r.right - pr)) * 10) / 10,
         };
       }
-      const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
+      // Local copy of measureJuegosSectionPinned's own textInk helper — this
+      // directory's established convention is a self-contained copy per
+      // function, not a shared import across functions (rule 7: measure
+      // ink, not boxes).
+      function textInk(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const node = walker.nextNode();
+        if (!node || !node.nodeValue || !node.nodeValue.trim()) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
+      }
+
+      const rowsWrap = document.querySelector('.pk-admin-juegos-rows');
+      const rows = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
+      const row = rows[0] || null;
+      const secondRow = rows[1] || null;
       const searchRow = document.querySelector('.pk-admin-juegos-search-row');
-      return { row: edges(row), searchRow: edges(searchRow) };
+      const section = row ? row.closest('.pk-admin-juegos-section') : null;
+      const header = section ? section.querySelector('.pk-admin-juegos-section-header') : null;
+      const captionLabel = header ? header.querySelector('.pk-admin-list-section-label') : null;
+      const cover = row ? row.querySelector('.pk-admin-row__cover') : null;
+      const chevron = row ? row.querySelector('.pk-admin-row__chevron') : null;
+      const rowCs = row ? getComputedStyle(row) : null;
+
+      let bandLeft = null, bandRightInset = null;
+      if (header) {
+        const hr = header.getBoundingClientRect();
+        const beforeCs = getComputedStyle(header, '::before');
+        const l = parseFloat(beforeCs.left);
+        const rr = parseFloat(beforeCs.right);
+        bandLeft = Math.round((hr.left + (Number.isNaN(l) ? 0 : l)) * 10) / 10;
+        bandRightInset = Math.round((window.innerWidth - (hr.right - (Number.isNaN(rr) ? 0 : rr))) * 10) / 10;
+      }
+
+      let dividerLeft = null, dividerRightInset = null;
+      if (secondRow) {
+        const dr = secondRow.getBoundingClientRect();
+        const dcs = getComputedStyle(secondRow, '::before');
+        const l = parseFloat(dcs.left);
+        const rr = parseFloat(dcs.right);
+        dividerLeft = Math.round((dr.left + (Number.isNaN(l) ? 0 : l)) * 10) / 10;
+        dividerRightInset = Math.round((window.innerWidth - (dr.right - (Number.isNaN(rr) ? 0 : rr))) * 10) / 10;
+      }
+
+      const captionInkRect = textInk(captionLabel);
+
+      return {
+        row: edges(row),
+        searchRow: edges(searchRow),
+        coverLeft: cover ? Math.round(cover.getBoundingClientRect().left * 10) / 10 : null,
+        coverWidth: cover ? Math.round(cover.getBoundingClientRect().width * 10) / 10 : null,
+        chevronRightInset: chevron ? Math.round((window.innerWidth - chevron.getBoundingClientRect().right) * 10) / 10 : null,
+        captionInkLeft: captionInkRect ? Math.round(captionInkRect.left * 10) / 10 : null,
+        columnGap: rowCs ? (parseFloat(rowCs.columnGap) || 0) : null,
+        bandLeft, bandRightInset,
+        dividerLeft, dividerRightInset,
+      };
     })())
   `,
   )
@@ -1286,13 +1373,52 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       const inkGapBelow = pinnedInk ? Math.round((bandBottom - pinnedInk.bottom) * 10) / 10 : null;
 
       const rowsWrap = section.querySelector('.pk-admin-juegos-rows');
-      const firstRowBelow = rowsWrap ? rowsWrap.querySelector('.pk-admin-row') : null;
+      const rowsList = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
+      const firstRowBelow = rowsList[0] || null;
+      const secondRowBelow = rowsList[1] || null;
       const rowHeight = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
+
+      // Plan 01.8.3-08 [G-01.8.3-2c]: repeat the band-vs-row and
+      // divider-vs-row measurement a SECOND time here, with the section
+      // really pinned (via the incremental real scroll already performed
+      // above) — never a synthetic class poke. Same viewport-relative
+      // derivation as measureJuegosKeelAt's resting-state reading: the
+      // band's edges from the header's own rect plus its ::before used
+      // left/right, the divider's edges from the SECOND row's own rect
+      // plus ITS ::before used left/right (only rows after the first carry
+      // the hairline).
+      function rowContentEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return {
+          left: Math.round((r.left + pl) * 10) / 10,
+          right: Math.round((window.innerWidth - (r.right - pr)) * 10) / 10,
+        };
+      }
+      const rowContentPinned = rowContentEdges(firstRowBelow);
+      const beforeLeftRaw = parseFloat(beforeCs.left);
+      const beforeRightRaw = parseFloat(beforeCs.right);
+      const bandLeftPinned = Math.round((headerRect.left + (Number.isNaN(beforeLeftRaw) ? 0 : beforeLeftRaw)) * 10) / 10;
+      const bandRightInsetPinned = Math.round((window.innerWidth - (headerRect.right - (Number.isNaN(beforeRightRaw) ? 0 : beforeRightRaw))) * 10) / 10;
+      let dividerLeftPinned = null, dividerRightInsetPinned = null;
+      if (secondRowBelow) {
+        const dr = secondRowBelow.getBoundingClientRect();
+        const dcs = getComputedStyle(secondRowBelow, '::before');
+        const dLeftRaw = parseFloat(dcs.left);
+        const dRightRaw = parseFloat(dcs.right);
+        dividerLeftPinned = Math.round((dr.left + (Number.isNaN(dLeftRaw) ? 0 : dLeftRaw)) * 10) / 10;
+        dividerRightInsetPinned = Math.round((window.innerWidth - (dr.right - (Number.isNaN(dRightRaw) ? 0 : dRightRaw))) * 10) / 10;
+      }
 
       return JSON.stringify({
         pinned, searchHidden, bandTop, bandBottom, bandHeight, bandBg, bandSearchGap,
         rowHeight, hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
         inkGapAbove, inkGapBelow,
+        rowContentPinned, bandLeftPinned, bandRightInsetPinned,
+        dividerLeftPinned, dividerRightInsetPinned,
       });
     })()
   `,
@@ -1330,24 +1456,82 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     }
   }
 
-  // ---- keel: a list row vs the pinned search row, at 375/360/390 ----
+  // ---- keel: a list row vs the pinned search row, plus the band/divider/
+  // caption-ink tests, at 375/360/390 (D-20b: the declared keel is 32px,
+  // viewport-relative, not 16 — see measureJuegosKeelAt's own header
+  // comment for why). ----
   const keelByWidth = {}
   for (const width of KEEL_VIEWPORTS) {
     keelByWidth[width] = await measureJuegosKeelAt({ client, baseUrl, width })
-    const { row, searchRow } = keelByWidth[width]
+    const { row, searchRow, coverLeft, coverWidth, chevronRightInset, captionInkLeft, columnGap, bandLeft, bandRightInset, dividerLeft, dividerRightInset } =
+      keelByWidth[width]
     if (!row || !searchRow) {
       fail(`juegos keel @ ${width}px: row or search-row not found (row=${!!row}, searchRow=${!!searchRow})`)
       continue
     }
-    log(`juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}`)
-    if (row.left !== 16 || row.right !== 16) {
-      fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 16/16`)
+    log(
+      `juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}; ` +
+        `cover left=${coverLeft} width=${coverWidth}; chevron right inset=${chevronRightInset}; caption ink left=${captionInkLeft}; ` +
+        `row column-gap=${columnGap}; band left=${bandLeft} right inset=${bandRightInset}; divider left=${dividerLeft} right inset=${dividerRightInset}`,
+    )
+    if (row.left !== 32 || row.right !== 32) {
+      fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 32/32 (D-20b)`)
     }
-    if (searchRow.left !== 16 || searchRow.right !== 16) {
-      fail(`juegos keel @ ${width}px: search row content edges left=${searchRow.left} right=${searchRow.right}, expected 16/16`)
+    if (searchRow.left !== 32 || searchRow.right !== 32) {
+      fail(`juegos keel @ ${width}px: search row content edges left=${searchRow.left} right=${searchRow.right}, expected 32/32 (D-20b)`)
     }
     if (row.left !== searchRow.left || row.right !== searchRow.right) {
       fail(`juegos keel @ ${width}px: row and search row disagree (row=${JSON.stringify(row)}, searchRow=${JSON.stringify(searchRow)})`)
+    }
+
+    // Test 1 (G-01.8.3-2c): the pinned caption band's painted edges must
+    // equal the row's own content edges. FAILS today: 16 against 32, both
+    // edges, all three widths (the band is anchored to the header's
+    // padding-box edge, bypassing the 16px `<main>` already adds).
+    if (bandLeft == null || bandRightInset == null) {
+      fail(`juegos keel @ ${width}px: band ::before geometry could not be measured`)
+    } else {
+      if (Math.abs(bandLeft - row.left) > 0.5) {
+        fail(`juegos keel @ ${width}px band-vs-row left: band=${bandLeft}px row=${row.left}px, expected within 0.5px`)
+      }
+      if (Math.abs(bandRightInset - row.right) > 0.5) {
+        fail(`juegos keel @ ${width}px band-vs-row right inset: band=${bandRightInset}px row=${row.right}px, expected within 0.5px`)
+      }
+    }
+
+    // Test 2: the row divider's right end must equal the row's own content
+    // right edge. FAILS today: 16 against 32 (the divider's `right: 0`
+    // shares the band's unintended axis, not the rows').
+    if (dividerRightInset == null) {
+      fail(`juegos keel @ ${width}px: divider ::before geometry could not be measured (fewer than two rows in the visible section?)`)
+    } else if (Math.abs(dividerRightInset - row.right) > 0.5) {
+      fail(`juegos keel @ ${width}px divider-vs-row right inset: divider=${dividerRightInset}px row=${row.right}px, expected within 0.5px`)
+    }
+
+    // Test 3 (positive control): the divider's LEFT is the row-name column
+    // — derived from the row's own cover/gap, never a copied 84 — and is
+    // UNCHANGED by this gap's fix (only the divider's right end moves).
+    // PASSES today; proves a coordinate-system change did not simply shift
+    // everything uniformly.
+    if (dividerLeft == null || coverLeft == null || coverWidth == null || columnGap == null) {
+      fail(`juegos keel @ ${width}px: could not measure the row-name-column derivation inputs (dividerLeft=${dividerLeft}, coverLeft=${coverLeft}, coverWidth=${coverWidth}, columnGap=${columnGap})`)
+    } else {
+      const derivedColumn = Math.round((coverLeft + coverWidth + columnGap) * 10) / 10
+      if (Math.abs(dividerLeft - derivedColumn) > 0.5) {
+        fail(
+          `juegos keel @ ${width}px: divider left ${dividerLeft}px does not match the derived row-name column ${derivedColumn}px ` +
+            `(cover left=${coverLeft} + cover width=${coverWidth} + column-gap=${columnGap})`,
+        )
+      }
+    }
+
+    // Test 4 (positive control): the caption ink's left already agrees with
+    // the row's content left (both 32 today) — the second proof the
+    // coordinate-system change alone did not manufacture a pass.
+    if (captionInkLeft == null) {
+      fail(`juegos keel @ ${width}px: caption ink left could not be measured`)
+    } else if (Math.abs(captionInkLeft - row.left) > 0.5) {
+      fail(`juegos keel @ ${width}px: caption ink left ${captionInkLeft}px does not match row content left ${row.left}px`)
     }
   }
 
@@ -1406,6 +1590,38 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
       if (later.airRatio < 2.5) fail(`juegos ink-to-ink ratio ${later.airRatio}:1 is below the 2.5:1 floor (above=${later.airAbove}px, below=${later.airBelow}px)`)
     }
     checkInkInBand("later-section (Juegos del club)", later)
+
+    // Plan 01.8.3-08 [G-01.8.3-2c]: repeat Test 1 (band-vs-row) and Test 2
+    // (divider-vs-row) from the resting-state loop above, but now with the
+    // section REALLY pinned (the incremental real scroll
+    // measureJuegosSectionPinned already performed to reach this branch) —
+    // the diagnosis proved horizontal geometry is scroll-state independent,
+    // so a divergence between the resting and pinned readings is itself a
+    // finding, never a synthetic class poke.
+    if (!later.rowContentPinned) {
+      fail("juegos pinned band/divider: could not measure the pinned section's own row content edges")
+    } else {
+      log(
+        `juegos pinned band-vs-row: band left=${later.bandLeftPinned} right inset=${later.bandRightInsetPinned}; ` +
+          `divider left=${later.dividerLeftPinned} right inset=${later.dividerRightInsetPinned}; ` +
+          `row left=${later.rowContentPinned.left} right=${later.rowContentPinned.right}`,
+      )
+      if (later.bandLeftPinned == null || later.bandRightInsetPinned == null) {
+        fail("juegos pinned band-vs-row: band ::before geometry could not be measured while pinned")
+      } else {
+        if (Math.abs(later.bandLeftPinned - later.rowContentPinned.left) > 0.5) {
+          fail(`juegos pinned band-vs-row left: band=${later.bandLeftPinned}px row=${later.rowContentPinned.left}px, expected within 0.5px`)
+        }
+        if (Math.abs(later.bandRightInsetPinned - later.rowContentPinned.right) > 0.5) {
+          fail(`juegos pinned band-vs-row right inset: band=${later.bandRightInsetPinned}px row=${later.rowContentPinned.right}px, expected within 0.5px`)
+        }
+      }
+      if (later.dividerRightInsetPinned == null) {
+        fail("juegos pinned divider-vs-row: divider ::before geometry could not be measured while pinned (fewer than two rows in the section?)")
+      } else if (Math.abs(later.dividerRightInsetPinned - later.rowContentPinned.right) > 0.5) {
+        fail(`juegos pinned divider-vs-row right inset: divider=${later.dividerRightInsetPinned}px row=${later.rowContentPinned.right}px, expected within 0.5px`)
+      }
+    }
   }
 
   if (!first.error && !later.error) {
@@ -1605,33 +1821,34 @@ async function main() {
       }
     }
 
-    // ---- the keel ----
-    log("Measuring the shell's content keel (open item 4)...")
+    // ---- main's own horizontal padding (NOT the content keel — see the
+    // relabelled comment above measureKeel) ----
+    log("Measuring <main>'s own horizontal padding across admin pages (excludes the one fullbleed page by construction; not the content keel — see measureJuegosKeelAt for that)...")
     const keelResults = {}
     for (const width of [375, 360]) {
       const m = await measureKeel({ client, baseUrl, width })
       keelResults[width] = m
       for (const [page, edges] of Object.entries(m)) {
         if (!edges) {
-          log(`FAIL: keel @ ${width}px ${page}: content wrapper not found`)
+          log(`FAIL: main padding @ ${width}px ${page}: content wrapper not found`)
           exitCode = 1
           continue
         }
-        log(`KEEL @ ${width}px ${page}: left=${edges.left}px right=${edges.right}px`)
+        log(`MAIN PADDING @ ${width}px ${page}: left=${edges.left}px right=${edges.right}px`)
       }
     }
-    // Cross-page consistency at each width — the keel should be one number
-    // per width across every screen (D-18's shared shape), not a fresh one
-    // per page.
+    // Cross-page consistency at each width — <main>'s own padding should be
+    // one number per width across every non-fullbleed screen (D-18's shared
+    // shape), not a fresh one per page. This says nothing about content.
     for (const width of [375, 360]) {
       const pages = Object.values(keelResults[width]).filter(Boolean)
       const distinctLeft = [...new Set(pages.map((p) => p.left))]
       const distinctRight = [...new Set(pages.map((p) => p.right))]
       if (distinctLeft.length > 1 || distinctRight.length > 1) {
-        log(`FAIL: keel @ ${width}px is not consistent across pages: ${JSON.stringify(keelResults[width])}`)
+        log(`FAIL: main padding @ ${width}px is not consistent across pages: ${JSON.stringify(keelResults[width])}`)
         exitCode = 1
       } else if (pages.length > 0) {
-        log(`KEEL @ ${width}px (consistent across ${pages.length} page(s)): left=${distinctLeft[0]}px right=${distinctRight[0]}px`)
+        log(`MAIN PADDING @ ${width}px (consistent across ${pages.length} page(s), excludes the fullbleed editor): left=${distinctLeft[0]}px right=${distinctRight[0]}px`)
       }
     }
 
