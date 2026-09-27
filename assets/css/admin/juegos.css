@@ -27,7 +27,21 @@
    number instead of two independently copied `44`s. 60px is measured as
    `4 + 48 + 8` — the row's own top padding, the 48px field (D-07), and
    its bottom padding (`.pk-admin-juegos-search-row` below) — never the
-   deleted page bar's reserved band (D-09). */
+   deleted page bar's reserved band (D-09).
+
+   Plan 01.8.3-11 (D-20a, G-01.8.3-2d/G-01.8.3-3): the declared 60px below
+   is now only the AT-REST value and the page's INITIAL state (before any
+   scroll, `admin_list.js`'s own `nearTop` holds and the row is visible).
+   `assets/js/hooks/admin_list.js` overwrites this property INLINE, on
+   `#juegos-page` itself (the element this selector targets), in lockstep
+   with the search row's `[data-pinned-hidden]` attribute — 0 while hidden,
+   back to this same measured height once the row has returned. Before this
+   fix the property was declared once, read twice (the pin-observer's own
+   rootMargin/threshold), and WRITTEN NEVER, which let the caption's sticky
+   offset stay pinned at the row's full height even while the row itself
+   scrolled fully off-screen — the `4 + 48 + 8` derivation above still
+   describes what the row measures; it no longer describes what this
+   property always resolves to. */
 .pk-admin-juegos {
   position: relative;
   --pk-juegos-pinned-h: 60px;

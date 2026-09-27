@@ -1855,6 +1855,11 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       const bandBottomDown = Math.round((headerRectDown.bottom - bottomOffsetDown) * 10) / 10;
       const bandHeightDown = Math.round((bandBottomDown - bandTopDown) * 10) / 10;
       const bandBgDown = beforeCsDown.backgroundColor;
+      // Plan 01.8.3-11: the header's own sticky-box bottom edge, recorded
+      // (not asserted) so plan 12's own guard for the first-section band
+      // overhang (this plan's declared out-of-scope secondary cause) can be
+      // negative-tested against a MEASURED number rather than a guess.
+      const headerBottomDown = Math.round(headerRectDown.bottom * 10) / 10;
       const bandSearchGapDown = searchRectDown ? Math.round((bandTopDown - searchRectDown.bottom) * 10) / 10 : null;
 
       // Plan 01.8.3-06's ink-inside-band reading, now taken in the DOWN
@@ -1981,7 +1986,7 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
           searchRect: searchRectDown,
           transform: transformDown,
           bandTop: bandTopDown, bandBottom: bandBottomDown, bandHeight: bandHeightDown,
-          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown,
+          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown, headerBottom: headerBottomDown,
           rowHeight: rowHeightDown,
           inkGapAbove: inkGapAboveDown, inkGapBelow: inkGapBelowDown,
           rowContentPinned, bandLeftPinned, bandRightInsetPinned,
@@ -2297,6 +2302,18 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     if (first.down.rowHeight === null || first.down.rowHeight < 64) fail(`juegos first-section row height ${first.down.rowHeight}px, expected >= 64px`)
     checkInkInBand("first-section (Borradores)", first.down)
     checkPinnedOffset("first-section (Borradores)", first)
+
+    // Plan 01.8.3-11 (recorded for plan 12, NOT this plan's scope — see
+    // this plan's own objective/threat-register): the first section's band
+    // overhangs its own header sticky box by ~11.8px (DEBUG.md), a SECOND,
+    // independent, single-cause defect (`--bandp`/`--pt` arithmetic) this
+    // plan deliberately does not fix. Recorded here as a measured number,
+    // not a guess, so plan 12's own guard can be negative-tested against it.
+    const overhang = Math.round((first.down.bandBottom - first.down.headerBottom) * 10) / 10
+    log(
+      `juegos first-section (Borradores) band-bottom vs header-bottom overhang (plan 12, not this plan's scope): ` +
+        `band bottom=${first.down.bandBottom}px header rect bottom=${first.down.headerBottom}px overhang=${overhang}px`,
+    )
   }
 
   const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
