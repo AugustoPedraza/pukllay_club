@@ -77,6 +77,39 @@
   outline-offset: 1px;
 }
 
+/* Plan 01.8.3-09 [G-01.8.3-2e]: `#juegos-search-input`'s `flex: 1;
+   min-width: 0` above has always been INERT — the input's real parent is
+   `<form id="juegos-search-form">` (index.ex:641), a plain `display: block`
+   element which is itself the flex ITEM of `.pk-admin-juegos-search-row`.
+   A `flex` declaration on a child of a `display: block` parent has no
+   effect, so the field stood at its `size=20` intrinsic width of 264px at
+   every viewport width, and the `+` landed at a fixed x=292 regardless of
+   viewport. Growing the FORM (the real flex item) and making it itself a
+   flex container makes the input's own pre-existing `flex: 1; min-width: 0`
+   live, so the field fills whichever width the form grows to. */
+#juegos-search-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+/* Plan 01.8.3-09 [G-01.8.3-2e]: `.pk-admin-action--a3`'s shared
+   `margin-left: -12px` (components.css) is a LEADING-icon pull — written
+   so a glyph at the START of a row lands on the content edge. `#juegos-
+   add-action` is a TRAILING action (the row's last flex item), so the
+   pull has to be on the TRAILING side, or the 44px box lands on the keel
+   while the glyph sits inset inside it. The magnitude is derived here,
+   not copied from a literal: half the difference between the A3 box's
+   declared `44px` and the A3 glyph rule's declared `18px`
+   (components.css) — the shared `-12px` was derived against a 20px glyph
+   before the A3 glyph rule narrowed it to 18. `.pk-admin-action--a3`
+   itself is NOT edited: the sheet's own ✕ is the same anatomy and the
+   developer reported it as correct. */
+#juegos-add-action {
+  margin-left: 0;
+  margin-right: calc((18px - 44px) / 2);
+}
+
 /* D-10: the `+` sheet's own internals — vertical rhythm between the
    field and the commit, and a full-width `Agregar` (071's own 271px
    fixture), following `editor.css`'s `#editor-bgg-edition-prompt`
