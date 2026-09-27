@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 9/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
+**Plans:** 10/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
 
 Plans:
 **Wave 1**
@@ -304,7 +304,7 @@ Plans:
 
 - [x] 01.8.3-09-PLAN.md — `G-01.8.3-2e`: the search form becomes the real flex item so the field tracks the viewport, and the `+`'s pull moves to its trailing side so its glyph lands on the rows' own axis
 
-- [ ] 01.8.3-10-PLAN.md — `G-01.8.3-4b`: the sheet body gets its own header's keel at the shared component, with every per-child compensation resolved individually and full-bleed rows kept full-bleed
+- [x] 01.8.3-10-PLAN.md — `G-01.8.3-4b`: the sheet body gets its own header's keel at the shared component, with every per-child compensation resolved individually and full-bleed rows kept full-bleed
 
 - [ ] 01.8.3-11-PLAN.md — `G-01.8.3-2d` + `G-01.8.3-3` (primary): the caption's sticky reservation tracks the search row in lockstep (D-20a), the pin observer is re-derived from the same value, and the probe stops manufacturing its own passing condition
 

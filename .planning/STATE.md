@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-09-PLAN.md
-last_updated: "2026-09-27T21:24:52.235Z"
+stopped_at: Completed 01.8.3-10-PLAN.md
+last_updated: "2026-09-27T22:24:10.038Z"
 last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: d7c17d5ee9f86a69667f4db562df56b988bf46e0
+state_head: a70981a6094fcf73e94fa3cb7599d3ecddf8533e
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 63
-  completed_plans: 58
+  completed_plans: 59
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 3 of 14
+Plan: 4 of 14
 Status: Ready to execute
 Last activity: 2026-09-27 — Phase 01.8.3 execution started
 
@@ -163,6 +163,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
 | Phase 01.8.3 P08 | ~50min | 3 tasks | 6 files |
 | Phase 01.8.3 P09 | 28min | 2 tasks | 2 files |
+| Phase 01.8.3 P10 | 54min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -341,6 +342,9 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-08: created --pk-admin-keel-inset (components.css :root) as the admin's first declared horizontal-geometry token — deliberately the COMPONENT half of the 32px viewport-relative keel, not the keel itself (<main>'s px-4 supplies the other half on non-fullbleed pages; the fullbleed editor and any position:fixed overlay both read it as a standalone 16px axis)
 - [Phase 01.8.3]: 01.8.3-08: no sweeping literal-to-token refactor — only the 4 juegos.css rules in the band's/divider's own family were converted; ~11 other hand-copied 16px literals across components.css/editor.css/estantes.css stay untouched, out of this gap's scope
 - [Phase 01.8.3]: 01.8.3-09: #juegos-search-form (the real flex item, not #juegos-search-input) gets flex: 1; min-width: 0; display: flex, making the input's pre-existing inert flex: 1 live; #juegos-add-action gets an ID-scoped trailing pull (margin-right: calc((18px - 44px) / 2)) replacing .pk-admin-action--a3's shared leading-icon margin-left: -12px for this trailing use only — closes G-01.8.3-2e
+- [Phase 01.8.3]: 01.8.3-10: Sheet body keel test axis is the header's own content edge (padding-derived), not the header title's own ink — a leading cover image can legitimately push the title text right without moving the header's established alignment axis
+- [Phase 01.8.3]: 01.8.3-10: Full-bleed sheet-row anatomies need an explicit calc(100% + 2*keel) width alongside their negative-margin compensation — width:auto alone is insufficient for inline-flex anatomies (a4/pk-editor-opt), only for block-level flex (.pk-admin-row)
+- [Phase 01.8.3]: 01.8.3-10: Nested list_row elements inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet's estante-list state) are NOT reached by the direct-child-only sheet-row compensation — recorded as an open finding (WINDOWS.md #35), not fixed, since widening the selector is a separate architectural decision outside this plan's scope
 
 ### Pending Todos
 
@@ -486,8 +490,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T21:24:32.896Z
-Stopped at: Completed 01.8.3-09-PLAN.md
+Last session: 2026-09-27T22:24:09.878Z
+Stopped at: Completed 01.8.3-10-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 7
 waived_count: 1
 fixed_count: 27
-total_count: 34
-last_updated: 2026-09-25T00:11:01.471Z
+total_count: 35
+last_updated: 2026-09-27T22:23:24.257Z
 ---
 
 # Broken Windows Ledger
@@ -49,6 +49,7 @@ last_updated: 2026-09-25T00:11:01.471Z
 | 32 | 01.8.2 | deviation | assets/css/admin/screens.css |  | pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12 | open |  | 2026-09-23T18:28:57.503Z |  |
 | 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
 | 34 | 01.8.3 | deviation | .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md |  | Task 2's acceptance criteria expects grep -c "Crear «" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required. | open |  | 2026-09-25T00:11:01.471Z |  |
+| 35 | 01.8.3 | stub | assets/css/admin/components.css |  | Direct-child sheet-row compensation does not reach list_row elements nested inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet/editor-shelf-sheet's own estante-list state) — they render ink at 32px instead of 16px, a narrower sub-case of G-01.8.3-4b left for a future plan | open |  | 2026-09-27T22:23:24.257Z |  |
 
 ````json
 [
@@ -463,6 +464,19 @@ last_updated: 2026-09-25T00:11:01.471Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-25T00:11:01.471Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 35,
+    "kind": "stub",
+    "phase": "01.8.3",
+    "file": "assets/css/admin/components.css",
+    "line": null,
+    "description": "Direct-child sheet-row compensation does not reach list_row elements nested inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet/editor-shelf-sheet's own estante-list state) — they render ink at 32px instead of 16px, a narrower sub-case of G-01.8.3-4b left for a future plan",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-27T22:23:24.257Z",
     "resolved_at": null,
     "milestone": "v1.1"
   }
