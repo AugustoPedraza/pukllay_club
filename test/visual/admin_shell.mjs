@@ -1860,6 +1860,13 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       // overhang (this plan's declared out-of-scope secondary cause) can be
       // negative-tested against a MEASURED number rather than a guess.
       const headerBottomDown = Math.round(headerRectDown.bottom * 10) / 10;
+      // Plan 01.8.3-12 [G-01.8.3-3, secondary cause]: the header's own full
+      // rect (top/height), read from the SAME headerRectDown the band's
+      // edges above are already derived from — so the band and the box it
+      // must fit inside are compared in the same coordinate system, same
+      // frame, never independently re-queried.
+      const headerTopDown = Math.round(headerRectDown.top * 10) / 10;
+      const headerHeightDown = Math.round(headerRectDown.height * 10) / 10;
       const bandSearchGapDown = searchRectDown ? Math.round((bandTopDown - searchRectDown.bottom) * 10) / 10 : null;
 
       // Plan 01.8.3-06's ink-inside-band reading, now taken in the DOWN
@@ -1986,7 +1993,8 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
           searchRect: searchRectDown,
           transform: transformDown,
           bandTop: bandTopDown, bandBottom: bandBottomDown, bandHeight: bandHeightDown,
-          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown, headerBottom: headerBottomDown,
+          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown,
+          headerTop: headerTopDown, headerBottom: headerBottomDown, headerHeight: headerHeightDown,
           rowHeight: rowHeightDown,
           inkGapAbove: inkGapAboveDown, inkGapBelow: inkGapBelowDown,
           rowContentPinned, bandLeftPinned, bandRightInsetPinned,
@@ -2033,6 +2041,50 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     const diff = Math.round(Math.abs(result.inkGapAbove - result.inkGapBelow) * 10) / 10
     if (diff > 2.0) {
       fail(`juegos ${label} ink-in-band: asymmetric by ${diff}px (above=${result.inkGapAbove}px, below=${result.inkGapBelow}px), expected within 2.0px of each other`)
+    }
+  }
+
+  // Plan 01.8.3-12 [G-01.8.3-3, secondary cause]: the band must not paint
+  // OUTSIDE its own header's sticky box. Test 1: the band's bottom edge is
+  // at or inside the header's own rect bottom (a band ending ABOVE the
+  // header's own bottom is fine — that is ordinary sticky content passing
+  // behind it, not this defect; only the band extending PAST its own host
+  // is). Test 2: the header's own pinned box is at least as tall as the
+  // band — the same defect restated as a box-height property, so whichever
+  // shape Task 3 lands on, this is the assertion that proves it. Both use
+  // the header rect `measureJuegosSectionPinned` already reads to derive
+  // the band's own edges, in the same frame, so the two quantities can
+  // never be in different coordinate systems. FAILS today on the first
+  // section (overhang ~+11.8px, header box ~32.2px against a 44px band);
+  // PASSES on a later section (~-0.2px) in the same run, the positive
+  // control that the quantity is measured correctly rather than
+  // mis-derived. No assertion is added about content passing BEHIND the
+  // header's own box — that is ordinary sticky behaviour and asserting
+  // against it would make this guard unfalsifiable in the other direction.
+  const checkBandOverhang = (label, result) => {
+    const { down } = result
+    if (down.headerHeight == null || down.headerBottom == null || down.bandBottom == null || down.bandHeight == null) {
+      fail(
+        `juegos ${label} band-overhang: missing measurement (headerHeight=${down.headerHeight}, headerBottom=${down.headerBottom}, bandBottom=${down.bandBottom}, bandHeight=${down.bandHeight})`,
+      )
+      return
+    }
+    const bandOverhang = Math.round((down.bandBottom - down.headerBottom) * 10) / 10
+    log(
+      `juegos ${label} band-overhang: header height=${down.headerHeight}px band height=${down.bandHeight}px ` +
+        `band bottom=${down.bandBottom}px header bottom=${down.headerBottom}px overhang=${bandOverhang}px`,
+    )
+    if (bandOverhang > 0.5) {
+      fail(
+        `juegos ${label} band-overhang test1: band bottom extends ${bandOverhang}px past the header's own rect bottom ` +
+          `(band bottom=${down.bandBottom}px, header bottom=${down.headerBottom}px), expected at or below 0.5px`,
+      )
+    }
+    if (down.headerHeight < down.bandHeight - 0.5) {
+      fail(
+        `juegos ${label} band-overhang test2: header box height=${down.headerHeight}px is shorter than the band ` +
+          `height=${down.bandHeight}px (allowing 0.5px), so the band cannot fit inside its own host`,
+      )
     }
   }
 
@@ -2302,18 +2354,7 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     if (first.down.rowHeight === null || first.down.rowHeight < 64) fail(`juegos first-section row height ${first.down.rowHeight}px, expected >= 64px`)
     checkInkInBand("first-section (Borradores)", first.down)
     checkPinnedOffset("first-section (Borradores)", first)
-
-    // Plan 01.8.3-11 (recorded for plan 12, NOT this plan's scope — see
-    // this plan's own objective/threat-register): the first section's band
-    // overhangs its own header sticky box by ~11.8px (DEBUG.md), a SECOND,
-    // independent, single-cause defect (`--bandp`/`--pt` arithmetic) this
-    // plan deliberately does not fix. Recorded here as a measured number,
-    // not a guess, so plan 12's own guard can be negative-tested against it.
-    const overhang = Math.round((first.down.bandBottom - first.down.headerBottom) * 10) / 10
-    log(
-      `juegos first-section (Borradores) band-bottom vs header-bottom overhang (plan 12, not this plan's scope): ` +
-        `band bottom=${first.down.bandBottom}px header rect bottom=${first.down.headerBottom}px overhang=${overhang}px`,
-    )
+    checkBandOverhang("first-section (Borradores)", first)
   }
 
   const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
@@ -2338,6 +2379,7 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     }
     checkInkInBand("later-section (Juegos del club)", later.down)
     checkPinnedOffset("later-section (Juegos del club)", later)
+    checkBandOverhang("later-section (Juegos del club)", later)
 
     // Plan 01.8.3-08 [G-01.8.3-2c]: repeat Test 1 (band-vs-row) and Test 2
     // (divider-vs-row) from the resting-state loop above, but now with the
