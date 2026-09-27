@@ -453,8 +453,13 @@ body:has(.pk-game-editor) main {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 16px;
-  margin: 0 -16px;
+  /* G-01.8.3-4b: already the correct full-bleed shape (ink at 16, press
+     surface edge to edge) — it was simply written for a parent padding
+     that did not exist until `.pk-admin-sheet__rows` (components.css) got
+     one. Kept, not removed, and re-expressed through that SAME property so
+     the two can never drift to different magnitudes. */
+  padding: 8px var(--pk-admin-keel-inset);
+  margin: 0 calc(-1 * var(--pk-admin-keel-inset));
   border: 0;
   background: none;
   text-align: left;

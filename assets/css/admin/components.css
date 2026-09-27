@@ -680,7 +680,10 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  padding: 0 16px 8px;
+  /* G-01.8.3-4b: no pixel change — reads the same declared keel the body
+     wrapper below now also reads, so the two siblings can never drift to
+     different magnitudes again. */
+  padding: 0 var(--pk-admin-keel-inset) 8px;
 }
 
 .pk-admin-sheet__cover {
@@ -721,6 +724,12 @@
 .pk-admin-sheet__commit {
   flex-shrink: 0;
   padding-top: 8px;
+  /* G-01.8.3-4b: no call site uses the `commit` slot today
+     (`grep -rn "<:commit>" lib/` finds nothing) — added here so the FIRST
+     one does not inherit the identical missing-keel defect the rows
+     wrapper below just had. */
+  padding-left: var(--pk-admin-keel-inset);
+  padding-right: var(--pk-admin-keel-inset);
 }
 
 .pk-admin-sheet__rows {
@@ -728,6 +737,47 @@
   overflow-y: auto;
   padding-top: 8px;
   padding-bottom: 8px;
+  /* G-01.8.3-4b's fix: match the header's own inset above. The overlay is
+     `position: fixed` and escapes `<main>`'s `px-4` entirely, so 16px here
+     and 32px on the page's own content are the SAME declared property in
+     two different stacking contexts (D-20b's "one axis per stacking
+     context, not one number globally") — not two numbers. */
+  padding-left: var(--pk-admin-keel-inset);
+  padding-right: var(--pk-admin-keel-inset);
+  /* Load-bearing, not cosmetic (T-01.8.3-30): this element already has
+     `overflow-y: auto`, which makes the OTHER axis compute to `auto` too,
+     and the compensating negative inline margins below would otherwise be
+     able to produce scrollable inline-end overflow — a horizontal
+     scrollbar inside the sheet. Do NOT add `overscroll-behavior` here —
+     that belongs to G-01.8.3-4a (plan 13); adding it now would make that
+     gap's own guard pass before its fix lands. */
+  overflow-x: hidden;
+}
+
+/* G-01.8.3-4b: row-shaped sheet children read correctly TODAY by self-
+   insetting 16px against an unpadded body (A4's own declared anatomy is
+   "48px, full-bleed, commit-first" — components.css above). With the body
+   now padded, they would land at 32 without this compensation. Direct-
+   child combinator only — a row nested inside some future padded sub-
+   wrapper must not be double-compensated. The margin magnitude is a
+   `calc()` negation of the SAME property `.pk-admin-sheet__rows` reads
+   above, so the two can never drift to different numbers.
+   The `width` override is EXPLICIT (Rule 1 — found via this task's own
+   GREEN probe run), not `auto`: `.pk-admin-row` is `display: flex`
+   (block-level, where `width: auto` DOES auto-expand to fill the space a
+   negative margin opens up) but `.pk-admin-action--a4` inherits
+   `.pk-admin-action`'s `display: inline-flex` (INLINE-level, where
+   `width: auto` shrink-wraps its own content instead — it measured 75.6px,
+   the button's own text width, not the panel's). Both anatomies originally
+   declared `width: 100%` against the now-padded parent's CONTENT box
+   (358px); `calc(100% + 2 * var(--pk-admin-keel-inset))` adds back exactly
+   what the negative margins opened up (358 + 32 = 390 = the panel's own
+   width) regardless of either element's display type. */
+.pk-admin-sheet__rows > .pk-admin-row,
+.pk-admin-sheet__rows > .pk-admin-action--a4 {
+  width: calc(100% + 2 * var(--pk-admin-keel-inset));
+  margin-left: calc(-1 * var(--pk-admin-keel-inset));
+  margin-right: calc(-1 * var(--pk-admin-keel-inset));
 }
 
 /* Dialog: centred 312px M3 basic dialog, 16px radius (D-19f). */

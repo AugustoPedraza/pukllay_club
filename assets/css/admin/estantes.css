@@ -347,7 +347,11 @@
 
 .pk-donde-va-search {
   position: relative;
-  margin: 0 16px 8px;
+  /* G-01.8.3-4b: the horizontal 16px was a hand-rolled substitute for the
+     keel `.pk-admin-sheet__rows` now declares itself (components.css) —
+     kept, it would double the inset to 32. Its 8px bottom margin is its
+     own rhythm and stays. */
+  margin: 0 0 8px;
 }
 
 .pk-donde-va-search input {
