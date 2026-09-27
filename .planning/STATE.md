@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-07-PLAN.md
-last_updated: "2026-09-25T21:02:54.724Z"
-last_activity: 2026-09-25
+stopped_at: Completed 01.8.3-08-PLAN.md
+last_updated: "2026-09-27T20:56:49.648Z"
+last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 410bd4fb97c3129b33dfdd0bce6cceb065ee7e44
+state_head: b0df1dcfc07f8a2caafaeab69c7bf67cd1f574d8
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 56
-  completed_plans: 56
+  total_plans: 63
+  completed_plans: 57
 ---
 
 Total Phases: 9
@@ -34,9 +34,9 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 3 of 7
+Plan: 2 of 14
 Status: Ready to execute
-Last activity: 2026-09-25 — Phase 01.8.3 execution started
+Last activity: 2026-09-27 — Phase 01.8.3 execution started
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -161,6 +161,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
 | Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
 | Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
+| Phase 01.8.3 P08 | ~50min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -336,6 +337,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
 - [Phase 01.8.3]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
 - [Phase 01.8.3]: 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
+- [Phase 01.8.3]: 01.8.3-08: created --pk-admin-keel-inset (components.css :root) as the admin's first declared horizontal-geometry token — deliberately the COMPONENT half of the 32px viewport-relative keel, not the keel itself (<main>'s px-4 supplies the other half on non-fullbleed pages; the fullbleed editor and any position:fixed overlay both read it as a standalone 16px axis)
+- [Phase 01.8.3]: 01.8.3-08: no sweeping literal-to-token refactor — only the 4 juegos.css rules in the band's/divider's own family were converted; ~11 other hand-copied 16px literals across components.css/editor.css/estantes.css stay untouched, out of this gap's scope
 
 ### Pending Todos
 
@@ -481,8 +484,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T21:02:54.556Z
-Stopped at: Completed 01.8.3-07-PLAN.md
+Last session: 2026-09-27T20:56:49.502Z
+Stopped at: Completed 01.8.3-08-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

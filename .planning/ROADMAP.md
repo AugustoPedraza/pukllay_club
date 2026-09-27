@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 7/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
+**Plans:** 8/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
 
 Plans:
 **Wave 1**
@@ -300,7 +300,7 @@ Plans:
 
 **Gap closure, round 2** *(added 2026-09-27 from the developer's own UAT walk; plans 01-07 unchanged. Seven gaps, every one already carrying a proven root cause, `artifacts` at file:line and a `missing` list — see `01.8.3-UAT.md` and the three `.planning/debug/DEBUG-*` sessions. Implements the developer's binding D-20a / D-20b decisions. `G-01.8.3-2f` is deferred by the developer and deliberately NOT planned; `G-01.8.3-2a` / `-2b` are resolved and carried as constraints, not re-planned. Sequenced serially because `test/visual/admin_shell.mjs`, `assets/css/admin/components.css` and `assets/css/admin/juegos.css` are each touched by several plans — and because every plan's own probe run re-verifies the previous plan's fix, which matters in a phase that has now shipped seven source-invisible bugs. Every plan leads with a guard task committed RED, with its failing transcript recorded as an artifact under `evidence/`.)*
 
-- [ ] 01.8.3-08-PLAN.md — `G-01.8.3-2c`: one declared admin keel inset (D-20b), the pinned caption band and the row divider's right end anchored to it, `edges()` re-pointed at viewport coordinates, and the two planning documents whose premises the diagnosis proved wrong amended
+- [x] 01.8.3-08-PLAN.md — `G-01.8.3-2c`: one declared admin keel inset (D-20b), the pinned caption band and the row divider's right end anchored to it, `edges()` re-pointed at viewport coordinates, and the two planning documents whose premises the diagnosis proved wrong amended
 
 - [ ] 01.8.3-09-PLAN.md — `G-01.8.3-2e`: the search form becomes the real flex item so the field tracks the viewport, and the `+`'s pull moves to its trailing side so its glyph lands on the rows' own axis
 
