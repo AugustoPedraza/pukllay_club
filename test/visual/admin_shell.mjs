@@ -709,6 +709,357 @@ async function checkOverlayCoversViewport({ client, baseUrl }) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.3-10 — G-01.8.3-4b: the sheet's BODY must share its own HEADER's
+// horizontal keel. `.pk-admin-sheet__header` declares `padding: 0 16px 8px`;
+// its sibling `.pk-admin-sheet__rows` (wrapping the default slot) declares
+// only vertical padding — the sheet's keel is delegated IMPLICITLY to
+// whatever the caller renders. A form-shaped body (no self-insetting child
+// at its root) renders at x=0; a row-shaped body (`.pk-admin-row`/
+// `.pk-admin-action--a4` at its root) self-insets 16px and reads correctly
+// today, by design (A4's own anatomy is "48px, full-bleed, commit-first").
+//
+// Reuses `runOpenerSteps`/`isOverlayOpen`/`setViewport`/`navigate`/
+// `pollUntil` from the G-01.8.3-2b overlay-coverage walk above — this is not
+// a second opener mechanism.
+// ---------------------------------------------------------------------------
+
+// Same row shape as `OVERLAY_CALL_SITES` plus `bodyShape` ('form' | 'row') —
+// which of Task 2's two governing declarations this call site's body falls
+// under. `staff-options-sheet` requires a staff-role user other than the
+// operator (this task's own precondition): `phx-click` is only rendered on
+// a row when `user.role == :staff` (`staff_live/index.ex`), so
+// `[phx-click]` is present ONLY for such rows — if the dev DB has none, the
+// selector never appears and the walk correctly reports NOT-OPENABLE
+// (dataIndependent: false) rather than a false FAIL or a silent skip.
+const SHEET_KEEL_CALL_SITES = [
+  {
+    page: "/admin/juegos",
+    overlayId: "add-game-sheet",
+    dataIndependent: true,
+    bodyShape: "form",
+    steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+  {
+    // `open-new-shelf` renders unconditionally in the header actions
+    // regardless of shelf count — data-independent (mirrors
+    // `OVERLAY_CALL_SITES`'s own row for this same opener).
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-name-sheet",
+    dataIndependent: true,
+    bodyShape: "form",
+    steps: [{ kind: "click", selector: '[phx-click="open-new-shelf"]' }],
+  },
+  {
+    // Requires at least one real shelf row in `#administrar-rows` — data-
+    // dependent (this task's own precondition).
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-options-sheet",
+    dataIndependent: false,
+    bodyShape: "row",
+    steps: [{ kind: "click", selector: "#administrar-rows .pk-admin-row" }],
+  },
+  {
+    // Requires a staff-role user other than the operator — see this
+    // table's own header comment. `#staff-list .pk-admin-row[phx-click]`
+    // matches only a row that actually renders the attribute (staff role),
+    // never the operator's own owner-role row, which renders no
+    // `phx-click` at all.
+    page: "/admin/staff",
+    overlayId: "staff-options-sheet",
+    dataIndependent: false,
+    bodyShape: "row",
+    steps: [{ kind: "click", selector: "#staff-list .pk-admin-row[phx-click]" }],
+  },
+]
+
+// A row-shaped body's own full-bleed children (D-19e/A4's declared
+// anatomy) — excluded from Test 3 (nothing [non-full-bleed] reaches the
+// panel edge) and the SUBJECT of Test 5 (the full-bleed press surface
+// positive control) instead. Shared as a literal string (not a helper) per
+// this file's established convention of a self-contained `evalJS` body per
+// function.
+const SHEET_FULL_BLEED_SELECTOR = ".pk-admin-row, .pk-admin-action--a4"
+
+// The measurement body for one already-open sheet: the panel's own border
+// box; the header's content box (`edges()`-shaped: left absolute, right an
+// inset); the header title's own INK left (rule 7, a text Range, never a
+// box); the body wrapper's content box, its own computed `padding`
+// (deliberately the raw shorthand string — `"8px 0px"` is the single most
+// legible proof of both the defect and the fix), and its `scrollWidth`/
+// `clientWidth`; every body descendant that is either a direct child or a
+// focusable control (deduped by node identity, never double-counted); the
+// leftmost ink-or-control edge inside the body, derived by walking the real
+// DOM rather than a per-call-site selector list (rule 7) — the winning
+// element's own tag/id is reported so a selector mismatch cannot silently
+// report a false pass; and, for a row-shaped body, the full-bleed child's
+// own border box and its own ink left (Test 5's positive control).
+async function measureSheetKeel(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      function round(n) { return Math.round(n * 10) / 10; }
+      function contentEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return { left: round(r.left + pl), right: round(window.innerWidth - (r.right - pr)) };
+      }
+      function absBox(el) {
+        const r = el.getBoundingClientRect();
+        return { left: round(r.left), right: round(r.right), width: round(r.width) };
+      }
+      function textInk(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const node = walker.nextNode();
+        if (!node || !node.nodeValue || !node.nodeValue.trim()) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
+      }
+
+      const root = document.getElementById(${JSON.stringify(overlayId)});
+      if (!root) return { found: false };
+      const panel = root.querySelector('[data-pk-sheet-panel]');
+      const header = root.querySelector('.pk-admin-sheet__header');
+      const titleEl = root.querySelector('.pk-admin-sheet__title');
+      const body = root.querySelector('.pk-admin-sheet__rows');
+      if (!panel || !header || !body) {
+        return { found: false, panelFound: !!panel, headerFound: !!header, bodyFound: !!body };
+      }
+
+      const FOCUSABLE_SELECTOR = 'a[href], button, input, select, textarea, [tabindex]';
+      const FULL_BLEED_SELECTOR = ${JSON.stringify(SHEET_FULL_BLEED_SELECTOR)};
+
+      const panelBox = absBox(panel);
+      const headerEdges = contentEdges(header);
+      const titleInk = textInk(titleEl);
+      const bodyEdges = contentEdges(body);
+      const bodyCs = getComputedStyle(body);
+
+      // Union of direct children + focusable descendants, deduped by node
+      // identity (a button that is both a direct child AND itself
+      // focusable must not be measured twice).
+      const nodeSet = new Set([...body.children, ...body.querySelectorAll(FOCUSABLE_SELECTOR)]);
+      const descendants = [...nodeSet].map((el) => ({
+        tag: el.tagName.toLowerCase(),
+        id: el.id || null,
+        className: typeof el.className === 'string' ? el.className : null,
+        isFullBleed: el.matches(FULL_BLEED_SELECTOR),
+        box: absBox(el),
+      }));
+
+      // The leftmost ink-or-control edge inside the body: walk EVERY
+      // descendant element, keep a focusable control (its own border-box
+      // left) or an element carrying a non-empty OWN text node (its ink
+      // left via textInk), and take the minimum. Reports the winning
+      // element's tag/id so the transcript can name it.
+      const candidates = [];
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_ELEMENT);
+      let node = walker.currentNode;
+      while (node) {
+        if (node !== body) {
+          // Ink beats box whenever the element carries its own text: a
+          // full-bleed pk-admin-action--a4 button IS a focusable control,
+          // but its border box is DELIBERATELY edge-to-edge (D-19e's
+          // anatomy) while its own 16px padding insets the ink that is
+          // actually seen — measuring the box here would report the
+          // full-bleed anatomy itself as a misalignment. Only an element
+          // with NO text of its own (a bare input, whose visible painted
+          // border IS its box) falls back to the border-box edge.
+          const hasOwnText = [...node.childNodes].some(
+            (n) => n.nodeType === Node.TEXT_NODE && n.nodeValue && n.nodeValue.trim(),
+          );
+          if (hasOwnText) {
+            const ink = textInk(node);
+            if (ink && ink.width > 0) {
+              candidates.push({ left: ink.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'ink' });
+            }
+          } else if (node.matches(FOCUSABLE_SELECTOR)) {
+            const r = node.getBoundingClientRect();
+            candidates.push({ left: r.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'control' });
+          }
+        }
+        node = walker.nextNode();
+      }
+      let leftmost = null;
+      for (const c of candidates) {
+        if (!leftmost || c.left < leftmost.left) leftmost = c;
+      }
+
+      // Test 5's positive control: the row-shaped body's own full-bleed
+      // child, if any.
+      const fullBleedEl = [...nodeSet].find((el) => el.matches(FULL_BLEED_SELECTOR));
+      const fullBleedInk = fullBleedEl ? textInk(fullBleedEl) : null;
+
+      return {
+        found: true,
+        panelBox,
+        headerEdges,
+        titleInkLeft: titleInk ? round(titleInk.left) : null,
+        bodyEdges,
+        bodyPadding: bodyCs.padding,
+        bodyScrollWidth: body.scrollWidth,
+        bodyClientWidth: body.clientWidth,
+        descendants,
+        leftmost: leftmost ? { left: round(leftmost.left), tag: leftmost.tag, id: leftmost.id, kind: leftmost.kind } : null,
+        fullBleedBox: fullBleedEl ? absBox(fullBleedEl) : null,
+        fullBleedInkLeft: fullBleedInk ? round(fullBleedInk.left) : null,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// Drives `SHEET_KEEL_CALL_SITES` end to end: for each row, navigate fresh,
+// run its opener steps, poll until its overlay's resolved `display` is not
+// `none`, then run the five sheet-keel tests against the real, really-open
+// sheet. Prints one verdict line per open sheet (every measured number) and
+// a summary naming how many rows were attempted vs. not-openable.
+async function checkSheetKeel({ client, baseUrl, rows }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  for (const row of rows) {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}${row.page}`)
+    await new Promise((r) => setTimeout(r, 250))
+
+    const openResult = await runOpenerSteps(client, row.steps)
+    if (!openResult.openable) {
+      if (row.dataIndependent) {
+        fail(
+          `${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+        )
+      } else {
+        notOpenable.push({ page: row.page, overlayId: row.overlayId, missingSelector: openResult.missingSelector })
+        log(
+          `NOT-OPENABLE: ${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — dev data is likely too thin for this row`,
+        )
+      }
+      continue
+    }
+
+    const opened = await pollUntil(() => isOverlayOpen(client, row.overlayId))
+    if (!opened) {
+      fail(`${row.page} ${row.overlayId}: opener steps completed but the overlay never reached a resolved display other than 'none'`)
+      continue
+    }
+
+    const m = await measureSheetKeel(client, row.overlayId)
+    if (!m.found) {
+      fail(
+        `${row.page} ${row.overlayId}: overlay reported open but its panel/header/body could not all be found (panel=${m.panelFound}, header=${m.headerFound}, body=${m.bodyFound})`,
+      )
+      continue
+    }
+
+    const nameOf = (d) => `<${d.tag}${d.id ? "#" + d.id : d.className ? "." + d.className.split(" ")[0] : ""}>`
+    log(
+      `sheet keel ${row.page} ${row.overlayId} (${row.bodyShape}-shaped): panel=[${m.panelBox.left},${m.panelBox.right}]; ` +
+        `header content=[${m.headerEdges.left},${m.headerEdges.right}] title ink left=${m.titleInkLeft}; ` +
+        `body content=[${m.bodyEdges.left},${m.bodyEdges.right}] body padding="${m.bodyPadding}" scrollWidth=${m.bodyScrollWidth} clientWidth=${m.bodyClientWidth}; ` +
+        `leftmost=${m.leftmost ? `${m.leftmost.kind}${nameOf(m.leftmost)}@${m.leftmost.left}` : "(none)"}`,
+    )
+
+    // Test 1 — the two siblings agree: header content edges == body content
+    // edges. FAILS today on every sheet regardless of body shape — the
+    // body wrapper itself has zero horizontal padding no matter what its
+    // children do.
+    if (Math.abs(m.headerEdges.left - m.bodyEdges.left) > 0.5) {
+      fail(`${row.page} ${row.overlayId} test1 (header-vs-body content left): header=${m.headerEdges.left}px body=${m.bodyEdges.left}px, expected within 0.5px`)
+    }
+    if (Math.abs(m.headerEdges.right - m.bodyEdges.right) > 0.5) {
+      fail(`${row.page} ${row.overlayId} test1 (header-vs-body content right inset): header=${m.headerEdges.right}px body=${m.bodyEdges.right}px, expected within 0.5px`)
+    }
+
+    // Test 2 — ink agrees with ink: the leftmost ink/control edge inside
+    // the body equals the header title's own ink left. FAILS today for a
+    // form-shaped body (its leftmost control sits at x=0); a row-shaped
+    // body's own full-bleed child already self-insets to 16px and PASSES
+    // today.
+    if (m.titleInkLeft == null || !m.leftmost) {
+      fail(`${row.page} ${row.overlayId} test2: could not measure the header title ink (${m.titleInkLeft}) or the body's leftmost ink/control (${m.leftmost})`)
+    } else if (Math.abs(m.titleInkLeft - m.leftmost.left) > 0.5) {
+      fail(
+        `${row.page} ${row.overlayId} test2 (ink-vs-ink): header title ink left=${m.titleInkLeft}px, body leftmost ${m.leftmost.kind}${nameOf(m.leftmost)} left=${m.leftmost.left}px, expected within 0.5px`,
+      )
+    }
+
+    // Test 3 — nothing (non-full-bleed) reaches the panel edge: every body
+    // descendant that is NOT a `.pk-admin-row`/`.pk-admin-action--a4` full-
+    // bleed child must sit inset from the panel's own border box by more
+    // than 0.5px on both sides. Full-bleed children are deliberately
+    // excluded here — they are Test 5's own positive control, not a
+    // violation of this test. FAILS today for a form-shaped body: its
+    // field/button render exactly flush with the panel (0px inset both
+    // sides, the zero-horizontal-padding defect).
+    for (const d of m.descendants) {
+      if (d.isFullBleed) continue
+      const leftInset = round2(d.box.left - m.panelBox.left)
+      const rightInset = round2(m.panelBox.right - d.box.right)
+      if (leftInset < 0.5 || rightInset < 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test3 (nothing reaches the panel edge): ${nameOf(d)} left inset=${leftInset}px right inset=${rightInset}px vs panel=[${m.panelBox.left},${m.panelBox.right}], expected both > 0.5px`,
+        )
+      }
+    }
+
+    // Test 4 — no horizontal scroll: the body's scrollWidth must not
+    // exceed its clientWidth by more than 0.5px. PASSES today; the control
+    // proving the fix's compensating negative margins (Task 2) do not
+    // introduce a horizontal scroller.
+    if (m.bodyScrollWidth - m.bodyClientWidth > 0.5) {
+      fail(`${row.page} ${row.overlayId} test4 (no horizontal scroll): scrollWidth=${m.bodyScrollWidth}px clientWidth=${m.bodyClientWidth}px, expected scrollWidth <= clientWidth + 0.5px`)
+    }
+
+    // Test 5 — the row-shaped rows are a second control: for a row-shaped
+    // body, the full-bleed child's own border box still spans the panel's
+    // full width (the press surface) while its own ink sits on the
+    // header's axis. PASSES today and must still pass after Task 2's fix —
+    // this is what makes the compensation verifiable instead of assumed.
+    if (row.bodyShape === "row") {
+      if (!m.fullBleedBox) {
+        fail(`${row.page} ${row.overlayId} test5: no .pk-admin-row/.pk-admin-action--a4 descendant found in a row-shaped body`)
+      } else {
+        if (Math.abs(m.fullBleedBox.left - m.panelBox.left) > 0.5 || Math.abs(m.fullBleedBox.right - m.panelBox.right) > 0.5) {
+          fail(
+            `${row.page} ${row.overlayId} test5 (full-bleed press surface): row/action box=[${m.fullBleedBox.left},${m.fullBleedBox.right}] vs panel=[${m.panelBox.left},${m.panelBox.right}], expected edge-to-edge within 0.5px`,
+          )
+        }
+        if (m.fullBleedInkLeft == null || m.titleInkLeft == null) {
+          fail(`${row.page} ${row.overlayId} test5: could not measure the row/action's own ink (${m.fullBleedInkLeft}) or the header title ink (${m.titleInkLeft})`)
+        } else if (Math.abs(m.fullBleedInkLeft - m.titleInkLeft) > 0.5) {
+          fail(
+            `${row.page} ${row.overlayId} test5 (ink on header axis): row/action ink left=${m.fullBleedInkLeft}px header title ink left=${m.titleInkLeft}px, expected within 0.5px`,
+          )
+        }
+      }
+    }
+
+    // Fresh navigation so no residual overlay/LiveView state leaks into the
+    // next row's measurement (mirrors `checkOverlayRealOpenWalk`'s own
+    // convention).
+    await navigate(client, `${baseUrl}${row.page}`)
+  }
+
+  log(`sheet keel walk: attempted=${rows.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+function round2(n) {
+  return Math.round(n * 10) / 10
+}
+
+// ---------------------------------------------------------------------------
 // The tab bar (D-13b) — height, indicator, and the snackbar derivation.
 // ---------------------------------------------------------------------------
 async function measureTabBar({ client, baseUrl, width }) {
@@ -2002,6 +2353,13 @@ async function main() {
     log("Measuring overlay coverage (synthetic control + real-open call-site walk)...")
     const overlayCoverage = await checkOverlayCoversViewport({ client, baseUrl })
     if (overlayCoverage.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- sheet body keel (plan 01.8.3-10, G-01.8.3-4b) ----
+    log("Measuring the sheet body's own keel against its header...")
+    const sheetKeel = await checkSheetKeel({ client, baseUrl, rows: SHEET_KEEL_CALL_SITES })
+    if (sheetKeel.fails.length > 0) {
       exitCode = 1
     }
   } finally {
