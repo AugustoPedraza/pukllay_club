@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-08-PLAN.md
-last_updated: "2026-09-27T20:56:49.648Z"
+stopped_at: Completed 01.8.3-09-PLAN.md
+last_updated: "2026-09-27T21:24:52.235Z"
 last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: b0df1dcfc07f8a2caafaeab69c7bf67cd1f574d8
+state_head: d7c17d5ee9f86a69667f4db562df56b988bf46e0
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 63
-  completed_plans: 57
+  completed_plans: 58
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 2 of 14
+Plan: 3 of 14
 Status: Ready to execute
 Last activity: 2026-09-27 — Phase 01.8.3 execution started
 
@@ -162,6 +162,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
 | Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
 | Phase 01.8.3 P08 | ~50min | 3 tasks | 6 files |
+| Phase 01.8.3 P09 | 28min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -339,6 +340,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
 - [Phase 01.8.3]: 01.8.3-08: created --pk-admin-keel-inset (components.css :root) as the admin's first declared horizontal-geometry token — deliberately the COMPONENT half of the 32px viewport-relative keel, not the keel itself (<main>'s px-4 supplies the other half on non-fullbleed pages; the fullbleed editor and any position:fixed overlay both read it as a standalone 16px axis)
 - [Phase 01.8.3]: 01.8.3-08: no sweeping literal-to-token refactor — only the 4 juegos.css rules in the band's/divider's own family were converted; ~11 other hand-copied 16px literals across components.css/editor.css/estantes.css stay untouched, out of this gap's scope
+- [Phase 01.8.3]: 01.8.3-09: #juegos-search-form (the real flex item, not #juegos-search-input) gets flex: 1; min-width: 0; display: flex, making the input's pre-existing inert flex: 1 live; #juegos-add-action gets an ID-scoped trailing pull (margin-right: calc((18px - 44px) / 2)) replacing .pk-admin-action--a3's shared leading-icon margin-left: -12px for this trailing use only — closes G-01.8.3-2e
 
 ### Pending Todos
 
@@ -484,8 +486,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-27T20:56:49.502Z
-Stopped at: Completed 01.8.3-08-PLAN.md
+Last session: 2026-09-27T21:24:32.896Z
+Stopped at: Completed 01.8.3-09-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
