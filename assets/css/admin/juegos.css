@@ -173,14 +173,22 @@
 /* Pins under the pinned search row once the title row has scrolled behind
    it (D-19n) — `top: var(--pk-juegos-pinned-h)` reserves exactly that
    row's own rendered height, never the deleted page bar's reserved band
-   (D-09/D-15). Full-bleed for free: this wrapper and every ancestor up to
-   the 16px-inset content keel carry no horizontal padding of their own,
-   so a 100%-width header already spans edge to edge without a
-   negative-margin trick. The fill itself lives on the header's own
-   `::before` band below (D-15, 071 d29-31) — never a `background`
-   directly on this wrapper or on the header's own padded box; painting
-   the box is what produced the empty tint above the ink this fix
-   removes. */
+   (D-09/D-15).
+
+   Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: this comment used to claim
+   the wrapper was "full-bleed for free" because "this wrapper and every
+   ancestor up to the 16px-inset content keel carry no horizontal padding
+   of their own" — that premise was FALSE. `<main>` IS such an ancestor
+   and DOES carry horizontal padding (`layouts.ex:637`'s `px-4`), so a band
+   meant to reach the viewport edge landed on an unintended third axis
+   instead (16px, when every row and the caption ink sit at 32px). The
+   band no longer reaches the viewport edge at all: it aligns to the same
+   `--pk-admin-keel-inset` its own header's ink uses (below), so the two
+   can no longer drift onto two axes. The fill itself still lives on the
+   header's own `::before` band below (D-15, 071 d29-31) — never a
+   `background` directly on this wrapper or on the header's own padded
+   box; painting the box is what produced the empty tint above the ink a
+   prior fix (01.8.3-06) removed. */
 .pk-admin-juegos-section-heading-wrap {
   position: sticky;
   top: var(--pk-juegos-pinned-h);
@@ -213,7 +221,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: var(--pt) 16px 0;
+  padding: var(--pt) var(--pk-admin-keel-inset) 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -266,13 +274,23 @@
    earlier version of this comment claimed the pinned `::before` rule
    itself repositioned the ink — no rule did, which is exactly how the
    ink drifted off-centre for every `--pt` other than the one value that
-   happened to cancel the arithmetic by coincidence.) */
+   happened to cancel the arithmetic by coincidence.)
+
+   Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: `left`/`right` used to read
+   `0` here, on the premise that this band was "full-bleed for free"
+   because every ancestor up to the content keel carried no horizontal
+   padding of its own — false, since `<main>` (`layouts.ex:637`) DOES, and
+   the band's `0` only picked up THAT 16px while the header's own ink
+   (above) picked up an additional, separate 16px of its own padding. The
+   band is not full-bleed to the viewport edge; it aligns to the same
+   `--pk-admin-keel-inset` the header's own ink uses, so both now read one
+   declaration and cannot drift onto two axes again. */
 .pk-admin-juegos-section-header::before {
   content: "";
   position: absolute;
   z-index: -1;
-  left: 0;
-  right: 0;
+  left: var(--pk-admin-keel-inset);
+  right: var(--pk-admin-keel-inset);
   top: calc(var(--pt) - var(--band) - var(--cap));
   bottom: calc(var(--cap) - var(--band));
   background: transparent;
@@ -386,7 +404,7 @@
 
 .pk-admin-juegos-section-hint {
   margin: 0;
-  padding: 4px 16px 0;
+  padding: 4px var(--pk-admin-keel-inset) 0;
   font-size: 13px;
   color: var(--color-neutral);
 }
@@ -411,7 +429,11 @@
   position: absolute;
   top: 0;
   left: 68px;
-  right: 0;
+  /* Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: the right end used to read
+     `0`, landing on the band's unintended axis (16px) instead of the
+     rows' own (32px) — the left end above is unchanged: the diagnosis
+     measured it as already correct. */
+  right: var(--pk-admin-keel-inset);
   height: 1px;
   background: var(--stroke);
 }

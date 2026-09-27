@@ -27,6 +27,35 @@
      first Scope A geometry constant to land, carried over verbatim from
      the sketches' own `sources/themes/default.css`. */
   --radius-md: 8px;
+
+  /* Plan 01.8.3-08 (G-01.8.3-2c, D-20b): the admin's ONE declared
+     horizontal keel inset — created here because the diagnosis proved no
+     such token existed anywhere (`admin/tokens.css` holds colour tokens
+     only, and the public site's `--pk-gutter` is never read by any
+     `.pk-admin-*` rule). Read this comment in order before touching any
+     rule that consumes this property:
+
+     1. D-20b declares the admin's horizontal keel as 32px, measured
+        VIEWPORT-relative, on any admin page that is not `fullbleed` —
+        confirmed live at 360/375/390, at rest and pinned
+        (`.planning/debug/DEBUG-juegos-horizontal-keel-three-axes.md`).
+     2. This property is only the COMPONENT HALF of that 32px. The other
+        half is `Layouts.app/1`'s own `<main class="px-4 ...">`
+        (`layouts.ex:637`), which every non-`fullbleed` admin page
+        inherits. 16 (this property) + 16 (`<main>`'s `px-4`) = 32.
+     3. The editor (`form.ex:1177`) is the ONE `fullbleed` admin page —
+        `<main>` contributes 0px there, so the same components reading
+        this property land on 16, not 32. That is correct, not a bug.
+     4. Inside a `position: fixed` overlay (`sheet/1`/`dialog/1`), which
+        escapes `<main>`'s `px-4` entirely, this SAME property yields a
+        16px axis — also correct, per D-20b's own "one axis per stacking
+        context, not one number globally".
+     5. NEVER add this property's value to `<main>` itself, or to the
+        `.mx-auto.w-full.max-w-3xl` wrapper every admin screen renders
+        inside. Doing so is the exact doubling D-16 (01.8.3-CONTEXT.md)
+        originally set out to avoid, and would put content at 48px
+        instead of 32px. */
+  --pk-admin-keel-inset: 16px;
 }
 
 /* ============================================================
