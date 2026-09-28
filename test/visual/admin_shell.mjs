@@ -1296,7 +1296,7 @@ async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logF
   // the page's ceiling, leaving zero room for its own closed-control
   // gestures below). Forcing scrollTop to 0 here is setup, not a gesture
   // under test — the real dispatched scroll below is what step 1 measures.
-  await evalJS(client, `document.scrollingElement.scrollTop = 0; true`)
+  await evalJS(client, `document.scrollingElement.scrollTo({ top: 0, left: 0, behavior: "instant" }); true`)
   await settleAfterScrollReset(client)
 
   // Step 1 — scroll to a non-zero starting offset by a REAL gesture (the
@@ -1321,26 +1321,54 @@ async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logF
     maxScrollable = await evalJS(client, `document.scrollingElement.scrollHeight - window.innerHeight`)
   }
   const scrollTarget = Math.max(10, Math.floor(maxScrollable * 0.3))
-  await dispatchWheel(client, { x: 195, y: 400, deltaY: scrollTarget })
+  await dispatchWheel(client, { x: 195, y: 600, deltaY: scrollTarget })
   await new Promise((r) => setTimeout(r, 80))
   const startingOffset = (await readOffsetAndPanelTop(client, null)).offset
 
   // Step 2 — the CLOSED-sheet positive control (test 0's own evidence):
   // the same touch drag and the same wheel the open-state gestures below
-  // will use, run here with the sheet still closed.
-  await dispatchTouchDrag(client, { x: 195, yStart: startingOffset > 400 ? 700 : 650, yEnd: 300 })
-  const touchClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
-  const touchClosedDelta = round2(Math.abs(touchClosedOffset - startingOffset))
-  await evalJS(client, `document.scrollingElement.scrollTop = ${startingOffset}; true`)
-  await settleAfterScrollReset(client)
-  await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
-  const wheelClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
-  const wheelClosedDelta = round2(Math.abs(wheelClosedOffset - startingOffset))
+  // will use, run here with the sheet still closed. Retried once on its
+  // own (2 attempts total) before test 0 is allowed to fail: `/admin/
+  // juegos` carries the PRE-EXISTING, already-documented `admin_list.js`
+  // pinned-band timing race (`.planning/WINDOWS.md` entry #36, plan 01.8.3-
+  // 11/12's own recorded flake) which intermittently absorbs a wheel event
+  // into its own growth-deferral mechanism instead of the document scroll —
+  // not a defect in the lock this plan closes, and not something this task
+  // has standing to fix. A bounded retry of the SANITY CHECK only (never
+  // the locked-state assertions below) absorbs that known flake without
+  // weakening what test 0 actually guards against.
+  let touchClosedDelta = 0
+  let wheelClosedDelta = 0
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    await dispatchTouchDrag(client, { x: 195, yStart: startingOffset > 400 ? 700 : 650, yEnd: 300 })
+    const touchClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+    touchClosedDelta = round2(Math.abs(touchClosedOffset - startingOffset))
+    await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
+    await settleAfterScrollReset(client)
+    // deltaY 900, not 400 — a wheel event's mapping to a scrollTop delta on
+    // this page measured wildly variable in practice (3-591px for the
+    // identical dispatched event across repeated runs), so the amplitude is
+    // sized for headroom against that variance, not against a single
+    // calibration reading.
+    await dispatchWheel(client, { x: 195, y: 600, deltaY: 900 })
+    const wheelClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+    wheelClosedDelta = round2(Math.abs(wheelClosedOffset - startingOffset))
+    if (touchClosedDelta > 50 && wheelClosedDelta > 50) break
+    if (attempt === 1) {
+      logFn(
+        `${row.page} ${row.overlayId}: closed-control attempt 1 read touch=${touchClosedDelta}px wheel=${wheelClosedDelta}px — retrying once before failing test0 (known admin_list.js timing race, WINDOWS.md #36)`,
+      )
+      await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
+      await settleAfterScrollReset(client)
+    }
+  }
 
-  // Test 0 — the harness works. A page that cannot demonstrably move under
-  // an UNLOCKED gesture has not measured a lock; do not evaluate the locked
-  // assertions against it (rule 8: negative-test every guard, never let a
-  // guard that cannot fail masquerade as one that measured something).
+  // Test 0 — the harness works: each CLOSED-state control delta exceeds
+  // 50px (this plan's own stated threshold). A page that cannot
+  // demonstrably move under an UNLOCKED gesture has not measured a lock; do
+  // not evaluate the locked assertions against it (rule 8: negative-test
+  // every guard, never let a guard that cannot fail masquerade as one that
+  // measured something).
   if (touchClosedDelta <= 50 || wheelClosedDelta <= 50) {
     fail(
       `${row.page} ${row.overlayId} test0 (harness works): closed-state touch delta=${touchClosedDelta}px wheel delta=${wheelClosedDelta}px, expected both > 50px — either this page cannot scroll enough to test the lock, or the gesture mechanism is inert here`,
@@ -1350,7 +1378,7 @@ async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logF
 
   // Step 3 — scroll back to the recorded starting offset (setup, not an
   // assertion — the locked-state deltas below are what is measured).
-  await evalJS(client, `document.scrollingElement.scrollTop = ${startingOffset}; true`)
+  await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
   await settleAfterScrollReset(client)
 
   // Step 4 — open by a real click, poll for resolved display.
@@ -1413,6 +1441,14 @@ async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logF
   const closeSelector = `#${row.overlayId} [data-pk-sheet-close], #${row.overlayId} [data-pk-dialog-cancel]`
   await clickCenterOf(client, closeSelector)
   await pollUntil(async () => !(await isOverlayOpen(client, row.overlayId)))
+  // Settle before reading the final offset — the SAME pre-existing
+  // `admin_list.js` pinned-band timing race named above (WINDOWS.md #36)
+  // schedules its own `scrollBy` compensation (`scheduleGrowth`, gated on a
+  // CSS `transitionend`) independent of this lock, so reading immediately
+  // after the close-poll can race it. A longer settle than this file's
+  // usual 300ms — measured needing it on `/admin/juegos` specifically,
+  // where the compensation's own transition duration exceeds 300ms.
+  await new Promise((r) => setTimeout(r, 800))
   const finalOffset = (await readOffsetAndPanelTop(client, null)).offset
   const lockStateAfterClose = await readOverlayLockState(client, row.overlayId)
 
@@ -1498,6 +1534,206 @@ async function checkOverlayScrollLock({ client, baseUrl, rows }) {
 
   log(`overlay scroll-lock walk: attempted=${rows.length} not-openable=${notOpenable.length}`)
   return { fails, notOpenable }
+}
+
+// ---------------------------------------------------------------------------
+// Task 3 — the handoff case and the teardown case. Both require the SAME
+// module-level counter the acquire/release logic in `admin_sheet.js` uses,
+// proven from the outside (there is no way to read a JS closure variable
+// from CDP) by observing `<body>`'s own class/property, which IS the
+// counter's only externally-visible effect.
+//
+// DESTRUCTIVE-PATH GUARD (mirrors `OVERLAY_CALL_SITES`'s own guard comment,
+// verbatim in shape): neither case below ever clicks a control that commits,
+// deletes, retires, removes or discards. The event names this whole file
+// must never target from inside this walk: `confirm-remove` (staff_live/
+// index.ex — permanently removes a staff member's access), `confirm-delete`
+// (estante_live/administrar.ex — deletes a real shelf), `confirm-quitar`
+// (estante_live/index.ex — un-places a real copy). Every step below stops at
+// the control that only OPENS the second overlay — `ask-remove`/`ask-delete`
+// — never at that overlay's own commit control.
+// ---------------------------------------------------------------------------
+
+// The handoff case: open a sheet, click the control that closes IT and
+// opens a dialog in the SAME server diff, then assert with the DIALOG open
+// that the document still does not move, that the lock class still holds,
+// and that the saved-offset property still resolves. A naive boolean toggle
+// passes every other test in this plan and fails only this one, because
+// LiveView mounts the dialog's hook (which runs its own `onOpen`, an
+// acquire) BEFORE destroying the sheet's hook (whose `destroyed()` runs a
+// release) — confirmed empirically in `admin_sheet.js`'s own header
+// comment. `dataIndependent: false` on every row here: the staff path needs
+// a staff-role user other than the operator, the shelf path needs a real
+// shelf row; either row reports NOT-OPENABLE, never a FAIL, when its own
+// precondition is unmet in a thin dev database.
+const SCROLL_LOCK_HANDOFF_CASES = [
+  {
+    name: "staff -> confirm-remove-dialog",
+    page: "/admin/staff",
+    sheetId: "staff-options-sheet",
+    dialogId: "confirm-remove-dialog",
+    openSteps: [{ kind: "click", selector: "#staff-list .pk-admin-row[phx-click]" }],
+    // Only OPENS the dialog — never `[phx-click="confirm-remove"]`.
+    handoffSteps: [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }],
+  },
+  {
+    name: "shelf -> confirm-delete-shelf-dialog",
+    page: "/admin/estantes/administrar",
+    sheetId: "shelf-options-sheet",
+    dialogId: "confirm-delete-shelf-dialog",
+    openSteps: [{ kind: "click", selector: "#administrar-rows .pk-admin-row" }],
+    // Only OPENS the dialog — never `[phx-click="confirm-delete"]`.
+    handoffSteps: [{ kind: "click", selector: '#shelf-options-sheet [phx-click="ask-delete"]' }],
+  },
+]
+
+async function checkOverlayScrollLockHandoff({ client, baseUrl }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    for (const c of SCROLL_LOCK_HANDOFF_CASES) {
+      await setViewport(client, 390, 844)
+      await navigate(client, `${baseUrl}${c.page}`)
+      await new Promise((r) => setTimeout(r, 250))
+
+      const opened = await runOpenerSteps(client, c.openSteps)
+      if (!opened.openable) {
+        notOpenable.push({ name: c.name })
+        log(`NOT-OPENABLE: ${c.name}: opener selector never appeared (${opened.missingSelector}) — dev data is likely too thin for this row`)
+        continue
+      }
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, c.sheetId))
+      if (!sheetOpen) {
+        fail(`${c.name}: ${c.sheetId} never reached a resolved display other than 'none'`)
+        continue
+      }
+
+      const handoffResult = await runOpenerSteps(client, c.handoffSteps)
+      if (!handoffResult.openable) {
+        fail(`${c.name}: handoff selector never appeared (${handoffResult.missingSelector})`)
+        continue
+      }
+      const dialogOpen = await pollUntil(() => isOverlayOpen(client, c.dialogId))
+      if (!dialogOpen) {
+        fail(`${c.name}: ${c.dialogId} never reached a resolved display other than 'none' after the handoff`)
+        continue
+      }
+
+      // The sheet's own root should now be gone (a `:if`-mounted DOM-removal
+      // close) — confirms this is genuinely the handoff path, not a no-op.
+      const sheetStillPresent = await evalJS(client, `!!document.getElementById(${JSON.stringify(c.sheetId)})`)
+
+      const before = (await readOffsetAndPanelTop(client, c.dialogId)).offset
+      await dispatchTouchDrag(client, { x: 195, yStart: 700, yEnd: 300 })
+      await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
+      const after = (await readOffsetAndPanelTop(client, c.dialogId)).offset
+      const delta = round2(Math.abs(after - before))
+
+      const lockState = await readOverlayLockState(client, c.dialogId)
+
+      log(
+        `scroll lock handoff ${c.name}: sheetStillInDom=${sheetStillPresent} dialogOpen=true movedBy=${delta}px ` +
+          `bodyClass="${lockState.bodyClass}" savedOffsetProp="${lockState.savedOffsetProp}"`,
+      )
+
+      if (delta > 1) {
+        fail(`${c.name}: document moved ${delta}px with the dialog open after the handoff, expected at most 1px`)
+      }
+      if (!lockState.hasLockClass) {
+        fail(`${c.name}: <body> does not carry the lock class with the dialog open after the handoff (class="${lockState.bodyClass}") — a boolean toggle would have released here, since the sheet's own destroyed() ran after the dialog's onOpen`)
+      }
+      if (!lockState.savedOffsetProp || lockState.savedOffsetProp === "") {
+        fail(`${c.name}: the saved-offset custom property is empty with the dialog open after the handoff`)
+      }
+
+      // Cancel the dialog (never confirm) so the walk leaves no residual
+      // open overlay and the lock is released cleanly for the next case.
+      await clickCenterOf(client, `#${c.dialogId} [data-pk-dialog-cancel]`)
+      await pollUntil(async () => !(await isOverlayOpen(client, c.dialogId)))
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  log(`overlay scroll-lock handoff walk: attempted=${SCROLL_LOCK_HANDOFF_CASES.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// The teardown case: with a sheet open, navigate AWAY (a real browser
+// navigation — `Page.navigate`, the same primitive every other check in
+// this file uses — not a synthetic hook teardown), then assert on the next
+// page that the lock is fully released: no lock class, no saved-offset
+// property, and a real touch drag moves the document. A LiveView teardown
+// mid-open (this element leaves the DOM while `destroyed()` runs) must
+// never leave a page permanently unscrollable — `layouts.ex:1619`'s own
+// precedent for exactly this failure, ported here for the admin lock.
+// Destination is a resolved real editor URL (309px of scrollable content
+// measured live) rather than `/admin` itself, whose dashboard cards do not
+// scroll at all at 390x844 — a destination with zero scrollable extent
+// cannot demonstrate release via movement, only via the class/property
+// checks, so a genuinely different, genuinely scrollable admin page is
+// used instead.
+async function checkOverlayScrollLockTeardown({ client, baseUrl }) {
+  const fails = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}/admin/juegos`)
+    await new Promise((r) => setTimeout(r, 250))
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(`teardown: #juegos-add-action never appeared — cannot set up the mid-open teardown case`)
+      return { fails }
+    }
+    const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+    if (!sheetOpen) {
+      fail(`teardown: add-game-sheet never reached a resolved display other than 'none'`)
+      return { fails }
+    }
+
+    const editorUrl = await resolveEditorUrl(client, baseUrl)
+    const destination = editorUrl || "/admin/estantes"
+    // Re-navigate to /admin/juegos first is wrong here — the sheet must
+    // still be open at the moment of navigation, so navigate directly from
+    // the current (sheet-open) page to the destination.
+    await navigate(client, `${baseUrl}${destination}`)
+    await new Promise((r) => setTimeout(r, 250))
+
+    const lockState = await readOverlayLockState(client, "add-game-sheet")
+    if (lockState.hasLockClass) {
+      fail(`teardown: <body> still carries the lock class on ${destination} after navigating away from an open sheet (class="${lockState.bodyClass}")`)
+    }
+    if (lockState.savedOffsetProp && lockState.savedOffsetProp !== "") {
+      fail(`teardown: the saved-offset custom property still resolves on ${destination} after navigating away ("${lockState.savedOffsetProp}")`)
+    }
+
+    const before = (await readOffsetAndPanelTop(client, null)).offset
+    await dispatchTouchDrag(client, { x: 195, yStart: 700, yEnd: 300 })
+    await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
+    const after = (await readOffsetAndPanelTop(client, null)).offset
+    const delta = round2(Math.abs(after - before))
+
+    log(`overlay scroll-lock teardown: destination=${destination} bodyClass="${lockState.bodyClass}" movedBy=${delta}px`)
+
+    if (delta <= 50) {
+      fail(`teardown: a real touch drag + wheel on ${destination} moved the document by only ${delta}px after navigating away from an open sheet, expected > 50px (the page must scroll normally, proving the lock is fully released)`)
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  return { fails }
 }
 
 // ---------------------------------------------------------------------------
@@ -3086,6 +3322,18 @@ async function main() {
     }
     const scrollLock = await checkOverlayScrollLock({ client, baseUrl, rows: scrollLockRows })
     if (scrollLock.fails.length > 0) {
+      exitCode = 1
+    }
+
+    log("Measuring the overlay scroll lock across a real sheet -> dialog handoff...")
+    const scrollLockHandoff = await checkOverlayScrollLockHandoff({ client, baseUrl })
+    if (scrollLockHandoff.fails.length > 0) {
+      exitCode = 1
+    }
+
+    log("Measuring the overlay scroll lock is fully released after a real navigation away from an open sheet...")
+    const scrollLockTeardown = await checkOverlayScrollLockTeardown({ client, baseUrl })
+    if (scrollLockTeardown.fails.length > 0) {
       exitCode = 1
     }
   } finally {
