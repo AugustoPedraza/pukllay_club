@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 12/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
+**Plans:** 13/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
 
 Plans:
 **Wave 1**
@@ -310,7 +310,7 @@ Plans:
 
 - [x] 01.8.3-12-PLAN.md — `G-01.8.3-3` (secondary, independent): the first section's 44px band stops painting outside its own sticky box; carries a blocking `checkpoint:decision` between the two shapes the geometry admits
 
-- [ ] 01.8.3-13-PLAN.md — `G-01.8.3-4a`: a reference-counted, scroll-position-preserving document lock on the shared overlay with overscroll containment, proven by real touch gestures against a closed-sheet positive control
+- [x] 01.8.3-13-PLAN.md — `G-01.8.3-4a`: a reference-counted, scroll-position-preserving document lock on the shared overlay with overscroll containment, proven by real touch gestures against a closed-sheet positive control
 
 - [ ] 01.8.3-14-PLAN.md — `G-01.8.3-4c`: focus returns to the control that opened a sheet, with the `staff_live` sheet-to-dialog handoff asserted passing both before and after the change
 

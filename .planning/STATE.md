@@ -5,16 +5,16 @@ milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
 status: executing
-stopped_at: Completed 01.8.3-12-PLAN.md
-last_updated: "2026-09-28T03:08:59.579Z"
+stopped_at: Completed 01.8.3-13-PLAN.md
+last_updated: "2026-09-28T05:00:27.754Z"
 last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 607a90e8b0f28c71f8693300c794159b51a9c3eb
+state_head: 4381c4c71f638a543a133ddf848a49e8717005f5
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 63
-  completed_plans: 61
+  completed_plans: 62
 ---
 
 Total Phases: 9
@@ -34,7 +34,7 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 13 of 14
+Plan: 14 of 14
 Status: Ready to execute
 
 Note (2026-09-27, this plan's executor): this field drifted stale across
@@ -177,6 +177,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.3 P10 | 54min | 3 tasks | 7 files |
 | Phase 01.8.3 P11 | 65min | 2 tasks | 3 files |
 | Phase 01.8.3 P12 | 50min | 3 tasks | 4 files |
+| Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -360,6 +361,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-10: Nested list_row elements inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet's estante-list state) are NOT reached by the direct-child-only sheet-row compensation — recorded as an open finding (WINDOWS.md #35), not fixed, since widening the selector is a separate architectural decision outside this plan's scope
 - [Phase 01.8.3]: 01.8.3-11: pinned caption's sticky offset made dynamic (D-20a) -- admin_list.js writes an effective reservation (0 or the row's full height) to --pk-juegos-pinned-h in lockstep with the search row's hide attribute; growth deferred to the row's own transitionend with a computed-duration fallback; closes G-01.8.3-2d and G-01.8.3-3's primary cause.
 - [Phase 01.8.3]: 01.8.3-12: rest-air chosen — first section's --pt: 14px override deleted; header box now reserves the full 44px band, closing G-01.8.3-3's overhang with no pin-moment jitter.
+- [Phase 01.8.3]: 01.8.3-13: Reference-counted (not boolean) document scroll lock at the shared AdminSheet component closes G-01.8.3-4a; fixed-body-plus-saved-offset CSS lock chosen over the repo's two bare overflow:hidden precedents for iOS Safari coverage + position preservation. — Proven necessary by a real sheet->dialog handoff (LiveView mounts the second overlay's hook and acquires before the first's destroyed()/release runs); a boolean toggle would unlock mid-handoff.
 
 ### Pending Todos
 
@@ -505,8 +507,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-28T03:08:59.413Z
-Stopped at: Completed 01.8.3-12-PLAN.md
+Last session: 2026-09-28T05:00:27.578Z
+Stopped at: Completed 01.8.3-13-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
