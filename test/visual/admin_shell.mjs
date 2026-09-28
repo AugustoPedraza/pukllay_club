@@ -1135,6 +1135,372 @@ function round2(n) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.3-13 — G-01.8.3-4a: while an `aria-modal="true"` sheet or dialog
+// is open, the page BEHIND it must not scroll. Independent from the two
+// walks above: G-01.8.3-2b asks whether a TAP can reach through (coverage);
+// G-01.8.3-4b asks whether the body shares its header's inset (keel); this
+// asks whether a GESTURE can move what is behind (lock) — three independent
+// questions about the same overlay. See
+// `.planning/debug/DEBUG-admin-sheet-modal-contract.md` for the full
+// diagnosis this walk re-proves against the fix, and `test/visual/
+// README.md`'s rule 8 for why every scroll assertion here carries its own
+// closed-state positive control.
+//
+// CDP's gesture-synthesis input command (`Input.synthesizeScrollGesture`) is
+// NEVER used anywhere in this file — it is inert in this headless build:
+// calibrated on a page scrollable by 1506px, a `gestureSourceType: "touch"`
+// synthesize call moved the document 0px, while `Input.dispatchTouchEvent`
+// moved it 281px and a `mouseWheel` moved it 300px on the SAME page. Its own
+// `yDistance` argument is also positive-to-scroll-UP, so applying a positive
+// distance at scrollTop 0 is a no-op regardless of whether the mechanism is
+// live — this diagnosis's own round 1 produced a false "locked" reading from
+// exactly that pair of mistakes. Every scroll assertion below is driven by
+// `Input.dispatchTouchEvent`/`mouseWheel` instead, each paired with a sheet-
+// CLOSED positive control in the same run so a page that cannot move at all
+// can never report a false "locked" verdict.
+// ---------------------------------------------------------------------------
+
+// A real touch drag: a touchStart at (x, yStart), several touchMoves
+// stepping toward yEnd, and a touchEnd — each its own `Input.dispatchTouchEvent`
+// with a short pause between them, the way a real finger delivers a drag
+// frame by frame rather than teleporting from start to end in one dispatch.
+async function dispatchTouchDrag(client, { x, yStart, yEnd, steps = 6, stepDelayMs = 16 }) {
+  const touchId = 1
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y: yStart, id: touchId }],
+  })
+  await new Promise((r) => setTimeout(r, stepDelayMs))
+  for (let i = 1; i <= steps; i++) {
+    const y = yStart + ((yEnd - yStart) * i) / steps
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y, id: touchId }],
+    })
+    await new Promise((r) => setTimeout(r, stepDelayMs))
+  }
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+  await new Promise((r) => setTimeout(r, 150))
+}
+
+// A real wheel: one `mouseWheel`-type `Input.dispatchMouseEvent` at (x, y)
+// with the given vertical delta — the same primitive `mouseMoved`/
+// `mousePressed`/`mouseReleased` triple `clickCenterOf` above already uses
+// for clicks, just the wheel variant. The 450ms settle pause (not this
+// file's usual ~30-80ms) is load-bearing, not generous: `app.css`'s
+// `html { scroll-behavior: smooth }` (gated only on `prefers-reduced-
+// motion`, applied document-wide, not scoped to the public catalog nav it
+// was authored for) makes Chrome ANIMATE a wheel-triggered scroll rather
+// than jump instantly — reading the offset before that animation settles
+// measured wildly inconsistent deltas for the identical dispatched event
+// (a fourth Rule 1 found via this task's own RED run: the same wheel call
+// on the same page read anywhere from 43px to 500px across repeated runs).
+async function dispatchWheel(client, { x, y, deltaY }) {
+  // The leading `mouseMoved` is load-bearing (a fifth Rule 1 found via this
+  // task's own RED run): a `mouseWheel` event dispatched with no preceding
+  // `mouseMoved` to the SAME point measured a reliable 0px delta — even
+  // though `x`/`y` are passed explicitly on the wheel event itself — while
+  // the identical wheel preceded by a `mouseMoved` measured consistently.
+  // `clickCenterOf` above already sends `mouseMoved` before every click for
+  // the same reason; this mirrors that.
+  await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y })
+  await client.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY })
+  await new Promise((r) => setTimeout(r, 450))
+}
+
+// A settle pause after a DIRECT `scrollTop = ...` JS assignment (setup, not
+// a gesture under test) — the property write itself is instant, but
+// `app.css`'s document-wide `scroll-behavior: smooth` can leave an
+// in-flight wheel-triggered scroll animation still interpolating toward
+// its OLD target for a short window afterward, which then silently
+// overwrites the direct assignment a few frames later if the next gesture
+// fires too soon (measured: a reset to 0 read back as 170 without this
+// pause).
+async function settleAfterScrollReset(client) {
+  await new Promise((r) => setTimeout(r, 300))
+}
+
+// Reads the document's current offset and, when an overlay id is given, that
+// overlay's own panel top edge — in the SAME evalJS call, so the bare-scrim
+// coordinate derived from it (below) is never a constant.
+async function readOffsetAndPanelTop(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const offset = document.scrollingElement.scrollTop;
+      const root = ${overlayId ? `document.getElementById(${JSON.stringify(overlayId)})` : "null"};
+      const panel = root ? root.querySelector('[data-pk-sheet-panel]') : null;
+      return { offset, panelTop: panel ? panel.getBoundingClientRect().top : null };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// The lock's own observable state (test 4/5's measurement body): the
+// resolved `overscroll-behavior-y` on the overlay root and, when present,
+// its `.pk-admin-sheet__rows` child (absent on a `dialog/1` instance — read
+// as `null`, not asserted), plus `<body>`'s own lock class and saved-offset
+// custom property.
+async function readOverlayLockState(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const root = document.getElementById(${JSON.stringify(overlayId)});
+      const rows = root ? root.querySelector('.pk-admin-sheet__rows') : null;
+      const bodyStyle = getComputedStyle(document.body);
+      return {
+        rootOverscrollY: root ? getComputedStyle(root).overscrollBehaviorY : null,
+        rowsOverscrollY: rows ? getComputedStyle(rows).overscrollBehaviorY : null,
+        bodyClass: document.body.className,
+        hasLockClass: document.body.classList.contains('pk-admin-overlay-open'),
+        savedOffsetProp: bodyStyle.getPropertyValue('--pk-admin-overlay-scroll-offset').trim(),
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// The base call-site table (Task 1) — at minimum `add-game-sheet` (the worst
+// case: /admin/juegos is scrollable by tens of thousands of pixels), plus an
+// editor overlay and a dialog/1 instance, both appended dynamically in
+// main() off a resolved real game id (mirrors `SHEET_KEEL_CALL_SITES`'s own
+// dynamically-appended editor row) since their URL is not a static route.
+const SCROLL_LOCK_CALL_SITES = [
+  {
+    page: "/admin/juegos",
+    overlayId: "add-game-sheet",
+    dataIndependent: true,
+    steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+]
+
+// Runs the full gesture battery — tests 0 through 5 — against ONE already-
+// navigated-to call site row. Mutates `fails`/`notOpenable` via the closures
+// passed in; returns nothing. Kept as its own function (rather than inlined
+// in the loop below) so `checkOverlayScrollLockHandoff`'s DIFFERENT walk
+// shape (open a SECOND overlay before asserting) can still reuse the
+// low-level gesture helpers without reusing this one's single-overlay
+// lifecycle.
+async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logFn = log }) {
+  await setViewport(client, 390, 844)
+  await navigate(client, `${baseUrl}${row.page}`)
+  await new Promise((r) => setTimeout(r, 250))
+  // Chrome's own `scroll-restoration: auto` can carry a prior scrollTop
+  // over to a fresh `Page.navigate` at the SAME URL (a third Rule 1 found
+  // via this task's own RED run: two rows sharing one resolved editor URL,
+  // back to back — the second measured a starting offset already pinned at
+  // the page's ceiling, leaving zero room for its own closed-control
+  // gestures below). Forcing scrollTop to 0 here is setup, not a gesture
+  // under test — the real dispatched scroll below is what step 1 measures.
+  await evalJS(client, `document.scrollingElement.scrollTop = 0; true`)
+  await settleAfterScrollReset(client)
+
+  // Step 1 — scroll to a non-zero starting offset by a REAL gesture (the
+  // document is closed and unlocked at this point, so nothing about the
+  // lock is being tested yet). The target is 30% of the page's OWN
+  // measured scrollable extent, not a fixed literal — a fixed large wheel
+  // (e.g. 900) drove a short page (309px scrollable, the real editor page)
+  // straight to its ceiling, leaving ZERO room for the same-direction
+  // closed-control/open-state gestures below to move it further and
+  // producing a false test0 "harness broken" reading on a page the lock was
+  // never even tested against (Rule 1 — found via this task's own RED run).
+  // Reading `scrollHeight`/`innerHeight` here is a measurement, not a
+  // gesture — the actual scroll below is still a real wheel dispatch. Read
+  // twice with a settle pause between: the editor page's own late-decoding
+  // cover image can still be growing the document's layout height in the
+  // first ~250ms after `Page.loadEventFired` (a second Rule 1 found via
+  // this task's own RED run — the SAME page measured 309px scrollable on
+  // one row and ~0px on the very next, both fresh navigations).
+  let maxScrollable = await evalJS(client, `document.scrollingElement.scrollHeight - window.innerHeight`)
+  if (maxScrollable < 20) {
+    await new Promise((r) => setTimeout(r, 400))
+    maxScrollable = await evalJS(client, `document.scrollingElement.scrollHeight - window.innerHeight`)
+  }
+  const scrollTarget = Math.max(10, Math.floor(maxScrollable * 0.3))
+  await dispatchWheel(client, { x: 195, y: 400, deltaY: scrollTarget })
+  await new Promise((r) => setTimeout(r, 80))
+  const startingOffset = (await readOffsetAndPanelTop(client, null)).offset
+
+  // Step 2 — the CLOSED-sheet positive control (test 0's own evidence):
+  // the same touch drag and the same wheel the open-state gestures below
+  // will use, run here with the sheet still closed.
+  await dispatchTouchDrag(client, { x: 195, yStart: startingOffset > 400 ? 700 : 650, yEnd: 300 })
+  const touchClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+  const touchClosedDelta = round2(Math.abs(touchClosedOffset - startingOffset))
+  await evalJS(client, `document.scrollingElement.scrollTop = ${startingOffset}; true`)
+  await settleAfterScrollReset(client)
+  await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
+  const wheelClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+  const wheelClosedDelta = round2(Math.abs(wheelClosedOffset - startingOffset))
+
+  // Test 0 — the harness works. A page that cannot demonstrably move under
+  // an UNLOCKED gesture has not measured a lock; do not evaluate the locked
+  // assertions against it (rule 8: negative-test every guard, never let a
+  // guard that cannot fail masquerade as one that measured something).
+  if (touchClosedDelta <= 50 || wheelClosedDelta <= 50) {
+    fail(
+      `${row.page} ${row.overlayId} test0 (harness works): closed-state touch delta=${touchClosedDelta}px wheel delta=${wheelClosedDelta}px, expected both > 50px — either this page cannot scroll enough to test the lock, or the gesture mechanism is inert here`,
+    )
+    return
+  }
+
+  // Step 3 — scroll back to the recorded starting offset (setup, not an
+  // assertion — the locked-state deltas below are what is measured).
+  await evalJS(client, `document.scrollingElement.scrollTop = ${startingOffset}; true`)
+  await settleAfterScrollReset(client)
+
+  // Step 4 — open by a real click, poll for resolved display.
+  const openResult = await runOpenerSteps(client, row.steps)
+  if (!openResult.openable) {
+    if (row.dataIndependent) {
+      fail(
+        `${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+      )
+    } else {
+      logFn(
+        `NOT-OPENABLE: ${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — dev data is likely too thin for this row`,
+      )
+      return "not-openable"
+    }
+    return
+  }
+  const opened = await pollUntil(() => isOverlayOpen(client, row.overlayId))
+  if (!opened) {
+    fail(`${row.page} ${row.overlayId}: opener steps completed but the overlay never reached a resolved display other than 'none'`)
+    return
+  }
+
+  // The bare-scrim coordinate is DERIVED from the measured panel's own top
+  // edge (never a constant): a point above the panel and below the
+  // viewport's own top inset.
+  const { panelTop } = await readOffsetAndPanelTop(client, row.overlayId)
+  const scrimY = panelTop === null ? 60 : Math.max(30, Math.round(panelTop / 2))
+  const panelY = panelTop === null ? 500 : Math.round(panelTop + (844 - panelTop) / 2)
+
+  const stillOpenAfter = async (label) => {
+    const ok = await isOverlayOpen(client, row.overlayId)
+    if (!ok) fail(`${row.page} ${row.overlayId} test2 (stayed open): overlay closed unexpectedly after ${label}`)
+    return ok
+  }
+
+  const oneGesture = async (label, run) => {
+    const before = (await readOffsetAndPanelTop(client, row.overlayId)).offset
+    await run()
+    const after = (await readOffsetAndPanelTop(client, row.overlayId)).offset
+    const delta = round2(Math.abs(after - before))
+    await stillOpenAfter(label)
+    return delta
+  }
+
+  // Step 5 — the four open-state gestures, in the declared order.
+  const deltaTouchScrim = await oneGesture("touch on bare scrim", () =>
+    dispatchTouchDrag(client, { x: 195, yStart: scrimY + 100, yEnd: Math.max(4, scrimY - 100) }),
+  )
+  const deltaWheelScrim = await oneGesture("wheel on scrim", () => dispatchWheel(client, { x: 195, y: scrimY, deltaY: 400 }))
+  const deltaTouchPanel = await oneGesture("touch on panel", () => dispatchTouchDrag(client, { x: 195, yStart: panelY + 100, yEnd: panelY - 100 }))
+  const deltaWheelPanel = await oneGesture("wheel on panel", () => dispatchWheel(client, { x: 195, y: panelY, deltaY: 400 }))
+
+  const lockState = await readOverlayLockState(client, row.overlayId)
+
+  // Step 6 — close by a real click on the overlay's OWN close control
+  // (`[data-pk-sheet-close]` for a sheet, `[data-pk-dialog-cancel]` for a
+  // dialog — `dialog/1` renders no ✕ at all, D-19f), and record the final
+  // offset.
+  const closeSelector = `#${row.overlayId} [data-pk-sheet-close], #${row.overlayId} [data-pk-dialog-cancel]`
+  await clickCenterOf(client, closeSelector)
+  await pollUntil(async () => !(await isOverlayOpen(client, row.overlayId)))
+  const finalOffset = (await readOffsetAndPanelTop(client, null)).offset
+  const lockStateAfterClose = await readOverlayLockState(client, row.overlayId)
+
+  logFn(
+    `scroll lock ${row.page} ${row.overlayId}: start=${startingOffset} closed-controls touch=${touchClosedDelta} wheel=${wheelClosedDelta}; ` +
+      `open-state touchScrim=${deltaTouchScrim} wheelScrim=${deltaWheelScrim} touchPanel=${deltaTouchPanel} wheelPanel=${deltaWheelPanel}; ` +
+      `final=${finalOffset}; overscroll root=${lockState.rootOverscrollY} rows=${lockState.rowsOverscrollY}; bodyClass(open)="${lockState.bodyClass}"`,
+  )
+
+  // Test 1 — the document does not move: each open-state delta at most 1px.
+  for (const [name, delta] of [
+    ["touch on bare scrim", deltaTouchScrim],
+    ["wheel on scrim", deltaWheelScrim],
+    ["touch on panel", deltaTouchPanel],
+    ["wheel on panel", deltaWheelPanel],
+  ]) {
+    if (delta > 1) {
+      fail(`${row.page} ${row.overlayId} test1 (document does not move): ${name} moved the document by ${delta}px, expected at most 1px`)
+    }
+  }
+
+  // Test 3 — position is preserved: final offset == starting offset, from a
+  // NON-ZERO start. A zero starting offset makes this assertion vacuous
+  // (0 -> 0 proves nothing — it is what a broken lock would ALSO produce by
+  // accident) — fail the harness explicitly rather than let it pass.
+  if (startingOffset === 0) {
+    fail(`${row.page} ${row.overlayId} test3 (position preserved): starting offset was 0 — the preservation check is vacuous from a zero start`)
+  } else if (Math.abs(finalOffset - startingOffset) > 1) {
+    fail(
+      `${row.page} ${row.overlayId} test3 (position preserved): offset after close=${finalOffset}px, offset before open=${startingOffset}px, expected within 1px`,
+    )
+  }
+
+  // Test 4 — overscroll containment while open: the overlay root, and its
+  // `.pk-admin-sheet__rows` child when present (absent on a dialog — not
+  // asserted there), resolve to `contain` or `none`.
+  if (!["contain", "none"].includes(lockState.rootOverscrollY)) {
+    fail(`${row.page} ${row.overlayId} test4 (overscroll containment): overlay root resolved overscroll-behavior-y=${lockState.rootOverscrollY}, expected contain or none`)
+  }
+  if (lockState.rowsOverscrollY !== null && !["contain", "none"].includes(lockState.rowsOverscrollY)) {
+    fail(`${row.page} ${row.overlayId} test4 (overscroll containment): .pk-admin-sheet__rows resolved overscroll-behavior-y=${lockState.rowsOverscrollY}, expected contain or none`)
+  }
+
+  // Test 5 — the lock's own state is observable: present while open
+  // (already read into `lockState` above, before the close), absent after.
+  if (!lockState.hasLockClass) {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, open): <body> does not carry the lock class while the overlay is open (class="${lockState.bodyClass}")`)
+  }
+  if (!lockState.savedOffsetProp || lockState.savedOffsetProp === "") {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, open): the saved-offset custom property is empty while the overlay is open`)
+  }
+  if (lockStateAfterClose.hasLockClass) {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, closed): <body> still carries the lock class after close (class="${lockStateAfterClose.bodyClass}")`)
+  }
+  if (lockStateAfterClose.savedOffsetProp && lockStateAfterClose.savedOffsetProp !== "") {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, closed): the saved-offset custom property still resolves after close ("${lockStateAfterClose.savedOffsetProp}")`)
+  }
+
+  return "checked"
+}
+
+// Drives `SCROLL_LOCK_CALL_SITES` (plus any dynamically-appended rows) end
+// to end, enabling touch emulation for the duration and restoring it
+// afterwards without touching `setViewport` (which sets `mobile: false` for
+// every OTHER check in this file).
+async function checkOverlayScrollLock({ client, baseUrl, rows }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    for (const row of rows) {
+      const result = await checkOverlayScrollLockRow({ client, baseUrl, row, fail })
+      if (result === "not-openable") notOpenable.push({ page: row.page, overlayId: row.overlayId })
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  log(`overlay scroll-lock walk: attempted=${rows.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// ---------------------------------------------------------------------------
 // The tab bar (D-13b) — height, indicator, and the snackbar derivation.
 // ---------------------------------------------------------------------------
 async function measureTabBar({ client, baseUrl, width }) {
@@ -2681,6 +3047,45 @@ async function main() {
     }
     const sheetKeel = await checkSheetKeel({ client, baseUrl, rows: sheetKeelRows })
     if (sheetKeel.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- overlay scroll lock (plan 01.8.3-13, G-01.8.3-4a) ----
+    log("Measuring the overlay scroll lock — real touch/wheel gestures with a closed-sheet positive control...")
+    // The editor overlay + dialog rows (Task 1's own "one editor overlay"
+    // and "one dialog/1 instance" requirements): built here off a resolved
+    // real game id, same mechanism as `sheetKeelEditorUrl` above. Both are
+    // `dataIndependent: false` — `editor-lifecycle-sheet` only renders for a
+    // published/retired game (`lifecycle_action/1` returns `nil` for a
+    // draft), and the resolved id's status is not controlled here.
+    // `[phx-click="retire"], [phx-click="restore"]` covers both non-draft
+    // statuses uniformly. Neither step ever reaches `confirm-retire` — the
+    // walk stops at OPENING `editor-retire-dialog`/`editor-restore-dialog`'s
+    // shared root, never at its own commit control (destructive-path guard,
+    // matching this file's established convention).
+    const scrollLockRows = [...SCROLL_LOCK_CALL_SITES]
+    const scrollLockEditorUrl = await resolveEditorUrl(client, baseUrl)
+    if (scrollLockEditorUrl) {
+      scrollLockRows.push({
+        page: scrollLockEditorUrl,
+        overlayId: "editor-lifecycle-sheet",
+        dataIndependent: false,
+        steps: [{ kind: "click", selector: ".pk-editor-topbar__menu" }],
+      })
+      scrollLockRows.push({
+        page: scrollLockEditorUrl,
+        overlayId: "editor-retire-dialog",
+        dataIndependent: false,
+        steps: [
+          { kind: "click", selector: ".pk-editor-topbar__menu" },
+          { kind: "click", selector: '#editor-lifecycle-sheet [phx-click="retire"], #editor-lifecycle-sheet [phx-click="restore"]' },
+        ],
+      })
+    } else {
+      log("scroll lock: could not resolve an editor URL — skipping the editor sheet/dialog rows (is the dev catalog empty?)")
+    }
+    const scrollLock = await checkOverlayScrollLock({ client, baseUrl, rows: scrollLockRows })
+    if (scrollLock.fails.length > 0) {
       exitCode = 1
     }
   } finally {
