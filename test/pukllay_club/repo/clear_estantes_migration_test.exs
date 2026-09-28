@@ -18,8 +18,16 @@
 # database only — i.e. CI, always.
 #
 # Same guard `catalog_test.exs` already uses for its own migration require.
-# (`sections_backfill_test.exs` requires a migration too, but from inside
-# `setup` — a runtime warning, which `--warnings-as-errors` does not count.)
+# All three migration-requiring test files now carry this same guard —
+# `catalog_test.exs`, this file, and `sections_backfill_test.exs`.
+# `sections_backfill_test.exs` requires from within `setup`, so its
+# diagnostic lands after `Kernel.ParallelCompiler.require/2`'s window has
+# closed and `--warnings-as-errors` does not observe it — measured
+# 2026-09-28 on Elixir 1.19.5: fresh database, full suite, the warning
+# printed and the run still exited 0. It is guarded anyway, because that
+# exemption is an artefact of ExUnit's diagnostic window and of the file
+# being `async: false` — not a property to build on. Flipping that file
+# to `async: true` would move the same diagnostic inside the window.
 if !Code.ensure_loaded?(PukllayClub.Repo.Migrations.ClearEstantesAndAssignments) do
   Code.require_file(
     "priv/repo/migrations/20260923140000_clear_estantes_and_assignments.exs",
