@@ -236,33 +236,65 @@ export default {
         : this.panel?.querySelector("[data-pk-sheet-close]")
       initial?.focus()
     }
-    // Guarded on `document.activeElement === document.body` (plan
-    // 01.8.2-12 Task 3, found via CDP tracing while fixing the DOM-removal
-    // close path below): `ask-remove` closes THIS sheet and opens
-    // `confirm-remove-dialog` in the SAME server diff. LiveView mounts the
-    // new dialog hook (which focuses Cancelar in ITS OWN onOpen) BEFORE it
-    // destroys this sheet's hook — confirmed empirically by instrumenting
-    // both callbacks. An unconditional restore here would therefore run
-    // AFTER the dialog already claimed focus and silently steal it back to
-    // the row, failing D-19f's "Cancelar carries initial focus" for the
-    // EXACT case that matters most (a destructive-action handoff). Only
-    // restore when nothing else has claimed focus in the meantime — the
-    // browser's own removal-of-focused-element behaviour resets
-    // `document.activeElement` to `body` synchronously (confirmed the same
-    // way), so `body` reliably means "no other overlay's onOpen ran first".
+    // FIX (plan 01.8.3-14, G-01.8.3-4c): the guard that used to live here
+    // compared the active element against `document.body` — correct for
+    // exactly one of four cases below and silently wrong for another.
+    // Measured, twice (on the real sheet, and in isolation with no app
+    // code — see `.planning/debug/DEBUG-admin-sheet-modal-contract.md`): a
+    // focused element inside a subtree that gains `display: none` via a
+    // class toggle reads as STILL FOCUSED inside the SAME MutationObserver
+    // microtask this callback runs in, and settles to `body` only after
+    // two animation frames — whereas a DOM-removal close resets
+    // `document.activeElement` to `body` SYNCHRONOUSLY (the browser's own
+    // removal-of-focused-element behaviour). The four cases and their
+    // correct outcomes:
+    //   1. Class-toggle close (e.g. `add-game-sheet`'s stay-mounted
+    //      `open={...}`): the active element at this point is still this
+    //      sheet's own close control — inside THIS overlay's own root.
+    //      Restore.
+    //   2. DOM-removal close (`staff_live`'s `:if={@selected_staff}`
+    //      pattern, plan 01.8.2-12 Task 3's own case): the active element
+    //      is already `document.body` by the time this runs. Restore.
+    //   3. The sheet->dialog handoff (also plan 01.8.2-12 Task 3's case:
+    //      `ask-remove` closes THIS sheet and opens `confirm-remove-dialog`
+    //      in the SAME server diff): LiveView mounts the new dialog's hook
+    //      and runs ITS OWN `onOpen` — which focuses Cancelar — BEFORE
+    //      destroying this sheet's hook (confirmed empirically by
+    //      instrumenting both callbacks). The active element is Cancelar,
+    //      inside a DIFFERENT overlay's own root. Decline — an
+    //      unconditional restore here would steal focus back to the
+    //      invoking row, failing D-19f for the exact case that matters
+    //      most (a destructive-action handoff). Proven on every run by
+    //      `test/visual/admin_shell.mjs`'s `checkSheetFocusReturn` case 3.
+    //   4. A background control was focused before the close (the user
+    //      clicked away while the overlay was open): the active element is
+    //      outside this overlay entirely. Decline.
+    // The property that actually distinguishes "restore" from "decline" is
+    // therefore CONTAINMENT in this overlay's own root — has anything
+    // OUTSIDE it claimed focus? — not an equality against `body`, which
+    // only accidentally covered case 2. No animation-frame deferral is
+    // used or needed: all four cases resolve correctly from state
+    // available SYNCHRONOUSLY at this point, and a deferral would reopen
+    // the exact interleaving window (a later `onOpen` running before the
+    // deferred restore) this guard exists to close.
     this.onClose = () => {
       // G-01.8.3-4a: release the document scroll lock. Guarded on
       // `overlayLockHeld` so a double `onClose` (this instance's own flag,
       // same shape as `wasOpen`'s guard against a double focus-return)
-      // can never release twice.
+      // can never release twice. Runs unconditionally, before any of the
+      // focus-restore early returns below — the release must never sit
+      // behind them.
       if (this.overlayLockHeld) {
         releaseOverlayLock()
         this.overlayLockHeld = false
       }
-      if (this.lastFocused && document.contains(this.lastFocused) && document.activeElement === document.body) {
-        this.lastFocused.focus()
-      }
+
+      const toFocus = this.lastFocused
       this.lastFocused = null
+      if (!toFocus || !document.contains(toFocus)) return
+      const active = document.activeElement
+      if (active !== document.body && !this.el.contains(active)) return
+      toFocus.focus()
     }
 
     this.onKeydownTrap = (e) => {
