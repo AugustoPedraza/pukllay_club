@@ -2018,56 +2018,78 @@ async function checkSheetFocusReturn({ client, baseUrl }) {
     notOpenable.push({ name: "staff -> confirm-remove-dialog" })
     log(`NOT-OPENABLE: case3 (handoff baseline): could not invite a probe staff account via the real /admin/staff invite form`)
   } else {
-    await clickCenterOf(client, `#${probeRowId}`)
-    const sheetOpen = await pollUntil(() => isOverlayOpen(client, "staff-options-sheet"))
-    if (!sheetOpen) {
-      fail(`case3 (handoff baseline): staff-options-sheet never reached a resolved display other than 'none'`)
-    } else {
-      // Only OPENS the dialog — never the dialog's own commit control.
-      const handoff = await runOpenerSteps(client, [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }])
-      if (!handoff.openable) {
-        fail(`case3 (handoff baseline): handoff selector never appeared (${handoff.missingSelector})`)
+    // WR-02 (01.8.3 review-fix round 1): the guarded walk below is wrapped
+    // in try/finally so the throwaway probe account is ALWAYS removed, even
+    // when the walk throws (`clickCenterOf` throws when its target selector
+    // never appears — every step between here and cleanup can throw). The
+    // single most likely trigger for exactly this throw is a real
+    // regression in the dialog/sheet markup this case exists to test, which
+    // is also the failure mode most likely to disable a non-guarded
+    // cleanup — leaking `probeEmail` into the dev database permanently and
+    // poisoning the staffCountBefore/staffCountAfter invariant below on
+    // every SUBSEQUENT run, not just this one.
+    try {
+      await clickCenterOf(client, `#${probeRowId}`)
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "staff-options-sheet"))
+      if (!sheetOpen) {
+        fail(`case3 (handoff baseline): staff-options-sheet never reached a resolved display other than 'none'`)
       } else {
-        const dialogOpen = await pollUntil(() => isOverlayOpen(client, "confirm-remove-dialog"))
-        if (!dialogOpen) {
-          fail(`case3 (handoff baseline): confirm-remove-dialog never reached a resolved display other than 'none' after the handoff`)
+        // Only OPENS the dialog — never the dialog's own commit control.
+        const handoff = await runOpenerSteps(client, [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }])
+        if (!handoff.openable) {
+          fail(`case3 (handoff baseline): handoff selector never appeared (${handoff.missingSelector})`)
         } else {
-          const after = await readActiveElement(client, { dialogId: "confirm-remove-dialog" })
-          log(
-            `focus return case3 (handoff baseline): actual=${after.tag || "(none)"}#${after.id || ""} insideDialog=${after.insideDialog} isDialogCancel=${after.isDialogCancel}`,
-          )
-          if (!after.insideDialog || !after.isDialogCancel) {
-            fail(
-              `case3 (handoff baseline): active element after the handoff is ${after.tag || "(none)"}#${after.id || "(none)"} (insideDialog=${after.insideDialog}), expected confirm-remove-dialog's own cancel control`,
+          const dialogOpen = await pollUntil(() => isOverlayOpen(client, "confirm-remove-dialog"))
+          if (!dialogOpen) {
+            fail(`case3 (handoff baseline): confirm-remove-dialog never reached a resolved display other than 'none' after the handoff`)
+          } else {
+            const after = await readActiveElement(client, { dialogId: "confirm-remove-dialog" })
+            log(
+              `focus return case3 (handoff baseline): actual=${after.tag || "(none)"}#${after.id || ""} insideDialog=${after.insideDialog} isDialogCancel=${after.isDialogCancel}`,
             )
+            if (!after.insideDialog || !after.isDialogCancel) {
+              fail(
+                `case3 (handoff baseline): active element after the handoff is ${after.tag || "(none)"}#${after.id || "(none)"} (insideDialog=${after.insideDialog}), expected confirm-remove-dialog's own cancel control`,
+              )
+            }
+            // Cancel, never confirm — the GUARDED walk leaves no residual open
+            // overlay and never reaches the destructive commit control.
+            await clickCenterOf(client, "#confirm-remove-dialog [data-pk-dialog-cancel]")
+            await pollUntil(async () => !(await isOverlayOpen(client, "confirm-remove-dialog")))
           }
-          // Cancel, never confirm — the GUARDED walk leaves no residual open
-          // overlay and never reaches the destructive commit control.
-          await clickCenterOf(client, "#confirm-remove-dialog [data-pk-dialog-cancel]")
-          await pollUntil(async () => !(await isOverlayOpen(client, "confirm-remove-dialog")))
         }
       }
+    } finally {
+      // Cleanup — a separate phase from the guarded walk above, removing ONLY
+      // the throwaway probe account this check itself just created (never a
+      // pre-existing staff member): re-open the SAME row, ask to remove, and
+      // this time confirm — verbatim mirror of
+      // `measureSnackbarDerivesFromTabBar`'s own established cleanup. Wrapped
+      // in its OWN try/catch: a `finally` block that itself throws REPLACES
+      // (masks) whatever real error the guarded walk above may have thrown —
+      // exactly the outcome this fix exists to prevent — so a cleanup
+      // failure is logged here, never rethrown.
+      try {
+        await navigate(client, `${baseUrl}/admin/staff`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)})?.click()`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.querySelector('#staff-options-sheet [phx-click="ask-remove"]')?.click()`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.querySelector('#confirm-remove-dialog .pk-admin-action--peligro')?.click()`)
+        await new Promise((r) => setTimeout(r, 500))
+        const gone = await pollUntil(async () => !(await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)}) !== null`)))
+        log(
+          gone
+            ? `cleanup: probe staff account ${probeEmail} removed cleanly`
+            : `cleanup: could not confirm removal of ${probeEmail} — check the dev DB manually`,
+        )
+      } catch (cleanupErr) {
+        log(
+          `cleanup: threw while removing probe staff account ${probeEmail} — check the dev DB manually (${cleanupErr && cleanupErr.message ? cleanupErr.message : cleanupErr})`,
+        )
+      }
     }
-
-    // Cleanup — a separate phase from the guarded walk above, removing ONLY
-    // the throwaway probe account this check itself just created (never a
-    // pre-existing staff member): re-open the SAME row, ask to remove, and
-    // this time confirm — verbatim mirror of
-    // `measureSnackbarDerivesFromTabBar`'s own established cleanup.
-    await navigate(client, `${baseUrl}/admin/staff`)
-    await new Promise((r) => setTimeout(r, 250))
-    await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)})?.click()`)
-    await new Promise((r) => setTimeout(r, 250))
-    await evalJS(client, `document.querySelector('#staff-options-sheet [phx-click="ask-remove"]')?.click()`)
-    await new Promise((r) => setTimeout(r, 250))
-    await evalJS(client, `document.querySelector('#confirm-remove-dialog .pk-admin-action--peligro')?.click()`)
-    await new Promise((r) => setTimeout(r, 500))
-    const gone = await pollUntil(async () => !(await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)}) !== null`)))
-    log(
-      gone
-        ? `cleanup: probe staff account ${probeEmail} removed cleanly`
-        : `cleanup: could not confirm removal of ${probeEmail} — check the dev DB manually`,
-    )
   }
 
   await navigate(client, `${baseUrl}/admin/staff`)
