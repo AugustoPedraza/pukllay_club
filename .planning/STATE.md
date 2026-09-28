@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
-status: executing
-stopped_at: Completed 01.8.3-13-PLAN.md
-last_updated: "2026-09-28T05:00:27.754Z"
+status: verifying
+stopped_at: Completed 01.8.3-14-PLAN.md (last plan in phase 01.8.3's gap-closure round)
+last_updated: "2026-09-28T05:26:53.022Z"
 last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 4381c4c71f638a543a133ddf848a49e8717005f5
+state_head: 831b6d520618d7542abf4a967af6b43be5c9fb91
 progress:
   total_phases: 8
   completed_phases: 4
   total_plans: 63
-  completed_plans: 62
+  completed_plans: 63
 ---
 
 Total Phases: 9
@@ -35,7 +35,7 @@ ahead of Phase 2, which keeps its number and scope.
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
 Plan: 14 of 14
-Status: Ready to execute
+Status: Phase complete — ready for verification
 
 Note (2026-09-27, this plan's executor): this field drifted stale across
 plans 06-10 (it read "Plan: 4 of 14" immediately before this correction,
@@ -178,6 +178,7 @@ covered screens 01.8.3 will change.
 | Phase 01.8.3 P11 | 65min | 2 tasks | 3 files |
 | Phase 01.8.3 P12 | 50min | 3 tasks | 4 files |
 | Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
+| Phase 01.8.3 P14 | ~55min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -362,6 +363,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-11: pinned caption's sticky offset made dynamic (D-20a) -- admin_list.js writes an effective reservation (0 or the row's full height) to --pk-juegos-pinned-h in lockstep with the search row's hide attribute; growth deferred to the row's own transitionend with a computed-duration fallback; closes G-01.8.3-2d and G-01.8.3-3's primary cause.
 - [Phase 01.8.3]: 01.8.3-12: rest-air chosen — first section's --pt: 14px override deleted; header box now reserves the full 44px band, closing G-01.8.3-3's overhang with no pin-moment jitter.
 - [Phase 01.8.3]: 01.8.3-13: Reference-counted (not boolean) document scroll lock at the shared AdminSheet component closes G-01.8.3-4a; fixed-body-plus-saved-offset CSS lock chosen over the repo's two bare overflow:hidden precedents for iOS Safari coverage + position preservation. — Proven necessary by a real sheet->dialog handoff (LiveView mounts the second overlay's hook and acquires before the first's destroyed()/release runs); a boolean toggle would unlock mid-handoff.
+- [Phase 01.8.3]: 01.8.3-14: onClose's focus-restore condition rewritten from an equality against document.body to containment against the overlay's own root, closing G-01.8.3-4c without disturbing plan 01.8.2-12's sheet->dialog handoff protection or plan 13's scroll lock
 
 ### Pending Todos
 
@@ -507,8 +509,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-28T05:00:27.578Z
-Stopped at: Completed 01.8.3-13-PLAN.md
+Last session: 2026-09-28T05:26:52.830Z
+Stopped at: Completed 01.8.3-14-PLAN.md (last plan in phase 01.8.3's gap-closure round)
 Resume file: None
 
 ## Operator Next Steps
