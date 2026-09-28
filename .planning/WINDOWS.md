@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 7
 waived_count: 1
-fixed_count: 27
+fixed_count: 28
 total_count: 36
-last_updated: 2026-09-28T03:04:55.303Z
+last_updated: 2026-09-28T10:35:44.366Z
 ---
 
 # Broken Windows Ledger
@@ -49,7 +49,7 @@ last_updated: 2026-09-28T03:04:55.303Z
 | 32 | 01.8.2 | deviation | assets/css/admin/screens.css |  | pk-admin-page-title's margin:0 defeats space-y-6's intended 24px page-head-to-body gap (measured 0px on both live admin screens, D3) — see deferred-items.md plan 12 | open |  | 2026-09-23T18:28:57.503Z |  |
 | 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
 | 34 | 01.8.3 | deviation | .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md |  | Task 2's acceptance criteria expects grep -c "Crear «" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required. | open |  | 2026-09-25T00:11:01.471Z |  |
-| 35 | 01.8.3 | stub | assets/css/admin/components.css |  | Direct-child sheet-row compensation does not reach list_row elements nested inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet/editor-shelf-sheet's own estante-list state) — they render ink at 32px instead of 16px, a narrower sub-case of G-01.8.3-4b left for a future plan | open |  | 2026-09-27T22:23:24.257Z |  |
+| 35 | 01.8.3 | stub | assets/css/admin/components.css |  | REGRESSION (not merely a stub left for later): plan 01.8.3-10's direct-child-only sheet-row compensation broke list_row elements nested inside an unpadded wrapper div on four live containers — #donde-va-estante-list, #donde-va-results (donde-va-sheet), #que-va-aca-unplaced, #que-va-aca-results (que-va-aca-sheet), plus editor-shelf-sheet's own placement_sheet/1 instance — rendering ink at 32px instead of 16px; these rows were correctly inset BEFORE plan 10 (the body carried zero horizontal padding, so each row self-inset via its own padding alone). checkSheetKeel's own guard could not catch its own regression: Test 2 compared only the MINIMUM leftmost candidate (structurally blind to over-inset, which can never be the minimum) and Test 3 excluded any element matching the full-bleed CSS class regardless of real DOM depth (hiding compensated vs uncompensated rows alike). Fixed in review-fix round 1: compensation selector generalized to a descendant combinator (reaches any depth, safe since no intermediate wrapper carries its own padding); new Test 6 in admin_shell.mjs asserts EVERY full-bleed descendant's own measured geometry against the panel/header, regardless of bodyShape or nesting depth — negative-tested RED against the unfixed CSS (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-red.txt) before the fix landed, GREEN after (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-green.txt). | fixed |  | 2026-09-27T22:23:24.257Z | 2026-09-28T10:35:44.366Z |
 | 36 | 01.8.3 | deviation | assets/js/hooks/admin_list.js |  | Intermittent flake (not a plan-12 defect): the pinned-offset scroll-up differential control (test4/test5 in admin_shell.mjs) leaves bandTop stuck at 0 instead of settling to 60 after scroll-up in roughly 2 of 4 local runs. This is a timing race in admin_list.js's growth-deferral mechanism introduced by plan 01.8.3-11 (transitionend-based reservation growth), confirmed pre-existing relative to plan 12 via a git-stash A/B against unmodified source. Not fixed here per explicit human decision — left open for a future plan. (Recorded as kind=deviation; the ledger's fixed kind vocabulary has no 'flake' entry.) | open |  | 2026-09-28T03:04:55.303Z |  |
 
 ````json
@@ -474,11 +474,11 @@ last_updated: 2026-09-28T03:04:55.303Z
     "phase": "01.8.3",
     "file": "assets/css/admin/components.css",
     "line": null,
-    "description": "Direct-child sheet-row compensation does not reach list_row elements nested inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet/editor-shelf-sheet's own estante-list state) — they render ink at 32px instead of 16px, a narrower sub-case of G-01.8.3-4b left for a future plan",
-    "status": "open",
+    "description": "REGRESSION (not merely a stub left for later): plan 01.8.3-10's direct-child-only sheet-row compensation broke list_row elements nested inside an unpadded wrapper div on four live containers — #donde-va-estante-list, #donde-va-results (donde-va-sheet), #que-va-aca-unplaced, #que-va-aca-results (que-va-aca-sheet), plus editor-shelf-sheet's own placement_sheet/1 instance — rendering ink at 32px instead of 16px; these rows were correctly inset BEFORE plan 10 (the body carried zero horizontal padding, so each row self-inset via its own padding alone). checkSheetKeel's own guard could not catch its own regression: Test 2 compared only the MINIMUM leftmost candidate (structurally blind to over-inset, which can never be the minimum) and Test 3 excluded any element matching the full-bleed CSS class regardless of real DOM depth (hiding compensated vs uncompensated rows alike). Fixed in review-fix round 1: compensation selector generalized to a descendant combinator (reaches any depth, safe since no intermediate wrapper carries its own padding); new Test 6 in admin_shell.mjs asserts EVERY full-bleed descendant's own measured geometry against the panel/header, regardless of bodyShape or nesting depth — negative-tested RED against the unfixed CSS (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-red.txt) before the fix landed, GREEN after (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-green.txt).",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-09-27T22:23:24.257Z",
-    "resolved_at": null,
+    "resolved_at": "2026-09-28T10:35:44.366Z",
     "milestone": "v1.1"
   },
   {

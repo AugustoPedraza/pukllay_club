@@ -794,15 +794,28 @@ body.pk-admin-overlay-open {
   overscroll-behavior: contain;
 }
 
-/* G-01.8.3-4b: row-shaped sheet children read correctly TODAY by self-
-   insetting 16px against an unpadded body (A4's own declared anatomy is
-   "48px, full-bleed, commit-first" — components.css above). With the body
-   now padded, they would land at 32 without this compensation. Direct-
-   child combinator only — a row nested inside some future padded sub-
-   wrapper must not be double-compensated. The margin magnitude is a
-   `calc()` negation of the SAME property `.pk-admin-sheet__rows` reads
-   above, so the two can never drift to different numbers.
-   The `width` override is EXPLICIT (Rule 1 — found via this task's own
+/* G-01.8.3-4b / WR-01 (01.8.3 review-fix round 1): row-shaped sheet
+   children read correctly TODAY by self-insetting 16px against an
+   unpadded body (A4's own declared anatomy is "48px, full-bleed,
+   commit-first" — components.css above). With the body now padded, they
+   would land at 32 without this compensation.
+   DESCENDANT combinator, not direct-child: plan 10 originally shipped this
+   as `.pk-admin-sheet__rows > .pk-admin-row` (direct-child only), which
+   left `placement_sheet/1`'s own «¿Dónde va?»/«¿Qué juego va acá?» sheets
+   regressed — their `.list_row`s render inside a plain, unstyled wrapper
+   `<div>` (`#donde-va-estante-list`, `#donde-va-results`,
+   `#que-va-aca-unplaced`, `#que-va-aca-results`), making them GRANDchildren
+   of `.pk-admin-sheet__rows`, not direct children, so they landed at 32px
+   uncompensated. The descendant form reaches any depth. This is safe
+   against double-compensation ONLY because none of those wrapper `<div>`s
+   (nor any other intermediate wrapper in the sheet inventory, audited
+   2026-09-28 against every `sheet/1` call site) carries any horizontal
+   padding of its own — if a future wrapper needs its own padding, it must
+   NOT also fall inside this selector's reach without re-auditing this
+   comment's premise. The margin magnitude is a `calc()` negation of the
+   SAME property `.pk-admin-sheet__rows` reads above, so the two can never
+   drift to different numbers.
+   The `width` override is EXPLICIT (Rule 1 — found via plan 10's own
    GREEN probe run), not `auto`: `.pk-admin-row` is `display: flex`
    (block-level, where `width: auto` DOES auto-expand to fill the space a
    negative margin opens up) but `.pk-admin-action--a4` inherits
@@ -813,8 +826,8 @@ body.pk-admin-overlay-open {
    (358px); `calc(100% + 2 * var(--pk-admin-keel-inset))` adds back exactly
    what the negative margins opened up (358 + 32 = 390 = the panel's own
    width) regardless of either element's display type. */
-.pk-admin-sheet__rows > .pk-admin-row,
-.pk-admin-sheet__rows > .pk-admin-action--a4 {
+.pk-admin-sheet__rows .pk-admin-row,
+.pk-admin-sheet__rows .pk-admin-action--a4 {
   width: calc(100% + 2 * var(--pk-admin-keel-inset));
   margin-left: calc(-1 * var(--pk-admin-keel-inset));
   margin-right: calc(-1 * var(--pk-admin-keel-inset));

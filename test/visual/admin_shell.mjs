@@ -794,11 +794,16 @@ const SHEET_KEEL_CALL_SITES = [
     // 1 placed, so almost any other real game name resolves to an
     // unplaced copy — data-dependent since it still needs a search hit.
     // `bodyShape: "mixed"`: the search field is a direct child (governed
-    // by Task 2's `.pk-donde-va-search` fix) but its estante-list rows
-    // render inside a plain, unpadded wrapper div (`#donde-va-estante-
-    // list`) — a GRANDCHILD of `.pk-admin-sheet__rows`, not a direct
-    // child, so Task 2's direct-child-only compensation does not reach
-    // them. See this sweep's own recorded finding below.
+    // by Task 2's `.pk-donde-va-search` fix); its estante-list rows render
+    // inside a plain, unpadded wrapper div (`#donde-va-estante-list`) — a
+    // GRANDCHILD of `.pk-admin-sheet__rows`, not a direct child. Plan 10's
+    // original direct-child-only compensation did not reach them (WR-01,
+    // 01.8.3 review-fix round 1 — regression, recorded RED at
+    // `evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-red.txt`); the
+    // compensation selector in components.css is now a descendant
+    // selector, and Test 6 below asserts every full-bleed row's own
+    // geometry (not just the leftmost candidate or a direct-child-only
+    // exclusion), so this exact shape of regression cannot recur silently.
     page: "/admin/estantes",
     overlayId: "donde-va-sheet",
     dataIndependent: false,
@@ -956,6 +961,29 @@ async function measureSheetKeel(client, overlayId) {
       const fullBleedEl = [...nodeSet].find((el) => el.matches(FULL_BLEED_SELECTOR));
       const fullBleedInk = fullBleedEl ? textInk(fullBleedEl) : null;
 
+      // Test 6 (WR-01, 01.8.3 review-fix round 1): EVERY full-bleed
+      // descendant, not just the first one .find() returns — nodeSet is
+      // already a full-subtree collection (body.querySelectorAll(FOCUSABLE_
+      // SELECTOR) has no depth limit; a full-bleed row is always itself
+      // focusable, whether it is a direct child of body or nested inside
+      // an unstyled wrapper div — a GRANDCHILD). Test 5 only checked the
+      // first such element and only for a "row"-shaped body; that blind spot
+      // is exactly what let plan 10's own direct-child-only CSS compensation
+      // regress placement_sheet/1's nested rows (32px, not 16px) without
+      // this sweep noticing — this row's OWN bodyShape is "mixed", not
+      // "row", so it never reached Test 5 at all.
+      const fullBleedRows = [...nodeSet]
+        .filter((el) => el.matches(FULL_BLEED_SELECTOR))
+        .map((el) => {
+          const ink = textInk(el);
+          return {
+            tag: el.tagName.toLowerCase(),
+            id: el.id || null,
+            box: absBox(el),
+            inkLeft: ink ? round(ink.left) : null,
+          };
+        });
+
       return {
         found: true,
         panelBox,
@@ -969,6 +997,7 @@ async function measureSheetKeel(client, overlayId) {
         leftmost: leftmost ? { left: round(leftmost.left), tag: leftmost.tag, id: leftmost.id, kind: leftmost.kind } : null,
         fullBleedBox: fullBleedEl ? absBox(fullBleedEl) : null,
         fullBleedInkLeft: fullBleedInk ? round(fullBleedInk.left) : null,
+        fullBleedRows,
       };
     })())
   `,
@@ -1117,6 +1146,37 @@ async function checkSheetKeel({ client, baseUrl, rows }) {
             `${row.page} ${row.overlayId} test5 (ink on header axis): row/action ink left=${m.fullBleedInkLeft}px header content edge left=${m.headerEdges.left}px, expected within 0.5px`,
           )
         }
+      }
+    }
+
+    // Test 6 (WR-01, 01.8.3 review-fix round 1) — EVERY full-bleed
+    // descendant reaches the panel edge-to-edge and aligns its own ink with
+    // the header axis, however deeply nested, and regardless of `bodyShape`
+    // (unlike Test 5, which only ran for `bodyShape === "row"` and only
+    // checked the first full-bleed element found). This is what Test 2 and
+    // Test 3 both structurally cannot catch: Test 2 compares only the
+    // MINIMUM leftmost candidate against the header edge, so an over-inset
+    // descendant (sitting further RIGHT than 16px, never the minimum) is
+    // invisible to it; Test 3 explicitly EXCLUDES every full-bleed element
+    // by class match, regardless of whether it is a direct child that
+    // received plan 10's compensation or a grandchild that did not. Test 6
+    // measures each full-bleed row's own real geometry against the panel
+    // and header directly, so a full-bleed row landing at 32px/48px instead
+    // of 16px (the exact shape of the WR-01 regression) fails here even
+    // though it is invisible to Tests 2 and 3.
+    for (const fb of m.fullBleedRows) {
+      const fbName = `<${fb.tag}${fb.id ? "#" + fb.id : ""}>`
+      if (Math.abs(fb.box.left - m.panelBox.left) > 0.5 || Math.abs(fb.box.right - m.panelBox.right) > 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test6 (every full-bleed row reaches the panel edge): ${fbName} box=[${fb.box.left},${fb.box.right}] vs panel=[${m.panelBox.left},${m.panelBox.right}], expected edge-to-edge within 0.5px`,
+        )
+      }
+      if (fb.inkLeft == null || m.headerEdges.left == null) {
+        fail(`${row.page} ${row.overlayId} test6: could not measure ${fbName}'s own ink (${fb.inkLeft}) or the header content edge (${m.headerEdges.left})`)
+      } else if (Math.abs(fb.inkLeft - m.headerEdges.left) > 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test6 (every full-bleed row's ink on header axis): ${fbName} ink left=${fb.inkLeft}px header content edge left=${m.headerEdges.left}px, expected within 0.5px`,
+        )
       }
     }
 
