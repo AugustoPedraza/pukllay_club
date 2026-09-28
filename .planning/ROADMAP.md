@@ -34,7 +34,7 @@ numbers and their scope; nothing from them is pulled forward.
 - [x] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text (completed 2026-09-12)
 - [x] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3) (completed 2026-09-16)
 - [ ] **Phase 01.8.2: Admin UI/UX Redesign** - Implement sketches 059–065 across the staff admin: in-shelf position backend, admin shell, Estantes as one page, one save bar, one action system, sheets (inserted 2026-09-16)
-- [ ] **Phase 01.8.3: Admin Screen-by-Screen Refinement** - Close the UI gaps raised by 01.8.2's UAT one admin screen at a time: main-menu screens drop their back row and page title, the Juegos search cluster becomes a `+` that opens a bottom sheet, one shared page width across bar and body, opaque pinned section captions, and the list/section/facet refinements (inserted 2026-09-24)
+- [x] **Phase 01.8.3: Admin Screen-by-Screen Refinement** - Close the UI gaps raised by 01.8.2's UAT one admin screen at a time: main-menu screens drop their back row and page title, the Juegos search cluster becomes a `+` that opens a bottom sheet, one shared page width across bar and body, opaque pinned section captions, and the list/section/facet refinements (inserted 2026-09-24) (completed 2026-09-28)
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
 
@@ -273,7 +273,7 @@ the page bar and back control its expectation names (D-05).
 **Requirements**: Closes UAT gaps G-01.8.2-3 (major), G-01.8.2-4 (minor), G-01.8.2-7 (cosmetic);
 unblocks the 19 outstanding 01.8.2 UAT checkpoints.
 **Depends on:** Phase 01.8.2
-**Plans:** 14/14 plans executed (5/5 original executed; 2 gap-closure plans added 2026-09-25 for `G-01.8.3-2a` / `G-01.8.3-2b`; 7 gap-closure plans added 2026-09-27 for the seven diagnosed gaps of the developer's 2026-09-27 UAT walk)
+**Plans:** 14/14 plans complete
 
 Plans:
 **Wave 1**
