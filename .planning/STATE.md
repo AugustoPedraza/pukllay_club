@@ -48,7 +48,7 @@ SUMMARY counts on a decimal phase number). Corrected by hand per that
 note's own recovery path ("inspect commits, write SUMMARY.md, then update
 STATE/ROADMAP manually") — 11 summaries exist on disk
 (01.8.3-01 through 01.8.3-11), 14 plans total, so 12 is next.
-Last activity: 2026-09-28 — Phase 01.8.3 complete, transitioned to Phase 01.8.2
+Last activity: 2026-09-28 - Completed quick task 260928-og0: guard the unguarded Code.require_file in sections_backfill_test.exs
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -431,6 +431,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 260928-og0 | Guarded the `CreateSections` require in `sections_backfill_test.exs`'s setup so a fresh-database run emits zero compiler warnings (RED 1 -> GREEN 0, full suite 1878 tests 0 failures); corrected the now-disproven exemption note in `clear_estantes_migration_test.exs`. Latent fix — did NOT cause or fix the PR #72 CI failure (that was three `mint 1.10.1` CVEs, resolved separately in 1311b0e8) | 2026-09-28 | 68b7b1ff | complete | [260928-og0-guard-the-unguarded-code-require-file-in](./quick/260928-og0-guard-the-unguarded-code-require-file-in/) |
 | 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
 | 260912-im6 | Renamed user-facing "catálogo" copy to "ludoteca" (404 page, catalog index title/heading/error states, site-level SEO description) — Rioplatense voseo tone, closing a split where the game-detail breadcrumb already said "Ludoteca"; no code identifiers touched | 2026-09-12 | 68b8960 | complete | [260912-im6-rename-user-facing-cat-logo-copy-to-ludo](./quick/260912-im6-rename-user-facing-cat-logo-copy-to-ludo/) |
 | 260912-mxq | Close out 13 diagnosed G-01.x debug sessions (12 resolved, G-01-7 still open) | 2026-09-12 | 01ef0eb | — | .planning/quick/260912-mxq-close-out-the-13-diagnosed-g-01-x-debug-sessions-in-planning |
