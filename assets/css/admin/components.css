@@ -632,10 +632,43 @@
   margin: 0;
   z-index: 75;
   display: none;
+  /* G-01.8.3-4a: a touch at this root's own scroll boundary (the scrim, or
+     the panel where its own rows are not yet scrollable) must not chain out
+     to the document behind it. Proven in isolation: chaining moved the
+     document 400px with the default `auto` and 0px with `contain`. Latent
+     today — every admin sheet measures zero scrollable rows against the
+     85vh cap (717.4px) — and arms itself the first time a sheet's content
+     passes that cap. */
+  overscroll-behavior: contain;
 }
 
 .pk-admin-overlay-root.pk-admin-overlay--open {
   display: block;
+}
+
+/* G-01.8.3-4a: the document lock for an open sheet or dialog. Superset of
+   this repo's own two working precedents — `body.pk-drawer-open`
+   (app.css:3267, toggled by layouts.ex's `.NavDrawerFocus`) and
+   `body.pk-sheet-open` (app.css:1776, toggled by game_preview.ex) — both of
+   which are a bare `overflow: hidden`. That alone preserves scroll position
+   for free (the offset never changes) but is known NOT to stop touch scroll
+   on iOS Safari when applied to `<body>` alone. A fixed body with no offset
+   holds on both engines but jumps the user to the top. This rule is the
+   fixed body PLUS the negated saved-offset custom property, which is what
+   holds on both platforms AND preserves position: `admin_sheet.js`'s
+   acquire step reads the document's live scroll offset once (module-level,
+   reference-counted — see that file's own header comment) and writes it
+   here as `--pk-admin-overlay-scroll-offset`; release restores it. The
+   `0px` fallback degrades this rule to a top-of-document lock rather than
+   an invalid declaration if the property is ever absent. */
+body.pk-admin-overlay-open {
+  position: fixed;
+  top: calc(-1 * var(--pk-admin-overlay-scroll-offset, 0px));
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 /* 38% scrim per 01.8.2-BENCHMARK.md's "Bottom sheet"/"Confirmation" rows. */
@@ -748,10 +781,17 @@
      `overflow-y: auto`, which makes the OTHER axis compute to `auto` too,
      and the compensating negative inline margins below would otherwise be
      able to produce scrollable inline-end overflow — a horizontal
-     scrollbar inside the sheet. Do NOT add `overscroll-behavior` here —
-     that belongs to G-01.8.3-4a (plan 13); adding it now would make that
-     gap's own guard pass before its fix lands. */
+     scrollbar inside the sheet. */
   overflow-x: hidden;
+  /* G-01.8.3-4a (plan 13): a touch at this scroller's OWN vertical boundary
+     must not chain out to the document behind it once a sheet's content
+     passes the 85vh cap and its rows actually become scrollable. Proven in
+     isolation (chaining moved the document 400px with `auto`, 0px with
+     `contain`) — latent today (every admin sheet measures zero scrollable
+     rows against the cap), not active, but part of the same change as the
+     overlay root's own `overscroll-behavior` above and the body lock rule
+     below, per the gap's own `missing:` list. */
+  overscroll-behavior: contain;
 }
 
 /* G-01.8.3-4b: row-shaped sheet children read correctly TODAY by self-
