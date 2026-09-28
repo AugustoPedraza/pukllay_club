@@ -709,6 +709,1403 @@ async function checkOverlayCoversViewport({ client, baseUrl }) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.3-10 — G-01.8.3-4b: the sheet's BODY must share its own HEADER's
+// horizontal keel. `.pk-admin-sheet__header` declares `padding: 0 16px 8px`;
+// its sibling `.pk-admin-sheet__rows` (wrapping the default slot) declares
+// only vertical padding — the sheet's keel is delegated IMPLICITLY to
+// whatever the caller renders. A form-shaped body (no self-insetting child
+// at its root) renders at x=0; a row-shaped body (`.pk-admin-row`/
+// `.pk-admin-action--a4` at its root) self-insets 16px and reads correctly
+// today, by design (A4's own anatomy is "48px, full-bleed, commit-first").
+//
+// Reuses `runOpenerSteps`/`isOverlayOpen`/`setViewport`/`navigate`/
+// `pollUntil` from the G-01.8.3-2b overlay-coverage walk above — this is not
+// a second opener mechanism.
+// ---------------------------------------------------------------------------
+
+// Same row shape as `OVERLAY_CALL_SITES` plus `bodyShape` ('form' | 'row' |
+// 'mixed') — which of Task 2's two governing declarations this call site's
+// body falls under ('mixed' names a body this plan's fix does not fully
+// reach — see `donde-va-sheet` below). `staff-options-sheet` requires a
+// staff-role user other than the operator (this task's own precondition):
+// `phx-click` is only rendered on a row when `user.role == :staff`
+// (`staff_live/index.ex`), so `[phx-click]` is present ONLY for such rows —
+// if the dev DB has none, the selector never appears and the walk correctly
+// reports NOT-OPENABLE (dataIndependent: false) rather than a false FAIL or
+// a silent skip.
+//
+// Task 3 (the sweep) added `donde-va-sheet` below and a dynamically-
+// resolved editor sheet (built in `main()`, since its URL is a real game
+// id resolved off `/admin/juegos`, not a static route). Destructive events
+// this whole table's steps must NEVER reach, taken from the templates read
+// for this sweep: `add-game` (submits a game), `confirm-delete`/`confirm-
+// quitar`/`confirm-remove` (deletes a shelf / un-places a copy / removes
+// staff), `donde-va-commit` (commits a placement), `choice-select` (D-30:
+// choosing IN a `.pk-editor-opt` sheet commits and closes immediately —
+// no row inside an opened editor sheet is ever clicked here), and
+// `confirm-discard`/`confirm-retire`. Every row below stops at OPENING its
+// sheet.
+const SHEET_KEEL_CALL_SITES = [
+  {
+    page: "/admin/juegos",
+    overlayId: "add-game-sheet",
+    dataIndependent: true,
+    bodyShape: "form",
+    steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+  {
+    // `open-new-shelf` renders unconditionally in the header actions
+    // regardless of shelf count — data-independent (mirrors
+    // `OVERLAY_CALL_SITES`'s own row for this same opener).
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-name-sheet",
+    dataIndependent: true,
+    bodyShape: "form",
+    steps: [{ kind: "click", selector: '[phx-click="open-new-shelf"]' }],
+  },
+  {
+    // Requires at least one real shelf row in `#administrar-rows` — data-
+    // dependent (this task's own precondition).
+    page: "/admin/estantes/administrar",
+    overlayId: "shelf-options-sheet",
+    dataIndependent: false,
+    bodyShape: "row",
+    steps: [{ kind: "click", selector: "#administrar-rows .pk-admin-row" }],
+  },
+  {
+    // Requires a staff-role user other than the operator — see this
+    // table's own header comment. `#staff-list .pk-admin-row[phx-click]`
+    // matches only a row that actually renders the attribute (staff role),
+    // never the operator's own owner-role row, which renders no
+    // `phx-click` at all.
+    page: "/admin/staff",
+    overlayId: "staff-options-sheet",
+    dataIndependent: false,
+    bodyShape: "row",
+    steps: [{ kind: "click", selector: "#staff-list .pk-admin-row[phx-click]" }],
+  },
+  {
+    // Task 3 — `placement_sheet/1`'s «¿Dónde va?», the `.pk-donde-va-search`
+    // change's own call site. `pick-copy` on an UNPLACED copy opens THIS
+    // sheet (`estante_live/index.ex`'s `open_donde_va/2`) rather than
+    // `cover-options-sheet` (which needs an already-PLACED copy — see
+    // `OVERLAY_CALL_SITES`'s own comment for why that row searches
+    // "carcassonne" specifically). The dev catalog has 435 copies and only
+    // 1 placed, so almost any other real game name resolves to an
+    // unplaced copy — data-dependent since it still needs a search hit.
+    // `bodyShape: "mixed"`: the search field is a direct child (governed
+    // by Task 2's `.pk-donde-va-search` fix); its estante-list rows render
+    // inside a plain, unpadded wrapper div (`#donde-va-estante-list`) — a
+    // GRANDCHILD of `.pk-admin-sheet__rows`, not a direct child. Plan 10's
+    // original direct-child-only compensation did not reach them (WR-01,
+    // 01.8.3 review-fix round 1 — regression, recorded RED at
+    // `evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-red.txt`); the
+    // compensation selector in components.css is now a descendant
+    // selector, and Test 6 below asserts every full-bleed row's own
+    // geometry (not just the leftmost candidate or a direct-child-only
+    // exclusion), so this exact shape of regression cannot recur silently.
+    page: "/admin/estantes",
+    overlayId: "donde-va-sheet",
+    dataIndependent: false,
+    bodyShape: "mixed",
+    steps: [
+      { kind: "type", selector: "#estantes-search-input", value: "catan" },
+      { kind: "click", selector: "#estantes-suggestions [data-pk-pressable]" },
+    ],
+  },
+]
+
+// A row-shaped body's own full-bleed children — excluded from Test 3
+// (nothing [non-full-bleed] reaches the panel edge) and the SUBJECT of
+// Test 5 (the full-bleed press surface positive control) instead. Covers
+// both D-19e/A4's shared anatomy AND `.pk-editor-opt` (Task 3's editor
+// choice sheet — a distinct class, same full-bleed contract: `editor.css`
+// re-expresses its `margin`/`padding` through the same keel property this
+// plan's components.css fix uses). Shared as a literal string (not a
+// helper) per this file's established convention of a self-contained
+// `evalJS` body per function.
+const SHEET_FULL_BLEED_SELECTOR = ".pk-admin-row, .pk-admin-action--a4, .pk-editor-opt"
+
+// The measurement body for one already-open sheet: the panel's own border
+// box; the header's content box (`edges()`-shaped: left absolute, right an
+// inset); the header title's own INK left (rule 7, a text Range, never a
+// box); the body wrapper's content box, its own computed `padding`
+// (deliberately the raw shorthand string — `"8px 0px"` is the single most
+// legible proof of both the defect and the fix), and its `scrollWidth`/
+// `clientWidth`; every body descendant that is either a direct child or a
+// focusable control (deduped by node identity, never double-counted); the
+// leftmost ink-or-control edge inside the body, derived by walking the real
+// DOM rather than a per-call-site selector list (rule 7) — the winning
+// element's own tag/id is reported so a selector mismatch cannot silently
+// report a false pass; and, for a row-shaped body, the full-bleed child's
+// own border box and its own ink left (Test 5's positive control).
+async function measureSheetKeel(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      function round(n) { return Math.round(n * 10) / 10; }
+      function contentEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return { left: round(r.left + pl), right: round(window.innerWidth - (r.right - pr)) };
+      }
+      function absBox(el) {
+        const r = el.getBoundingClientRect();
+        return { left: round(r.left), right: round(r.right), width: round(r.width) };
+      }
+      function textInk(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        // Skip whitespace-only text nodes rather than giving up on the
+        // first one found (Rule 1 — found via Task 3's own sweep run):
+        // .pk-editor-opt's real label text sits two levels deep
+        // (<button><span class="pk-editor-opt__text"><span
+        // class="pk-editor-opt__label">Ligero</span>...) and the FIRST
+        // text node in document order can be a template-emitted blank one.
+        let node = walker.nextNode();
+        while (node && (!node.nodeValue || !node.nodeValue.trim())) {
+          node = walker.nextNode();
+        }
+        if (!node) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
+      }
+
+      const root = document.getElementById(${JSON.stringify(overlayId)});
+      if (!root) return { found: false };
+      const panel = root.querySelector('[data-pk-sheet-panel]');
+      const header = root.querySelector('.pk-admin-sheet__header');
+      const titleEl = root.querySelector('.pk-admin-sheet__title');
+      const body = root.querySelector('.pk-admin-sheet__rows');
+      if (!panel || !header || !body) {
+        return { found: false, panelFound: !!panel, headerFound: !!header, bodyFound: !!body };
+      }
+
+      const FOCUSABLE_SELECTOR = 'a[href], button, input, select, textarea, [tabindex]';
+      const FULL_BLEED_SELECTOR = ${JSON.stringify(SHEET_FULL_BLEED_SELECTOR)};
+
+      const panelBox = absBox(panel);
+      const headerEdges = contentEdges(header);
+      const titleInk = textInk(titleEl);
+      const bodyEdges = contentEdges(body);
+      const bodyCs = getComputedStyle(body);
+
+      // Union of direct children + focusable descendants, deduped by node
+      // identity (a button that is both a direct child AND itself
+      // focusable must not be measured twice).
+      const nodeSet = new Set([...body.children, ...body.querySelectorAll(FOCUSABLE_SELECTOR)]);
+      const descendants = [...nodeSet].map((el) => ({
+        tag: el.tagName.toLowerCase(),
+        id: el.id || null,
+        className: typeof el.className === 'string' ? el.className : null,
+        isFullBleed: el.matches(FULL_BLEED_SELECTOR),
+        box: absBox(el),
+      }));
+
+      // The leftmost ink-or-control edge inside the body: walk EVERY
+      // descendant element, keep a focusable control (its own border-box
+      // left) or an element carrying a non-empty OWN text node (its ink
+      // left via textInk), and take the minimum. Reports the winning
+      // element's tag/id so the transcript can name it.
+      const candidates = [];
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_ELEMENT);
+      let node = walker.currentNode;
+      while (node) {
+        if (node !== body) {
+          // Ink beats box whenever the element carries its own text: a
+          // full-bleed pk-admin-action--a4 button IS a focusable control,
+          // but its border box is DELIBERATELY edge-to-edge (D-19e's
+          // anatomy) while its own 16px padding insets the ink that is
+          // actually seen — measuring the box here would report the
+          // full-bleed anatomy itself as a misalignment. Only an element
+          // with NO text of its own (a bare input, whose visible painted
+          // border IS its box) falls back to the border-box edge.
+          const hasOwnText = [...node.childNodes].some(
+            (n) => n.nodeType === Node.TEXT_NODE && n.nodeValue && n.nodeValue.trim(),
+          );
+          if (hasOwnText) {
+            const ink = textInk(node);
+            if (ink && ink.width > 0) {
+              candidates.push({ left: ink.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'ink' });
+            }
+          } else if (node.matches(FOCUSABLE_SELECTOR) && !node.matches(FULL_BLEED_SELECTOR)) {
+            // A full-bleed control (.pk-editor-opt is the case that
+            // surfaced this — Rule 1, Task 3's sweep) is EXCLUDED here even
+            // when its own immediate children carry no direct text node:
+            // its border box is deliberately edge-to-edge, and its real
+            // ink sits two levels deeper (a nested label span) — the
+            // TreeWalker continues into that subtree on its own next
+            // iterations, where the label's own hasOwnText branch above
+            // picks up the real ink. Treating the full-bleed node itself
+            // as a "control" here would report its edge-to-edge BOX as if
+            // it were content, exactly the same misreading Test 3 already
+            // guards against on the other axis.
+            const r = node.getBoundingClientRect();
+            candidates.push({ left: r.left, tag: node.tagName.toLowerCase(), id: node.id || null, kind: 'control' });
+          }
+        }
+        node = walker.nextNode();
+      }
+      let leftmost = null;
+      for (const c of candidates) {
+        if (!leftmost || c.left < leftmost.left) leftmost = c;
+      }
+
+      // Test 5's positive control: the row-shaped body's own full-bleed
+      // child, if any.
+      const fullBleedEl = [...nodeSet].find((el) => el.matches(FULL_BLEED_SELECTOR));
+      const fullBleedInk = fullBleedEl ? textInk(fullBleedEl) : null;
+
+      // Test 6 (WR-01, 01.8.3 review-fix round 1): EVERY full-bleed
+      // descendant, not just the first one .find() returns — nodeSet is
+      // already a full-subtree collection (body.querySelectorAll(FOCUSABLE_
+      // SELECTOR) has no depth limit; a full-bleed row is always itself
+      // focusable, whether it is a direct child of body or nested inside
+      // an unstyled wrapper div — a GRANDCHILD). Test 5 only checked the
+      // first such element and only for a "row"-shaped body; that blind spot
+      // is exactly what let plan 10's own direct-child-only CSS compensation
+      // regress placement_sheet/1's nested rows (32px, not 16px) without
+      // this sweep noticing — this row's OWN bodyShape is "mixed", not
+      // "row", so it never reached Test 5 at all.
+      const fullBleedRows = [...nodeSet]
+        .filter((el) => el.matches(FULL_BLEED_SELECTOR))
+        .map((el) => {
+          const ink = textInk(el);
+          return {
+            tag: el.tagName.toLowerCase(),
+            id: el.id || null,
+            box: absBox(el),
+            inkLeft: ink ? round(ink.left) : null,
+          };
+        });
+
+      return {
+        found: true,
+        panelBox,
+        headerEdges,
+        titleInkLeft: titleInk ? round(titleInk.left) : null,
+        bodyEdges,
+        bodyPadding: bodyCs.padding,
+        bodyScrollWidth: body.scrollWidth,
+        bodyClientWidth: body.clientWidth,
+        descendants,
+        leftmost: leftmost ? { left: round(leftmost.left), tag: leftmost.tag, id: leftmost.id, kind: leftmost.kind } : null,
+        fullBleedBox: fullBleedEl ? absBox(fullBleedEl) : null,
+        fullBleedInkLeft: fullBleedInk ? round(fullBleedInk.left) : null,
+        fullBleedRows,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// Drives `SHEET_KEEL_CALL_SITES` end to end: for each row, navigate fresh,
+// run its opener steps, poll until its overlay's resolved `display` is not
+// `none`, then run the five sheet-keel tests against the real, really-open
+// sheet. Prints one verdict line per open sheet (every measured number) and
+// a summary naming how many rows were attempted vs. not-openable.
+async function checkSheetKeel({ client, baseUrl, rows }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  for (const row of rows) {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}${row.page}`)
+    await new Promise((r) => setTimeout(r, 250))
+
+    const openResult = await runOpenerSteps(client, row.steps)
+    if (!openResult.openable) {
+      if (row.dataIndependent) {
+        fail(
+          `${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+        )
+      } else {
+        notOpenable.push({ page: row.page, overlayId: row.overlayId, missingSelector: openResult.missingSelector })
+        log(
+          `NOT-OPENABLE: ${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — dev data is likely too thin for this row`,
+        )
+      }
+      continue
+    }
+
+    const opened = await pollUntil(() => isOverlayOpen(client, row.overlayId))
+    if (!opened) {
+      fail(`${row.page} ${row.overlayId}: opener steps completed but the overlay never reached a resolved display other than 'none'`)
+      continue
+    }
+
+    const m = await measureSheetKeel(client, row.overlayId)
+    if (!m.found) {
+      fail(
+        `${row.page} ${row.overlayId}: overlay reported open but its panel/header/body could not all be found (panel=${m.panelFound}, header=${m.headerFound}, body=${m.bodyFound})`,
+      )
+      continue
+    }
+
+    const nameOf = (d) => `<${d.tag}${d.id ? "#" + d.id : d.className ? "." + d.className.split(" ")[0] : ""}>`
+    log(
+      `sheet keel ${row.page} ${row.overlayId} (${row.bodyShape}-shaped): panel=[${m.panelBox.left},${m.panelBox.right}]; ` +
+        `header content=[${m.headerEdges.left},${m.headerEdges.right}] title ink left=${m.titleInkLeft}; ` +
+        `body content=[${m.bodyEdges.left},${m.bodyEdges.right}] body padding="${m.bodyPadding}" scrollWidth=${m.bodyScrollWidth} clientWidth=${m.bodyClientWidth}; ` +
+        `leftmost=${m.leftmost ? `${m.leftmost.kind}${nameOf(m.leftmost)}@${m.leftmost.left}` : "(none)"}`,
+    )
+
+    // Test 1 — the two siblings agree: header content edges == body content
+    // edges. FAILS today on every sheet regardless of body shape — the
+    // body wrapper itself has zero horizontal padding no matter what its
+    // children do.
+    if (Math.abs(m.headerEdges.left - m.bodyEdges.left) > 0.5) {
+      fail(`${row.page} ${row.overlayId} test1 (header-vs-body content left): header=${m.headerEdges.left}px body=${m.bodyEdges.left}px, expected within 0.5px`)
+    }
+    if (Math.abs(m.headerEdges.right - m.bodyEdges.right) > 0.5) {
+      fail(`${row.page} ${row.overlayId} test1 (header-vs-body content right inset): header=${m.headerEdges.right}px body=${m.bodyEdges.right}px, expected within 0.5px`)
+    }
+
+    // Test 2 — ink agrees with ink: the leftmost ink/control edge inside
+    // the body equals the header's OWN CONTENT EDGE — not the title
+    // glyph's own ink specifically (Rule 1, found via Task 3's own sweep
+    // run: `placement_sheet/1` renders a leading `cover` image, which
+    // pushes the title text itself right of the header's content edge
+    // by the cover's own width+gap — 84px, not 16 — even though the
+    // header's content edge, per Test 1, is still 16 there. Comparing
+    // against the title's own ink specifically would report a cover-
+    // bearing sheet as misaligned when it is not; `m.headerEdges.left`
+    // is cover-invariant and is what G-01.8.3-4b's own truth actually
+    // names — "the title AND the close X share one left/right
+    // alignment" is the header's established axis, which the title
+    // happens to sit flush against only when nothing precedes it).
+    // FAILS today for a form-shaped body (its leftmost control sits at
+    // x=0); a row-shaped body's own full-bleed child already self-insets
+    // to 16px and PASSES today.
+    if (m.headerEdges.left == null || !m.leftmost) {
+      fail(`${row.page} ${row.overlayId} test2: could not measure the header content edge (${m.headerEdges.left}) or the body's leftmost ink/control (${m.leftmost})`)
+    } else if (Math.abs(m.headerEdges.left - m.leftmost.left) > 0.5) {
+      fail(
+        `${row.page} ${row.overlayId} test2 (ink-vs-ink): header content edge left=${m.headerEdges.left}px, body leftmost ${m.leftmost.kind}${nameOf(m.leftmost)} left=${m.leftmost.left}px, expected within 0.5px`,
+      )
+    }
+
+    // Test 3 — nothing (non-full-bleed) reaches the panel edge: every body
+    // descendant that is NOT a `.pk-admin-row`/`.pk-admin-action--a4` full-
+    // bleed child must sit inset from the panel's own border box by more
+    // than 0.5px on both sides. Full-bleed children are deliberately
+    // excluded here — they are Test 5's own positive control, not a
+    // violation of this test. FAILS today for a form-shaped body: its
+    // field/button render exactly flush with the panel (0px inset both
+    // sides, the zero-horizontal-padding defect).
+    for (const d of m.descendants) {
+      if (d.isFullBleed) continue
+      const leftInset = round2(d.box.left - m.panelBox.left)
+      const rightInset = round2(m.panelBox.right - d.box.right)
+      if (leftInset < 0.5 || rightInset < 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test3 (nothing reaches the panel edge): ${nameOf(d)} left inset=${leftInset}px right inset=${rightInset}px vs panel=[${m.panelBox.left},${m.panelBox.right}], expected both > 0.5px`,
+        )
+      }
+    }
+
+    // Test 4 — no horizontal scroll: the body's scrollWidth must not
+    // exceed its clientWidth by more than 0.5px. PASSES today; the control
+    // proving the fix's compensating negative margins (Task 2) do not
+    // introduce a horizontal scroller.
+    if (m.bodyScrollWidth - m.bodyClientWidth > 0.5) {
+      fail(`${row.page} ${row.overlayId} test4 (no horizontal scroll): scrollWidth=${m.bodyScrollWidth}px clientWidth=${m.bodyClientWidth}px, expected scrollWidth <= clientWidth + 0.5px`)
+    }
+
+    // Test 5 — the row-shaped rows are a second control: for a row-shaped
+    // body, the full-bleed child's own border box still spans the panel's
+    // full width (the press surface) while its own ink sits on the
+    // header's axis. PASSES today and must still pass after Task 2's fix —
+    // this is what makes the compensation verifiable instead of assumed.
+    if (row.bodyShape === "row") {
+      if (!m.fullBleedBox) {
+        fail(`${row.page} ${row.overlayId} test5: no .pk-admin-row/.pk-admin-action--a4 descendant found in a row-shaped body`)
+      } else {
+        if (Math.abs(m.fullBleedBox.left - m.panelBox.left) > 0.5 || Math.abs(m.fullBleedBox.right - m.panelBox.right) > 0.5) {
+          fail(
+            `${row.page} ${row.overlayId} test5 (full-bleed press surface): row/action box=[${m.fullBleedBox.left},${m.fullBleedBox.right}] vs panel=[${m.panelBox.left},${m.panelBox.right}], expected edge-to-edge within 0.5px`,
+          )
+        }
+        // Header's own content edge, not the title glyph's ink — see
+        // Test 2's own comment for why (cover-bearing sheets push the
+        // title right without moving the header's established axis).
+        if (m.fullBleedInkLeft == null || m.headerEdges.left == null) {
+          fail(`${row.page} ${row.overlayId} test5: could not measure the row/action's own ink (${m.fullBleedInkLeft}) or the header content edge (${m.headerEdges.left})`)
+        } else if (Math.abs(m.fullBleedInkLeft - m.headerEdges.left) > 0.5) {
+          fail(
+            `${row.page} ${row.overlayId} test5 (ink on header axis): row/action ink left=${m.fullBleedInkLeft}px header content edge left=${m.headerEdges.left}px, expected within 0.5px`,
+          )
+        }
+      }
+    }
+
+    // Test 6 (WR-01, 01.8.3 review-fix round 1) — EVERY full-bleed
+    // descendant reaches the panel edge-to-edge and aligns its own ink with
+    // the header axis, however deeply nested, and regardless of `bodyShape`
+    // (unlike Test 5, which only ran for `bodyShape === "row"` and only
+    // checked the first full-bleed element found). This is what Test 2 and
+    // Test 3 both structurally cannot catch: Test 2 compares only the
+    // MINIMUM leftmost candidate against the header edge, so an over-inset
+    // descendant (sitting further RIGHT than 16px, never the minimum) is
+    // invisible to it; Test 3 explicitly EXCLUDES every full-bleed element
+    // by class match, regardless of whether it is a direct child that
+    // received plan 10's compensation or a grandchild that did not. Test 6
+    // measures each full-bleed row's own real geometry against the panel
+    // and header directly, so a full-bleed row landing at 32px/48px instead
+    // of 16px (the exact shape of the WR-01 regression) fails here even
+    // though it is invisible to Tests 2 and 3.
+    for (const fb of m.fullBleedRows) {
+      const fbName = `<${fb.tag}${fb.id ? "#" + fb.id : ""}>`
+      if (Math.abs(fb.box.left - m.panelBox.left) > 0.5 || Math.abs(fb.box.right - m.panelBox.right) > 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test6 (every full-bleed row reaches the panel edge): ${fbName} box=[${fb.box.left},${fb.box.right}] vs panel=[${m.panelBox.left},${m.panelBox.right}], expected edge-to-edge within 0.5px`,
+        )
+      }
+      if (fb.inkLeft == null || m.headerEdges.left == null) {
+        fail(`${row.page} ${row.overlayId} test6: could not measure ${fbName}'s own ink (${fb.inkLeft}) or the header content edge (${m.headerEdges.left})`)
+      } else if (Math.abs(fb.inkLeft - m.headerEdges.left) > 0.5) {
+        fail(
+          `${row.page} ${row.overlayId} test6 (every full-bleed row's ink on header axis): ${fbName} ink left=${fb.inkLeft}px header content edge left=${m.headerEdges.left}px, expected within 0.5px`,
+        )
+      }
+    }
+
+    // Fresh navigation so no residual overlay/LiveView state leaks into the
+    // next row's measurement (mirrors `checkOverlayRealOpenWalk`'s own
+    // convention).
+    await navigate(client, `${baseUrl}${row.page}`)
+  }
+
+  log(`sheet keel walk: attempted=${rows.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+function round2(n) {
+  return Math.round(n * 10) / 10
+}
+
+// ---------------------------------------------------------------------------
+// Plan 01.8.3-13 — G-01.8.3-4a: while an `aria-modal="true"` sheet or dialog
+// is open, the page BEHIND it must not scroll. Independent from the two
+// walks above: G-01.8.3-2b asks whether a TAP can reach through (coverage);
+// G-01.8.3-4b asks whether the body shares its header's inset (keel); this
+// asks whether a GESTURE can move what is behind (lock) — three independent
+// questions about the same overlay. See
+// `.planning/debug/DEBUG-admin-sheet-modal-contract.md` for the full
+// diagnosis this walk re-proves against the fix, and `test/visual/
+// README.md`'s rule 8 for why every scroll assertion here carries its own
+// closed-state positive control.
+//
+// CDP's gesture-synthesis input command (`Input.synthesizeScrollGesture`) is
+// NEVER used anywhere in this file — it is inert in this headless build:
+// calibrated on a page scrollable by 1506px, a `gestureSourceType: "touch"`
+// synthesize call moved the document 0px, while `Input.dispatchTouchEvent`
+// moved it 281px and a `mouseWheel` moved it 300px on the SAME page. Its own
+// `yDistance` argument is also positive-to-scroll-UP, so applying a positive
+// distance at scrollTop 0 is a no-op regardless of whether the mechanism is
+// live — this diagnosis's own round 1 produced a false "locked" reading from
+// exactly that pair of mistakes. Every scroll assertion below is driven by
+// `Input.dispatchTouchEvent`/`mouseWheel` instead, each paired with a sheet-
+// CLOSED positive control in the same run so a page that cannot move at all
+// can never report a false "locked" verdict.
+// ---------------------------------------------------------------------------
+
+// A real touch drag: a touchStart at (x, yStart), several touchMoves
+// stepping toward yEnd, and a touchEnd — each its own `Input.dispatchTouchEvent`
+// with a short pause between them, the way a real finger delivers a drag
+// frame by frame rather than teleporting from start to end in one dispatch.
+async function dispatchTouchDrag(client, { x, yStart, yEnd, steps = 6, stepDelayMs = 16 }) {
+  const touchId = 1
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x, y: yStart, id: touchId }],
+  })
+  await new Promise((r) => setTimeout(r, stepDelayMs))
+  for (let i = 1; i <= steps; i++) {
+    const y = yStart + ((yEnd - yStart) * i) / steps
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x, y, id: touchId }],
+    })
+    await new Promise((r) => setTimeout(r, stepDelayMs))
+  }
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] })
+  await new Promise((r) => setTimeout(r, 150))
+}
+
+// A real wheel: one `mouseWheel`-type `Input.dispatchMouseEvent` at (x, y)
+// with the given vertical delta — the same primitive `mouseMoved`/
+// `mousePressed`/`mouseReleased` triple `clickCenterOf` above already uses
+// for clicks, just the wheel variant. The 450ms settle pause (not this
+// file's usual ~30-80ms) is load-bearing, not generous: `app.css`'s
+// `html { scroll-behavior: smooth }` (gated only on `prefers-reduced-
+// motion`, applied document-wide, not scoped to the public catalog nav it
+// was authored for) makes Chrome ANIMATE a wheel-triggered scroll rather
+// than jump instantly — reading the offset before that animation settles
+// measured wildly inconsistent deltas for the identical dispatched event
+// (a fourth Rule 1 found via this task's own RED run: the same wheel call
+// on the same page read anywhere from 43px to 500px across repeated runs).
+async function dispatchWheel(client, { x, y, deltaY }) {
+  // The leading `mouseMoved` is load-bearing (a fifth Rule 1 found via this
+  // task's own RED run): a `mouseWheel` event dispatched with no preceding
+  // `mouseMoved` to the SAME point measured a reliable 0px delta — even
+  // though `x`/`y` are passed explicitly on the wheel event itself — while
+  // the identical wheel preceded by a `mouseMoved` measured consistently.
+  // `clickCenterOf` above already sends `mouseMoved` before every click for
+  // the same reason; this mirrors that.
+  await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y })
+  await client.send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY })
+  await new Promise((r) => setTimeout(r, 450))
+}
+
+// A settle pause after a DIRECT `scrollTop = ...` JS assignment (setup, not
+// a gesture under test) — the property write itself is instant, but
+// `app.css`'s document-wide `scroll-behavior: smooth` can leave an
+// in-flight wheel-triggered scroll animation still interpolating toward
+// its OLD target for a short window afterward, which then silently
+// overwrites the direct assignment a few frames later if the next gesture
+// fires too soon (measured: a reset to 0 read back as 170 without this
+// pause).
+async function settleAfterScrollReset(client) {
+  await new Promise((r) => setTimeout(r, 300))
+}
+
+// Reads the document's current offset and, when an overlay id is given, that
+// overlay's own panel top edge — in the SAME evalJS call, so the bare-scrim
+// coordinate derived from it (below) is never a constant.
+async function readOffsetAndPanelTop(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const offset = document.scrollingElement.scrollTop;
+      const root = ${overlayId ? `document.getElementById(${JSON.stringify(overlayId)})` : "null"};
+      const panel = root ? root.querySelector('[data-pk-sheet-panel]') : null;
+      return { offset, panelTop: panel ? panel.getBoundingClientRect().top : null };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// The lock's own observable state (test 4/5's measurement body): the
+// resolved `overscroll-behavior-y` on the overlay root and, when present,
+// its `.pk-admin-sheet__rows` child (absent on a `dialog/1` instance — read
+// as `null`, not asserted), plus `<body>`'s own lock class and saved-offset
+// custom property.
+async function readOverlayLockState(client, overlayId) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const root = document.getElementById(${JSON.stringify(overlayId)});
+      const rows = root ? root.querySelector('.pk-admin-sheet__rows') : null;
+      const bodyStyle = getComputedStyle(document.body);
+      return {
+        rootOverscrollY: root ? getComputedStyle(root).overscrollBehaviorY : null,
+        rowsOverscrollY: rows ? getComputedStyle(rows).overscrollBehaviorY : null,
+        bodyClass: document.body.className,
+        hasLockClass: document.body.classList.contains('pk-admin-overlay-open'),
+        savedOffsetProp: bodyStyle.getPropertyValue('--pk-admin-overlay-scroll-offset').trim(),
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// The base call-site table (Task 1) — at minimum `add-game-sheet` (the worst
+// case: /admin/juegos is scrollable by tens of thousands of pixels), plus an
+// editor overlay and a dialog/1 instance, both appended dynamically in
+// main() off a resolved real game id (mirrors `SHEET_KEEL_CALL_SITES`'s own
+// dynamically-appended editor row) since their URL is not a static route.
+const SCROLL_LOCK_CALL_SITES = [
+  {
+    page: "/admin/juegos",
+    overlayId: "add-game-sheet",
+    dataIndependent: true,
+    steps: [{ kind: "click", selector: "#juegos-add-action" }],
+  },
+]
+
+// Runs the full gesture battery — tests 0 through 5 — against ONE already-
+// navigated-to call site row. Mutates `fails`/`notOpenable` via the closures
+// passed in; returns nothing. Kept as its own function (rather than inlined
+// in the loop below) so `checkOverlayScrollLockHandoff`'s DIFFERENT walk
+// shape (open a SECOND overlay before asserting) can still reuse the
+// low-level gesture helpers without reusing this one's single-overlay
+// lifecycle.
+async function checkOverlayScrollLockRow({ client, baseUrl, row, fail, log: logFn = log }) {
+  await setViewport(client, 390, 844)
+  await navigate(client, `${baseUrl}${row.page}`)
+  await new Promise((r) => setTimeout(r, 250))
+  // Chrome's own `scroll-restoration: auto` can carry a prior scrollTop
+  // over to a fresh `Page.navigate` at the SAME URL (a third Rule 1 found
+  // via this task's own RED run: two rows sharing one resolved editor URL,
+  // back to back — the second measured a starting offset already pinned at
+  // the page's ceiling, leaving zero room for its own closed-control
+  // gestures below). Forcing scrollTop to 0 here is setup, not a gesture
+  // under test — the real dispatched scroll below is what step 1 measures.
+  await evalJS(client, `document.scrollingElement.scrollTo({ top: 0, left: 0, behavior: "instant" }); true`)
+  await settleAfterScrollReset(client)
+
+  // Step 1 — scroll to a non-zero starting offset by a REAL gesture (the
+  // document is closed and unlocked at this point, so nothing about the
+  // lock is being tested yet). The target is 30% of the page's OWN
+  // measured scrollable extent, not a fixed literal — a fixed large wheel
+  // (e.g. 900) drove a short page (309px scrollable, the real editor page)
+  // straight to its ceiling, leaving ZERO room for the same-direction
+  // closed-control/open-state gestures below to move it further and
+  // producing a false test0 "harness broken" reading on a page the lock was
+  // never even tested against (Rule 1 — found via this task's own RED run).
+  // Reading `scrollHeight`/`innerHeight` here is a measurement, not a
+  // gesture — the actual scroll below is still a real wheel dispatch. Read
+  // twice with a settle pause between: the editor page's own late-decoding
+  // cover image can still be growing the document's layout height in the
+  // first ~250ms after `Page.loadEventFired` (a second Rule 1 found via
+  // this task's own RED run — the SAME page measured 309px scrollable on
+  // one row and ~0px on the very next, both fresh navigations).
+  let maxScrollable = await evalJS(client, `document.scrollingElement.scrollHeight - window.innerHeight`)
+  if (maxScrollable < 20) {
+    await new Promise((r) => setTimeout(r, 400))
+    maxScrollable = await evalJS(client, `document.scrollingElement.scrollHeight - window.innerHeight`)
+  }
+  const scrollTarget = Math.max(10, Math.floor(maxScrollable * 0.3))
+  await dispatchWheel(client, { x: 195, y: 600, deltaY: scrollTarget })
+  await new Promise((r) => setTimeout(r, 80))
+  const startingOffset = (await readOffsetAndPanelTop(client, null)).offset
+
+  // Step 2 — the CLOSED-sheet positive control (test 0's own evidence):
+  // the same touch drag and the same wheel the open-state gestures below
+  // will use, run here with the sheet still closed. Retried once on its
+  // own (2 attempts total) before test 0 is allowed to fail: `/admin/
+  // juegos` carries the PRE-EXISTING, already-documented `admin_list.js`
+  // pinned-band timing race (`.planning/WINDOWS.md` entry #36, plan 01.8.3-
+  // 11/12's own recorded flake) which intermittently absorbs a wheel event
+  // into its own growth-deferral mechanism instead of the document scroll —
+  // not a defect in the lock this plan closes, and not something this task
+  // has standing to fix. A bounded retry of the SANITY CHECK only (never
+  // the locked-state assertions below) absorbs that known flake without
+  // weakening what test 0 actually guards against.
+  let touchClosedDelta = 0
+  let wheelClosedDelta = 0
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    await dispatchTouchDrag(client, { x: 195, yStart: startingOffset > 400 ? 700 : 650, yEnd: 300 })
+    const touchClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+    touchClosedDelta = round2(Math.abs(touchClosedOffset - startingOffset))
+    await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
+    await settleAfterScrollReset(client)
+    // deltaY 900, not 400 — a wheel event's mapping to a scrollTop delta on
+    // this page measured wildly variable in practice (3-591px for the
+    // identical dispatched event across repeated runs), so the amplitude is
+    // sized for headroom against that variance, not against a single
+    // calibration reading.
+    await dispatchWheel(client, { x: 195, y: 600, deltaY: 900 })
+    const wheelClosedOffset = (await readOffsetAndPanelTop(client, null)).offset
+    wheelClosedDelta = round2(Math.abs(wheelClosedOffset - startingOffset))
+    if (touchClosedDelta > 50 && wheelClosedDelta > 50) break
+    if (attempt === 1) {
+      logFn(
+        `${row.page} ${row.overlayId}: closed-control attempt 1 read touch=${touchClosedDelta}px wheel=${wheelClosedDelta}px — retrying once before failing test0 (known admin_list.js timing race, WINDOWS.md #36)`,
+      )
+      await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
+      await settleAfterScrollReset(client)
+    }
+  }
+
+  // Test 0 — the harness works: each CLOSED-state control delta exceeds
+  // 50px (this plan's own stated threshold). A page that cannot
+  // demonstrably move under an UNLOCKED gesture has not measured a lock; do
+  // not evaluate the locked assertions against it (rule 8: negative-test
+  // every guard, never let a guard that cannot fail masquerade as one that
+  // measured something).
+  if (touchClosedDelta <= 50 || wheelClosedDelta <= 50) {
+    fail(
+      `${row.page} ${row.overlayId} test0 (harness works): closed-state touch delta=${touchClosedDelta}px wheel delta=${wheelClosedDelta}px, expected both > 50px — either this page cannot scroll enough to test the lock, or the gesture mechanism is inert here`,
+    )
+    return
+  }
+
+  // Step 3 — scroll back to the recorded starting offset (setup, not an
+  // assertion — the locked-state deltas below are what is measured).
+  await evalJS(client, `document.scrollingElement.scrollTo({ top: ${startingOffset}, left: 0, behavior: "instant" }); true`)
+  await settleAfterScrollReset(client)
+
+  // Step 4 — open by a real click, poll for resolved display.
+  const openResult = await runOpenerSteps(client, row.steps)
+  if (!openResult.openable) {
+    if (row.dataIndependent) {
+      fail(
+        `${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+      )
+    } else {
+      logFn(
+        `NOT-OPENABLE: ${row.page} ${row.overlayId}: opener selector never appeared (${openResult.missingSelector}) — dev data is likely too thin for this row`,
+      )
+      return "not-openable"
+    }
+    return
+  }
+  const opened = await pollUntil(() => isOverlayOpen(client, row.overlayId))
+  if (!opened) {
+    fail(`${row.page} ${row.overlayId}: opener steps completed but the overlay never reached a resolved display other than 'none'`)
+    return
+  }
+
+  // The bare-scrim coordinate is DERIVED from the measured panel's own top
+  // edge (never a constant): a point above the panel and below the
+  // viewport's own top inset.
+  const { panelTop } = await readOffsetAndPanelTop(client, row.overlayId)
+  const scrimY = panelTop === null ? 60 : Math.max(30, Math.round(panelTop / 2))
+  const panelY = panelTop === null ? 500 : Math.round(panelTop + (844 - panelTop) / 2)
+
+  const stillOpenAfter = async (label) => {
+    const ok = await isOverlayOpen(client, row.overlayId)
+    if (!ok) fail(`${row.page} ${row.overlayId} test2 (stayed open): overlay closed unexpectedly after ${label}`)
+    return ok
+  }
+
+  const oneGesture = async (label, run) => {
+    const before = (await readOffsetAndPanelTop(client, row.overlayId)).offset
+    await run()
+    const after = (await readOffsetAndPanelTop(client, row.overlayId)).offset
+    const delta = round2(Math.abs(after - before))
+    await stillOpenAfter(label)
+    return delta
+  }
+
+  // Step 5 — the four open-state gestures, in the declared order.
+  const deltaTouchScrim = await oneGesture("touch on bare scrim", () =>
+    dispatchTouchDrag(client, { x: 195, yStart: scrimY + 100, yEnd: Math.max(4, scrimY - 100) }),
+  )
+  const deltaWheelScrim = await oneGesture("wheel on scrim", () => dispatchWheel(client, { x: 195, y: scrimY, deltaY: 400 }))
+  const deltaTouchPanel = await oneGesture("touch on panel", () => dispatchTouchDrag(client, { x: 195, yStart: panelY + 100, yEnd: panelY - 100 }))
+  const deltaWheelPanel = await oneGesture("wheel on panel", () => dispatchWheel(client, { x: 195, y: panelY, deltaY: 400 }))
+
+  const lockState = await readOverlayLockState(client, row.overlayId)
+
+  // Step 6 — close by a real click on the overlay's OWN close control
+  // (`[data-pk-sheet-close]` for a sheet, `[data-pk-dialog-cancel]` for a
+  // dialog — `dialog/1` renders no ✕ at all, D-19f), and record the final
+  // offset.
+  const closeSelector = `#${row.overlayId} [data-pk-sheet-close], #${row.overlayId} [data-pk-dialog-cancel]`
+  await clickCenterOf(client, closeSelector)
+  await pollUntil(async () => !(await isOverlayOpen(client, row.overlayId)))
+  // Settle before reading the final offset — the SAME pre-existing
+  // `admin_list.js` pinned-band timing race named above (WINDOWS.md #36)
+  // schedules its own `scrollBy` compensation (`scheduleGrowth`, gated on a
+  // CSS `transitionend`) independent of this lock, so reading immediately
+  // after the close-poll can race it. A longer settle than this file's
+  // usual 300ms — measured needing it on `/admin/juegos` specifically,
+  // where the compensation's own transition duration exceeds 300ms.
+  await new Promise((r) => setTimeout(r, 800))
+  const finalOffset = (await readOffsetAndPanelTop(client, null)).offset
+  const lockStateAfterClose = await readOverlayLockState(client, row.overlayId)
+
+  logFn(
+    `scroll lock ${row.page} ${row.overlayId}: start=${startingOffset} closed-controls touch=${touchClosedDelta} wheel=${wheelClosedDelta}; ` +
+      `open-state touchScrim=${deltaTouchScrim} wheelScrim=${deltaWheelScrim} touchPanel=${deltaTouchPanel} wheelPanel=${deltaWheelPanel}; ` +
+      `final=${finalOffset}; overscroll root=${lockState.rootOverscrollY} rows=${lockState.rowsOverscrollY}; bodyClass(open)="${lockState.bodyClass}"`,
+  )
+
+  // Test 1 — the document does not move: each open-state delta at most 1px.
+  for (const [name, delta] of [
+    ["touch on bare scrim", deltaTouchScrim],
+    ["wheel on scrim", deltaWheelScrim],
+    ["touch on panel", deltaTouchPanel],
+    ["wheel on panel", deltaWheelPanel],
+  ]) {
+    if (delta > 1) {
+      fail(`${row.page} ${row.overlayId} test1 (document does not move): ${name} moved the document by ${delta}px, expected at most 1px`)
+    }
+  }
+
+  // Test 3 — position is preserved: final offset == starting offset, from a
+  // NON-ZERO start. A zero starting offset makes this assertion vacuous
+  // (0 -> 0 proves nothing — it is what a broken lock would ALSO produce by
+  // accident) — fail the harness explicitly rather than let it pass.
+  if (startingOffset === 0) {
+    fail(`${row.page} ${row.overlayId} test3 (position preserved): starting offset was 0 — the preservation check is vacuous from a zero start`)
+  } else if (Math.abs(finalOffset - startingOffset) > 1) {
+    fail(
+      `${row.page} ${row.overlayId} test3 (position preserved): offset after close=${finalOffset}px, offset before open=${startingOffset}px, expected within 1px`,
+    )
+  }
+
+  // Test 4 — overscroll containment while open: the overlay root, and its
+  // `.pk-admin-sheet__rows` child when present (absent on a dialog — not
+  // asserted there), resolve to `contain` or `none`.
+  if (!["contain", "none"].includes(lockState.rootOverscrollY)) {
+    fail(`${row.page} ${row.overlayId} test4 (overscroll containment): overlay root resolved overscroll-behavior-y=${lockState.rootOverscrollY}, expected contain or none`)
+  }
+  if (lockState.rowsOverscrollY !== null && !["contain", "none"].includes(lockState.rowsOverscrollY)) {
+    fail(`${row.page} ${row.overlayId} test4 (overscroll containment): .pk-admin-sheet__rows resolved overscroll-behavior-y=${lockState.rowsOverscrollY}, expected contain or none`)
+  }
+
+  // Test 5 — the lock's own state is observable: present while open
+  // (already read into `lockState` above, before the close), absent after.
+  if (!lockState.hasLockClass) {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, open): <body> does not carry the lock class while the overlay is open (class="${lockState.bodyClass}")`)
+  }
+  if (!lockState.savedOffsetProp || lockState.savedOffsetProp === "") {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, open): the saved-offset custom property is empty while the overlay is open`)
+  }
+  if (lockStateAfterClose.hasLockClass) {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, closed): <body> still carries the lock class after close (class="${lockStateAfterClose.bodyClass}")`)
+  }
+  if (lockStateAfterClose.savedOffsetProp && lockStateAfterClose.savedOffsetProp !== "") {
+    fail(`${row.page} ${row.overlayId} test5 (lock state observable, closed): the saved-offset custom property still resolves after close ("${lockStateAfterClose.savedOffsetProp}")`)
+  }
+
+  return "checked"
+}
+
+// Drives `SCROLL_LOCK_CALL_SITES` (plus any dynamically-appended rows) end
+// to end, enabling touch emulation for the duration and restoring it
+// afterwards without touching `setViewport` (which sets `mobile: false` for
+// every OTHER check in this file).
+async function checkOverlayScrollLock({ client, baseUrl, rows }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    for (const row of rows) {
+      const result = await checkOverlayScrollLockRow({ client, baseUrl, row, fail })
+      if (result === "not-openable") notOpenable.push({ page: row.page, overlayId: row.overlayId })
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  log(`overlay scroll-lock walk: attempted=${rows.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// ---------------------------------------------------------------------------
+// Task 3 — the handoff case and the teardown case. Both require the SAME
+// module-level counter the acquire/release logic in `admin_sheet.js` uses,
+// proven from the outside (there is no way to read a JS closure variable
+// from CDP) by observing `<body>`'s own class/property, which IS the
+// counter's only externally-visible effect.
+//
+// DESTRUCTIVE-PATH GUARD (mirrors `OVERLAY_CALL_SITES`'s own guard comment,
+// verbatim in shape): neither case below ever clicks a control that commits,
+// deletes, retires, removes or discards. The event names this whole file
+// must never target from inside this walk: `confirm-remove` (staff_live/
+// index.ex — permanently removes a staff member's access), `confirm-delete`
+// (estante_live/administrar.ex — deletes a real shelf), `confirm-quitar`
+// (estante_live/index.ex — un-places a real copy). Every step below stops at
+// the control that only OPENS the second overlay — `ask-remove`/`ask-delete`
+// — never at that overlay's own commit control.
+// ---------------------------------------------------------------------------
+
+// The handoff case: open a sheet, click the control that closes IT and
+// opens a dialog in the SAME server diff, then assert with the DIALOG open
+// that the document still does not move, that the lock class still holds,
+// and that the saved-offset property still resolves. A naive boolean toggle
+// passes every other test in this plan and fails only this one, because
+// LiveView mounts the dialog's hook (which runs its own `onOpen`, an
+// acquire) BEFORE destroying the sheet's hook (whose `destroyed()` runs a
+// release) — confirmed empirically in `admin_sheet.js`'s own header
+// comment. `dataIndependent: false` on every row here: the staff path needs
+// a staff-role user other than the operator, the shelf path needs a real
+// shelf row; either row reports NOT-OPENABLE, never a FAIL, when its own
+// precondition is unmet in a thin dev database.
+const SCROLL_LOCK_HANDOFF_CASES = [
+  {
+    name: "staff -> confirm-remove-dialog",
+    page: "/admin/staff",
+    sheetId: "staff-options-sheet",
+    dialogId: "confirm-remove-dialog",
+    openSteps: [{ kind: "click", selector: "#staff-list .pk-admin-row[phx-click]" }],
+    // Only OPENS the dialog — never `[phx-click="confirm-remove"]`.
+    handoffSteps: [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }],
+  },
+  {
+    name: "shelf -> confirm-delete-shelf-dialog",
+    page: "/admin/estantes/administrar",
+    sheetId: "shelf-options-sheet",
+    dialogId: "confirm-delete-shelf-dialog",
+    openSteps: [{ kind: "click", selector: "#administrar-rows .pk-admin-row" }],
+    // Only OPENS the dialog — never `[phx-click="confirm-delete"]`.
+    handoffSteps: [{ kind: "click", selector: '#shelf-options-sheet [phx-click="ask-delete"]' }],
+  },
+]
+
+async function checkOverlayScrollLockHandoff({ client, baseUrl }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    for (const c of SCROLL_LOCK_HANDOFF_CASES) {
+      await setViewport(client, 390, 844)
+      await navigate(client, `${baseUrl}${c.page}`)
+      await new Promise((r) => setTimeout(r, 250))
+
+      const opened = await runOpenerSteps(client, c.openSteps)
+      if (!opened.openable) {
+        notOpenable.push({ name: c.name })
+        log(`NOT-OPENABLE: ${c.name}: opener selector never appeared (${opened.missingSelector}) — dev data is likely too thin for this row`)
+        continue
+      }
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, c.sheetId))
+      if (!sheetOpen) {
+        fail(`${c.name}: ${c.sheetId} never reached a resolved display other than 'none'`)
+        continue
+      }
+
+      const handoffResult = await runOpenerSteps(client, c.handoffSteps)
+      if (!handoffResult.openable) {
+        fail(`${c.name}: handoff selector never appeared (${handoffResult.missingSelector})`)
+        continue
+      }
+      const dialogOpen = await pollUntil(() => isOverlayOpen(client, c.dialogId))
+      if (!dialogOpen) {
+        fail(`${c.name}: ${c.dialogId} never reached a resolved display other than 'none' after the handoff`)
+        continue
+      }
+
+      // The sheet's own root should now be gone (a `:if`-mounted DOM-removal
+      // close) — confirms this is genuinely the handoff path, not a no-op.
+      const sheetStillPresent = await evalJS(client, `!!document.getElementById(${JSON.stringify(c.sheetId)})`)
+
+      const before = (await readOffsetAndPanelTop(client, c.dialogId)).offset
+      await dispatchTouchDrag(client, { x: 195, yStart: 700, yEnd: 300 })
+      await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
+      const after = (await readOffsetAndPanelTop(client, c.dialogId)).offset
+      const delta = round2(Math.abs(after - before))
+
+      const lockState = await readOverlayLockState(client, c.dialogId)
+
+      log(
+        `scroll lock handoff ${c.name}: sheetStillInDom=${sheetStillPresent} dialogOpen=true movedBy=${delta}px ` +
+          `bodyClass="${lockState.bodyClass}" savedOffsetProp="${lockState.savedOffsetProp}"`,
+      )
+
+      if (delta > 1) {
+        fail(`${c.name}: document moved ${delta}px with the dialog open after the handoff, expected at most 1px`)
+      }
+      if (!lockState.hasLockClass) {
+        fail(`${c.name}: <body> does not carry the lock class with the dialog open after the handoff (class="${lockState.bodyClass}") — a boolean toggle would have released here, since the sheet's own destroyed() ran after the dialog's onOpen`)
+      }
+      if (!lockState.savedOffsetProp || lockState.savedOffsetProp === "") {
+        fail(`${c.name}: the saved-offset custom property is empty with the dialog open after the handoff`)
+      }
+
+      // Cancel the dialog (never confirm) so the walk leaves no residual
+      // open overlay and the lock is released cleanly for the next case.
+      await clickCenterOf(client, `#${c.dialogId} [data-pk-dialog-cancel]`)
+      await pollUntil(async () => !(await isOverlayOpen(client, c.dialogId)))
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  log(`overlay scroll-lock handoff walk: attempted=${SCROLL_LOCK_HANDOFF_CASES.length} not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// The teardown case: with a sheet open, navigate AWAY (a real browser
+// navigation — `Page.navigate`, the same primitive every other check in
+// this file uses — not a synthetic hook teardown), then assert on the next
+// page that the lock is fully released: no lock class, no saved-offset
+// property, and a real touch drag moves the document. A LiveView teardown
+// mid-open (this element leaves the DOM while `destroyed()` runs) must
+// never leave a page permanently unscrollable — `layouts.ex:1619`'s own
+// precedent for exactly this failure, ported here for the admin lock.
+// Destination is a resolved real editor URL (309px of scrollable content
+// measured live) rather than `/admin` itself, whose dashboard cards do not
+// scroll at all at 390x844 — a destination with zero scrollable extent
+// cannot demonstrate release via movement, only via the class/property
+// checks, so a genuinely different, genuinely scrollable admin page is
+// used instead.
+async function checkOverlayScrollLockTeardown({ client, baseUrl }) {
+  const fails = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await client.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 })
+  try {
+    await setViewport(client, 390, 844)
+    await navigate(client, `${baseUrl}/admin/juegos`)
+    await new Promise((r) => setTimeout(r, 250))
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(`teardown: #juegos-add-action never appeared — cannot set up the mid-open teardown case`)
+      return { fails }
+    }
+    const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+    if (!sheetOpen) {
+      fail(`teardown: add-game-sheet never reached a resolved display other than 'none'`)
+      return { fails }
+    }
+
+    const editorUrl = await resolveEditorUrl(client, baseUrl)
+    const destination = editorUrl || "/admin/estantes"
+    // Re-navigate to /admin/juegos first is wrong here — the sheet must
+    // still be open at the moment of navigation, so navigate directly from
+    // the current (sheet-open) page to the destination.
+    await navigate(client, `${baseUrl}${destination}`)
+    await new Promise((r) => setTimeout(r, 250))
+
+    const lockState = await readOverlayLockState(client, "add-game-sheet")
+    if (lockState.hasLockClass) {
+      fail(`teardown: <body> still carries the lock class on ${destination} after navigating away from an open sheet (class="${lockState.bodyClass}")`)
+    }
+    if (lockState.savedOffsetProp && lockState.savedOffsetProp !== "") {
+      fail(`teardown: the saved-offset custom property still resolves on ${destination} after navigating away ("${lockState.savedOffsetProp}")`)
+    }
+
+    const before = (await readOffsetAndPanelTop(client, null)).offset
+    await dispatchTouchDrag(client, { x: 195, yStart: 700, yEnd: 300 })
+    await dispatchWheel(client, { x: 195, y: 400, deltaY: 400 })
+    const after = (await readOffsetAndPanelTop(client, null)).offset
+    const delta = round2(Math.abs(after - before))
+
+    log(`overlay scroll-lock teardown: destination=${destination} bodyClass="${lockState.bodyClass}" movedBy=${delta}px`)
+
+    if (delta <= 50) {
+      fail(`teardown: a real touch drag + wheel on ${destination} moved the document by only ${delta}px after navigating away from an open sheet, expected > 50px (the page must scroll normally, proving the lock is fully released)`)
+    }
+  } finally {
+    await client.send("Emulation.setTouchEmulationEnabled", { enabled: false })
+  }
+
+  return { fails }
+}
+
+// ---------------------------------------------------------------------------
+// Plan 01.8.3-14 — G-01.8.3-4c: focus must return to the control that opened
+// a sheet once it closes, without undoing the sheet->dialog focus handoff
+// plan 01.8.2-12 Task 3 protects. `admin_sheet.js`'s `onClose` guards the
+// restore on `document.activeElement === document.body` — true for the
+// DOM-removal close path (`staff_live`'s `:if={@selected_staff}` pattern,
+// the case that guard was written for) but FALSE for a stay-mounted
+// `open={...}` sheet that closes via a class toggle to `display: none`: the
+// active element inside the close-class mutation microtask is still the
+// sheet's own close control (or a dialog's Cancelar), not `body`, so the
+// restore is skipped and focus silently settles to `body` at the next style
+// recalc (`.planning/debug/DEBUG-admin-sheet-modal-contract.md`'s own
+// measurement).
+//
+// Drives ONLY real input — real clicks via `clickCenterOf`, a real Escape
+// keydown/keyup via `dispatchEscapeKey` below — never a programmatic
+// `.focus()` call anywhere in this check (rule 8's fabrication trap: a
+// check that manufactures the very state it claims to measure proves
+// nothing about the rendered page).
+//
+// DESTRUCTIVE-PATH GUARD (mirrors `OVERLAY_CALL_SITES`/
+// `SCROLL_LOCK_HANDOFF_CASES`'s own guard comment, verbatim in shape): case
+// 3 below stops at the staff sheet's own remove-ask control, which only
+// OPENS `confirm-remove-dialog` — it never clicks the dialog's own commit
+// control (`staff_live/index.ex`'s handler, which permanently removes a
+// staff member's access). The staff row count is asserted unchanged before
+// and after the whole walk.
+// ---------------------------------------------------------------------------
+
+// A real Escape key: `keyDown` then `keyUp` through the CDP input domain,
+// not a synthetic `KeyboardEvent` dispatched via `element.dispatchEvent` —
+// the hook's own `document.addEventListener("keydown", ...)` listener must
+// see a genuine dispatched event, matching this file's real-input
+// discipline for clicks (`Input.dispatchMouseEvent`) and gestures
+// (`Input.dispatchTouchEvent`/`mouseWheel`).
+async function dispatchEscapeKey(client) {
+  await client.send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  })
+  await client.send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  })
+  await new Promise((r) => setTimeout(r, 150))
+}
+
+// The active element's own identity — id, tag, its `aria-label` (the
+// sheet's close control and the dialog's cancel control both carry one),
+// whether it is `document.body`, and (when `dialogId` is given, case 3
+// only) whether it is contained by that dialog's own root and carries the
+// dialog's own cancel data attribute. Locates everything by id/attribute,
+// never by class name — a class-based lookup could silently match the
+// wrong control (this file's own `OVERLAY_CALL_SITES` comment makes the
+// same point for opener selectors).
+async function readActiveElement(client, { dialogId } = {}) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const el = document.activeElement;
+      const dialogRoot = ${dialogId ? `document.getElementById(${JSON.stringify(dialogId)})` : "null"};
+      return {
+        id: el ? el.id : null,
+        tag: el ? el.tagName : null,
+        ariaLabel: el ? el.getAttribute('aria-label') : null,
+        isBody: el === document.body,
+        insideDialog: dialogRoot ? dialogRoot.contains(el) : null,
+        isDialogCancel: el ? el.hasAttribute('data-pk-dialog-cancel') : false,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// Three cases, each from a fresh navigation (case 2 re-opens on the same
+// navigation as case 1, matching the plan's own instruction), each
+// reporting one verdict line naming the expected element, the actual
+// element, and (cases 1/2) whether the opener is still in the document —
+// so a failure caused by the opener itself having been removed is
+// distinguishable from the guard defect this plan closes.
+async function checkSheetFocusReturn({ client, baseUrl }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await setViewport(client, 390, 844)
+
+  // Case 1 — Escape close on a stay-mounted sheet (/admin/juegos,
+  // add-game-sheet). FAILS today: the active element settles to `body`.
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  await new Promise((r) => setTimeout(r, 250))
+  {
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(
+        `case1 (Escape close): opener #juegos-add-action never appeared — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+      )
+    } else {
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+      if (!sheetOpen) {
+        fail(`case1 (Escape close): add-game-sheet never reached a resolved display other than 'none'`)
+      } else {
+        await dispatchEscapeKey(client)
+        const closed = await pollUntil(async () => !(await isOverlayOpen(client, "add-game-sheet")))
+        if (!closed) {
+          fail(`case1 (Escape close): add-game-sheet did not close after a real Escape keydown/keyup`)
+        } else {
+          const after = await readActiveElement(client)
+          const openerPresent = await evalJS(client, `!!document.getElementById('juegos-add-action')`)
+          log(
+            `focus return case1 (Escape close): expected=#juegos-add-action actual=${after.tag || "(none)"}#${after.id || ""} (body=${after.isBody}) openerPresent=${openerPresent}`,
+          )
+          if (after.id !== "juegos-add-action") {
+            fail(
+              `case1 (Escape close): active element after close is ${after.tag || "(none)"}#${after.id || "(none)"} (body=${after.isBody}), expected #juegos-add-action; opener still present=${openerPresent}`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // Case 2 — close-control click on the same sheet, re-opened fresh (same
+  // page, same overlay). FAILS today for the same reason as case 1.
+  {
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(`case2 (close-control click): opener #juegos-add-action never appeared on re-open`)
+    } else {
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+      if (!sheetOpen) {
+        fail(`case2 (close-control click): add-game-sheet never reached a resolved display other than 'none' on re-open`)
+      } else {
+        // Located by its own data attribute (admin_components.ex's
+        // `sheet/1`), never by class name.
+        await clickCenterOf(client, "#add-game-sheet [data-pk-sheet-close]")
+        const closed = await pollUntil(async () => !(await isOverlayOpen(client, "add-game-sheet")))
+        if (!closed) {
+          fail(`case2 (close-control click): add-game-sheet did not close after a real click on its close control`)
+        } else {
+          const after = await readActiveElement(client)
+          const openerPresent = await evalJS(client, `!!document.getElementById('juegos-add-action')`)
+          log(
+            `focus return case2 (close-control click): expected=#juegos-add-action actual=${after.tag || "(none)"}#${after.id || ""} (body=${after.isBody}) openerPresent=${openerPresent}`,
+          )
+          if (after.id !== "juegos-add-action") {
+            fail(
+              `case2 (close-control click): active element after close is ${after.tag || "(none)"}#${after.id || "(none)"} (body=${after.isBody}), expected #juegos-add-action; opener still present=${openerPresent}`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // Case 3 — the handoff regression baseline: a staff row -> staff-options-
+  // sheet -> its remove-ask control -> confirm-remove-dialog (the SAME
+  // chain plan 01.8.2-12 Task 3 was written for; `SCROLL_LOCK_HANDOFF_CASES`
+  // above drives the identical path for its own, different assertion).
+  // PASSES today — this is the before-baseline a regression guard needs to
+  // distinguish "still works" from "never exercised".
+  //
+  // Needs a staff-role user other than the operator (`staff_live/index.ex`
+  // wires `phx-click="open-staff-sheet"` only onto rows where
+  // `user.role == :staff`, never onto the operator's own row). Following
+  // this file's own established pattern (`measureSnackbarDerivesFromTabBar`,
+  // above), a throwaway probe account is invited via the REAL `/admin/staff`
+  // invite form for the duration of this case only — sanctioned setup
+  // through the app's own UI, not a fabricated focus or DOM state (rule 8's
+  // fabrication trap is about manufacturing the state a check asserts ON,
+  // not about seeding data a real user flow would also produce). If the
+  // invite itself does not succeed, this case reports NOT-OPENABLE rather
+  // than failing the harness. The GUARDED walk (open sheet -> ask-remove ->
+  // assert -> Cancelar) never clicks the dialog's own commit control;
+  // cleanup — a clearly separate phase run after the assertion, mirroring
+  // `measureSnackbarDerivesFromTabBar`'s own cleanup verbatim — does, and
+  // only for the throwaway probe this check itself created.
+  await navigate(client, `${baseUrl}/admin/staff`)
+  await new Promise((r) => setTimeout(r, 250))
+  const staffCountBefore = await evalJS(client, `document.querySelectorAll('#staff-list .pk-admin-row').length`)
+
+  const probeEmail = `probe-focus-return-${Date.now()}@pukllayclub.invalid`
+  await evalJS(
+    client,
+    `
+    (() => {
+      const input = document.getElementById('invite-staff-email');
+      input.value = ${JSON.stringify(probeEmail)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('invite-staff-form').requestSubmit();
+      return true;
+    })()
+  `,
+  )
+  const probeRowId = await pollUntil(() =>
+    evalJS(
+      client,
+      `
+      (() => {
+        const rows = [...document.querySelectorAll('#staff-list .pk-admin-row[phx-click]')];
+        const row = rows.find(r => r.textContent.includes(${JSON.stringify(probeEmail)}));
+        return row ? row.id : null;
+      })()
+    `,
+    ),
+  )
+
+  if (!probeRowId) {
+    notOpenable.push({ name: "staff -> confirm-remove-dialog" })
+    log(`NOT-OPENABLE: case3 (handoff baseline): could not invite a probe staff account via the real /admin/staff invite form`)
+  } else {
+    // WR-02 (01.8.3 review-fix round 1): the guarded walk below is wrapped
+    // in try/finally so the throwaway probe account is ALWAYS removed, even
+    // when the walk throws (`clickCenterOf` throws when its target selector
+    // never appears — every step between here and cleanup can throw). The
+    // single most likely trigger for exactly this throw is a real
+    // regression in the dialog/sheet markup this case exists to test, which
+    // is also the failure mode most likely to disable a non-guarded
+    // cleanup — leaking `probeEmail` into the dev database permanently and
+    // poisoning the staffCountBefore/staffCountAfter invariant below on
+    // every SUBSEQUENT run, not just this one.
+    try {
+      await clickCenterOf(client, `#${probeRowId}`)
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "staff-options-sheet"))
+      if (!sheetOpen) {
+        fail(`case3 (handoff baseline): staff-options-sheet never reached a resolved display other than 'none'`)
+      } else {
+        // Only OPENS the dialog — never the dialog's own commit control.
+        const handoff = await runOpenerSteps(client, [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }])
+        if (!handoff.openable) {
+          fail(`case3 (handoff baseline): handoff selector never appeared (${handoff.missingSelector})`)
+        } else {
+          const dialogOpen = await pollUntil(() => isOverlayOpen(client, "confirm-remove-dialog"))
+          if (!dialogOpen) {
+            fail(`case3 (handoff baseline): confirm-remove-dialog never reached a resolved display other than 'none' after the handoff`)
+          } else {
+            const after = await readActiveElement(client, { dialogId: "confirm-remove-dialog" })
+            log(
+              `focus return case3 (handoff baseline): actual=${after.tag || "(none)"}#${after.id || ""} insideDialog=${after.insideDialog} isDialogCancel=${after.isDialogCancel}`,
+            )
+            if (!after.insideDialog || !after.isDialogCancel) {
+              fail(
+                `case3 (handoff baseline): active element after the handoff is ${after.tag || "(none)"}#${after.id || "(none)"} (insideDialog=${after.insideDialog}), expected confirm-remove-dialog's own cancel control`,
+              )
+            }
+            // Cancel, never confirm — the GUARDED walk leaves no residual open
+            // overlay and never reaches the destructive commit control.
+            await clickCenterOf(client, "#confirm-remove-dialog [data-pk-dialog-cancel]")
+            await pollUntil(async () => !(await isOverlayOpen(client, "confirm-remove-dialog")))
+          }
+        }
+      }
+    } finally {
+      // Cleanup — a separate phase from the guarded walk above, removing ONLY
+      // the throwaway probe account this check itself just created (never a
+      // pre-existing staff member): re-open the SAME row, ask to remove, and
+      // this time confirm — verbatim mirror of
+      // `measureSnackbarDerivesFromTabBar`'s own established cleanup. Wrapped
+      // in its OWN try/catch: a `finally` block that itself throws REPLACES
+      // (masks) whatever real error the guarded walk above may have thrown —
+      // exactly the outcome this fix exists to prevent — so a cleanup
+      // failure is logged here, never rethrown.
+      try {
+        await navigate(client, `${baseUrl}/admin/staff`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)})?.click()`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.querySelector('#staff-options-sheet [phx-click="ask-remove"]')?.click()`)
+        await new Promise((r) => setTimeout(r, 250))
+        await evalJS(client, `document.querySelector('#confirm-remove-dialog .pk-admin-action--peligro')?.click()`)
+        await new Promise((r) => setTimeout(r, 500))
+        const gone = await pollUntil(async () => !(await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)}) !== null`)))
+        log(
+          gone
+            ? `cleanup: probe staff account ${probeEmail} removed cleanly`
+            : `cleanup: could not confirm removal of ${probeEmail} — check the dev DB manually`,
+        )
+      } catch (cleanupErr) {
+        log(
+          `cleanup: threw while removing probe staff account ${probeEmail} — check the dev DB manually (${cleanupErr && cleanupErr.message ? cleanupErr.message : cleanupErr})`,
+        )
+      }
+    }
+  }
+
+  await navigate(client, `${baseUrl}/admin/staff`)
+  await new Promise((r) => setTimeout(r, 250))
+  const staffCountAfter = await evalJS(client, `document.querySelectorAll('#staff-list .pk-admin-row').length`)
+  if (staffCountBefore !== staffCountAfter) {
+    fail(
+      `case3 (handoff baseline): staff count changed from ${staffCountBefore} to ${staffCountAfter} — this walk must never leave a residual account behind`,
+    )
+  }
+
+  log(`sheet focus-return walk: attempted=3 not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// ---------------------------------------------------------------------------
 // The tab bar (D-13b) — height, indicator, and the snackbar derivation.
 // ---------------------------------------------------------------------------
 async function measureTabBar({ client, baseUrl, width }) {
@@ -973,10 +2370,21 @@ async function measureSaveBarLive({ client, baseUrl, editorUrl, width }) {
 }
 
 // ---------------------------------------------------------------------------
-// The keel (open item 4) — the shell's real content edges. Measured on
-// each page's own `.mx-auto.w-full.max-w-3xl` content wrapper (the D-18
-// shared shape both live screens render), at each of D-19n's/079's named
-// widths.
+// Plan 01.8.3-08 [Rule 1 - Bug]: this function measures `<main>`'s OWN
+// horizontal padding (`main .mx-auto.w-full.max-w-3xl`'s rect, at each of
+// D-19n's/079's named widths) — it is NOT "the content keel" despite the
+// name below, and it can say nothing about content-level insets. D-20b
+// (G-01.8.3-2c, DEBUG-juegos-horizontal-keel-three-axes.md) proved that
+// page content on every non-fullbleed admin page actually renders at 32px
+// viewport-relative (this same 16px padding PLUS each component's own 16px
+// self-inset) — a quantity this function structurally cannot see, since it
+// only reads the padding being doubled, not the doubled result. `PAGES`
+// (above) EXCLUDES the one fullbleed admin page (the editor, `form.ex:1177`)
+// BY CONSTRUCTION, where `main` contributes 0px and the same components
+// land on 16px instead — so this check can say nothing about the editor
+// either. See `measureJuegosKeelAt` below for the viewport-relative,
+// D-20b-accurate content-keel measurement this function's own name used to
+// falsely promise.
 // ---------------------------------------------------------------------------
 async function measureKeel({ client, baseUrl, width }) {
   await setViewport(client, width, 844)
@@ -1050,16 +2458,38 @@ async function forceEagerDecodeCovers(client) {
   )
 }
 
-// "Content edge" is measured relative to `.pk-admin-juegos`'s OWN box, not
-// the viewport — `<main>`'s site-wide 16px horizontal padding (the shared
-// admin keel `measureKeel` above already independently verifies) would
-// otherwise get counted a second time on top of the row's/search-row's own
-// `padding-left`, silently doubling every reading to 32px. D-16's own
-// language is explicit that this is a per-CHILD self-inset ("rows self-
-// inset 16px") layered on a container that itself has none — this function
-// nets the container's contribution back out so the reported number is
-// each element's OWN contribution, which is what D-16 requires to be 16
-// and consistent between the two.
+// Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: every number below is
+// VIEWPORT-relative — for each measured element, `left` is its own
+// content-box left edge in viewport coordinates and `right` is
+// `window.innerWidth` minus its content-box right edge. NO container rect
+// is subtracted and NO padding is added back. The PREVIOUS form of this
+// function measured relative to `.pk-admin-juegos`'s own box and added the
+// element's own padding back, on the theory that `<main>`'s 16px would
+// otherwise "silently double every reading to 32px" — but D-20b
+// (DEBUG-juegos-horizontal-keel-three-axes.md, `probe_vs_eye`) proved that
+// container-relative 16 was a quantity that existed NOWHERE on the
+// rendered page: the caption band painted at 16 while the row it should
+// match painted at 32, and this function's own netted-out reading of "16"
+// for both was exactly what let that regression ship past a passing guard.
+// D-20b declares the admin's keel as 32px measured exactly this way, on
+// any page that is not `fullbleed` (the one exception is the editor,
+// `form.ex:1177`, which this function does not visit).
+//
+// The band's and the divider's painted edges are both derived the same
+// way: `hostRect.left + used(::before left)` for the left edge, and
+// `innerWidth - (hostRect.right - used(::before right))` for the right
+// inset — read off `getComputedStyle(host, '::before')`, the SAME
+// mechanism `measureJuegosSectionPinned` below already trusts for the
+// band's own `top`/`bottom`. The band's host is the section's own header
+// (`.pk-admin-juegos-section-header`, `position: relative`, the `::before`
+// pseudo-element's containing block); the divider's host is the SECOND row
+// in the same section's rows list (`.pk-admin-row + .pk-admin-row`, the
+// only rows that carry the hairline `::before`) — both resolved from the
+// SAME section as the measured row/searchRow, via `.closest(...)`, so a
+// page where a different section happens to be the one currently expanded
+// (Borradores/Retirados start collapsed; only Juegos del club never is)
+// never silently compares one section's band against a different
+// section's rows.
 async function measureJuegosKeelAt({ client, baseUrl, width }) {
   await setViewport(client, width, 844)
   await navigate(client, `${baseUrl}/admin/juegos`)
@@ -1068,9 +2498,9 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
       client,
       `
       JSON.stringify((() => {
-        const container = document.querySelector('.pk-admin-juegos');
         const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
-        if (!container || !row) return null;
+        const searchRow = document.querySelector('.pk-admin-juegos-search-row');
+        if (!row || !searchRow) return null;
         return true;
       })())
     `,
@@ -1083,22 +2513,116 @@ async function measureJuegosKeelAt({ client, baseUrl, width }) {
     client,
     `
     JSON.stringify((() => {
-      const container = document.querySelector('.pk-admin-juegos');
-      const cRect = container ? container.getBoundingClientRect() : null;
       function edges(el) {
-        if (!el || !cRect) return null;
+        if (!el) return null;
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         const pl = parseFloat(cs.paddingLeft) || 0;
         const pr = parseFloat(cs.paddingRight) || 0;
         return {
-          left: Math.round(((r.left - cRect.left) + pl) * 10) / 10,
-          right: Math.round(((cRect.right - r.right) + pr) * 10) / 10,
+          left: Math.round((r.left + pl) * 10) / 10,
+          right: Math.round((window.innerWidth - (r.right - pr)) * 10) / 10,
         };
       }
-      const row = document.querySelector('.pk-admin-juegos-rows .pk-admin-row');
+      // Local copy of measureJuegosSectionPinned's own textInk helper — this
+      // directory's established convention is a self-contained copy per
+      // function, not a shared import across functions (rule 7: measure
+      // ink, not boxes).
+      function textInk(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const node = walker.nextNode();
+        if (!node || !node.nodeValue || !node.nodeValue.trim()) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
+      }
+
+      // Plan 01.8.3-09 [G-01.8.3-2e]: viewport-relative BORDER-BOX rects for
+      // the search cluster's own visible controls — never the search row
+      // CONTAINER's content box ('searchRow' above already agrees with the
+      // rows at 32/32 and is exactly why the shipped probe reported this
+      // screen as passing; the defect lives on boxes this function never
+      // read until now). 'left'/'right' here are the box's own edges in
+      // viewport coordinates (no padding math — border-box, not content-box)
+      // and 'width' is the box's own rendered width.
+      function borderBoxEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return {
+          left: Math.round(r.left * 10) / 10,
+          right: Math.round((window.innerWidth - r.right) * 10) / 10,
+          width: Math.round(r.width * 10) / 10,
+        };
+      }
+
+      const rowsWrap = document.querySelector('.pk-admin-juegos-rows');
+      const rows = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
+      const row = rows[0] || null;
+      const secondRow = rows[1] || null;
       const searchRow = document.querySelector('.pk-admin-juegos-search-row');
-      return { row: edges(row), searchRow: edges(searchRow) };
+      const section = row ? row.closest('.pk-admin-juegos-section') : null;
+      const header = section ? section.querySelector('.pk-admin-juegos-section-header') : null;
+      const captionLabel = header ? header.querySelector('.pk-admin-list-section-label') : null;
+      const cover = row ? row.querySelector('.pk-admin-row__cover') : null;
+      const chevron = row ? row.querySelector('.pk-admin-row__chevron') : null;
+      const rowCs = row ? getComputedStyle(row) : null;
+
+      // Plan 01.8.3-09 [G-01.8.3-2e]: the field, the '+' button, and the
+      // '+'s own glyph — the three boxes the fix actually changes. The
+      // glyph lookup mirrors the A3 glyph rule's own selector
+      // ('.pk-admin-action--a3 [class^="hero-"], .pk-admin-action--a3
+      // [class*=" hero-"]', components.css); icon/1 (core_components.ex)
+      // renders a span, never an svg. Falls back to the button's
+      // first element child, reporting the fallback rather than silently
+      // measuring the box instead of the glyph (rule 8's substitution
+      // mechanism).
+      const searchInput = document.getElementById('juegos-search-input');
+      const addAction = document.getElementById('juegos-add-action');
+      let glyph = addAction ? addAction.querySelector('[class^="hero-"], [class*=" hero-"]') : null;
+      let glyphIsFallback = false;
+      if (addAction && !glyph) {
+        glyph = addAction.firstElementChild;
+        glyphIsFallback = true;
+      }
+
+      let bandLeft = null, bandRightInset = null;
+      if (header) {
+        const hr = header.getBoundingClientRect();
+        const beforeCs = getComputedStyle(header, '::before');
+        const l = parseFloat(beforeCs.left);
+        const rr = parseFloat(beforeCs.right);
+        bandLeft = Math.round((hr.left + (Number.isNaN(l) ? 0 : l)) * 10) / 10;
+        bandRightInset = Math.round((window.innerWidth - (hr.right - (Number.isNaN(rr) ? 0 : rr))) * 10) / 10;
+      }
+
+      let dividerLeft = null, dividerRightInset = null;
+      if (secondRow) {
+        const dr = secondRow.getBoundingClientRect();
+        const dcs = getComputedStyle(secondRow, '::before');
+        const l = parseFloat(dcs.left);
+        const rr = parseFloat(dcs.right);
+        dividerLeft = Math.round((dr.left + (Number.isNaN(l) ? 0 : l)) * 10) / 10;
+        dividerRightInset = Math.round((window.innerWidth - (dr.right - (Number.isNaN(rr) ? 0 : rr))) * 10) / 10;
+      }
+
+      const captionInkRect = textInk(captionLabel);
+
+      return {
+        row: edges(row),
+        searchRow: edges(searchRow),
+        coverLeft: cover ? Math.round(cover.getBoundingClientRect().left * 10) / 10 : null,
+        coverWidth: cover ? Math.round(cover.getBoundingClientRect().width * 10) / 10 : null,
+        chevronRightInset: chevron ? Math.round((window.innerWidth - chevron.getBoundingClientRect().right) * 10) / 10 : null,
+        captionInkLeft: captionInkRect ? Math.round(captionInkRect.left * 10) / 10 : null,
+        columnGap: rowCs ? (parseFloat(rowCs.columnGap) || 0) : null,
+        bandLeft, bandRightInset,
+        dividerLeft, dividerRightInset,
+        searchInput: borderBoxEdges(searchInput),
+        addAction: borderBoxEdges(addAction),
+        glyph: borderBoxEdges(glyph),
+        glyphIsFallback,
+      };
     })())
   `,
   )
@@ -1129,12 +2653,29 @@ async function expandJuegosSection(client, key) {
   return result
 }
 
-// Scrolls the given section's caption into its pinned state (overshooting
-// so its own rows are visible below it too), nudges the scroll back up a
-// few px so `admin_list.js`'s onScroll sees `goingDown === false` and
-// un-hides the pinned search row (needed for the band/search-row adjacency
-// measurement below), then reads every geometry fact this check needs off
-// the real, currently-pinned DOM.
+// Scrolls the given section's caption into its pinned state via a REAL
+// incremental scroll-down (never a single jump — admin_list.js's onScroll
+// only sees a real `goingDown` direction across successive scroll events,
+// exactly what a finger does), reads every DOWN-state geometry fact a real
+// scrolling user actually sees, then scrolls back UP in real increments
+// (the scroll-up differential control, same session, same section) and
+// reads the UP-state geometry too — both states returned from one call so
+// the differential between them is never assembled from two independent
+// runs.
+//
+// Plan 01.8.3-11 [T-01.8.3-34]: this function used to drive the page OUT
+// of the hidden state before measuring — `searchInputEl.focus({
+// preventScroll: true })` plus a synthetic `new Event('scroll')`,
+// justified by its own comment as "needed for the band/search-row
+// adjacency measurement". That hack manufactured the passing condition for
+// EVERY band and search-row number this function ever reported (rule 8's
+// first mechanism, test/visual/README.md) and is the direct cause of
+// G-01.8.3-2d/G-01.8.3-3's blind spot: `searchHidden` and the absolute
+// `bandTop` were already measured and printed on every run, and nothing
+// ever asserted on them. Both are deleted. Any future edit needing the
+// un-hidden state must reach it by a REAL scroll-up, exactly as the
+// differential control below does — never by focusing the input or
+// dispatching a synthetic event.
 async function measureJuegosSectionPinned(client, sectionSelector) {
   const json = await evalJS(
     client,
@@ -1199,13 +2740,44 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
       // ONCE, before any scrolling, and reuse that fixed value.
       const naturalTop = sentinel.getBoundingClientRect().top + window.scrollY;
 
-      let pinned = false;
+      // Plan 01.8.3-11: real incremental scroll, never a single jump. A
+      // bare window.scrollTo(0, target) reaches the target in one paint —
+      // exactly the "single jump" the plan's own <behavior> rules out,
+      // since it is not what a finger does across successive real scroll
+      // events. This helper walks toward targetY in steps no larger than
+      // maxStep, yielding a frame plus a short settle between each one.
+      async function scrollStep(targetY, maxStep) {
+        const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const clamped = Math.min(Math.max(0, targetY), maxScroll);
+        let guard = 0;
+        while (Math.abs(window.scrollY - clamped) > 0.5 && guard < 500) {
+          const remaining = clamped - window.scrollY;
+          const delta = Math.abs(remaining) > maxStep ? Math.sign(remaining) * maxStep : remaining;
+          window.scrollTo(0, window.scrollY + delta);
+          await new Promise((r) => requestAnimationFrame(r));
+          await new Promise((r) => setTimeout(r, 40));
+          guard++;
+        }
+        return window.scrollY;
+      }
+
+      // Phase 1: walk incrementally to roughly 250px past the section's
+      // own natural top (the same overshoot the old single-jump target
+      // used, now reached via real steps instead of one paint).
+      const phase1Target = naturalTop - pinnedH + 250;
+      await scrollStep(phase1Target, 45);
+
+      // Phase 2: creep the rest of the way in <=45px steps until the wrap
+      // itself reports pinned — the try cap and rich error payload for the
+      // never-pinned case are unchanged from before this plan.
+      let pinned = wrap.getAttribute('data-pinned') === 'true';
       let tries = 0;
-      let lastScrollY = -1;
+      let lastScrollY = window.scrollY;
       while (!pinned && tries < 60) {
         const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const target = Math.min(Math.max(0, naturalTop - pinnedH + 250), maxScroll);
-        window.scrollTo(0, target);
+        const nextY = Math.min(window.scrollY + 45, maxScroll);
+        if (nextY === window.scrollY) break;
+        window.scrollTo(0, nextY);
         await new Promise((r) => requestAnimationFrame(r));
         await new Promise((r) => setTimeout(r, 80));
         lastScrollY = window.scrollY;
@@ -1216,7 +2788,7 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         return JSON.stringify({
           error: 'section never reached data-pinned="true" after scrolling',
           debug: {
-            pinnedH, naturalTop, tries, lastScrollY,
+            pinnedH, naturalTop, phase1Target, tries, lastScrollY,
             sentinelCount: document.querySelectorAll('[data-pk-section-sentinel]').length,
             sectionOuterHTMLLen: section.outerHTML.length,
             wrapAttrs: wrap.getAttributeNames(),
@@ -1224,75 +2796,188 @@ async function measureJuegosSectionPinned(client, sectionSelector) {
         });
       }
 
-      // Now that the caption is confirmed pinned, un-hide the pinned search
-      // row WITHOUT touching scroll position at all: a scroll-position nudge
-      // risks crossing back over the observer's own pin threshold near the
-      // boundary (observed empirically — a bare -5px nudge intermittently
-      // un-pinned the caption). admin_list.js's onScroll only re-evaluates
-      // on a real 'scroll' event, but its un-hide branch is
-      // (focused OR nearTop) — focusing the search input and firing a
-      // synthetic scroll event (net scrollY delta zero) satisfies that
-      // branch without moving the page at all — the preventScroll focus
-      // option below is required, not decorative: the search input is
-      // visually translated off-screen while data-pinned-hidden is set
-      // (its layout box still sits at its own sticky top:0, unaffected by
-      // the transform), so a bare, option-less focus() call made the
-      // browser "helpfully" scroll the whole page back toward that layout
-      // box's natural position near the top of the document — observed
-      // empirically resetting scrollY to near-zero and reading a stale
-      // pinned attribute back before the observer had a chance to correct
-      // it for the new, no-longer-pinned scroll position.
-      const searchInputEl = document.querySelector('#juegos-search-input');
-      if (searchInputEl) searchInputEl.focus({ preventScroll: true });
-      window.dispatchEvent(new Event('scroll'));
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => setTimeout(r, 150));
-      pinned = wrap.getAttribute('data-pinned') === 'true';
-      if (!pinned) {
-        return JSON.stringify({ error: 'section un-pinned after focusing the search input — unexpected' });
+      // ---- DOWN state: measured exactly where the real scroll left it.
+      // No focus, no synthetic scroll event, no un-hide of any kind — this
+      // is the state a scrolling user actually occupies. ----
+      function textInkFull(el) {
+        if (!el) return null;
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && (!node.nodeValue || !node.nodeValue.trim())) node = walker.nextNode();
+        if (!node) return null;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect();
       }
-      if (searchInputEl) searchInputEl.blur();
-
-      // Plan 01.8.3-06: the caption's ink rect a SECOND time, now that the
-      // section is confirmed pinned — a distinct reading from capInk
-      // above, which is the RESTING-layout measurement the D-13 air-ratio
-      // assertions depend on and must not be disturbed. Read via the same
-      // textInk helper, on the same label element, so both readings are
-      // directly comparable.
-      const pinnedInk = textInk(labelElForInk);
 
       const searchWrap = document.querySelector('#juegos-search-wrap');
-      const searchHidden = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
-      const searchRect = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchHiddenDown = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      const searchRectRawDown = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchRectDown = searchRectRawDown
+        ? { top: Math.round(searchRectRawDown.top * 10) / 10, bottom: Math.round(searchRectRawDown.bottom * 10) / 10 }
+        : null;
+      const transformDown = searchWrap ? getComputedStyle(searchWrap).transform : null;
 
-      const headerRect = header.getBoundingClientRect();
-      const beforeCs = getComputedStyle(header, '::before');
-      const topOffset = parseFloat(beforeCs.top) || 0;
-      const bottomOffset = parseFloat(beforeCs.bottom) || 0;
-      const bandTop = Math.round((headerRect.top + topOffset) * 10) / 10;
-      const bandBottom = Math.round((headerRect.bottom - bottomOffset) * 10) / 10;
-      const bandHeight = Math.round((bandBottom - bandTop) * 10) / 10;
-      const bandBg = beforeCs.backgroundColor;
-      const bandSearchGap = searchRect ? Math.round((bandTop - searchRect.bottom) * 10) / 10 : null;
+      const headerRectDown = header.getBoundingClientRect();
+      const beforeCsDown = getComputedStyle(header, '::before');
+      const topOffsetDown = parseFloat(beforeCsDown.top) || 0;
+      const bottomOffsetDown = parseFloat(beforeCsDown.bottom) || 0;
+      const bandTopDown = Math.round((headerRectDown.top + topOffsetDown) * 10) / 10;
+      const bandBottomDown = Math.round((headerRectDown.bottom - bottomOffsetDown) * 10) / 10;
+      const bandHeightDown = Math.round((bandBottomDown - bandTopDown) * 10) / 10;
+      const bandBgDown = beforeCsDown.backgroundColor;
+      // Plan 01.8.3-11: the header's own sticky-box bottom edge, recorded
+      // (not asserted) so plan 12's own guard for the first-section band
+      // overhang (this plan's declared out-of-scope secondary cause) can be
+      // negative-tested against a MEASURED number rather than a guess.
+      const headerBottomDown = Math.round(headerRectDown.bottom * 10) / 10;
+      // Plan 01.8.3-12 [G-01.8.3-3, secondary cause]: the header's own full
+      // rect (top/height), read from the SAME headerRectDown the band's
+      // edges above are already derived from — so the band and the box it
+      // must fit inside are compared in the same coordinate system, same
+      // frame, never independently re-queried.
+      const headerTopDown = Math.round(headerRectDown.top * 10) / 10;
+      const headerHeightDown = Math.round(headerRectDown.height * 10) / 10;
+      const bandSearchGapDown = searchRectDown ? Math.round((bandTopDown - searchRectDown.bottom) * 10) / 10 : null;
 
-      // Plan 01.8.3-06: where the pinned caption's own ink sits INSIDE the
-      // band — bandTop/bandBottom above are read off the ::before
-      // pseudo-element's own resolved geometry, never the header's box,
-      // exactly like the band-height reading a few lines up. A null
-      // pinnedInk (ink could not be measured) propagates as null gaps
-      // rather than a false zero, which would otherwise read as a perfect
-      // pass.
-      const inkGapAbove = pinnedInk ? Math.round((pinnedInk.top - bandTop) * 10) / 10 : null;
-      const inkGapBelow = pinnedInk ? Math.round((bandBottom - pinnedInk.bottom) * 10) / 10 : null;
+      // Plan 01.8.3-06's ink-inside-band reading, now taken in the DOWN
+      // state (what a user actually sees while scrolling down) rather than
+      // the old manufactured un-hidden state — algebraically the same
+      // number either way (it depends only on header padding, never on the
+      // search row's own visibility), but measured where it is claimed.
+      const pinnedInkDown = textInkFull(labelElForInk);
+      const inkGapAboveDown = pinnedInkDown ? Math.round((pinnedInkDown.top - bandTopDown) * 10) / 10 : null;
+      const inkGapBelowDown = pinnedInkDown ? Math.round((bandBottomDown - pinnedInkDown.bottom) * 10) / 10 : null;
 
       const rowsWrap = section.querySelector('.pk-admin-juegos-rows');
-      const firstRowBelow = rowsWrap ? rowsWrap.querySelector('.pk-admin-row') : null;
-      const rowHeight = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
+      const rowsList = rowsWrap ? [...rowsWrap.querySelectorAll('.pk-admin-row')] : [];
+      const firstRowBelow = rowsList[0] || null;
+      const secondRowBelow = rowsList[1] || null;
+      const rowHeightDown = firstRowBelow ? Math.round(firstRowBelow.getBoundingClientRect().height * 10) / 10 : null;
+
+      function rowContentEdges(el) {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const pl = parseFloat(cs.paddingLeft) || 0;
+        const pr = parseFloat(cs.paddingRight) || 0;
+        return {
+          left: Math.round((r.left + pl) * 10) / 10,
+          right: Math.round((window.innerWidth - (r.right - pr)) * 10) / 10,
+        };
+      }
+      const rowContentPinned = rowContentEdges(firstRowBelow);
+      const beforeLeftRawDown = parseFloat(beforeCsDown.left);
+      const beforeRightRawDown = parseFloat(beforeCsDown.right);
+      const bandLeftPinned = Math.round((headerRectDown.left + (Number.isNaN(beforeLeftRawDown) ? 0 : beforeLeftRawDown)) * 10) / 10;
+      const bandRightInsetPinned = Math.round(
+        (window.innerWidth - (headerRectDown.right - (Number.isNaN(beforeRightRawDown) ? 0 : beforeRightRawDown))) * 10,
+      ) / 10;
+      let dividerLeftPinned = null, dividerRightInsetPinned = null;
+      if (secondRowBelow) {
+        const dr = secondRowBelow.getBoundingClientRect();
+        const dcs = getComputedStyle(secondRowBelow, '::before');
+        const dLeftRaw = parseFloat(dcs.left);
+        const dRightRaw = parseFloat(dcs.right);
+        dividerLeftPinned = Math.round((dr.left + (Number.isNaN(dLeftRaw) ? 0 : dLeftRaw)) * 10) / 10;
+        dividerRightInsetPinned = Math.round((window.innerWidth - (dr.right - (Number.isNaN(dRightRaw) ? 0 : dRightRaw))) * 10) / 10;
+      }
+
+      // Test 3: an elementFromPoint sweep of the strip between the
+      // viewport top and the band's own top — every whole pixel when that
+      // strip is <=60px tall (the shipped defect's own magnitude), or at
+      // least 12 evenly-spaced points otherwise, since a fixed 5-point
+      // sample can straddle a row boundary and miss.
+      const bandTopFloorDown = Math.floor(bandTopDown);
+      const sweepYs = [];
+      if (bandTopFloorDown > 0) {
+        if (bandTopFloorDown <= 60) {
+          for (let y = 1; y < bandTopFloorDown; y++) sweepYs.push(y);
+        } else {
+          const n = 12;
+          for (let i = 1; i <= n; i++) sweepYs.push(Math.round((bandTopFloorDown * i) / (n + 1)));
+        }
+      }
+      const sweepX = Math.round(window.innerWidth / 2);
+      const sweep = sweepYs.map((y) => {
+        const el = document.elementFromPoint(sweepX, y);
+        const rowEl = el ? el.closest('.pk-admin-row') : null;
+        const hit = el ? (typeof el.className === 'string' && el.className ? el.tagName.toLowerCase() + '.' + el.className.split(' ')[0] : el.tagName.toLowerCase()) : null;
+        return { y, insideRow: !!rowEl, hit };
+      });
+      const offendingYs = sweep.filter((s) => s.insideRow);
+
+      // ---- UP state: the scroll-up differential control, same session,
+      // same section. Scroll back up in REAL increments (never a jump)
+      // until the hide attribute is gone, wait for the row's transform
+      // transition to settle, then measure. ----
+      function transformIsIdentity(transformStr) {
+        if (!transformStr || transformStr === 'none') return true;
+        try {
+          const m = new DOMMatrixReadOnly(transformStr);
+          return Math.abs(m.m41) < 0.5 && Math.abs(m.m42) < 0.5;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      let upTries = 0;
+      let searchHiddenNow = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      while (searchHiddenNow && upTries < 20) {
+        const nextY = Math.max(0, window.scrollY - 45);
+        if (nextY === window.scrollY) break;
+        window.scrollTo(0, nextY);
+        await new Promise((r) => requestAnimationFrame(r));
+        await new Promise((r) => setTimeout(r, 80));
+        searchHiddenNow = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+        upTries++;
+      }
+      let settleTries = 0;
+      while (searchWrap && settleTries < 30) {
+        if (transformIsIdentity(getComputedStyle(searchWrap).transform)) break;
+        await new Promise((r) => setTimeout(r, 30));
+        settleTries++;
+      }
+
+      const stillPinned = wrap.getAttribute('data-pinned') === 'true';
+      if (!stillPinned) {
+        return JSON.stringify({ error: 'section un-pinned while scrolling up for the differential control' });
+      }
+
+      const searchHiddenUp = searchWrap ? searchWrap.hasAttribute('data-pinned-hidden') : null;
+      const searchRectRawUp = searchWrap ? searchWrap.getBoundingClientRect() : null;
+      const searchRectUp = searchRectRawUp
+        ? { top: Math.round(searchRectRawUp.top * 10) / 10, bottom: Math.round(searchRectRawUp.bottom * 10) / 10 }
+        : null;
+      const headerRectUp = header.getBoundingClientRect();
+      const beforeCsUp = getComputedStyle(header, '::before');
+      const topOffsetUp = parseFloat(beforeCsUp.top) || 0;
+      const bottomOffsetUp = parseFloat(beforeCsUp.bottom) || 0;
+      const bandTopUp = Math.round((headerRectUp.top + topOffsetUp) * 10) / 10;
+      const bandSearchGapUp = searchRectUp ? Math.round((bandTopUp - searchRectUp.bottom) * 10) / 10 : null;
 
       return JSON.stringify({
-        pinned, searchHidden, bandTop, bandBottom, bandHeight, bandBg, bandSearchGap,
-        rowHeight, hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
-        inkGapAbove, inkGapBelow,
+        pinned, pinnedH,
+        hasRowAbove: hasRowAboveForInk, airAbove, airBelow, airRatio,
+        down: {
+          searchHidden: searchHiddenDown,
+          searchRect: searchRectDown,
+          transform: transformDown,
+          bandTop: bandTopDown, bandBottom: bandBottomDown, bandHeight: bandHeightDown,
+          bandBg: bandBgDown, bandSearchGap: bandSearchGapDown,
+          headerTop: headerTopDown, headerBottom: headerBottomDown, headerHeight: headerHeightDown,
+          rowHeight: rowHeightDown,
+          inkGapAbove: inkGapAboveDown, inkGapBelow: inkGapBelowDown,
+          rowContentPinned, bandLeftPinned, bandRightInsetPinned,
+          dividerLeftPinned, dividerRightInsetPinned,
+          sweep, offendingYs,
+        },
+        up: {
+          searchHidden: searchHiddenUp,
+          searchRect: searchRectUp,
+          bandTop: bandTopUp,
+          bandSearchGap: bandSearchGapUp,
+        },
       });
     })()
   `,
@@ -1330,24 +3015,225 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     }
   }
 
-  // ---- keel: a list row vs the pinned search row, at 375/360/390 ----
+  // Plan 01.8.3-12 [G-01.8.3-3, secondary cause]: the band must not paint
+  // OUTSIDE its own header's sticky box. Test 1: the band's bottom edge is
+  // at or inside the header's own rect bottom (a band ending ABOVE the
+  // header's own bottom is fine — that is ordinary sticky content passing
+  // behind it, not this defect; only the band extending PAST its own host
+  // is). Test 2: the header's own pinned box is at least as tall as the
+  // band — the same defect restated as a box-height property, so whichever
+  // shape Task 3 lands on, this is the assertion that proves it. Both use
+  // the header rect `measureJuegosSectionPinned` already reads to derive
+  // the band's own edges, in the same frame, so the two quantities can
+  // never be in different coordinate systems. FAILS today on the first
+  // section (overhang ~+11.8px, header box ~32.2px against a 44px band);
+  // PASSES on a later section (~-0.2px) in the same run, the positive
+  // control that the quantity is measured correctly rather than
+  // mis-derived. No assertion is added about content passing BEHIND the
+  // header's own box — that is ordinary sticky behaviour and asserting
+  // against it would make this guard unfalsifiable in the other direction.
+  const checkBandOverhang = (label, result) => {
+    const { down } = result
+    if (down.headerHeight == null || down.headerBottom == null || down.bandBottom == null || down.bandHeight == null) {
+      fail(
+        `juegos ${label} band-overhang: missing measurement (headerHeight=${down.headerHeight}, headerBottom=${down.headerBottom}, bandBottom=${down.bandBottom}, bandHeight=${down.bandHeight})`,
+      )
+      return
+    }
+    const bandOverhang = Math.round((down.bandBottom - down.headerBottom) * 10) / 10
+    log(
+      `juegos ${label} band-overhang: header height=${down.headerHeight}px band height=${down.bandHeight}px ` +
+        `band bottom=${down.bandBottom}px header bottom=${down.headerBottom}px overhang=${bandOverhang}px`,
+    )
+    if (bandOverhang > 0.5) {
+      fail(
+        `juegos ${label} band-overhang test1: band bottom extends ${bandOverhang}px past the header's own rect bottom ` +
+          `(band bottom=${down.bandBottom}px, header bottom=${down.headerBottom}px), expected at or below 0.5px`,
+      )
+    }
+    if (down.headerHeight < down.bandHeight - 0.5) {
+      fail(
+        `juegos ${label} band-overhang test2: header box height=${down.headerHeight}px is shorter than the band ` +
+          `height=${down.bandHeight}px (allowing 0.5px), so the band cannot fit inside its own host`,
+      )
+    }
+  }
+
+  // ---- keel: a list row vs the pinned search row, plus the band/divider/
+  // caption-ink tests, at 375/360/390 (D-20b: the declared keel is 32px,
+  // viewport-relative, not 16 — see measureJuegosKeelAt's own header
+  // comment for why). ----
   const keelByWidth = {}
   for (const width of KEEL_VIEWPORTS) {
     keelByWidth[width] = await measureJuegosKeelAt({ client, baseUrl, width })
-    const { row, searchRow } = keelByWidth[width]
+    const {
+      row,
+      searchRow,
+      coverLeft,
+      coverWidth,
+      chevronRightInset,
+      captionInkLeft,
+      columnGap,
+      bandLeft,
+      bandRightInset,
+      dividerLeft,
+      dividerRightInset,
+      searchInput,
+      addAction,
+      glyph,
+      glyphIsFallback,
+    } = keelByWidth[width]
     if (!row || !searchRow) {
       fail(`juegos keel @ ${width}px: row or search-row not found (row=${!!row}, searchRow=${!!searchRow})`)
       continue
     }
-    log(`juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}`)
-    if (row.left !== 16 || row.right !== 16) {
-      fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 16/16`)
+    log(
+      `juegos keel @ ${width}px: row left=${row.left} right=${row.right}; search row left=${searchRow.left} right=${searchRow.right}; ` +
+        `cover left=${coverLeft} width=${coverWidth}; chevron right inset=${chevronRightInset}; caption ink left=${captionInkLeft}; ` +
+        `row column-gap=${columnGap}; band left=${bandLeft} right inset=${bandRightInset}; divider left=${dividerLeft} right inset=${dividerRightInset}; ` +
+        `search input left=${searchInput?.left} right inset=${searchInput?.right} width=${searchInput?.width}; ` +
+        `add action left=${addAction?.left} right inset=${addAction?.right} width=${addAction?.width}; ` +
+        `glyph left=${glyph?.left} right inset=${glyph?.right} width=${glyph?.width} (fallback=${glyphIsFallback})`,
+    )
+    if (row.left !== 32 || row.right !== 32) {
+      fail(`juegos keel @ ${width}px: row content edges left=${row.left} right=${row.right}, expected 32/32 (D-20b)`)
     }
-    if (searchRow.left !== 16 || searchRow.right !== 16) {
-      fail(`juegos keel @ ${width}px: search row content edges left=${searchRow.left} right=${searchRow.right}, expected 16/16`)
+    if (searchRow.left !== 32 || searchRow.right !== 32) {
+      fail(`juegos keel @ ${width}px: search row content edges left=${searchRow.left} right=${searchRow.right}, expected 32/32 (D-20b)`)
     }
     if (row.left !== searchRow.left || row.right !== searchRow.right) {
       fail(`juegos keel @ ${width}px: row and search row disagree (row=${JSON.stringify(row)}, searchRow=${JSON.stringify(searchRow)})`)
+    }
+
+    // ---- G-01.8.3-2e: the search field and the `+` themselves, never the
+    // search row CONTAINER (already asserted 32/32 above and unchanged by
+    // this gap's fix). ----
+
+    // Test 1 (G-01.8.3-2e) — left agreement, positive control: the field's
+    // own border-box left must equal the row's content left. PASSES today
+    // (both 32) — proves the cluster's left edge was never the defect; only
+    // the right-hand side (the `+`) and the field's responsiveness are.
+    if (!searchInput) {
+      fail(`juegos keel @ ${width}px: #juegos-search-input not found`)
+    } else if (Math.abs(searchInput.left - row.left) > 0.5) {
+      fail(`juegos keel @ ${width}px search field left agreement: field=${searchInput.left}px row=${row.left}px, expected within 0.5px`)
+    }
+
+    // Test 2 (G-01.8.3-2e) — the `+`'s glyph is on the rows' axis: the
+    // glyph span's right inset must equal the row chevron's right inset,
+    // asserted against the MEASURED chevron inset (never a literal 32) so
+    // the guard retains the ability to disagree with the stylesheet. FAILS
+    // today at every width (`.pk-admin-action--a3`'s `margin-left: -12px`
+    // is a leading-icon pull applied to a trailing action).
+    if (!glyph || chevronRightInset == null) {
+      fail(`juegos keel @ ${width}px: could not measure the +'s glyph or the row chevron (glyph=${!!glyph}, chevronRightInset=${chevronRightInset})`)
+    } else {
+      if (glyphIsFallback) {
+        log(`juegos keel @ ${width}px: +'s glyph lookup fell back to the button's first element child (no [class^="hero-"]/[class*=" hero-"] descendant found)`)
+      }
+      if (Math.abs(glyph.right - chevronRightInset) > 0.5) {
+        fail(`juegos keel @ ${width}px +'s glyph vs chevron: glyph right inset=${glyph.right}px chevron right inset=${chevronRightInset}px, expected within 0.5px`)
+      }
+    }
+
+    // Test 3 (G-01.8.3-2e) — nothing spills: the `+`'s border-box right
+    // inset must be >= the row's own content right inset minus half the
+    // difference between the A3 box width and its glyph width — both
+    // derived from the MEASURED rects here, never from the `-12px`/`-13px`
+    // a stylesheet declares. In plainer terms, the button's box may
+    // overhang the content edge by exactly the amount that centres its
+    // glyph on that edge, and by no more. FAILS today at 360, where the
+    // box already spills past the row's own content box.
+    if (!addAction || !glyph) {
+      fail(`juegos keel @ ${width}px: could not measure the +'s own box or glyph for the spill check (addAction=${!!addAction}, glyph=${!!glyph})`)
+    } else {
+      const allowance = Math.round(((addAction.width - glyph.width) / 2) * 10) / 10
+      const minRightInset = Math.round((row.right - allowance) * 10) / 10
+      if (addAction.right < minRightInset) {
+        fail(
+          `juegos keel @ ${width}px +'s spill: add-action right inset=${addAction.right}px, row content right inset=${row.right}px, ` +
+            `allowance=${allowance}px (half of add-action width=${addAction.width}px minus glyph width=${glyph.width}px), ` +
+            `expected right inset >= ${minRightInset}px`,
+        )
+      }
+    }
+
+    // Test 1 (G-01.8.3-2c): the pinned caption band's painted edges must
+    // equal the row's own content edges. FAILS today: 16 against 32, both
+    // edges, all three widths (the band is anchored to the header's
+    // padding-box edge, bypassing the 16px `<main>` already adds).
+    if (bandLeft == null || bandRightInset == null) {
+      fail(`juegos keel @ ${width}px: band ::before geometry could not be measured`)
+    } else {
+      if (Math.abs(bandLeft - row.left) > 0.5) {
+        fail(`juegos keel @ ${width}px band-vs-row left: band=${bandLeft}px row=${row.left}px, expected within 0.5px`)
+      }
+      if (Math.abs(bandRightInset - row.right) > 0.5) {
+        fail(`juegos keel @ ${width}px band-vs-row right inset: band=${bandRightInset}px row=${row.right}px, expected within 0.5px`)
+      }
+    }
+
+    // Test 2: the row divider's right end must equal the row's own content
+    // right edge. FAILS today: 16 against 32 (the divider's `right: 0`
+    // shares the band's unintended axis, not the rows').
+    if (dividerRightInset == null) {
+      fail(`juegos keel @ ${width}px: divider ::before geometry could not be measured (fewer than two rows in the visible section?)`)
+    } else if (Math.abs(dividerRightInset - row.right) > 0.5) {
+      fail(`juegos keel @ ${width}px divider-vs-row right inset: divider=${dividerRightInset}px row=${row.right}px, expected within 0.5px`)
+    }
+
+    // Test 3 (positive control): the divider's LEFT is the row-name column
+    // — derived from the row's own cover/gap, never a copied 84 — and is
+    // UNCHANGED by this gap's fix (only the divider's right end moves).
+    // PASSES today; proves a coordinate-system change did not simply shift
+    // everything uniformly.
+    if (dividerLeft == null || coverLeft == null || coverWidth == null || columnGap == null) {
+      fail(`juegos keel @ ${width}px: could not measure the row-name-column derivation inputs (dividerLeft=${dividerLeft}, coverLeft=${coverLeft}, coverWidth=${coverWidth}, columnGap=${columnGap})`)
+    } else {
+      const derivedColumn = Math.round((coverLeft + coverWidth + columnGap) * 10) / 10
+      if (Math.abs(dividerLeft - derivedColumn) > 0.5) {
+        fail(
+          `juegos keel @ ${width}px: divider left ${dividerLeft}px does not match the derived row-name column ${derivedColumn}px ` +
+            `(cover left=${coverLeft} + cover width=${coverWidth} + column-gap=${columnGap})`,
+        )
+      }
+    }
+
+    // Test 4 (positive control): the caption ink's left already agrees with
+    // the row's content left (both 32 today) — the second proof the
+    // coordinate-system change alone did not manufacture a pass.
+    if (captionInkLeft == null) {
+      fail(`juegos keel @ ${width}px: caption ink left could not be measured`)
+    } else if (Math.abs(captionInkLeft - row.left) > 0.5) {
+      fail(`juegos keel @ ${width}px: caption ink left ${captionInkLeft}px does not match row content left ${row.left}px`)
+    }
+  }
+
+  // Test 4 (G-01.8.3-2e) — the cluster is responsive: cross-width, so it
+  // runs once after the loop against the collected `keelByWidth` map. The
+  // field's border-box width at 390 minus its width at 360 must equal 30px
+  // within 1px, and its width at 375 minus its width at 360 must equal
+  // 15px within 1px. FAILS today — the field's `flex: 1` has always been
+  // inert (its parent, `#juegos-search-form`, is `display: block`), so all
+  // three widths measure the same intrinsic `size=20` width and both
+  // deltas are 0. Fails loudly (never silently skips) if any width's
+  // measurement is missing.
+  const widths390 = keelByWidth[390]?.searchInput?.width ?? null
+  const widths375 = keelByWidth[375]?.searchInput?.width ?? null
+  const widths360 = keelByWidth[360]?.searchInput?.width ?? null
+  if (widths390 == null || widths375 == null || widths360 == null) {
+    fail(
+      `juegos keel search field responsiveness: missing a width measurement (390px=${widths390}, 375px=${widths375}, 360px=${widths360})`,
+    )
+  } else {
+    log(`juegos keel search field widths: 360px=${widths360} 375px=${widths375} 390px=${widths390}`)
+    const delta390v360 = Math.round((widths390 - widths360) * 10) / 10
+    const delta375v360 = Math.round((widths375 - widths360) * 10) / 10
+    if (Math.abs(delta390v360 - 30) > 1) {
+      fail(`juegos keel search field responsiveness: width@390 - width@360 = ${delta390v360}px, expected 30px ±1px`)
+    }
+    if (Math.abs(delta375v360 - 15) > 1) {
+      fail(`juegos keel search field responsiveness: width@375 - width@360 = ${delta375v360}px, expected 15px ±1px`)
     }
   }
 
@@ -1365,21 +3251,81 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     fail("juegos sections: #juegos-section-toggle-draft not found — is Borradores empty in this dev catalog?")
   }
 
+  // Plan 01.8.3-11 [T-01.8.3-34/G-01.8.3-2d/G-01.8.3-3]: the pinned-offset
+  // guard — tests 1/2/3/4/5 against `measureJuegosSectionPinned`'s DOWN and
+  // UP sub-objects. Test 1: the row really is hidden in the DOWN state
+  // (every other DOWN assertion is meaningless otherwise). Test 2: the
+  // band is at the viewport top in the DOWN state. Test 3: nothing renders
+  // above the band (the elementFromPoint sweep). Test 4: the band stays
+  // flush to the row's own bottom in BOTH states — the pre-existing
+  // adjacency assertion, restated against the wrap's measured bottom
+  // instead of a constant. Test 5: the scroll-up differential control —
+  // proves the offset now tracks the row rather than having simply moved
+  // to a different constant.
+  const checkPinnedOffset = (label, result) => {
+    if (!result.down) {
+      fail(`juegos ${label} pinned-offset: down-state measurement missing`)
+      return
+    }
+    const { down, up, pinnedH } = result
+
+    if (down.searchHidden !== true) {
+      fail(`juegos ${label} pinned-offset test1: search row is NOT hidden in the DOWN state (searchHidden=${down.searchHidden})`)
+    }
+
+    if (down.bandTop == null || down.bandTop > 0.5) {
+      fail(`juegos ${label} pinned-offset test2: band top=${down.bandTop}px in the DOWN state, expected at or below 0.5px`)
+    }
+
+    if (down.offendingYs && down.offendingYs.length > 0) {
+      const named = down.offendingYs.map((o) => `y=${o.y}(${o.hit})`).join(", ")
+      fail(`juegos ${label} pinned-offset test3: ${down.offendingYs.length} sampled y value(s) above the band resolve inside a .pk-admin-row: ${named}`)
+    }
+
+    if (down.bandSearchGap == null || Math.abs(down.bandSearchGap) > 0.5) {
+      fail(`juegos ${label} pinned-offset test4 (DOWN): band-to-row gap=${down.bandSearchGap}px, expected within ±0.5px of 0`)
+    }
+    if (!up || up.bandSearchGap == null || Math.abs(up.bandSearchGap) > 0.5) {
+      fail(`juegos ${label} pinned-offset test4 (UP): band-to-row gap=${up ? up.bandSearchGap : null}px, expected within ±0.5px of 0`)
+    }
+
+    if (!up) {
+      fail(`juegos ${label} pinned-offset test5: UP-state measurement missing`)
+    } else {
+      if (up.searchHidden !== false) {
+        fail(`juegos ${label} pinned-offset test5: search row still hidden after scrolling up (searchHidden=${up.searchHidden})`)
+      }
+      if (!up.searchRect || Math.abs(up.searchRect.top - 0) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP wrap rect top=${up.searchRect ? up.searchRect.top : null}px, expected within ±0.5px of 0`)
+      }
+      if (!up.searchRect || pinnedH == null || Math.abs(up.searchRect.bottom - pinnedH) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP wrap rect bottom=${up.searchRect ? up.searchRect.bottom : null}px, expected within ±0.5px of its own measured height (${pinnedH}px)`)
+      }
+      if (up.bandTop == null || !up.searchRect || Math.abs(up.bandTop - up.searchRect.bottom) > 0.5) {
+        fail(`juegos ${label} pinned-offset test5: UP band top=${up.bandTop}px does not equal wrap bottom=${up.searchRect ? up.searchRect.bottom : null}px within ±0.5px`)
+      }
+    }
+
+    log(
+      `juegos ${label} pinned-offset: DOWN bandTop=${down.bandTop} searchHidden=${down.searchHidden} offendingYs=${down.offendingYs ? down.offendingYs.length : "n/a"}; ` +
+        `UP bandTop=${up ? up.bandTop : null} searchHidden=${up ? up.searchHidden : null} searchRect=${up ? JSON.stringify(up.searchRect) : null} pinnedH=${pinnedH}`,
+    )
+  }
+
   const first = await measureJuegosSectionPinned(client, "#juegos-section-draft")
   if (first.error) {
     fail(`juegos first-section (Borradores) band: ${first.error}`)
   } else {
     log(
-      `juegos first-section (Borradores) band: height=${first.bandHeight}px (top=${first.bandTop} bottom=${first.bandBottom}) ` +
-        `bg=${first.bandBg} search-row gap=${first.bandSearchGap}px row-height=${first.rowHeight}px searchHidden=${first.searchHidden}`,
+      `juegos first-section (Borradores) band: height=${first.down.bandHeight}px (top=${first.down.bandTop} bottom=${first.down.bandBottom}) ` +
+        `bg=${first.down.bandBg} search-row gap=${first.down.bandSearchGap}px row-height=${first.down.rowHeight}px searchHidden=${first.down.searchHidden}`,
     )
-    if (Math.abs(first.bandHeight - 44.0) > 0.5) fail(`juegos first-section band height ${first.bandHeight}px, expected 44.0 ±0.5px`)
-    if (first.bandSearchGap === null || Math.abs(first.bandSearchGap) > 0.5) {
-      fail(`juegos first-section band-to-search-row gap is ${first.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
-    }
-    if (isFullyTransparent(first.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.bandBg})`)
-    if (first.rowHeight === null || first.rowHeight < 64) fail(`juegos first-section row height ${first.rowHeight}px, expected >= 64px`)
-    checkInkInBand("first-section (Borradores)", first)
+    if (Math.abs(first.down.bandHeight - 44.0) > 0.5) fail(`juegos first-section band height ${first.down.bandHeight}px, expected 44.0 ±0.5px`)
+    if (isFullyTransparent(first.down.bandBg)) fail(`juegos first-section band background is fully transparent while pinned (${first.down.bandBg})`)
+    if (first.down.rowHeight === null || first.down.rowHeight < 64) fail(`juegos first-section row height ${first.down.rowHeight}px, expected >= 64px`)
+    checkInkInBand("first-section (Borradores)", first.down)
+    checkPinnedOffset("first-section (Borradores)", first)
+    checkBandOverhang("first-section (Borradores)", first)
   }
 
   const later = await measureJuegosSectionPinned(client, "#juegos-section-published")
@@ -1387,15 +3333,12 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
     fail(`juegos later-section (Juegos del club) band: ${later.error}`)
   } else {
     log(
-      `juegos later-section (Juegos del club) band: height=${later.bandHeight}px (top=${later.bandTop} bottom=${later.bandBottom}) ` +
-        `bg=${later.bandBg} search-row gap=${later.bandSearchGap}px row-height=${later.rowHeight}px searchHidden=${later.searchHidden}`,
+      `juegos later-section (Juegos del club) band: height=${later.down.bandHeight}px (top=${later.down.bandTop} bottom=${later.down.bandBottom}) ` +
+        `bg=${later.down.bandBg} search-row gap=${later.down.bandSearchGap}px row-height=${later.down.rowHeight}px searchHidden=${later.down.searchHidden}`,
     )
-    if (Math.abs(later.bandHeight - 44.0) > 0.5) fail(`juegos later-section band height ${later.bandHeight}px, expected 44.0 ±0.5px`)
-    if (later.bandSearchGap === null || Math.abs(later.bandSearchGap) > 0.5) {
-      fail(`juegos later-section band-to-search-row gap is ${later.bandSearchGap}px, expected within ±0.5px (0 = flush)`)
-    }
-    if (isFullyTransparent(later.bandBg)) fail(`juegos later-section band background is fully transparent while pinned (${later.bandBg})`)
-    if (later.rowHeight === null || later.rowHeight < 64) fail(`juegos later-section row height ${later.rowHeight}px, expected >= 64px`)
+    if (Math.abs(later.down.bandHeight - 44.0) > 0.5) fail(`juegos later-section band height ${later.down.bandHeight}px, expected 44.0 ±0.5px`)
+    if (isFullyTransparent(later.down.bandBg)) fail(`juegos later-section band background is fully transparent while pinned (${later.down.bandBg})`)
+    if (later.down.rowHeight === null || later.down.rowHeight < 64) fail(`juegos later-section row height ${later.down.rowHeight}px, expected >= 64px`)
 
     if (!later.hasRowAbove) {
       fail("juegos ink ratio: later section has no row above it to measure — expected Borradores' last row above Juegos del club's caption")
@@ -1405,24 +3348,58 @@ async function checkJuegosListGeometry({ client, baseUrl }) {
       log(`juegos ink-to-ink: above=${later.airAbove}px below=${later.airBelow}px ratio=${later.airRatio}:1`)
       if (later.airRatio < 2.5) fail(`juegos ink-to-ink ratio ${later.airRatio}:1 is below the 2.5:1 floor (above=${later.airAbove}px, below=${later.airBelow}px)`)
     }
-    checkInkInBand("later-section (Juegos del club)", later)
+    checkInkInBand("later-section (Juegos del club)", later.down)
+    checkPinnedOffset("later-section (Juegos del club)", later)
+    checkBandOverhang("later-section (Juegos del club)", later)
+
+    // Plan 01.8.3-08 [G-01.8.3-2c]: repeat Test 1 (band-vs-row) and Test 2
+    // (divider-vs-row) from the resting-state loop above, but now with the
+    // section REALLY pinned (the incremental real scroll
+    // measureJuegosSectionPinned already performed to reach this branch) —
+    // the diagnosis proved horizontal geometry is scroll-state independent,
+    // so a divergence between the resting and pinned readings is itself a
+    // finding, never a synthetic class poke.
+    if (!later.down.rowContentPinned) {
+      fail("juegos pinned band/divider: could not measure the pinned section's own row content edges")
+    } else {
+      log(
+        `juegos pinned band-vs-row: band left=${later.down.bandLeftPinned} right inset=${later.down.bandRightInsetPinned}; ` +
+          `divider left=${later.down.dividerLeftPinned} right inset=${later.down.dividerRightInsetPinned}; ` +
+          `row left=${later.down.rowContentPinned.left} right=${later.down.rowContentPinned.right}`,
+      )
+      if (later.down.bandLeftPinned == null || later.down.bandRightInsetPinned == null) {
+        fail("juegos pinned band-vs-row: band ::before geometry could not be measured while pinned")
+      } else {
+        if (Math.abs(later.down.bandLeftPinned - later.down.rowContentPinned.left) > 0.5) {
+          fail(`juegos pinned band-vs-row left: band=${later.down.bandLeftPinned}px row=${later.down.rowContentPinned.left}px, expected within 0.5px`)
+        }
+        if (Math.abs(later.down.bandRightInsetPinned - later.down.rowContentPinned.right) > 0.5) {
+          fail(`juegos pinned band-vs-row right inset: band=${later.down.bandRightInsetPinned}px row=${later.down.rowContentPinned.right}px, expected within 0.5px`)
+        }
+      }
+      if (later.down.dividerRightInsetPinned == null) {
+        fail("juegos pinned divider-vs-row: divider ::before geometry could not be measured while pinned (fewer than two rows in the section?)")
+      } else if (Math.abs(later.down.dividerRightInsetPinned - later.down.rowContentPinned.right) > 0.5) {
+        fail(`juegos pinned divider-vs-row right inset: divider=${later.down.dividerRightInsetPinned}px row=${later.down.rowContentPinned.right}px, expected within 0.5px`)
+      }
+    }
   }
 
   if (!first.error && !later.error) {
-    const delta = Math.round((first.bandHeight - later.bandHeight) * 10) / 10
-    log(`juegos band heights: first=${first.bandHeight}px later=${later.bandHeight}px delta=${delta}px`)
-    if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.bandHeight}px, later=${later.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
+    const delta = Math.round((first.down.bandHeight - later.down.bandHeight) * 10) / 10
+    log(`juegos band heights: first=${first.down.bandHeight}px later=${later.down.bandHeight}px delta=${delta}px`)
+    if (Math.abs(delta) > 0.5) fail(`juegos band heights disagree between sections by ${delta}px (first=${first.down.bandHeight}px, later=${later.down.bandHeight}px) — the shipped 32.2/44.2 defect this guards against`)
 
     // Plan 01.8.3-06: the assertion that directly names the root cause — a
     // band whose ink offset tracks `--pt` reads 14 against 26 today, even
     // though the band's own HEIGHT is identical (44px) for both sections.
-    if (first.inkGapAbove == null || later.inkGapAbove == null) {
-      fail(`juegos ink gap-above cross-section: could not measure inkGapAbove for one or both sections (first=${first.inkGapAbove}, later=${later.inkGapAbove})`)
+    if (first.down.inkGapAbove == null || later.down.inkGapAbove == null) {
+      fail(`juegos ink gap-above cross-section: could not measure inkGapAbove for one or both sections (first=${first.down.inkGapAbove}, later=${later.down.inkGapAbove})`)
     } else {
-      const crossDelta = Math.round(Math.abs(first.inkGapAbove - later.inkGapAbove) * 10) / 10
-      log(`juegos ink gap-above cross-section: first=${first.inkGapAbove}px later=${later.inkGapAbove}px delta=${crossDelta}px`)
+      const crossDelta = Math.round(Math.abs(first.down.inkGapAbove - later.down.inkGapAbove) * 10) / 10
+      log(`juegos ink gap-above cross-section: first=${first.down.inkGapAbove}px later=${later.down.inkGapAbove}px delta=${crossDelta}px`)
       if (crossDelta > 1.0) {
-        fail(`juegos ink gap-above disagrees between sections by ${crossDelta}px (first=${first.inkGapAbove}px, later=${later.inkGapAbove}px) — the band's ink offset tracks --pt instead of staying fixed`)
+        fail(`juegos ink gap-above disagrees between sections by ${crossDelta}px (first=${first.down.inkGapAbove}px, later=${later.down.inkGapAbove}px) — the band's ink offset tracks --pt instead of staying fixed`)
       }
     }
   }
@@ -1605,33 +3582,34 @@ async function main() {
       }
     }
 
-    // ---- the keel ----
-    log("Measuring the shell's content keel (open item 4)...")
+    // ---- main's own horizontal padding (NOT the content keel — see the
+    // relabelled comment above measureKeel) ----
+    log("Measuring <main>'s own horizontal padding across admin pages (excludes the one fullbleed page by construction; not the content keel — see measureJuegosKeelAt for that)...")
     const keelResults = {}
     for (const width of [375, 360]) {
       const m = await measureKeel({ client, baseUrl, width })
       keelResults[width] = m
       for (const [page, edges] of Object.entries(m)) {
         if (!edges) {
-          log(`FAIL: keel @ ${width}px ${page}: content wrapper not found`)
+          log(`FAIL: main padding @ ${width}px ${page}: content wrapper not found`)
           exitCode = 1
           continue
         }
-        log(`KEEL @ ${width}px ${page}: left=${edges.left}px right=${edges.right}px`)
+        log(`MAIN PADDING @ ${width}px ${page}: left=${edges.left}px right=${edges.right}px`)
       }
     }
-    // Cross-page consistency at each width — the keel should be one number
-    // per width across every screen (D-18's shared shape), not a fresh one
-    // per page.
+    // Cross-page consistency at each width — <main>'s own padding should be
+    // one number per width across every non-fullbleed screen (D-18's shared
+    // shape), not a fresh one per page. This says nothing about content.
     for (const width of [375, 360]) {
       const pages = Object.values(keelResults[width]).filter(Boolean)
       const distinctLeft = [...new Set(pages.map((p) => p.left))]
       const distinctRight = [...new Set(pages.map((p) => p.right))]
       if (distinctLeft.length > 1 || distinctRight.length > 1) {
-        log(`FAIL: keel @ ${width}px is not consistent across pages: ${JSON.stringify(keelResults[width])}`)
+        log(`FAIL: main padding @ ${width}px is not consistent across pages: ${JSON.stringify(keelResults[width])}`)
         exitCode = 1
       } else if (pages.length > 0) {
-        log(`KEEL @ ${width}px (consistent across ${pages.length} page(s)): left=${distinctLeft[0]}px right=${distinctRight[0]}px`)
+        log(`MAIN PADDING @ ${width}px (consistent across ${pages.length} page(s), excludes the fullbleed editor): left=${distinctLeft[0]}px right=${distinctRight[0]}px`)
       }
     }
 
@@ -1646,6 +3624,92 @@ async function main() {
     log("Measuring overlay coverage (synthetic control + real-open call-site walk)...")
     const overlayCoverage = await checkOverlayCoversViewport({ client, baseUrl })
     if (overlayCoverage.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- sheet body keel (plan 01.8.3-10, G-01.8.3-4b) ----
+    log("Measuring the sheet body's own keel against its header...")
+    // Task 3: the editor's own choice sheet (`form.ex:1035`'s
+    // `.pk-editor-opt`, the call site this plan's editor.css fix re-
+    // expressed — "must be measured, not reasoned about"). Its URL is a
+    // real game id, resolved fresh here off `/admin/juegos` (same
+    // mechanism `resolveEditorUrl` uses for the save-bar check above) —
+    // not a static route, so it is built here rather than as a
+    // `SHEET_KEEL_CALL_SITES` literal. `edit-field`/`weight_band` renders
+    // unconditionally on the editor page — data-independent.
+    const sheetKeelRows = [...SHEET_KEEL_CALL_SITES]
+    const sheetKeelEditorUrl = await resolveEditorUrl(client, baseUrl)
+    if (sheetKeelEditorUrl) {
+      sheetKeelRows.push({
+        page: sheetKeelEditorUrl,
+        overlayId: "editor-weight-band-sheet",
+        dataIndependent: true,
+        bodyShape: "row",
+        steps: [{ kind: "click", selector: '[phx-click="edit-field"][phx-value-field="weight_band"]' }],
+      })
+    } else {
+      log("sheet keel: could not resolve an editor URL — skipping editor-weight-band-sheet (is the dev catalog empty?)")
+    }
+    const sheetKeel = await checkSheetKeel({ client, baseUrl, rows: sheetKeelRows })
+    if (sheetKeel.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- overlay scroll lock (plan 01.8.3-13, G-01.8.3-4a) ----
+    log("Measuring the overlay scroll lock — real touch/wheel gestures with a closed-sheet positive control...")
+    // The editor overlay + dialog rows (Task 1's own "one editor overlay"
+    // and "one dialog/1 instance" requirements): built here off a resolved
+    // real game id, same mechanism as `sheetKeelEditorUrl` above. Both are
+    // `dataIndependent: false` — `editor-lifecycle-sheet` only renders for a
+    // published/retired game (`lifecycle_action/1` returns `nil` for a
+    // draft), and the resolved id's status is not controlled here.
+    // `[phx-click="retire"], [phx-click="restore"]` covers both non-draft
+    // statuses uniformly. Neither step ever reaches `confirm-retire` — the
+    // walk stops at OPENING `editor-retire-dialog`/`editor-restore-dialog`'s
+    // shared root, never at its own commit control (destructive-path guard,
+    // matching this file's established convention).
+    const scrollLockRows = [...SCROLL_LOCK_CALL_SITES]
+    const scrollLockEditorUrl = await resolveEditorUrl(client, baseUrl)
+    if (scrollLockEditorUrl) {
+      scrollLockRows.push({
+        page: scrollLockEditorUrl,
+        overlayId: "editor-lifecycle-sheet",
+        dataIndependent: false,
+        steps: [{ kind: "click", selector: ".pk-editor-topbar__menu" }],
+      })
+      scrollLockRows.push({
+        page: scrollLockEditorUrl,
+        overlayId: "editor-retire-dialog",
+        dataIndependent: false,
+        steps: [
+          { kind: "click", selector: ".pk-editor-topbar__menu" },
+          { kind: "click", selector: '#editor-lifecycle-sheet [phx-click="retire"], #editor-lifecycle-sheet [phx-click="restore"]' },
+        ],
+      })
+    } else {
+      log("scroll lock: could not resolve an editor URL — skipping the editor sheet/dialog rows (is the dev catalog empty?)")
+    }
+    const scrollLock = await checkOverlayScrollLock({ client, baseUrl, rows: scrollLockRows })
+    if (scrollLock.fails.length > 0) {
+      exitCode = 1
+    }
+
+    log("Measuring the overlay scroll lock across a real sheet -> dialog handoff...")
+    const scrollLockHandoff = await checkOverlayScrollLockHandoff({ client, baseUrl })
+    if (scrollLockHandoff.fails.length > 0) {
+      exitCode = 1
+    }
+
+    log("Measuring the overlay scroll lock is fully released after a real navigation away from an open sheet...")
+    const scrollLockTeardown = await checkOverlayScrollLockTeardown({ client, baseUrl })
+    if (scrollLockTeardown.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- sheet focus return (plan 01.8.3-14, G-01.8.3-4c) ----
+    log("Measuring focus return after both sheet close paths, plus the sheet->dialog handoff baseline...")
+    const focusReturn = await checkSheetFocusReturn({ client, baseUrl })
+    if (focusReturn.fails.length > 0) {
       exitCode = 1
     }
   } finally {

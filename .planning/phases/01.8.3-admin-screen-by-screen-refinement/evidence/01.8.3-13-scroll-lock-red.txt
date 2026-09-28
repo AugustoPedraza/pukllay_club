@@ -1,0 +1,105 @@
+Using existing server at http://localhost:4000 (PROBE_BASE_URL set) — starting nothing.
+Logging in as staff (augusto.pedraza08@gmail.com)...
+Login confirmed (admin tab bar present).
+tab bar @ 375px: height=67px --pk-tab-bar-h=67px indicator=56x30
+tab bar @ 360px: height=67px --pk-tab-bar-h=67px indicator=56x30
+Measuring the snackbar's offset against the tab bar (inviting a throwaway staff account for a real flash)...
+cleanup: probe staff account probe-shell-1790567817831@pukllayclub.invalid removed cleanly
+snackbar: bottom=765px, tab bar top=777px, clearance=12.0px
+Confirming the deleted page bar has not resurfaced on /admin...
+page bar: absent on /admin, as expected — AdminComponents.page_bar/1 and its CSS were deleted outright in plan 01.8.3-02 (D-09); this check now guards against its return rather than measuring its (now nonexistent) at-rest layout cost
+Checking the fixed foot save bar (D-28)...
+--pk-save-bar-h resolves to 77px (checked on /admin, which never carries a save bar itself — save_bar/1 is editor-only)
+Resolved editor URL: /admin/juegos/177/editar; live [data-pk-save-bar] instance found there: true
+save bar @ 375px: barH=77px (--pk-save-bar-h=77px) btn=88.7x44 ink=61.7% right-gap=16px lastBlockBottom=751.3px barTop=767px clearance=15.7px
+save bar @ 360px: barH=77px (--pk-save-bar-h=77px) btn=88.7x44 ink=61.7% right-gap=16px lastBlockBottom=751.3px barTop=767px clearance=15.7px
+Measuring <main>'s own horizontal padding across admin pages (excludes the one fullbleed page by construction; not the content keel — see measureJuegosKeelAt for that)...
+MAIN PADDING @ 375px /admin: left=16px right=16px
+MAIN PADDING @ 375px /admin/staff: left=16px right=16px
+MAIN PADDING @ 375px /admin/estantes: left=16px right=16px
+MAIN PADDING @ 375px /admin/estantes/pendientes: left=16px right=16px
+MAIN PADDING @ 375px /admin/estantes/administrar: left=16px right=16px
+MAIN PADDING @ 375px /admin/juegos: left=16px right=16px
+MAIN PADDING @ 375px /admin/secciones: left=16px right=16px
+MAIN PADDING @ 375px /admin/niveles: left=16px right=16px
+MAIN PADDING @ 360px /admin: left=16px right=16px
+MAIN PADDING @ 360px /admin/staff: left=16px right=16px
+MAIN PADDING @ 360px /admin/estantes: left=16px right=16px
+MAIN PADDING @ 360px /admin/estantes/pendientes: left=16px right=16px
+MAIN PADDING @ 360px /admin/estantes/administrar: left=16px right=16px
+MAIN PADDING @ 360px /admin/juegos: left=16px right=16px
+MAIN PADDING @ 360px /admin/secciones: left=16px right=16px
+MAIN PADDING @ 360px /admin/niveles: left=16px right=16px
+MAIN PADDING @ 375px (consistent across 8 page(s), excludes the fullbleed editor): left=16px right=16px
+MAIN PADDING @ 360px (consistent across 8 page(s), excludes the fullbleed editor): left=16px right=16px
+Measuring the Juegos list/caption geometry...
+juegos keel @ 375px: row left=32 right=32; search row left=32 right=32; cover left=32 width=40; chevron right inset=32; caption ink left=32; row column-gap=12; band left=32 right inset=32; divider left=84 right inset=32; search input left=32 right inset=71 width=272; add action left=312 right inset=19 width=44; glyph left=325 right inset=32 width=18 (fallback=false)
+juegos keel @ 360px: row left=32 right=32; search row left=32 right=32; cover left=32 width=40; chevron right inset=32; caption ink left=32; row column-gap=12; band left=32 right inset=32; divider left=84 right inset=32; search input left=32 right inset=71 width=257; add action left=297 right inset=19 width=44; glyph left=310 right inset=32 width=18 (fallback=false)
+juegos keel @ 390px: row left=32 right=32; search row left=32 right=32; cover left=32 width=40; chevron right inset=32; caption ink left=32; row column-gap=12; band left=32 right inset=32; divider left=84 right inset=32; search input left=32 right inset=71 width=287; add action left=327 right inset=19 width=44; glyph left=340 right inset=32 width=18 (fallback=false)
+juegos keel search field widths: 360px=257 375px=272 390px=287
+juegos first-section (Borradores) band: height=44px (top=0 bottom=44) bg=rgb(241, 236, 253) search-row gap=0px row-height=64px searchHidden=true
+juegos first-section (Borradores) ink-in-band: above=13.5px below=13.5px
+juegos first-section (Borradores) pinned-offset: DOWN bandTop=0 searchHidden=true offendingYs=0; UP bandTop=60 searchHidden=false searchRect={"top":0,"bottom":60} pinnedH=60
+juegos first-section (Borradores) band-overhang: header height=44.2px band height=44px band bottom=44px header bottom=44.2px overhang=-0.2px
+juegos later-section (Juegos del club) band: height=44px (top=0 bottom=44) bg=rgb(241, 236, 253) search-row gap=0px row-height=64px searchHidden=true
+juegos ink-to-ink: above=39px below=14.7px ratio=2.65:1
+juegos later-section (Juegos del club) ink-in-band: above=13.5px below=13.5px
+juegos later-section (Juegos del club) pinned-offset: DOWN bandTop=0 searchHidden=true offendingYs=0; UP bandTop=60 searchHidden=false searchRect={"top":0,"bottom":60} pinnedH=60
+juegos later-section (Juegos del club) band-overhang: header height=44.2px band height=44px band bottom=44px header bottom=44.2px overhang=-0.2px
+juegos pinned band-vs-row: band left=32 right inset=32; divider left=84 right inset=32; row left=32 right=32
+juegos band heights: first=44px later=44px delta=0px
+juegos ink gap-above cross-section: first=13.5px later=13.5px delta=0px
+Measuring overlay coverage (synthetic control + real-open call-site walk)...
+synthetic overlay control /admin: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/staff: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/estantes: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/estantes/pendientes: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/estantes/administrar: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/juegos: full-ICB overlay for all 3 container(s), margins 0px
+synthetic overlay control /admin/secciones: full-ICB overlay for all 2 container(s), margins 0px
+synthetic overlay control /admin/niveles: full-ICB overlay for all 2 container(s), margins 0px
+COVERED: /admin/juegos add-game-sheet: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+COVERED: /admin/estantes/administrar shelf-name-sheet: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+COVERED: /admin/estantes/administrar shelf-options-sheet: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+COVERED: /admin/estantes/administrar confirm-delete-shelf-dialog: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+clickCenterOf: #estantes-suggestions [data-pk-pressable] is obstructed at its own centre point — a real tap there would hit navbar pk-nav px-0 instead. Falling back to a direct .click().
+COVERED: /admin/estantes cover-options-sheet: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+COVERED: /admin/niveles niveles-sheet: rect 390x844 @ (0,0) covers ICB 390x844, margins 0px, all 5 hit tests inside
+overlay real-open walk: attempted=6 covered=6 not-openable=0
+Measuring the sheet body's own keel against its header...
+sheet keel /admin/juegos add-game-sheet (form-shaped): panel=[0,390]; header content=[16,16] title ink left=16; body content=[16,16] body padding="8px 16px" scrollWidth=390 clientWidth=390; leftmost=ink<span>@16
+sheet keel /admin/estantes/administrar shelf-name-sheet (form-shaped): panel=[0,390]; header content=[16,16] title ink left=16; body content=[16,16] body padding="8px 16px" scrollWidth=390 clientWidth=390; leftmost=ink<span>@16
+sheet keel /admin/estantes/administrar shelf-options-sheet (row-shaped): panel=[0,390]; header content=[16,16] title ink left=16; body content=[16,16] body padding="8px 16px" scrollWidth=390 clientWidth=390; leftmost=ink<button>@16
+NOT-OPENABLE: /admin/staff staff-options-sheet: opener selector never appeared (#staff-list .pk-admin-row[phx-click]) — dev data is likely too thin for this row
+clickCenterOf: #estantes-suggestions [data-pk-pressable] is obstructed at its own centre point — a real tap there would hit navbar pk-nav px-0 instead. Falling back to a direct .click().
+sheet keel /admin/estantes donde-va-sheet (mixed-shaped): panel=[0,390]; header content=[16,16] title ink left=84; body content=[16,16] body padding="8px 16px" scrollWidth=390 clientWidth=390; leftmost=control<input#donde-va-search-input>@16
+sheet keel /admin/juegos/177/editar editor-weight-band-sheet (row-shaped): panel=[0,390]; header content=[16,16] title ink left=16; body content=[16,16] body padding="8px 16px" scrollWidth=390 clientWidth=390; leftmost=ink<span>@16
+sheet keel walk: attempted=6 not-openable=1
+Measuring the overlay scroll lock — real touch/wheel gestures with a closed-sheet positive control...
+scroll lock /admin/juegos add-game-sheet: start=7283 closed-controls touch=617 wheel=132; open-state touchScrim=350 wheelScrim=145 touchPanel=185 wheelPanel=400; final=8363; overscroll root=auto rows=auto; bodyClass(open)=""
+FAIL: /admin/juegos add-game-sheet test1 (document does not move): touch on bare scrim moved the document by 350px, expected at most 1px
+FAIL: /admin/juegos add-game-sheet test1 (document does not move): wheel on scrim moved the document by 145px, expected at most 1px
+FAIL: /admin/juegos add-game-sheet test1 (document does not move): touch on panel moved the document by 185px, expected at most 1px
+FAIL: /admin/juegos add-game-sheet test1 (document does not move): wheel on panel moved the document by 400px, expected at most 1px
+FAIL: /admin/juegos add-game-sheet test3 (position preserved): offset after close=8363px, offset before open=7283px, expected within 1px
+FAIL: /admin/juegos add-game-sheet test4 (overscroll containment): overlay root resolved overscroll-behavior-y=auto, expected contain or none
+FAIL: /admin/juegos add-game-sheet test4 (overscroll containment): .pk-admin-sheet__rows resolved overscroll-behavior-y=auto, expected contain or none
+FAIL: /admin/juegos add-game-sheet test5 (lock state observable, open): <body> does not carry the lock class while the overlay is open (class="")
+FAIL: /admin/juegos add-game-sheet test5 (lock state observable, open): the saved-offset custom property is empty while the overlay is open
+scroll lock /admin/juegos/177/editar editor-lifecycle-sheet: start=92 closed-controls touch=217 wheel=217; open-state touchScrim=185 wheelScrim=32 touchPanel=0 wheelPanel=0; final=309; overscroll root=auto rows=auto; bodyClass(open)=""
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test1 (document does not move): touch on bare scrim moved the document by 185px, expected at most 1px
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test1 (document does not move): wheel on scrim moved the document by 32px, expected at most 1px
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test3 (position preserved): offset after close=309px, offset before open=92px, expected within 1px
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test4 (overscroll containment): overlay root resolved overscroll-behavior-y=auto, expected contain or none
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test4 (overscroll containment): .pk-admin-sheet__rows resolved overscroll-behavior-y=auto, expected contain or none
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test5 (lock state observable, open): <body> does not carry the lock class while the overlay is open (class="")
+FAIL: /admin/juegos/177/editar editor-lifecycle-sheet test5 (lock state observable, open): the saved-offset custom property is empty while the overlay is open
+scroll lock /admin/juegos/177/editar editor-retire-dialog: start=92 closed-controls touch=217 wheel=217; open-state touchScrim=217 wheelScrim=0 touchPanel=0 wheelPanel=0; final=309; overscroll root=auto rows=null; bodyClass(open)=""
+FAIL: /admin/juegos/177/editar editor-retire-dialog test1 (document does not move): touch on bare scrim moved the document by 217px, expected at most 1px
+FAIL: /admin/juegos/177/editar editor-retire-dialog test3 (position preserved): offset after close=309px, offset before open=92px, expected within 1px
+FAIL: /admin/juegos/177/editar editor-retire-dialog test4 (overscroll containment): overlay root resolved overscroll-behavior-y=auto, expected contain or none
+FAIL: /admin/juegos/177/editar editor-retire-dialog test5 (lock state observable, open): <body> does not carry the lock class while the overlay is open (class="")
+FAIL: /admin/juegos/177/editar editor-retire-dialog test5 (lock state observable, open): the saved-offset custom property is empty while the overlay is open
+overlay scroll-lock walk: attempted=3 not-openable=0
+
+admin_shell.mjs: FAILURES ABOVE

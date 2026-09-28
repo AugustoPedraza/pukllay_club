@@ -4,17 +4,17 @@ milestone: v1.1
 milestone_name: Sharable Version
 current_phase: 01.8.3
 current_phase_name: Admin Screen-by-Screen Refinement (INSERTED)
-status: executing
-stopped_at: Completed 01.8.3-07-PLAN.md
-last_updated: "2026-09-25T21:02:54.724Z"
-last_activity: 2026-09-25
+status: verifying
+stopped_at: Completed 01.8.3-14-PLAN.md (last plan in phase 01.8.3's gap-closure round)
+last_updated: "2026-09-28T05:26:53.022Z"
+last_activity: 2026-09-27
 last_activity_desc: Phase 01.8.3 execution started
-state_head: 410bd4fb97c3129b33dfdd0bce6cceb065ee7e44
+state_head: 831b6d520618d7542abf4a967af6b43be5c9fb91
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 56
-  completed_plans: 56
+  total_plans: 63
+  completed_plans: 63
 ---
 
 Total Phases: 9
@@ -34,9 +34,20 @@ ahead of Phase 2, which keeps its number and scope.
 ## Current Position
 
 Phase: 01.8.3 (Admin Screen-by-Screen Refinement (INSERTED)) — EXECUTING
-Plan: 3 of 7
-Status: Ready to execute
-Last activity: 2026-09-25 — Phase 01.8.3 execution started
+Plan: 14 of 14
+Status: Phase complete — ready for verification
+
+Note (2026-09-27, this plan's executor): this field drifted stale across
+plans 06-10 (it read "Plan: 4 of 14" immediately before this correction,
+despite 01.8.3-01 through -10-SUMMARY.md already existing on disk) — the
+documented "GSD Decimal-Phase Resume Bug" in this repo's CLAUDE.md
+(`gsd_run query state.advance-plan` increments from whatever stale value
+is here rather than recomputing from the phase directory's real PLAN/
+SUMMARY counts on a decimal phase number). Corrected by hand per that
+note's own recovery path ("inspect commits, write SUMMARY.md, then update
+STATE/ROADMAP manually") — 11 summaries exist on disk
+(01.8.3-01 through 01.8.3-11), 14 plans total, so 12 is next.
+Last activity: 2026-09-27 — Phase 01.8.3 execution started
 
 Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
 `gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
@@ -161,6 +172,13 @@ covered screens 01.8.3 will change.
 | Phase 01.8.2 P21 | 75min | 3 tasks | 13 files |
 | Phase 01.8.3 P06 | ~35min | 3 tasks | 3 files |
 | Phase 01.8.3 P07 | 75min | 3 tasks | 3 files |
+| Phase 01.8.3 P08 | ~50min | 3 tasks | 6 files |
+| Phase 01.8.3 P09 | 28min | 2 tasks | 2 files |
+| Phase 01.8.3 P10 | 54min | 3 tasks | 7 files |
+| Phase 01.8.3 P11 | 65min | 2 tasks | 3 files |
+| Phase 01.8.3 P12 | 50min | 3 tasks | 4 files |
+| Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
+| Phase 01.8.3 P14 | ~55min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -336,6 +354,16 @@ Recent decisions affecting current work:
 - [Phase 01.8.2]: Left Game.admin_changeset/2's :shelf_id cast field unchanged even though the ESTANTE block no longer reads/writes it — narrowing the shared changeset contract was judged out of this plan's scope; an existing test still exercises the legacy draft-change path directly
 - [Phase 01.8.3]: 01.8.3-06: pinned-band ink fix — a pinned-state padding override (padding-top: --bandp + --cap, padding-bottom: --pt - --bandp - --cap) on .pk-admin-juegos-section-header moves the caption INK to the band's centre while the header's total vertical padding (hence its box height) stays unchanged, so the existing 01.8.3-05 band-height/flush-adjacency math needs no edit; admin_shell.mjs gains an ink-in-band measurement (per-section symmetry + cross-section --pt independence) observed RED against unfixed CSS before the fix landed, plus a de-flaked pollUntil-based loginAsStaff; a new comment-stripped ExUnit gate (admin_pinned_band_test.exs) binds the padding override, the --bandp derivation and the --pt floor in source, negative-tested three ways
 - [Phase 01.8.3]: 01.8.3-07: closed G-01.8.3-2b via margin: 0 on the shared .pk-admin-overlay-root component (not a call-site patch), backed by a synthetic data-independent coverage control plus a table-driven real-open walk over six sheet/1 and dialog/1 call sites
+- [Phase 01.8.3]: 01.8.3-08: created --pk-admin-keel-inset (components.css :root) as the admin's first declared horizontal-geometry token — deliberately the COMPONENT half of the 32px viewport-relative keel, not the keel itself (<main>'s px-4 supplies the other half on non-fullbleed pages; the fullbleed editor and any position:fixed overlay both read it as a standalone 16px axis)
+- [Phase 01.8.3]: 01.8.3-08: no sweeping literal-to-token refactor — only the 4 juegos.css rules in the band's/divider's own family were converted; ~11 other hand-copied 16px literals across components.css/editor.css/estantes.css stay untouched, out of this gap's scope
+- [Phase 01.8.3]: 01.8.3-09: #juegos-search-form (the real flex item, not #juegos-search-input) gets flex: 1; min-width: 0; display: flex, making the input's pre-existing inert flex: 1 live; #juegos-add-action gets an ID-scoped trailing pull (margin-right: calc((18px - 44px) / 2)) replacing .pk-admin-action--a3's shared leading-icon margin-left: -12px for this trailing use only — closes G-01.8.3-2e
+- [Phase 01.8.3]: 01.8.3-10: Sheet body keel test axis is the header's own content edge (padding-derived), not the header title's own ink — a leading cover image can legitimately push the title text right without moving the header's established alignment axis
+- [Phase 01.8.3]: 01.8.3-10: Full-bleed sheet-row anatomies need an explicit calc(100% + 2*keel) width alongside their negative-margin compensation — width:auto alone is insufficient for inline-flex anatomies (a4/pk-editor-opt), only for block-level flex (.pk-admin-row)
+- [Phase 01.8.3]: 01.8.3-10: Nested list_row elements inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet's estante-list state) are NOT reached by the direct-child-only sheet-row compensation — recorded as an open finding (WINDOWS.md #35), not fixed, since widening the selector is a separate architectural decision outside this plan's scope
+- [Phase 01.8.3]: 01.8.3-11: pinned caption's sticky offset made dynamic (D-20a) -- admin_list.js writes an effective reservation (0 or the row's full height) to --pk-juegos-pinned-h in lockstep with the search row's hide attribute; growth deferred to the row's own transitionend with a computed-duration fallback; closes G-01.8.3-2d and G-01.8.3-3's primary cause.
+- [Phase 01.8.3]: 01.8.3-12: rest-air chosen — first section's --pt: 14px override deleted; header box now reserves the full 44px band, closing G-01.8.3-3's overhang with no pin-moment jitter.
+- [Phase 01.8.3]: 01.8.3-13: Reference-counted (not boolean) document scroll lock at the shared AdminSheet component closes G-01.8.3-4a; fixed-body-plus-saved-offset CSS lock chosen over the repo's two bare overflow:hidden precedents for iOS Safari coverage + position preservation. — Proven necessary by a real sheet->dialog handoff (LiveView mounts the second overlay's hook and acquires before the first's destroyed()/release runs); a boolean toggle would unlock mid-handoff.
+- [Phase 01.8.3]: 01.8.3-14: onClose's focus-restore condition rewritten from an equality against document.body to containment against the overlay's own root, closing G-01.8.3-4c without disturbing plan 01.8.2-12's sheet->dialog handoff protection or plan 13's scroll lock
 
 ### Pending Todos
 
@@ -481,8 +509,8 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T21:02:54.556Z
-Stopped at: Completed 01.8.3-07-PLAN.md
+Last session: 2026-09-28T05:26:52.830Z
+Stopped at: Completed 01.8.3-14-PLAN.md (last plan in phase 01.8.3's gap-closure round)
 Resume file: None
 
 ## Operator Next Steps

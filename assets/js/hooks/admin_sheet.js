@@ -33,6 +33,80 @@
 // `isOverlayOpen` helper does, and exactly what `.pk-admin-overlay--open`'s
 // class toggle actually controls (`components.css`: `display: none` at
 // rest, `display: block` when open).
+//
+// FIX (plan 01.8.3-13, G-01.8.3-4a): the document behind an open sheet or
+// dialog was fully scrollable — `onOpen`/`onClose` above manage focus only,
+// and no CSS rule locked the document either (see
+// `.planning/debug/DEBUG-admin-sheet-modal-contract.md`). The module-level
+// counter and saved offset below are shared by EVERY instance of this hook
+// on the page (there are 20 exposed `sheet/1`/`dialog/1` call sites across 8
+// files sharing this one module) because a sheet->dialog handoff — e.g.
+// `staff_live/index.ex`'s `ask-remove` closing `staff-options-sheet` and
+// opening `confirm-remove-dialog` in the SAME server diff — mounts the
+// SECOND overlay's hook and runs ITS `onOpen` (an acquire) BEFORE LiveView
+// destroys the first's hook (whose `destroyed()` runs a release),
+// confirmed empirically by instrumenting both callbacks (the same ordering
+// this file's own `onClose` comment above already documents for focus). A
+// plain boolean toggle would therefore unlock the document while the
+// dialog is still open; a reference count does not, because the nested
+// acquire only increments — it never re-reads or re-writes the saved
+// offset, since the document is already held at a shifted position at that
+// point and would read back as (near) zero.
+let overlayLockCount = 0
+let overlayLockSavedOffset = 0
+
+// Acquire: on the FIRST (0 -> 1) acquire, read the document's current
+// scroll offset, write it as a length-valued custom property on `<body>`
+// for the CSS lock rule (`components.css`'s `body.pk-admin-overlay-open`)
+// to read, then add the lock class. A nested acquire (count already > 0)
+// only increments — see this file's header comment above for why the
+// offset must not be re-read there.
+function acquireOverlayLock() {
+  if (overlayLockCount === 0) {
+    overlayLockSavedOffset = document.scrollingElement.scrollTop
+    document.body.style.setProperty("--pk-admin-overlay-scroll-offset", `${overlayLockSavedOffset}px`)
+    document.body.classList.add("pk-admin-overlay-open")
+  }
+  overlayLockCount++
+}
+
+// Release: decrements, never below zero (a stray extra release — e.g. a
+// double-fire this file's own per-instance flag already guards against —
+// must never make the count negative and thus never "acquire" on the next
+// legitimate open without doing the first-acquire work). Only when the
+// count reaches zero does it actually unlock: remove the class, remove the
+// custom property, and restore the document to the saved offset.
+function releaseOverlayLock() {
+  if (overlayLockCount === 0) return
+  overlayLockCount--
+  if (overlayLockCount === 0) {
+    document.body.classList.remove("pk-admin-overlay-open")
+    document.body.style.removeProperty("--pk-admin-overlay-scroll-offset")
+    // FORCE A REFLOW before restoring the offset (found via this task's own
+    // live-device tracing — a Rule 1 bug, not a theoretical concern):
+    // `document.scrollingElement`'s scrollable height comes from `<html>`,
+    // which has NO overflow while `<body>` is `position: fixed` (that is
+    // the WHOLE mechanism the lock relies on). Removing the class
+    // synchronously updates the CSSOM, but the layout engine does not
+    // necessarily recompute `<html>`'s now-restored scrollable height
+    // before the very next synchronous line runs.
+    void document.body.offsetHeight
+    // `{ behavior: "instant" }`, NOT a bare `scrollTop =` assignment — a
+    // SECOND, independent Rule 1 bug this same trace caught: `app.css`'s
+    // document-wide `html { scroll-behavior: smooth }` (gated only on
+    // `prefers-reduced-motion`) makes Chrome ANIMATE even a direct
+    // `scrollTop` property write here, so a synchronous read immediately
+    // after the assignment measured 0 (the pre-restore value) while the
+    // SAME read 200ms later measured the correct restored offset — a plain
+    // property write would silently race every synchronous caller (this
+    // hook's own tests included) against that animation. `behavior:
+    // "instant"` explicitly overrides the page's CSS `scroll-behavior` for
+    // this one call, per the CSSOM View scroll API, landing the restore
+    // synchronously instead.
+    document.scrollingElement.scrollTo({ top: overlayLockSavedOffset, left: 0, behavior: "instant" })
+  }
+}
+
 export default {
   mounted() {
     // The element carrying `phx-hook="AdminSheet"` is always the OVERLAY
@@ -58,6 +132,13 @@ export default {
     this.isOpen = () => getComputedStyle(this.el).display !== "none"
 
     this.lastFocused = null
+    // G-01.8.3-4a: per-instance flag so THIS instance's own acquire/release
+    // pair can never fire twice (a double `onClose`, or an `onClose`
+    // followed by a `destroyed()` release for an already-released
+    // instance) — mirrors `wasOpen`'s own role for the focus-return call
+    // just below, but tracks the scroll-lock reference this instance holds
+    // rather than open/closed state.
+    this.overlayLockHeld = false
 
     this.requestClose = () => {
       if (!this.isOpen() || !this.closeControl) return
@@ -141,31 +222,79 @@ export default {
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
     this.onOpen = () => {
+      // G-01.8.3-4a: acquire the document scroll lock. Guarded on
+      // `overlayLockHeld` so a MutationObserver firing `onOpen` twice for
+      // the same open (should not happen, but this instance's own flag is
+      // the cheap defence against it) can never acquire twice.
+      if (!this.overlayLockHeld) {
+        acquireOverlayLock()
+        this.overlayLockHeld = true
+      }
       this.lastFocused = document.activeElement
       const initial = this.isDialog
         ? this.panel?.querySelector("[data-pk-dialog-cancel]")
         : this.panel?.querySelector("[data-pk-sheet-close]")
       initial?.focus()
     }
-    // Guarded on `document.activeElement === document.body` (plan
-    // 01.8.2-12 Task 3, found via CDP tracing while fixing the DOM-removal
-    // close path below): `ask-remove` closes THIS sheet and opens
-    // `confirm-remove-dialog` in the SAME server diff. LiveView mounts the
-    // new dialog hook (which focuses Cancelar in ITS OWN onOpen) BEFORE it
-    // destroys this sheet's hook — confirmed empirically by instrumenting
-    // both callbacks. An unconditional restore here would therefore run
-    // AFTER the dialog already claimed focus and silently steal it back to
-    // the row, failing D-19f's "Cancelar carries initial focus" for the
-    // EXACT case that matters most (a destructive-action handoff). Only
-    // restore when nothing else has claimed focus in the meantime — the
-    // browser's own removal-of-focused-element behaviour resets
-    // `document.activeElement` to `body` synchronously (confirmed the same
-    // way), so `body` reliably means "no other overlay's onOpen ran first".
+    // FIX (plan 01.8.3-14, G-01.8.3-4c): the guard that used to live here
+    // compared the active element against `document.body` — correct for
+    // exactly one of four cases below and silently wrong for another.
+    // Measured, twice (on the real sheet, and in isolation with no app
+    // code — see `.planning/debug/DEBUG-admin-sheet-modal-contract.md`): a
+    // focused element inside a subtree that gains `display: none` via a
+    // class toggle reads as STILL FOCUSED inside the SAME MutationObserver
+    // microtask this callback runs in, and settles to `body` only after
+    // two animation frames — whereas a DOM-removal close resets
+    // `document.activeElement` to `body` SYNCHRONOUSLY (the browser's own
+    // removal-of-focused-element behaviour). The four cases and their
+    // correct outcomes:
+    //   1. Class-toggle close (e.g. `add-game-sheet`'s stay-mounted
+    //      `open={...}`): the active element at this point is still this
+    //      sheet's own close control — inside THIS overlay's own root.
+    //      Restore.
+    //   2. DOM-removal close (`staff_live`'s `:if={@selected_staff}`
+    //      pattern, plan 01.8.2-12 Task 3's own case): the active element
+    //      is already `document.body` by the time this runs. Restore.
+    //   3. The sheet->dialog handoff (also plan 01.8.2-12 Task 3's case:
+    //      `ask-remove` closes THIS sheet and opens `confirm-remove-dialog`
+    //      in the SAME server diff): LiveView mounts the new dialog's hook
+    //      and runs ITS OWN `onOpen` — which focuses Cancelar — BEFORE
+    //      destroying this sheet's hook (confirmed empirically by
+    //      instrumenting both callbacks). The active element is Cancelar,
+    //      inside a DIFFERENT overlay's own root. Decline — an
+    //      unconditional restore here would steal focus back to the
+    //      invoking row, failing D-19f for the exact case that matters
+    //      most (a destructive-action handoff). Proven on every run by
+    //      `test/visual/admin_shell.mjs`'s `checkSheetFocusReturn` case 3.
+    //   4. A background control was focused before the close (the user
+    //      clicked away while the overlay was open): the active element is
+    //      outside this overlay entirely. Decline.
+    // The property that actually distinguishes "restore" from "decline" is
+    // therefore CONTAINMENT in this overlay's own root — has anything
+    // OUTSIDE it claimed focus? — not an equality against `body`, which
+    // only accidentally covered case 2. No animation-frame deferral is
+    // used or needed: all four cases resolve correctly from state
+    // available SYNCHRONOUSLY at this point, and a deferral would reopen
+    // the exact interleaving window (a later `onOpen` running before the
+    // deferred restore) this guard exists to close.
     this.onClose = () => {
-      if (this.lastFocused && document.contains(this.lastFocused) && document.activeElement === document.body) {
-        this.lastFocused.focus()
+      // G-01.8.3-4a: release the document scroll lock. Guarded on
+      // `overlayLockHeld` so a double `onClose` (this instance's own flag,
+      // same shape as `wasOpen`'s guard against a double focus-return)
+      // can never release twice. Runs unconditionally, before any of the
+      // focus-restore early returns below — the release must never sit
+      // behind them.
+      if (this.overlayLockHeld) {
+        releaseOverlayLock()
+        this.overlayLockHeld = false
       }
+
+      const toFocus = this.lastFocused
       this.lastFocused = null
+      if (!toFocus || !document.contains(toFocus)) return
+      const active = document.activeElement
+      if (active !== document.body && !this.el.contains(active)) return
+      toFocus.focus()
     }
 
     this.onKeydownTrap = (e) => {
@@ -214,6 +343,19 @@ export default {
     // destroyed later — its own class-based close already ran `onClose()`
     // and flipped `wasOpen` to `false` — never double-fires focus-return.
     if (this.wasOpen) this.onClose()
+    // G-01.8.3-4a: a DEFENSIVE release, independent of `wasOpen` above —
+    // `layouts.ex:1619`'s own precedent for exactly this failure mode (its
+    // comment: "a LiveView teardown mid-open must never leave the page
+    // permanently unscrollable"). `onClose()` just above already releases
+    // when `wasOpen` is true, so this line is a no-op on that path (guarded
+    // on the same `overlayLockHeld` flag); it only does real work if this
+    // instance still holds the lock reference through some path that did
+    // NOT run `onClose` first, closing that leak unconditionally rather
+    // than trusting `wasOpen` to have covered every teardown shape.
+    if (this.overlayLockHeld) {
+      releaseOverlayLock()
+      this.overlayLockHeld = false
+    }
     document.removeEventListener("keydown", this.onKeydown)
     document.removeEventListener("keydown", this.onKeydownTrap)
     this.scrim?.removeEventListener("click", this.onScrimClick)

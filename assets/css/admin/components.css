@@ -27,6 +27,35 @@
      first Scope A geometry constant to land, carried over verbatim from
      the sketches' own `sources/themes/default.css`. */
   --radius-md: 8px;
+
+  /* Plan 01.8.3-08 (G-01.8.3-2c, D-20b): the admin's ONE declared
+     horizontal keel inset — created here because the diagnosis proved no
+     such token existed anywhere (`admin/tokens.css` holds colour tokens
+     only, and the public site's `--pk-gutter` is never read by any
+     `.pk-admin-*` rule). Read this comment in order before touching any
+     rule that consumes this property:
+
+     1. D-20b declares the admin's horizontal keel as 32px, measured
+        VIEWPORT-relative, on any admin page that is not `fullbleed` —
+        confirmed live at 360/375/390, at rest and pinned
+        (`.planning/debug/DEBUG-juegos-horizontal-keel-three-axes.md`).
+     2. This property is only the COMPONENT HALF of that 32px. The other
+        half is `Layouts.app/1`'s own `<main class="px-4 ...">`
+        (`layouts.ex:637`), which every non-`fullbleed` admin page
+        inherits. 16 (this property) + 16 (`<main>`'s `px-4`) = 32.
+     3. The editor (`form.ex:1177`) is the ONE `fullbleed` admin page —
+        `<main>` contributes 0px there, so the same components reading
+        this property land on 16, not 32. That is correct, not a bug.
+     4. Inside a `position: fixed` overlay (`sheet/1`/`dialog/1`), which
+        escapes `<main>`'s `px-4` entirely, this SAME property yields a
+        16px axis — also correct, per D-20b's own "one axis per stacking
+        context, not one number globally".
+     5. NEVER add this property's value to `<main>` itself, or to the
+        `.mx-auto.w-full.max-w-3xl` wrapper every admin screen renders
+        inside. Doing so is the exact doubling D-16 (01.8.3-CONTEXT.md)
+        originally set out to avoid, and would put content at 48px
+        instead of 32px. */
+  --pk-admin-keel-inset: 16px;
 }
 
 /* ============================================================
@@ -603,10 +632,43 @@
   margin: 0;
   z-index: 75;
   display: none;
+  /* G-01.8.3-4a: a touch at this root's own scroll boundary (the scrim, or
+     the panel where its own rows are not yet scrollable) must not chain out
+     to the document behind it. Proven in isolation: chaining moved the
+     document 400px with the default `auto` and 0px with `contain`. Latent
+     today — every admin sheet measures zero scrollable rows against the
+     85vh cap (717.4px) — and arms itself the first time a sheet's content
+     passes that cap. */
+  overscroll-behavior: contain;
 }
 
 .pk-admin-overlay-root.pk-admin-overlay--open {
   display: block;
+}
+
+/* G-01.8.3-4a: the document lock for an open sheet or dialog. Superset of
+   this repo's own two working precedents — `body.pk-drawer-open`
+   (app.css:3267, toggled by layouts.ex's `.NavDrawerFocus`) and
+   `body.pk-sheet-open` (app.css:1776, toggled by game_preview.ex) — both of
+   which are a bare `overflow: hidden`. That alone preserves scroll position
+   for free (the offset never changes) but is known NOT to stop touch scroll
+   on iOS Safari when applied to `<body>` alone. A fixed body with no offset
+   holds on both engines but jumps the user to the top. This rule is the
+   fixed body PLUS the negated saved-offset custom property, which is what
+   holds on both platforms AND preserves position: `admin_sheet.js`'s
+   acquire step reads the document's live scroll offset once (module-level,
+   reference-counted — see that file's own header comment) and writes it
+   here as `--pk-admin-overlay-scroll-offset`; release restores it. The
+   `0px` fallback degrades this rule to a top-of-document lock rather than
+   an invalid declaration if the property is ever absent. */
+body.pk-admin-overlay-open {
+  position: fixed;
+  top: calc(-1 * var(--pk-admin-overlay-scroll-offset, 0px));
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 /* 38% scrim per 01.8.2-BENCHMARK.md's "Bottom sheet"/"Confirmation" rows. */
@@ -651,7 +713,10 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  padding: 0 16px 8px;
+  /* G-01.8.3-4b: no pixel change — reads the same declared keel the body
+     wrapper below now also reads, so the two siblings can never drift to
+     different magnitudes again. */
+  padding: 0 var(--pk-admin-keel-inset) 8px;
 }
 
 .pk-admin-sheet__cover {
@@ -692,6 +757,12 @@
 .pk-admin-sheet__commit {
   flex-shrink: 0;
   padding-top: 8px;
+  /* G-01.8.3-4b: no call site uses the `commit` slot today
+     (`grep -rn "<:commit>" lib/` finds nothing) — added here so the FIRST
+     one does not inherit the identical missing-keel defect the rows
+     wrapper below just had. */
+  padding-left: var(--pk-admin-keel-inset);
+  padding-right: var(--pk-admin-keel-inset);
 }
 
 .pk-admin-sheet__rows {
@@ -699,6 +770,67 @@
   overflow-y: auto;
   padding-top: 8px;
   padding-bottom: 8px;
+  /* G-01.8.3-4b's fix: match the header's own inset above. The overlay is
+     `position: fixed` and escapes `<main>`'s `px-4` entirely, so 16px here
+     and 32px on the page's own content are the SAME declared property in
+     two different stacking contexts (D-20b's "one axis per stacking
+     context, not one number globally") — not two numbers. */
+  padding-left: var(--pk-admin-keel-inset);
+  padding-right: var(--pk-admin-keel-inset);
+  /* Load-bearing, not cosmetic (T-01.8.3-30): this element already has
+     `overflow-y: auto`, which makes the OTHER axis compute to `auto` too,
+     and the compensating negative inline margins below would otherwise be
+     able to produce scrollable inline-end overflow — a horizontal
+     scrollbar inside the sheet. */
+  overflow-x: hidden;
+  /* G-01.8.3-4a (plan 13): a touch at this scroller's OWN vertical boundary
+     must not chain out to the document behind it once a sheet's content
+     passes the 85vh cap and its rows actually become scrollable. Proven in
+     isolation (chaining moved the document 400px with `auto`, 0px with
+     `contain`) — latent today (every admin sheet measures zero scrollable
+     rows against the cap), not active, but part of the same change as the
+     overlay root's own `overscroll-behavior` above and the body lock rule
+     below, per the gap's own `missing:` list. */
+  overscroll-behavior: contain;
+}
+
+/* G-01.8.3-4b / WR-01 (01.8.3 review-fix round 1): row-shaped sheet
+   children read correctly TODAY by self-insetting 16px against an
+   unpadded body (A4's own declared anatomy is "48px, full-bleed,
+   commit-first" — components.css above). With the body now padded, they
+   would land at 32 without this compensation.
+   DESCENDANT combinator, not direct-child: plan 10 originally shipped this
+   as `.pk-admin-sheet__rows > .pk-admin-row` (direct-child only), which
+   left `placement_sheet/1`'s own «¿Dónde va?»/«¿Qué juego va acá?» sheets
+   regressed — their `.list_row`s render inside a plain, unstyled wrapper
+   `<div>` (`#donde-va-estante-list`, `#donde-va-results`,
+   `#que-va-aca-unplaced`, `#que-va-aca-results`), making them GRANDchildren
+   of `.pk-admin-sheet__rows`, not direct children, so they landed at 32px
+   uncompensated. The descendant form reaches any depth. This is safe
+   against double-compensation ONLY because none of those wrapper `<div>`s
+   (nor any other intermediate wrapper in the sheet inventory, audited
+   2026-09-28 against every `sheet/1` call site) carries any horizontal
+   padding of its own — if a future wrapper needs its own padding, it must
+   NOT also fall inside this selector's reach without re-auditing this
+   comment's premise. The margin magnitude is a `calc()` negation of the
+   SAME property `.pk-admin-sheet__rows` reads above, so the two can never
+   drift to different numbers.
+   The `width` override is EXPLICIT (Rule 1 — found via plan 10's own
+   GREEN probe run), not `auto`: `.pk-admin-row` is `display: flex`
+   (block-level, where `width: auto` DOES auto-expand to fill the space a
+   negative margin opens up) but `.pk-admin-action--a4` inherits
+   `.pk-admin-action`'s `display: inline-flex` (INLINE-level, where
+   `width: auto` shrink-wraps its own content instead — it measured 75.6px,
+   the button's own text width, not the panel's). Both anatomies originally
+   declared `width: 100%` against the now-padded parent's CONTENT box
+   (358px); `calc(100% + 2 * var(--pk-admin-keel-inset))` adds back exactly
+   what the negative margins opened up (358 + 32 = 390 = the panel's own
+   width) regardless of either element's display type. */
+.pk-admin-sheet__rows .pk-admin-row,
+.pk-admin-sheet__rows .pk-admin-action--a4 {
+  width: calc(100% + 2 * var(--pk-admin-keel-inset));
+  margin-left: calc(-1 * var(--pk-admin-keel-inset));
+  margin-right: calc(-1 * var(--pk-admin-keel-inset));
 }
 
 /* Dialog: centred 312px M3 basic dialog, 16px radius (D-19f). */

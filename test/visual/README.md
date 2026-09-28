@@ -80,6 +80,35 @@ check while a rect-level check would have caught it day one):
 7. Measure **ink, not boxes**, when the element draws nothing (a
    transparent element's box edge is invisible, so a box-only check
    reports padding changes as no change at all).
+8. **Negative-test every new guard against today's unfixed source (rule 8),
+   and record the failing transcript.** A guard that has never been observed
+   to fail proves nothing about what it claims to measure. Earned from
+   four independent diagnoses converging on ONE pattern on 2026-09-27
+   (`.planning/debug/DEBUG-juegos-horizontal-keel-three-axes.md` and
+   sibling sessions): a guard can pass TRUTHFULLY while asserting a
+   quantity that is not true of the rendered page. Four confirmed
+   mechanisms, each one a guard that passed while the developer's eye read
+   a different quantity:
+   - **Manufactured state** — driving the page into a state a real user
+     never occupies (a synthetic scroll `Event`, a direct class/attribute
+     poke) specifically to make a measurement, rather than reaching that
+     state through a real interaction.
+   - **Netted-out coordinates** — reporting a container-relative number as
+     if it were an on-screen (viewport-relative) one; subtracting an
+     ancestor's own padding back out of a reading can make a guard assert
+     a quantity that exists nowhere on the painted page.
+   - **Collected but never asserted** — a field is measured and printed on
+     every run, but no assertion ever reads it, so a regression in exactly
+     that field prints, unremarked, in the log of every "passing" run.
+   - **Right axis, wrong property** — delivering exactly the guard a gap's
+     own `missing:` list asked for, faithfully, when the real defect is a
+     different, independent property of the same element (e.g. an
+     overlay's viewport COVERAGE vs. its scroll LOCK — two independent
+     questions about the same box).
+   Consequence: every new guard in this directory must be demonstrated to
+   FAIL against the current, unfixed source before its fix lands, and that
+   demonstration recorded — a plan that only shows a guard passing has not
+   closed its gap, it has only added an assertion.
 
 `admin_components.mjs` additionally confirmed, empirically, that
 **`offsetParent` is unconditionally `null` for any `position: fixed`
@@ -92,3 +121,22 @@ SAME flaw is present in `assets/js/hooks/admin_sheet.js`'s own
 `isOpen = () => this.el.offsetParent !== null`, which is why Esc,
 drag-down-close, and focus-trap/focus-return are confirmed non-functional
 in the shipped admin as of this writing (01.8.2-12-SUMMARY.md).
+
+9. **A scroll assertion in this directory drives `Input.dispatchTouchEvent`
+   (a real touchStart/touchMove/touchEnd sequence) or `Input.dispatchMouseEvent`
+   with `type: "mouseWheel"` — NEVER CDP's gesture-synthesis input command
+   (`Input.synthesizeScrollGesture`).** That command is INERT in this
+   headless build: calibrated on a real page scrollable by 1506px, a
+   `gestureSourceType: "touch"` synthesize call moved the document 0px,
+   while `dispatchTouchEvent` moved it 281px and a `mouseWheel` moved it
+   300px on the SAME page. Its `yDistance` argument is also
+   positive-to-scroll-UP (the opposite of a natural downward scroll), so a
+   positive distance applied at `scrollTop: 0` is a no-op regardless of
+   whether the underlying mechanism works at all — plan 01.8.3-13's own
+   diagnosis (`.planning/debug/DEBUG-admin-sheet-modal-contract.md`)
+   produced a false "locked" reading from exactly that pair of mistakes in
+   its first round. Consequence: **every scroll assertion must carry its
+   own sheet/dialog-CLOSED positive control in the SAME run**, and that
+   control must itself FAIL the harness (not merely log a warning) when it
+   does not move the page by a clearly-nonzero margin — a guard that cannot
+   move an unlocked page has not measured a lock, it has measured nothing.

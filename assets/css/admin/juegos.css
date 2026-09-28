@@ -27,7 +27,21 @@
    number instead of two independently copied `44`s. 60px is measured as
    `4 + 48 + 8` — the row's own top padding, the 48px field (D-07), and
    its bottom padding (`.pk-admin-juegos-search-row` below) — never the
-   deleted page bar's reserved band (D-09). */
+   deleted page bar's reserved band (D-09).
+
+   Plan 01.8.3-11 (D-20a, G-01.8.3-2d/G-01.8.3-3): the declared 60px below
+   is now only the AT-REST value and the page's INITIAL state (before any
+   scroll, `admin_list.js`'s own `nearTop` holds and the row is visible).
+   `assets/js/hooks/admin_list.js` overwrites this property INLINE, on
+   `#juegos-page` itself (the element this selector targets), in lockstep
+   with the search row's `[data-pinned-hidden]` attribute — 0 while hidden,
+   back to this same measured height once the row has returned. Before this
+   fix the property was declared once, read twice (the pin-observer's own
+   rootMargin/threshold), and WRITTEN NEVER, which let the caption's sticky
+   offset stay pinned at the row's full height even while the row itself
+   scrolled fully off-screen — the `4 + 48 + 8` derivation above still
+   describes what the row measures; it no longer describes what this
+   property always resolves to. */
 .pk-admin-juegos {
   position: relative;
   --pk-juegos-pinned-h: 60px;
@@ -75,6 +89,39 @@
 #juegos-search-input:focus {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
+}
+
+/* Plan 01.8.3-09 [G-01.8.3-2e]: `#juegos-search-input`'s `flex: 1;
+   min-width: 0` above has always been INERT — the input's real parent is
+   `<form id="juegos-search-form">` (index.ex:641), a plain `display: block`
+   element which is itself the flex ITEM of `.pk-admin-juegos-search-row`.
+   A `flex` declaration on a child of a `display: block` parent has no
+   effect, so the field stood at its `size=20` intrinsic width of 264px at
+   every viewport width, and the `+` landed at a fixed x=292 regardless of
+   viewport. Growing the FORM (the real flex item) and making it itself a
+   flex container makes the input's own pre-existing `flex: 1; min-width: 0`
+   live, so the field fills whichever width the form grows to. */
+#juegos-search-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+/* Plan 01.8.3-09 [G-01.8.3-2e]: `.pk-admin-action--a3`'s shared
+   `margin-left: -12px` (components.css) is a LEADING-icon pull — written
+   so a glyph at the START of a row lands on the content edge. `#juegos-
+   add-action` is a TRAILING action (the row's last flex item), so the
+   pull has to be on the TRAILING side, or the 44px box lands on the keel
+   while the glyph sits inset inside it. The magnitude is derived here,
+   not copied from a literal: half the difference between the A3 box's
+   declared `44px` and the A3 glyph rule's declared `18px`
+   (components.css) — the shared `-12px` was derived against a 20px glyph
+   before the A3 glyph rule narrowed it to 18. `.pk-admin-action--a3`
+   itself is NOT edited: the sheet's own ✕ is the same anatomy and the
+   developer reported it as correct. */
+#juegos-add-action {
+  margin-left: 0;
+  margin-right: calc((18px - 44px) / 2);
 }
 
 /* D-10: the `+` sheet's own internals — vertical rhythm between the
@@ -173,14 +220,22 @@
 /* Pins under the pinned search row once the title row has scrolled behind
    it (D-19n) — `top: var(--pk-juegos-pinned-h)` reserves exactly that
    row's own rendered height, never the deleted page bar's reserved band
-   (D-09/D-15). Full-bleed for free: this wrapper and every ancestor up to
-   the 16px-inset content keel carry no horizontal padding of their own,
-   so a 100%-width header already spans edge to edge without a
-   negative-margin trick. The fill itself lives on the header's own
-   `::before` band below (D-15, 071 d29-31) — never a `background`
-   directly on this wrapper or on the header's own padded box; painting
-   the box is what produced the empty tint above the ink this fix
-   removes. */
+   (D-09/D-15).
+
+   Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: this comment used to claim
+   the wrapper was "full-bleed for free" because "this wrapper and every
+   ancestor up to the 16px-inset content keel carry no horizontal padding
+   of their own" — that premise was FALSE. `<main>` IS such an ancestor
+   and DOES carry horizontal padding (`layouts.ex:637`'s `px-4`), so a band
+   meant to reach the viewport edge landed on an unintended third axis
+   instead (16px, when every row and the caption ink sit at 32px). The
+   band no longer reaches the viewport edge at all: it aligns to the same
+   `--pk-admin-keel-inset` its own header's ink uses (below), so the two
+   can no longer drift onto two axes. The fill itself still lives on the
+   header's own `::before` band below (D-15, 071 d29-31) — never a
+   `background` directly on this wrapper or on the header's own padded
+   box; painting the box is what produced the empty tint above the ink a
+   prior fix (01.8.3-06) removed. */
 .pk-admin-juegos-section-heading-wrap {
   position: sticky;
   top: var(--pk-juegos-pinned-h);
@@ -195,8 +250,10 @@
    bottom padding stays 0 so the rows below sit welded against it.
 
    The custom properties below drive the `::before` pinned band (D-15,
-   071 d29-31): `--pt` is the resting top padding (overridden per-section
-   below), `--band`/`--cap` are 071's own measured cap-height correction
+   071 d29-31): `--pt` is the resting top padding (plan 01.8.3-12,
+   G-01.8.3-3: no longer overridden per-section — every section shares this
+   same 26px, see the pinned `::before` rule's own comment further below for
+   why), `--band`/`--cap` are 071's own measured cap-height correction
    constants (unchanged by the port), and `--cap-box` is the caption's own
    single-line content-box height — `14px × 1.3`, the font-size and
    line-height Task 3 (D-13) declares on `.pk-admin-list-section-label`
@@ -213,7 +270,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: var(--pt) 16px 0;
+  padding: var(--pt) var(--pk-admin-keel-inset) 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -225,13 +282,6 @@
   --cap-box: 18.2px;
   --bandp: calc((44px - var(--cap-box)) / 2);
   transition: background var(--duration-fast) var(--ease-standard);
-}
-
-/* The first section takes less leading air — the search/add block above
-   it already separates it (decision 21's stated exception) — now flowing
-   through the same `--pt` the band arithmetic above reads. */
-.pk-admin-juegos-section:first-child .pk-admin-juegos-section-header {
-  --pt: 14px;
 }
 
 .pk-admin-juegos-section-header--collapsible {
@@ -266,13 +316,23 @@
    earlier version of this comment claimed the pinned `::before` rule
    itself repositioned the ink — no rule did, which is exactly how the
    ink drifted off-centre for every `--pt` other than the one value that
-   happened to cancel the arithmetic by coincidence.) */
+   happened to cancel the arithmetic by coincidence.)
+
+   Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: `left`/`right` used to read
+   `0` here, on the premise that this band was "full-bleed for free"
+   because every ancestor up to the content keel carried no horizontal
+   padding of its own — false, since `<main>` (`layouts.ex:637`) DOES, and
+   the band's `0` only picked up THAT 16px while the header's own ink
+   (above) picked up an additional, separate 16px of its own padding. The
+   band is not full-bleed to the viewport edge; it aligns to the same
+   `--pk-admin-keel-inset` the header's own ink uses, so both now read one
+   declaration and cannot drift onto two axes again. */
 .pk-admin-juegos-section-header::before {
   content: "";
   position: absolute;
   z-index: -1;
-  left: 0;
-  right: 0;
+  left: var(--pk-admin-keel-inset);
+  right: var(--pk-admin-keel-inset);
   top: calc(var(--pt) - var(--band) - var(--cap));
   bottom: calc(var(--cap) - var(--band));
   background: transparent;
@@ -297,11 +357,12 @@
    `bottom: calc(var(--pt) - 2 * var(--bandp))` below continues to
    resolve to a 44px band with no edit of its own.
 
-   Precondition: every declared `--pt` (the base rule and the
-   `:first-child` override) must be at least `--bandp + --cap`, or this
-   rule's `padding-bottom` resolves negative and the declaration is
-   dropped — `admin_pinned_band_test.exs` (01.8.3-06) gates this in
-   source. */
+   Precondition: every declared `--pt` must be at least `--bandp + --cap`,
+   or this rule's `padding-bottom` resolves negative and the declaration is
+   dropped — `admin_pinned_band_test.exs` (01.8.3-06) gates this in source.
+   (Plan 01.8.3-12 removed the `:first-child` override this comment used to
+   name; the base rule's `--pt: 26px` is now the only declared value and it
+   clears this floor with room to spare.) */
 .pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header {
   padding-top: calc(var(--bandp) + var(--cap));
   padding-bottom: calc(var(--pt) - var(--bandp) - var(--cap));
@@ -327,13 +388,27 @@
    `--pt + --cap-box - 44px` — i.e. `--pt - 2 × --bandp` (algebraically
    identical, since `2 × --bandp = 44px - --cap-box`) — for
    `height - bottom - top` to reduce to the same `--cap-box + 2 × --bandp`
-   the un-pinned math already proves. For the FIRST section this correctly
-   yields a NEGATIVE `bottom` (the band extends past the header's own,
-   shorter box into the row below) — the exact same overflow shape the
-   PRE-EXISTING code already relied on for the `bottom` side of the FIRST
-   section (its own `bottom` was already negative under the old formula:
-   `--cap - --bandp` = `0.6 - 12.9` = `-12.3`), so this is not a new class
-   of rendering, only a relocation of which edge carries it per section. */
+   the un-pinned math already proves. At the time this rule was written, the
+   FIRST section's `--pt: 14px` override made this correctly yield a
+   NEGATIVE `bottom` (the band extending past the header's own, shorter box
+   into the row below) — the exact same overflow shape the PRE-EXISTING code
+   already relied on for the `bottom` side of the FIRST section (its own
+   `bottom` was already negative under the old formula: `--cap - --bandp` =
+   `0.6 - 12.9` = `-12.3`), so at the time it was not considered a new class
+   of rendering, only a relocation of which edge carries it per section.
+
+   Plan 01.8.3-12 [G-01.8.3-3, rest-air]: that negative `bottom` was in fact
+   the defect — 11.8px of opaque band painting outside the header's own
+   sticky box, over list rows the header's shrunken 32.2px box never
+   reserved space for (measured live: header box 32.2px against a 44px
+   band). Closing it required the first section's box to reserve the full
+   44px like every other section, which meant removing its `--pt: 14px`
+   override (D-19g-bis decision 21's deliberate first-section exception,
+   amended in `01.8.2-CONTEXT.md` — see that file for the full amendment).
+   With no override left, `--pt` is now `26px` for every section, `--pt`
+   clears `2 * --bandp` (25.8px) everywhere, and `bottom` above resolves to
+   `+0.2px` for every section — never negative, so the band can never again
+   exceed its host's own box for any `--pt` this rule declares. */
 .pk-admin-juegos-section-heading-wrap[data-pinned="true"] .pk-admin-juegos-section-header::before {
   top: 0;
   bottom: calc(var(--pt) - 2 * var(--bandp));
@@ -386,7 +461,7 @@
 
 .pk-admin-juegos-section-hint {
   margin: 0;
-  padding: 4px 16px 0;
+  padding: 4px var(--pk-admin-keel-inset) 0;
   font-size: 13px;
   color: var(--color-neutral);
 }
@@ -411,7 +486,11 @@
   position: absolute;
   top: 0;
   left: 68px;
-  right: 0;
+  /* Plan 01.8.3-08 [Rule 1 - Bug, G-01.8.3-2c]: the right end used to read
+     `0`, landing on the band's unintended axis (16px) instead of the
+     rows' own (32px) — the left end above is unchanged: the diagnosis
+     measured it as already correct. */
+  right: var(--pk-admin-keel-inset);
   height: 1px;
   background: var(--stroke);
 }
