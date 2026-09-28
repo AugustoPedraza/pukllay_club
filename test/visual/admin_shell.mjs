@@ -1737,6 +1737,293 @@ async function checkOverlayScrollLockTeardown({ client, baseUrl }) {
 }
 
 // ---------------------------------------------------------------------------
+// Plan 01.8.3-14 — G-01.8.3-4c: focus must return to the control that opened
+// a sheet once it closes, without undoing the sheet->dialog focus handoff
+// plan 01.8.2-12 Task 3 protects. `admin_sheet.js`'s `onClose` guards the
+// restore on `document.activeElement === document.body` — true for the
+// DOM-removal close path (`staff_live`'s `:if={@selected_staff}` pattern,
+// the case that guard was written for) but FALSE for a stay-mounted
+// `open={...}` sheet that closes via a class toggle to `display: none`: the
+// active element inside the close-class mutation microtask is still the
+// sheet's own close control (or a dialog's Cancelar), not `body`, so the
+// restore is skipped and focus silently settles to `body` at the next style
+// recalc (`.planning/debug/DEBUG-admin-sheet-modal-contract.md`'s own
+// measurement).
+//
+// Drives ONLY real input — real clicks via `clickCenterOf`, a real Escape
+// keydown/keyup via `dispatchEscapeKey` below — never a programmatic
+// `.focus()` call anywhere in this check (rule 8's fabrication trap: a
+// check that manufactures the very state it claims to measure proves
+// nothing about the rendered page).
+//
+// DESTRUCTIVE-PATH GUARD (mirrors `OVERLAY_CALL_SITES`/
+// `SCROLL_LOCK_HANDOFF_CASES`'s own guard comment, verbatim in shape): case
+// 3 below stops at the staff sheet's own remove-ask control, which only
+// OPENS `confirm-remove-dialog` — it never clicks the dialog's own commit
+// control (`staff_live/index.ex`'s handler, which permanently removes a
+// staff member's access). The staff row count is asserted unchanged before
+// and after the whole walk.
+// ---------------------------------------------------------------------------
+
+// A real Escape key: `keyDown` then `keyUp` through the CDP input domain,
+// not a synthetic `KeyboardEvent` dispatched via `element.dispatchEvent` —
+// the hook's own `document.addEventListener("keydown", ...)` listener must
+// see a genuine dispatched event, matching this file's real-input
+// discipline for clicks (`Input.dispatchMouseEvent`) and gestures
+// (`Input.dispatchTouchEvent`/`mouseWheel`).
+async function dispatchEscapeKey(client) {
+  await client.send("Input.dispatchKeyEvent", {
+    type: "keyDown",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  })
+  await client.send("Input.dispatchKeyEvent", {
+    type: "keyUp",
+    key: "Escape",
+    code: "Escape",
+    windowsVirtualKeyCode: 27,
+    nativeVirtualKeyCode: 27,
+  })
+  await new Promise((r) => setTimeout(r, 150))
+}
+
+// The active element's own identity — id, tag, its `aria-label` (the
+// sheet's close control and the dialog's cancel control both carry one),
+// whether it is `document.body`, and (when `dialogId` is given, case 3
+// only) whether it is contained by that dialog's own root and carries the
+// dialog's own cancel data attribute. Locates everything by id/attribute,
+// never by class name — a class-based lookup could silently match the
+// wrong control (this file's own `OVERLAY_CALL_SITES` comment makes the
+// same point for opener selectors).
+async function readActiveElement(client, { dialogId } = {}) {
+  const json = await evalJS(
+    client,
+    `
+    JSON.stringify((() => {
+      const el = document.activeElement;
+      const dialogRoot = ${dialogId ? `document.getElementById(${JSON.stringify(dialogId)})` : "null"};
+      return {
+        id: el ? el.id : null,
+        tag: el ? el.tagName : null,
+        ariaLabel: el ? el.getAttribute('aria-label') : null,
+        isBody: el === document.body,
+        insideDialog: dialogRoot ? dialogRoot.contains(el) : null,
+        isDialogCancel: el ? el.hasAttribute('data-pk-dialog-cancel') : false,
+      };
+    })())
+  `,
+  )
+  return JSON.parse(json)
+}
+
+// Three cases, each from a fresh navigation (case 2 re-opens on the same
+// navigation as case 1, matching the plan's own instruction), each
+// reporting one verdict line naming the expected element, the actual
+// element, and (cases 1/2) whether the opener is still in the document —
+// so a failure caused by the opener itself having been removed is
+// distinguishable from the guard defect this plan closes.
+async function checkSheetFocusReturn({ client, baseUrl }) {
+  const fails = []
+  const notOpenable = []
+  const fail = (msg) => {
+    fails.push(msg)
+    log(`FAIL: ${msg}`)
+  }
+
+  await setViewport(client, 390, 844)
+
+  // Case 1 — Escape close on a stay-mounted sheet (/admin/juegos,
+  // add-game-sheet). FAILS today: the active element settles to `body`.
+  await navigate(client, `${baseUrl}/admin/juegos`)
+  await new Promise((r) => setTimeout(r, 250))
+  {
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(
+        `case1 (Escape close): opener #juegos-add-action never appeared — this opener renders unconditionally, so its absence means the walk itself is broken, not that dev data is thin`,
+      )
+    } else {
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+      if (!sheetOpen) {
+        fail(`case1 (Escape close): add-game-sheet never reached a resolved display other than 'none'`)
+      } else {
+        await dispatchEscapeKey(client)
+        const closed = await pollUntil(async () => !(await isOverlayOpen(client, "add-game-sheet")))
+        if (!closed) {
+          fail(`case1 (Escape close): add-game-sheet did not close after a real Escape keydown/keyup`)
+        } else {
+          const after = await readActiveElement(client)
+          const openerPresent = await evalJS(client, `!!document.getElementById('juegos-add-action')`)
+          log(
+            `focus return case1 (Escape close): expected=#juegos-add-action actual=${after.tag || "(none)"}#${after.id || ""} (body=${after.isBody}) openerPresent=${openerPresent}`,
+          )
+          if (after.id !== "juegos-add-action") {
+            fail(
+              `case1 (Escape close): active element after close is ${after.tag || "(none)"}#${after.id || "(none)"} (body=${after.isBody}), expected #juegos-add-action; opener still present=${openerPresent}`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // Case 2 — close-control click on the same sheet, re-opened fresh (same
+  // page, same overlay). FAILS today for the same reason as case 1.
+  {
+    const opened = await runOpenerSteps(client, [{ kind: "click", selector: "#juegos-add-action" }])
+    if (!opened.openable) {
+      fail(`case2 (close-control click): opener #juegos-add-action never appeared on re-open`)
+    } else {
+      const sheetOpen = await pollUntil(() => isOverlayOpen(client, "add-game-sheet"))
+      if (!sheetOpen) {
+        fail(`case2 (close-control click): add-game-sheet never reached a resolved display other than 'none' on re-open`)
+      } else {
+        // Located by its own data attribute (admin_components.ex's
+        // `sheet/1`), never by class name.
+        await clickCenterOf(client, "#add-game-sheet [data-pk-sheet-close]")
+        const closed = await pollUntil(async () => !(await isOverlayOpen(client, "add-game-sheet")))
+        if (!closed) {
+          fail(`case2 (close-control click): add-game-sheet did not close after a real click on its close control`)
+        } else {
+          const after = await readActiveElement(client)
+          const openerPresent = await evalJS(client, `!!document.getElementById('juegos-add-action')`)
+          log(
+            `focus return case2 (close-control click): expected=#juegos-add-action actual=${after.tag || "(none)"}#${after.id || ""} (body=${after.isBody}) openerPresent=${openerPresent}`,
+          )
+          if (after.id !== "juegos-add-action") {
+            fail(
+              `case2 (close-control click): active element after close is ${after.tag || "(none)"}#${after.id || "(none)"} (body=${after.isBody}), expected #juegos-add-action; opener still present=${openerPresent}`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // Case 3 — the handoff regression baseline: a staff row -> staff-options-
+  // sheet -> its remove-ask control -> confirm-remove-dialog (the SAME
+  // chain plan 01.8.2-12 Task 3 was written for; `SCROLL_LOCK_HANDOFF_CASES`
+  // above drives the identical path for its own, different assertion).
+  // PASSES today — this is the before-baseline a regression guard needs to
+  // distinguish "still works" from "never exercised".
+  //
+  // Needs a staff-role user other than the operator (`staff_live/index.ex`
+  // wires `phx-click="open-staff-sheet"` only onto rows where
+  // `user.role == :staff`, never onto the operator's own row). Following
+  // this file's own established pattern (`measureSnackbarDerivesFromTabBar`,
+  // above), a throwaway probe account is invited via the REAL `/admin/staff`
+  // invite form for the duration of this case only — sanctioned setup
+  // through the app's own UI, not a fabricated focus or DOM state (rule 8's
+  // fabrication trap is about manufacturing the state a check asserts ON,
+  // not about seeding data a real user flow would also produce). If the
+  // invite itself does not succeed, this case reports NOT-OPENABLE rather
+  // than failing the harness. The GUARDED walk (open sheet -> ask-remove ->
+  // assert -> Cancelar) never clicks the dialog's own commit control;
+  // cleanup — a clearly separate phase run after the assertion, mirroring
+  // `measureSnackbarDerivesFromTabBar`'s own cleanup verbatim — does, and
+  // only for the throwaway probe this check itself created.
+  await navigate(client, `${baseUrl}/admin/staff`)
+  await new Promise((r) => setTimeout(r, 250))
+  const staffCountBefore = await evalJS(client, `document.querySelectorAll('#staff-list .pk-admin-row').length`)
+
+  const probeEmail = `probe-focus-return-${Date.now()}@pukllayclub.invalid`
+  await evalJS(
+    client,
+    `
+    (() => {
+      const input = document.getElementById('invite-staff-email');
+      input.value = ${JSON.stringify(probeEmail)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('invite-staff-form').requestSubmit();
+      return true;
+    })()
+  `,
+  )
+  const probeRowId = await pollUntil(() =>
+    evalJS(
+      client,
+      `
+      (() => {
+        const rows = [...document.querySelectorAll('#staff-list .pk-admin-row[phx-click]')];
+        const row = rows.find(r => r.textContent.includes(${JSON.stringify(probeEmail)}));
+        return row ? row.id : null;
+      })()
+    `,
+    ),
+  )
+
+  if (!probeRowId) {
+    notOpenable.push({ name: "staff -> confirm-remove-dialog" })
+    log(`NOT-OPENABLE: case3 (handoff baseline): could not invite a probe staff account via the real /admin/staff invite form`)
+  } else {
+    await clickCenterOf(client, `#${probeRowId}`)
+    const sheetOpen = await pollUntil(() => isOverlayOpen(client, "staff-options-sheet"))
+    if (!sheetOpen) {
+      fail(`case3 (handoff baseline): staff-options-sheet never reached a resolved display other than 'none'`)
+    } else {
+      // Only OPENS the dialog — never the dialog's own commit control.
+      const handoff = await runOpenerSteps(client, [{ kind: "click", selector: '#staff-options-sheet [phx-click="ask-remove"]' }])
+      if (!handoff.openable) {
+        fail(`case3 (handoff baseline): handoff selector never appeared (${handoff.missingSelector})`)
+      } else {
+        const dialogOpen = await pollUntil(() => isOverlayOpen(client, "confirm-remove-dialog"))
+        if (!dialogOpen) {
+          fail(`case3 (handoff baseline): confirm-remove-dialog never reached a resolved display other than 'none' after the handoff`)
+        } else {
+          const after = await readActiveElement(client, { dialogId: "confirm-remove-dialog" })
+          log(
+            `focus return case3 (handoff baseline): actual=${after.tag || "(none)"}#${after.id || ""} insideDialog=${after.insideDialog} isDialogCancel=${after.isDialogCancel}`,
+          )
+          if (!after.insideDialog || !after.isDialogCancel) {
+            fail(
+              `case3 (handoff baseline): active element after the handoff is ${after.tag || "(none)"}#${after.id || "(none)"} (insideDialog=${after.insideDialog}), expected confirm-remove-dialog's own cancel control`,
+            )
+          }
+          // Cancel, never confirm — the GUARDED walk leaves no residual open
+          // overlay and never reaches the destructive commit control.
+          await clickCenterOf(client, "#confirm-remove-dialog [data-pk-dialog-cancel]")
+          await pollUntil(async () => !(await isOverlayOpen(client, "confirm-remove-dialog")))
+        }
+      }
+    }
+
+    // Cleanup — a separate phase from the guarded walk above, removing ONLY
+    // the throwaway probe account this check itself just created (never a
+    // pre-existing staff member): re-open the SAME row, ask to remove, and
+    // this time confirm — verbatim mirror of
+    // `measureSnackbarDerivesFromTabBar`'s own established cleanup.
+    await navigate(client, `${baseUrl}/admin/staff`)
+    await new Promise((r) => setTimeout(r, 250))
+    await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)})?.click()`)
+    await new Promise((r) => setTimeout(r, 250))
+    await evalJS(client, `document.querySelector('#staff-options-sheet [phx-click="ask-remove"]')?.click()`)
+    await new Promise((r) => setTimeout(r, 250))
+    await evalJS(client, `document.querySelector('#confirm-remove-dialog .pk-admin-action--peligro')?.click()`)
+    await new Promise((r) => setTimeout(r, 500))
+    const gone = await pollUntil(async () => !(await evalJS(client, `document.getElementById(${JSON.stringify(probeRowId)}) !== null`)))
+    log(
+      gone
+        ? `cleanup: probe staff account ${probeEmail} removed cleanly`
+        : `cleanup: could not confirm removal of ${probeEmail} — check the dev DB manually`,
+    )
+  }
+
+  await navigate(client, `${baseUrl}/admin/staff`)
+  await new Promise((r) => setTimeout(r, 250))
+  const staffCountAfter = await evalJS(client, `document.querySelectorAll('#staff-list .pk-admin-row').length`)
+  if (staffCountBefore !== staffCountAfter) {
+    fail(
+      `case3 (handoff baseline): staff count changed from ${staffCountBefore} to ${staffCountAfter} — this walk must never leave a residual account behind`,
+    )
+  }
+
+  log(`sheet focus-return walk: attempted=3 not-openable=${notOpenable.length}`)
+  return { fails, notOpenable }
+}
+
+// ---------------------------------------------------------------------------
 // The tab bar (D-13b) — height, indicator, and the snackbar derivation.
 // ---------------------------------------------------------------------------
 async function measureTabBar({ client, baseUrl, width }) {
@@ -3334,6 +3621,13 @@ async function main() {
     log("Measuring the overlay scroll lock is fully released after a real navigation away from an open sheet...")
     const scrollLockTeardown = await checkOverlayScrollLockTeardown({ client, baseUrl })
     if (scrollLockTeardown.fails.length > 0) {
+      exitCode = 1
+    }
+
+    // ---- sheet focus return (plan 01.8.3-14, G-01.8.3-4c) ----
+    log("Measuring focus return after both sheet close paths, plus the sheet->dialog handoff baseline...")
+    const focusReturn = await checkSheetFocusReturn({ client, baseUrl })
+    if (focusReturn.fails.length > 0) {
       exitCode = 1
     }
   } finally {
