@@ -178,9 +178,25 @@ defmodule PukllayClubWeb.AdminPinnedBandTest do
       |> Regex.scan(src)
       |> Enum.map(fn [_, raw] -> to_float(raw) end)
 
-    assert length(pts) >= 2,
-           "Expected at least 2 declared `--pt` values (the base rule plus the `:first-child` " <>
-             "override) in assets/css/admin/juegos.css, found #{length(pts)}."
+    # Plan 01.8.3-12 (G-01.8.3-3, rest-air) deleted the `:first-child`
+    # override this assertion used to require a second value for — the
+    # first section's `--pt: 14px` was BELOW `2 * --bandp` (25.8px), which
+    # is exactly what let the pinned band overflow its own 32.2px sticky
+    # box by 11.8px. With the override gone there is only one declared
+    # `--pt` (the base rule's 26px), so `length(pts) >= 2` would now assert
+    # a stylesheet shape this plan deliberately removed. What still matters
+    # — and what a reintroduced per-section override could still violate —
+    # is that at least one `--pt` exists, and EVERY declared `--pt` clears
+    # `2 * --bandp`, not merely `--bandp + --cap`: `--bandp + --cap` only
+    # keeps `padding-bottom` non-negative (the pre-existing floor below);
+    # `2 * --bandp` is the stricter floor that keeps the band's own
+    # `bottom: calc(var(--pt) - 2 * var(--bandp))` (the pinned `::before`
+    # rule) non-negative too, which is the actual overhang this plan closed.
+    assert pts != [],
+           "Expected at least 1 declared `--pt` value in assets/css/admin/juegos.css, found " <>
+             "#{length(pts)}."
+
+    overhang_floor = 2 * bandp
 
     for pt <- pts do
       assert pt >= floor - 0.001,
@@ -189,6 +205,15 @@ defmodule PukllayClubWeb.AdminPinnedBandTest do
                "#{cap_box}px and --cap=#{cap}px). Below this floor the pinned rule's " <>
                "`padding-bottom` resolves negative and the declaration is dropped entirely, " <>
                "silently reverting the header's pinned box height."
+
+      assert pt >= overhang_floor - 0.001,
+             "Found `--pt: #{pt}px` in assets/css/admin/juegos.css, below `2 * --bandp` " <>
+               "(#{Float.round(overhang_floor, 2)}px, from the DECLARED --bandp=" <>
+               "#{Float.round(bandp, 2)}px). Below this floor the pinned band's own " <>
+               "`bottom: calc(var(--pt) - 2 * var(--bandp))` resolves negative and the band " <>
+               "paints past its own header's sticky box — exactly G-01.8.3-3's 11.8px overhang, " <>
+               "measured on the first section before plan 01.8.3-12 removed its `--pt: 14px` " <>
+               "override."
     end
   end
 

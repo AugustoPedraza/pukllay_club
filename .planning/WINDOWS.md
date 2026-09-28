@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 7
+open_count: 8
 waived_count: 1
 fixed_count: 27
-total_count: 35
-last_updated: 2026-09-27T22:23:24.257Z
+total_count: 36
+last_updated: 2026-09-28T03:04:55.303Z
 ---
 
 # Broken Windows Ledger
@@ -50,6 +50,7 @@ last_updated: 2026-09-27T22:23:24.257Z
 | 33 | 01.8.2 | unrun-verify | test/pukllay_club/catalog/bgg_editions_test.exs |  | link_bgg_id/3 has no dedicated concurrent-race Task.async test (reuses add_game_from_bgg/1's proven lock mechanism, not independently re-derived) | open |  | 2026-09-24T02:08:38.186Z |  |
 | 34 | 01.8.3 | deviation | .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md |  | Task 2's acceptance criteria expects grep -c "Crear «" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required. | open |  | 2026-09-25T00:11:01.471Z |  |
 | 35 | 01.8.3 | stub | assets/css/admin/components.css |  | Direct-child sheet-row compensation does not reach list_row elements nested inside an unpadded wrapper div (que-va-aca-sheet/donde-va-sheet/editor-shelf-sheet's own estante-list state) — they render ink at 32px instead of 16px, a narrower sub-case of G-01.8.3-4b left for a future plan | open |  | 2026-09-27T22:23:24.257Z |  |
+| 36 | 01.8.3 | deviation | assets/js/hooks/admin_list.js |  | Intermittent flake (not a plan-12 defect): the pinned-offset scroll-up differential control (test4/test5 in admin_shell.mjs) leaves bandTop stuck at 0 instead of settling to 60 after scroll-up in roughly 2 of 4 local runs. This is a timing race in admin_list.js's growth-deferral mechanism introduced by plan 01.8.3-11 (transitionend-based reservation growth), confirmed pre-existing relative to plan 12 via a git-stash A/B against unmodified source. Not fixed here per explicit human decision — left open for a future plan. (Recorded as kind=deviation; the ledger's fixed kind vocabulary has no 'flake' entry.) | open |  | 2026-09-28T03:04:55.303Z |  |
 
 ````json
 [
@@ -477,6 +478,19 @@ last_updated: 2026-09-27T22:23:24.257Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-09-27T22:23:24.257Z",
+    "resolved_at": null,
+    "milestone": "v1.1"
+  },
+  {
+    "id": 36,
+    "kind": "deviation",
+    "phase": "01.8.3",
+    "file": "assets/js/hooks/admin_list.js",
+    "line": null,
+    "description": "Intermittent flake (not a plan-12 defect): the pinned-offset scroll-up differential control (test4/test5 in admin_shell.mjs) leaves bandTop stuck at 0 instead of settling to 60 after scroll-up in roughly 2 of 4 local runs. This is a timing race in admin_list.js's growth-deferral mechanism introduced by plan 01.8.3-11 (transitionend-based reservation growth), confirmed pre-existing relative to plan 12 via a git-stash A/B against unmodified source. Not fixed here per explicit human decision — left open for a future plan. (Recorded as kind=deviation; the ledger's fixed kind vocabulary has no 'flake' entry.)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-28T03:04:55.303Z",
     "resolved_at": null,
     "milestone": "v1.1"
   }
