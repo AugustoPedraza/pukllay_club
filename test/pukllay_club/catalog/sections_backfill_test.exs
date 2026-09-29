@@ -17,7 +17,14 @@ defmodule PukllayClub.Catalog.SectionsBackfillTest do
   @migration_path Path.join([File.cwd!(), "priv/repo/migrations/20260914150000_create_sections.exs"])
 
   setup do
-    Code.require_file(@migration_path)
+    # Guarded against redefining a module `Ecto.Migrator` already compiled
+    # into the VM during the `test` alias's `ecto.migrate` step, on a fresh
+    # database only. See the long-form mechanism note at the top of
+    # `clear_estantes_migration_test.exs`.
+    if !Code.ensure_loaded?(PukllayClub.Repo.Migrations.CreateSections) do
+      Code.require_file(@migration_path)
+    end
+
     Repo.delete_all("section_games")
     Repo.delete_all("sections")
     :ok
