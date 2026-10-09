@@ -514,6 +514,111 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
+  describe "SectionLive.Index — the placed cover lands (01.8.4, RAIL-06)" do
+    setup :register_and_log_in_staff
+
+    # The cover buttons whose class list carries the landed modifier.
+    defp landed_cover_ids(html) do
+      ~r/<button[^>]*\bid="(web-cover-\d+)"[^>]*\bclass="[^"]*\bpk-admin-web-box--landed\b/
+      |> Regex.scan(html)
+      |> Enum.map(&List.last/1)
+    end
+
+    defp rail_selected(html) do
+      ~r/<button[^>]*\bid="(web-cover-\d+)"[^>]*\bdata-pk-rail-selected="(true|false)"/
+      |> Regex.scan(html)
+      |> Map.new(fn [_, id, flag] -> {id, flag} end)
+    end
+
+    test "a placed game's cover alone carries the landed class and is the selected one", %{conn: conn} do
+      featured = featured_section()
+      [a, b] = seed_named(featured, ["Aaa Aterriza", "Bbb Aterriza"])
+      picked = game_fixture(%{name: "Ccc Aterriza"})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+      assert landed_cover_ids(html) == []
+
+      lv |> element("#web-slot-1") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "ccc"})
+      html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
+
+      assert landed_cover_ids(html) == ["web-cover-#{picked.id}"]
+
+      assert rail_selected(html) == %{
+               "web-cover-#{a.id}" => "false",
+               "web-cover-#{picked.id}" => "true",
+               "web-cover-#{b.id}" => "false"
+             }
+    end
+
+    test "a moved game's cover alone carries the landed class", %{conn: conn} do
+      featured = featured_section()
+      [_a, _b, c] = seed_named(featured, ["Aaa Aterriza", "Bbb Aterriza", "Ccc Aterriza"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 0, "ccc")
+      html = lv |> element("#web-add-result-#{c.id}") |> render_click()
+
+      assert landed_cover_ids(html) == ["web-cover-#{c.id}"]
+      assert html =~ ~s(data-pk-rail-selected="true")
+      assert length(Regex.scan(~r/data-pk-rail-selected="true"/, html)) == 1
+    end
+
+    test "the next mutating event clears it: removing a different game, then undoing the removal", %{
+      conn: conn
+    } do
+      featured = featured_section()
+      [a, _b] = seed_named(featured, ["Aaa Aterriza", "Bbb Aterriza"])
+      picked = game_fixture(%{name: "Ccc Aterriza"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-2") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "ccc"})
+      html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
+      assert landed_cover_ids(html) == ["web-cover-#{picked.id}"]
+
+      lv |> element("#web-cover-#{a.id}") |> render_click()
+      html = lv |> element("button[phx-click='remove-game'][phx-value-game-id='#{a.id}']") |> render_click()
+
+      refute html =~ "pk-admin-web-box--landed"
+      assert Enum.all?(rail_selected(html), fn {_id, flag} -> flag == "false" end)
+
+      # Deshacer re-adds the removed game; it must not light up either.
+      html = lv |> element("button[phx-click='undo-remove']") |> render_click()
+      refute html =~ "pk-admin-web-box--landed"
+    end
+
+    test "saving the row's settings clears it", %{conn: conn} do
+      featured = featured_section()
+      seed_named(featured, ["Aaa Aterriza"])
+      picked = game_fixture(%{name: "Ccc Aterriza"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-1") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "ccc"})
+      html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
+      assert landed_cover_ids(html) == ["web-cover-#{picked.id}"]
+
+      html = lv |> form("#web-ajustes-form", %{"section" => %{"name" => "Destacados nuevos"}}) |> render_submit()
+
+      refute html =~ "pk-admin-web-box--landed"
+    end
+
+    test "Deshacer of a placement leaves no cover marked landed", %{conn: conn} do
+      featured = featured_section()
+      seed_named(featured, ["Aaa Aterriza", "Bbb Aterriza"])
+      picked = game_fixture(%{name: "Ccc Aterriza"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "ccc"})
+      lv |> element("#web-add-result-#{picked.id}") |> render_click()
+      html = lv |> element("button[phx-click='undo-place']") |> render_click()
+
+      refute html =~ "pk-admin-web-box--landed"
+    end
+  end
+
   describe "SectionLive.Index — add-sheet handlers vs. forged and stale payloads (01.8.4, CTX-04)" do
     setup :register_and_log_in_staff
 

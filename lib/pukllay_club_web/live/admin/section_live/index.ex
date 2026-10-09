@@ -108,7 +108,12 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   def handle_event("save", %{"section" => params}, socket) do
     case Sections.update_section(socket.assigns.featured, normalize_ajustes_params(params)) do
       {:ok, _section} ->
-        {:noreply, socket |> load_sections() |> clear_snackbars() |> put_flash(:info, "Fila guardada.")}
+        {:noreply,
+         socket
+         |> load_sections()
+         |> clear_snackbars()
+         |> assign(:landed_game_id, nil)
+         |> put_flash(:info, "Fila guardada.")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -255,6 +260,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
          socket
          |> assign(:selected_member, nil)
          |> clear_snackbars()
+         |> assign(:landed_game_id, nil)
          |> assign(:removed, member && %{game_id: int_id, name: member.game.name})
          |> load_sections()}
 
@@ -271,7 +277,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
 
       %{game_id: game_id} ->
         {:ok, _section} = Sections.add_game(socket.assigns.featured, game_id)
-        {:noreply, socket |> assign(:removed, nil) |> load_sections()}
+        {:noreply, socket |> assign(:removed, nil) |> assign(:landed_game_id, nil) |> load_sections()}
     end
   end
 
@@ -296,6 +302,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> assign(:reorder_mode, false)
      |> assign(:revealed_section_id, nil)
      |> clear_snackbars()
+     |> assign(:landed_game_id, nil)
      |> assign(:undo_snapshot, socket.assigns.reorder_snapshot)
      |> assign(:reorder_snapshot, nil)}
   end
@@ -308,7 +315,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
 
       snapshot ->
         restore_section_order(snapshot)
-        {:noreply, socket |> assign(:undo_snapshot, nil) |> load_sections()}
+        {:noreply, socket |> assign(:undo_snapshot, nil) |> assign(:landed_game_id, nil) |> load_sections()}
     end
   end
 
@@ -581,7 +588,10 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
               <button
                 type="button"
                 id={"web-cover-#{member.game_id}"}
-                class="pk-admin-web-box"
+                class={[
+                  "pk-admin-web-box",
+                  member.game_id == @landed_game_id && "pk-admin-web-box--landed"
+                ]}
                 data-pk-pressable="true"
                 data-pk-rail-selected={to_string(member.game_id == @landed_game_id)}
                 phx-click="open-member-sheet"

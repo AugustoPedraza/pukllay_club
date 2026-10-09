@@ -364,6 +364,36 @@
   color: var(--color-neutral);
 }
 
+/* Plan 01.8.4-04, RAIL-06: the placed or moved cover drops into its spot
+   (sketch 070) - from 40px above at 92% size, a small overshoot, then
+   settled, over 520ms. This is deliberately NOT the longer landing in
+   estantes.css: the two screens drew different motion and are not unified.
+   Gated behind prefers-reduced-motion no-preference (this repo's
+   established idiom, a media-query gate on the trigger rather than a
+   per-selector reduce override), so a user who asked for no motion sees
+   the cover simply appear. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pk-admin-web-land {
+    0% {
+      transform: translateY(-40px) scale(0.92);
+      opacity: 0;
+    }
+
+    60% {
+      transform: translateY(4px) scale(1.02);
+      opacity: 1;
+    }
+
+    100% {
+      transform: none;
+    }
+  }
+
+  .pk-admin-web-box--landed .pk-admin-web-cover__art {
+    animation: pk-admin-web-land 520ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
+
 /* RAIL-04: at the featured cap every "+" dims, but the slot stays a live
    button - a tap explains the cap (D-24 forbids dead controls). Opacity
    only: nothing here may make the control inert. */
