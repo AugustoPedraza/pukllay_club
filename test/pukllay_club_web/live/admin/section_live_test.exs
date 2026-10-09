@@ -17,6 +17,11 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     ~r/<button[^>]*\bid="(web-slot-\d+)"/ |> Regex.scan(html) |> Enum.map(&List.last/1)
   end
 
+  # The idle rows' ids in DOM order.
+  defp recent_row_ids(html) do
+    ~r/id="(web-add-sheet-recent-\d+)"/ |> Regex.scan(html) |> Enum.map(&List.last/1)
+  end
+
   describe "SectionLive.Index — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
       assert {:error, {:redirect, %{to: "/admin/ingresar"}}} = live(conn, ~p"/admin/secciones")
@@ -532,6 +537,123 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       lv |> element("button[phx-click='remove-game'][phx-value-game-id='#{first.id}']") |> render_click()
       refute render(lv) =~ "Fila guardada."
       assert snackbars.() == 1
+    end
+  end
+
+  describe "SectionLive.Index — the sheet's recents, ranked search and no-match branch (01.8.4, ADD-03/04/07)" do
+    setup :register_and_log_in_staff
+
+    test "an empty query lists Últimas novedades: non-members only, the row's own games excluded", %{conn: conn} do
+      featured = featured_section()
+      member = game_fixture(%{name: "Ya En La Fila"})
+      add_game_to_section(featured, member, 1)
+      newcomer = game_fixture(%{name: "Recién Llegado"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      html = lv |> element("#web-slot-0") |> render_click()
+
+      assert html =~ "Últimas novedades"
+      assert has_element?(lv, "#web-add-sheet #web-add-sheet-recent")
+      assert has_element?(lv, "#web-add-sheet-recent-#{newcomer.id}")
+      refute has_element?(lv, "#web-add-sheet-recent-#{member.id}")
+      refute has_element?(lv, "#web-add-sheet-results")
+      refute has_element?(lv, "#web-add-sheet-no-match")
+    end
+
+    test "the idle rows are exactly Catalog.recent_games_for_row/2's output, six at most", %{conn: conn} do
+      featured = featured_section()
+      member = game_fixture(%{name: "Ya En La Fila"})
+      add_game_to_section(featured, member, 1)
+      for n <- 1..8, do: game_fixture(%{name: "Novedad #{n}"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      html = lv |> element("#web-slot-0") |> render_click()
+
+      expected = Catalog.recent_games_for_row([member.id])
+      assert length(expected) == 6
+      assert recent_row_ids(html) == Enum.map(expected, &"web-add-sheet-recent-#{&1.id}")
+    end
+
+    test "typing lists ranked results, the starts-with match before the contains-only one", %{conn: conn} do
+      contains_only = game_fixture(%{name: "Explorers of Catan"})
+      starts_with = game_fixture(%{name: "Catán"})
+      _retired = game_fixture(%{name: "Catán Retirado", status: :retired})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      html = render_change(lv, "add-sheet-search", %{"q" => "cat"})
+
+      assert has_element?(lv, "#web-add-sheet-results #web-add-result-#{starts_with.id}")
+      assert has_element?(lv, "#web-add-sheet-results #web-add-result-#{contains_only.id}")
+      refute html =~ "Catán Retirado"
+      refute has_element?(lv, "#web-add-sheet-recent")
+
+      # Ordering is asserted by rendered-HTML offset, not by the assign.
+      {starts_at, _} = :binary.match(html, ~s(id="web-add-result-#{starts_with.id}"))
+      {contains_at, _} = :binary.match(html, ~s(id="web-add-result-#{contains_only.id}"))
+      assert starts_at < contains_at
+    end
+
+    test "a whitespace-only query is the idle state, not a no-match", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "   "})
+
+      assert has_element?(lv, "#web-add-sheet-recent")
+      refute has_element?(lv, "#web-add-sheet-no-match")
+    end
+
+    test "a query matching nothing renders the verbatim no-match copy and a Crear row", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      html = render_change(lv, "add-sheet-search", %{"q" => "zzz"})
+
+      assert has_element?(lv, "#web-add-sheet-no-match")
+      assert html =~ "Ningún juego se llama así."
+      assert html =~ "Crear «zzz»"
+      assert html =~ "Agregarlo al catálogo"
+      assert has_element?(lv, "#web-add-create-row", "Crear «zzz»")
+      assert has_element?(lv, "#web-add-create-row", "Agregarlo al catálogo")
+      refute has_element?(lv, "#web-add-sheet-results")
+      refute has_element?(lv, "#web-add-sheet-recent")
+    end
+
+    test "the Crear row is a phx-click div, never a link", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "zzz"})
+
+      assert has_element?(lv, "div#web-add-create-row[phx-click='create-game-stub']")
+      refute has_element?(lv, "a#web-add-create-row")
+      refute has_element?(lv, "#web-add-create-row[href]")
+      refute has_element?(lv, "#web-add-create-row[data-phx-link]")
+    end
+
+    test "the Crear row reflects the query escaped, never as markup", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      html = render_change(lv, "add-sheet-search", %{"q" => "<b>zzz</b>"})
+
+      refute html =~ "<b>zzz</b>"
+      assert html =~ "Crear «&lt;b&gt;zzz&lt;/b&gt;»"
+    end
+
+    test "tapping the Crear row flashes the stub copy, closes the sheet and changes nothing", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture(%{name: "Everdell"}), 1)
+      before = member_ids(featured)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "zzz"})
+
+      html = lv |> element("#web-add-create-row") |> render_click()
+
+      assert html =~ "Crear un juego: se diseña en otra ronda"
+      refute has_element?(lv, "#web-add-sheet")
+      assert member_ids(featured) == before
+      # Not a navigation: the same LiveView is still rendering the same page.
+      assert has_element?(lv, "#web-destacada")
     end
   end
 

@@ -151,7 +151,14 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
 
     case Params.parse_int(raw, 0..length(ids)) do
       {:ok, index} ->
-        sheet = %{index: index, snapshot_ids: ids, query: "", results: [], recent: []}
+        sheet = %{
+          index: index,
+          snapshot_ids: ids,
+          query: "",
+          results: [],
+          recent: Catalog.recent_games_for_row(ids)
+        }
+
         {:noreply, assign(socket, :add_sheet, sheet)}
 
       :error ->
@@ -174,6 +181,18 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   end
 
   def handle_event("add-sheet-search", _params, socket), do: {:noreply, socket}
+
+  # ADD-08 / phase 01.8.8: the real "create a game" flow is designed in that
+  # phase's own sketch round. Until then the row is a stub that says so and
+  # deliberately does NOT navigate anywhere (unlike Estantes' equivalent).
+  @impl true
+  def handle_event("create-game-stub", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:add_sheet, nil)
+     |> clear_snackbars()
+     |> put_flash(:info, "Crear un juego: se diseña en otra ronda")}
+  end
 
   @impl true
   def handle_event("add-sheet-pick", %{"game-id" => raw}, %{assigns: %{add_sheet: %{} = sheet, featured: %{}}} = socket) do
@@ -417,18 +436,21 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     |> clear_flash(:error)
   end
 
-  # The sheet's candidate rows (ADD-03/ADD-04 replace this body with the
-  # ranked search and the recents). Non-members only for now: a game already
-  # in the row is not offered, and a retired game never is.
+  # The sheet's candidate rows. A blank query is the idle state (ADD-03:
+  # the newest games not already in the row); anything else is the ranked
+  # name search (ADD-04). Both queries cap at 6 and exclude `:retired`
+  # themselves, so nothing is re-sliced or re-filtered here. A game already
+  # in the row IS returned by the search: the sheet marks it and moves it
+  # (ADD-05) instead of hiding it.
   defp candidate_games(member_ids, query) do
-    if String.trim(query) == "" do
-      []
+    if blank_query?(query) do
+      Catalog.recent_games_for_row(member_ids)
     else
-      [q: query, limit: 6]
-      |> Catalog.list_admin_games()
-      |> Enum.reject(&(&1.status == :retired or &1.id in member_ids))
+      Catalog.search_admin_games_ranked(query)
     end
   end
+
+  defp blank_query?(query), do: String.trim(query) == ""
 
   defp member_names(members), do: Enum.map(members, & &1.game.name)
 
@@ -719,7 +741,22 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
           </div>
         </:commit>
 
-        <div :if={@add_sheet.query != ""} id="web-add-sheet-results">
+        <div :if={blank_query?(@add_sheet.query)} id="web-add-sheet-recent">
+          <AdminComponents.list_section_label>Últimas novedades</AdminComponents.list_section_label>
+          <AdminComponents.list_row
+            :for={game <- @add_sheet.recent}
+            id={"web-add-sheet-recent-#{game.id}"}
+            cover={game.thumbnail_url}
+            name={game.name}
+            phx-click="add-sheet-pick"
+            phx-value-game-id={game.id}
+          />
+        </div>
+
+        <div
+          :if={!blank_query?(@add_sheet.query) and @add_sheet.results != []}
+          id="web-add-sheet-results"
+        >
           <AdminComponents.list_row
             :for={game <- @add_sheet.results}
             id={"web-add-result-#{game.id}"}
@@ -727,6 +764,22 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
             name={game.name}
             phx-click="add-sheet-pick"
             phx-value-game-id={game.id}
+          />
+        </div>
+
+        <div
+          :if={!blank_query?(@add_sheet.query) and @add_sheet.results == []}
+          id="web-add-sheet-no-match"
+          class="pk-estantes-no-match"
+        >
+          <p class="pk-estantes-no-match__hint">Ningún juego se llama así.</p>
+          <%!-- ADD-07: a phx-click stub, NOT a navigate. Phase 01.8.8 (ADD-08)
+          designs Web's real "create a game" flow in its own sketch round. --%>
+          <AdminComponents.list_row
+            id="web-add-create-row"
+            name={"Crear «#{String.trim(@add_sheet.query)}»"}
+            meta="Agregarlo al catálogo"
+            phx-click="create-game-stub"
           />
         </div>
       </AdminComponents.sheet>
