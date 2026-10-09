@@ -559,6 +559,39 @@ defmodule PukllayClub.Catalog do
     )
   end
 
+  @doc """
+  `Últimas novedades` for the destacada add sheet (01.8.4, ADD-03): the
+  `#{@admin_ranked_default_limit}` (`opts[:limit]` overrides) most recently
+  added games that are not in `exclude_ids` — the current members of the
+  row the sheet was opened from.
+
+  The eligibility rule is deliberately narrow: `:retired` games are
+  excluded, `:draft` games are INCLUDED, and there is NO thumbnail
+  requirement. The sketch artefact filtered on a thumbnail; that is
+  deliberately not carried over, so do not "restore" it.
+
+  Ordered `[desc: inserted_at, desc: id]`. This differs from
+  `automatic_order_by(:recent)`'s `asc: id` tiebreak on purpose:
+  `timestamps()` is second-precision and several games are routinely added
+  inside one second, so "newest first" needs the higher id (the later
+  insert) to come first.
+
+  `exclude_ids` is built server-side from `Sections.section_members/1`,
+  never from client params.
+  """
+  @spec recent_games_for_row([integer()], keyword()) :: [Game.t()]
+  def recent_games_for_row(exclude_ids, opts \\ []) when is_list(exclude_ids) do
+    limit = Keyword.get(opts, :limit, @admin_ranked_default_limit)
+
+    Repo.all(
+      from g in Game,
+        where: g.status != :retired,
+        where: g.id not in ^exclude_ids,
+        order_by: [desc: g.inserted_at, desc: g.id],
+        limit: ^limit
+    )
+  end
+
   defp admin_filtered_query(query, opts) do
     query
     |> maybe_filter_admin_status(Map.get(opts, :status))
