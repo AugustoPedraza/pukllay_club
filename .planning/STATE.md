@@ -5,11 +5,11 @@ milestone_name: Web Tab — Sketch 070 Parity
 current_phase: 01.8.4
 current_phase_name: The Rail Becomes the Add Surface
 status: executing
-stopped_at: Milestone v1.2 opened — PROJECT/REQUIREMENTS/ROADMAP written; phase 01.8.4 not yet planned
-last_updated: "2026-10-09T20:55:39.523Z"
+stopped_at: Completed 01.8.4-01-PLAN.md
+last_updated: "2026-10-09T21:36:14.900Z"
 last_activity: 2026-10-09
-last_activity_desc: Opened milestone v1.2 (Web Tab — Sketch 070 Parity); roadmapped phases 01.8.4–01.8.8
-state_head: 538a212e3595514986b6bb0294cfa2fa73ec1769
+last_activity_desc: Phase 01.8.4 execution started
+state_head: 795ad48ff9fe8bd52b5f0ea5afa44e6b031c1ed5
 progress:
   total_phases: 8
   completed_phases: 7
@@ -27,16 +27,16 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.4 — The Rail Becomes the Add Surface, the first phase of milestone
+**Current focus:** Phase 01.8.4 — The Rail Becomes the Add Surface
 v1.2 (Web Tab — Sketch 070 Parity). Phases 01.8.4–01.8.8 are decimal insertions ahead of Phase 2,
 which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/01.8.2/01.8.3 set.
 
 ## Current Position
 
-Phase: 01.8.4 (The Rail Becomes the Add Surface) — READY TO EXECUTE
-Plan: —
+Phase: 01.8.4 (The Rail Becomes the Add Surface) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-10-09 — Opened milestone v1.2 and roadmapped phases 01.8.4–01.8.8
+Last activity: 2026-10-09 — Phase 01.8.4 execution started
 
 **Design contract for this whole milestone:** sketch 070
 (`.planning/sketches/070-web-destacados/index.html`) plus
@@ -177,6 +177,7 @@ findings note; Argentine voseo.
 | Phase 01.8.3 P12 | 50min | 3 tasks | 4 files |
 | Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
 | Phase 01.8.3 P14 | ~55min | 2 tasks | 2 files |
+| Phase 01.8.4 P01 | 13 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -362,6 +363,8 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-12: rest-air chosen — first section's --pt: 14px override deleted; header box now reserves the full 44px band, closing G-01.8.3-3's overhang with no pin-moment jitter.
 - [Phase 01.8.3]: 01.8.3-13: Reference-counted (not boolean) document scroll lock at the shared AdminSheet component closes G-01.8.3-4a; fixed-body-plus-saved-offset CSS lock chosen over the repo's two bare overflow:hidden precedents for iOS Safari coverage + position preservation. — Proven necessary by a real sheet->dialog handoff (LiveView mounts the second overlay's hook and acquires before the first's destroyed()/release runs); a boolean toggle would unlock mid-handoff.
 - [Phase 01.8.3]: 01.8.3-14: onClose's focus-restore condition rewritten from an equality against document.body to containment against the overlay's own root, closing G-01.8.3-4c without disturbing plan 01.8.2-12's sheet->dialog handoff protection or plan 13's scroll lock
+- [Phase 01.8.4]: 01.8.4-01: insert_game_at/3 and move_game_to/3 take a 0-based slot index over dense 1..n storage, lock the section row FOR UPDATE, and reject (never clamp) an out-of-range slot — A clamped slot would silently place a game somewhere other than the tapped gap; the locked row also removes the stale-struct and cap races
+- [Phase 01.8.4]: 01.8.4-01: clear_snackbars/1 (assigns plus :info/:error flashes) gates every snack-setting write in SectionLive.Index — snackbar/1 has no data-timeout consumer, so a stale flash would otherwise render beside a later assign-driven snack
 
 ### Pending Todos
 
@@ -542,8 +545,8 @@ resurfaces at the next audit.
 
 ## Session Continuity
 
-Last session: 2026-09-28T05:26:52.830Z
-Stopped at: Phase 01.8.2 complete, ready to plan Phase 01.8.3
+Last session: 2026-10-09T21:36:14.853Z
+Stopped at: Completed 01.8.4-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

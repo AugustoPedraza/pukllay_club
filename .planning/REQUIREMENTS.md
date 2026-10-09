@@ -23,7 +23,7 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 - [ ] **RAIL-01**: The destacada rail carries a "+" slot in every gap — before the first cover,
       between every two, after the last (N+1) — always visible, with a 44px hit box (20px column
       plus 12px each side) and no `gap` on the rail itself
-- [ ] **RAIL-02**: Each slot has a Spanish accessible label following the artefact's `where()`
+- [x] **RAIL-02**: Each slot has a Spanish accessible label following the artefact's `where()`
       grammar: `Agregar un juego al principio` / `… entre {X} y {Y}` / `… al final`
 - [ ] **RAIL-03**: An empty row's rail is a single 96×100 dashed tile beside the line
       `Tocá + para elegir el primer juego.`
@@ -33,14 +33,14 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
       070 decision 12 / D-19j forbids a second control beside the main one
 - [ ] **RAIL-06**: A placed cover lands with a 520ms animation (`cubic-bezier(.2,.8,.3,1)`), with a
       `prefers-reduced-motion: reduce` opt-out. **Not** estantes' 620ms
-- [ ] **RAIL-07**: The rail's `role="group"` stays labelled by the row name (`aria-labelledby`), so
+- [x] **RAIL-07**: The rail's `role="group"` stays labelled by the row name (`aria-labelledby`), so
       the row's identity is announced once rather than on every cover
 
 ### Add a game
 
-- [ ] **ADD-01**: Tapping a slot opens the full-height `¿Qué juego va acá?` sheet, whose header
+- [x] **ADD-01**: Tapping a slot opens the full-height `¿Qué juego va acá?` sheet, whose header
       context names the chosen spot: `{fila} · al principio | entre {X} y {Y} | al final`
-- [ ] **ADD-02**: The sheet's search field `Buscá un juego` is pinned and focused on open
+- [x] **ADD-02**: The sheet's search field `Buscá un juego` is pinned and focused on open
 - [ ] **ADD-03**: Idle (empty query) lists `Últimas novedades` — the 6 most recently added games
       not already in the row
 - [ ] **ADD-04**: Typing searches every game, starts-with before contains, 6 results max, excluding
@@ -48,7 +48,7 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 - [ ] **ADD-05**: A game already in the row shows the sub `Ya está en la fila · pasa a este lugar`
       and is **moved, not duplicated**; picking the game already in that exact spot snacks
       `Ya está en ese lugar` (no action)
-- [ ] **ADD-06**: Placing closes the sheet and snacks `Juego agregado` + **Deshacer**
+- [x] **ADD-06**: Placing closes the sheet and snacks `Juego agregado` + **Deshacer**
 - [ ] **ADD-07**: No match shows `Ningún juego se llama así.` plus `Crear «{q}»` /
       `Agregarlo al catálogo`
 - [ ] **ADD-08**: `Crear «{q}»` is **designed in its own sketch round and then built** — it is the
@@ -115,10 +115,10 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 
 ### Context API
 
-- [ ] **CTX-01**: `Sections` gains insert-at-index, preserving the dense-position invariant (D-25)
+- [x] **CTX-01**: `Sections` gains insert-at-index, preserving the dense-position invariant (D-25)
       and the transactional 20-game featured cap. Index semantics are pinned explicitly and tested
       at slot 0, slot n, and a middle slot
-- [ ] **CTX-02**: `Sections` gains move-to-index. Its index arithmetic excludes the moving game, so
+- [x] **CTX-02**: `Sections` gains move-to-index. Its index arithmetic excludes the moving game, so
       a move to slot `i` cannot land one spot off
 - [ ] **CTX-03**: `Sections` gains an atomic featured-role move — today `sections.featured` is set
       only by a migration backfill and no function moves it. Setting the role on one row clears it
@@ -158,18 +158,18 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | RAIL-01 | Phase 01.8.4 | Pending |
-| RAIL-02 | Phase 01.8.4 | Pending |
+| RAIL-02 | Phase 01.8.4 | Complete |
 | RAIL-03 | Phase 01.8.4 | Pending |
 | RAIL-04 | Phase 01.8.4 | Pending |
 | RAIL-05 | Phase 01.8.4 | Pending |
 | RAIL-06 | Phase 01.8.4 | Pending |
-| RAIL-07 | Phase 01.8.4 | Pending |
-| ADD-01 | Phase 01.8.4 | Pending |
-| ADD-02 | Phase 01.8.4 | Pending |
+| RAIL-07 | Phase 01.8.4 | Complete |
+| ADD-01 | Phase 01.8.4 | Complete |
+| ADD-02 | Phase 01.8.4 | Complete |
 | ADD-03 | Phase 01.8.4 | Pending |
 | ADD-04 | Phase 01.8.4 | Pending |
 | ADD-05 | Phase 01.8.4 | Pending |
-| ADD-06 | Phase 01.8.4 | Pending |
+| ADD-06 | Phase 01.8.4 | Complete |
 | ADD-07 | Phase 01.8.4 | Pending |
 | ADD-08 | Phase 01.8.8 | Pending |
 | MOVE-01 | Phase 01.8.5 | Pending |
@@ -191,8 +191,8 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 | CHROME-06 | Phase 01.8.6 | Pending |
 | CHROME-07 | Phase 01.8.6 | Pending |
 | CHROME-08 | Phase 01.8.6 | Pending |
-| CTX-01 | Phase 01.8.4 | Pending |
-| CTX-02 | Phase 01.8.4 | Pending |
+| CTX-01 | Phase 01.8.4 | Complete |
+| CTX-02 | Phase 01.8.4 | Complete |
 | CTX-03 | Phase 01.8.7 | Pending |
 | CTX-04 | Phase 01.8.4 | Pending |
 
@@ -201,6 +201,7 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 01.8.7 → 7 (ROLE-01..06, CTX-03) · 01.8.8 → 1 (ADD-08). Sum = 38.
 
 **Coverage:**
+
 - v1 requirements: 38 total
 - Mapped to phases: 38 ✓
 - Unmapped: 0 ✓
