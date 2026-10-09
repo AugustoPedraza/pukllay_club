@@ -2,6 +2,9 @@
 title: Pick transactional email provider, wire Swoosh in prod, set SPF/DKIM
 date: 2026-09-13
 priority: high
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-10-09
 ---
 
 # Email provider + DNS for magic-link auth

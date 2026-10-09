@@ -13,6 +13,7 @@ task's own changes).
   drift predates it. Needs a future `mix format` pass + review of the diff
   (Styler can change program behavior per this project's own CLAUDE.md
   caveat — do not blind-format without reviewing the hunk).
+  status: acknowledged
 
 ## From plan 12 (2026-09-23) — found by `test/visual/admin_components.mjs`/`admin_shell.mjs` against the real /admin
 
@@ -112,6 +113,7 @@ unchanged, only the concrete visibility check it names.
   on `document.activeElement === document.body` (see the `isOpen()` fix
   entry above, follow-on fix 3). Verified via the same D-19f harness
   assertion, now green.
+  status: acknowledged
 
 ## Open item 1 — routed to plan 01.8.2-22 (2026-09-23)
 
@@ -158,6 +160,7 @@ from the harness's own headless-Chrome evidence.
   substring collision and plan 01.8.2-08's Styler-underscore integer grep. A whole-document
   substring assertion is not a guard — it is a coincidence detector. A guard that fails for the
   wrong reason costs exactly as much trust as one that passes for the wrong reason.
+  status: acknowledged
 
 ## From the PR's CI (2026-09-24) — a latent fresh-database trap in migration-behaviour tests
 
@@ -186,3 +189,4 @@ and the build goes red for a reason that has nothing to do with the change. Guar
 `ecto.migrate` is a no-op, loads nothing, and the warning never fires. It reproduces only on a
 fresh database — i.e. CI, every time. Verifying `mix quality` locally is not equivalent to
 verifying CI unless the test database is dropped first.
+  status: acknowledged
