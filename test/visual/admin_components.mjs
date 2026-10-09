@@ -518,6 +518,46 @@ async function runPageCase({ client, baseUrl, page, viewport, theme }) {
         return { label: normText(el).slice(0, 30) || el.tagName, hit };
       });
 
+      // Plan 01.8.4-04 (RAIL-01): the "+" slot's HORIZONTAL hit box. A8 above
+      // reads height only, and a slot is a tall 20px-wide column, so it
+      // passes that check whatever its width. The slot is 20px of box plus a
+      // bleeding ::before layer, with 12px of margin either side. Probing
+      // with elementFromPoint at +-21px (must hit the slot) and +-23px (must
+      // NOT hit it - the neighbouring cover starts at +-22px) measures the
+      // result of those declarations rather than re-reading them. The empty
+      // rail is deliberately exempt: there the slot IS the 96x100 tile, so
+      // +-23px legitimately still resolves to it. A probe point outside the
+      // viewport has no element to report, so it is recorded as null and
+      // never counted as a pass or a fail.
+      const slotHitBoxes = [...document.querySelectorAll('button.pk-admin-web-slot')]
+        .filter(visible)
+        .filter(el => {
+          const rail = el.closest('.pk-admin-web-rail');
+          return rail && !rail.classList.contains('pk-admin-web-rail--empty');
+        })
+        .map(el => {
+          const r = el.getBoundingClientRect();
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          const inView = (x, y) => x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight;
+          const hits = dx => {
+            const x = cx + dx;
+            if (!inView(x, cy)) return null;
+            const found = document.elementFromPoint(x, cy);
+            return !!found && el.contains(found);
+          };
+          return {
+            label: el.id || normText(el).slice(0, 30) || 'slot',
+            isFirst: el === el.parentElement.firstElementChild,
+            isLast: el === el.parentElement.lastElementChild,
+            centre: hits(0),
+            left21: hits(-21),
+            right21: hits(21),
+            left23: hits(-23),
+            right23: hits(23),
+            rect: { left: r.left, width: r.width, height: r.height },
+          };
+        });
+
       const titleEl = document.querySelector('.pk-admin-page-title');
       const backEl = document.querySelector('.pk-admin-back-row');
       let headToBody = null;
@@ -539,6 +579,7 @@ async function runPageCase({ client, baseUrl, page, viewport, theme }) {
         actions,
         fields,
         tappables,
+        slotHitBoxes,
         title: titleEl
           ? {
               text: normText(titleEl),
@@ -732,6 +773,39 @@ function check44pxFloor(measured, ctx) {
   return failures
 }
 
+// RAIL-01 — the slot's horizontal hit box is 44px and does not overlap its
+// neighbour. Skips cleanly when the page renders no slot (seven of the eight
+// swept pages) or only the exempt empty rail. A probe point that fell outside
+// the viewport is null and is neither a pass nor a fail; a centre point that
+// does not resolve to the slot (something fixed sits on top of it) skips that
+// slot rather than blaming its geometry.
+//
+// The end slots reclaim the rail's 16px padding with a wider hit layer on
+// their OUTER side, so their outer +-23px probe legitimately resolves to the
+// slot and is exempt; the inner side still must not.
+function checkSlotHitBox(measured, ctx) {
+  const failures = []
+  for (const s of measured.slotHitBoxes || []) {
+    if (s.centre !== true) continue
+    const probes = [
+      { name: "-21px", hit: s.left21, outer: false, wantHit: true },
+      { name: "+21px", hit: s.right21, outer: false, wantHit: true },
+      { name: "-23px", hit: s.left23, outer: s.isFirst, wantHit: false },
+      { name: "+23px", hit: s.right23, outer: s.isLast, wantHit: false },
+    ]
+    for (const p of probes) {
+      if (p.hit == null || (p.outer && !p.wantHit)) continue
+      if (p.wantHit && !p.hit) {
+        failures.push(`${label(ctx)} slot ${s.label}: ${p.name} from its centre does not hit the slot - the hit box is narrower than 44px`)
+      }
+      if (!p.wantHit && p.hit) {
+        failures.push(`${label(ctx)} slot ${s.label}: ${p.name} from its centre still hits the slot - its hit layer overlaps its neighbour`)
+      }
+    }
+  }
+  return failures
+}
+
 // D2 — one page-title type across the admin (22px/600, per screens.css).
 // Collected across ALL pages/viewport/theme cases at the end of main(),
 // since it is a cross-page consistency check, not a per-case one.
@@ -750,6 +824,7 @@ const CHECKS = [
   checkSheetHasNoButtons,
   checkActionContrast,
   check44pxFloor,
+  checkSlotHitBox,
 ]
 
 // ---------------------------------------------------------------------------

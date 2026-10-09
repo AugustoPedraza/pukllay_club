@@ -1,7 +1,7 @@
 {
   "contract": "1.0.0",
   "flavor": "core",
-  "milestone": "v1.1 — Sharable Version",
+  "milestone": "v1.2 — Web Tab — Sketch 070 Parity",
   "phases": [
     {
       "number": "1",
@@ -11,17 +11,52 @@
     {
       "number": "01.7",
       "name": "Production Catalog Data & Security Hardening",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "01.8",
       "name": "SEO, Structured Data & Social Sharing",
-      "status": "complete"
+      "status": "pending"
     },
     {
       "number": "01.8.1",
       "name": "Staff Admin — Ludoteca, Shelves & Curated Destacados",
-      "status": "complete"
+      "status": "pending"
+    },
+    {
+      "number": "01.8.2",
+      "name": "Admin UI/UX Redesign",
+      "status": "pending"
+    },
+    {
+      "number": "01.8.3",
+      "name": "Admin Screen-by-Screen Refinement",
+      "status": "pending"
+    },
+    {
+      "number": "01.8.4",
+      "name": "The Rail Becomes the Add Surface",
+      "status": "in_progress"
+    },
+    {
+      "number": "01.8.5",
+      "name": "Moving a Game",
+      "status": "pending"
+    },
+    {
+      "number": "01.8.6",
+      "name": "Page & Row Chrome",
+      "status": "pending"
+    },
+    {
+      "number": "01.8.7",
+      "name": "Destacada Becomes a Role",
+      "status": "pending"
+    },
+    {
+      "number": "01.8.8",
+      "name": "`Crear «{q}»` — Designed, Then Built",
+      "status": "pending"
     },
     {
       "number": "2",
@@ -40,9 +75,9 @@
     }
   ],
   "next": {
-    "command": "/gsd:progress",
-    "label": "Show progress",
-    "reason": "Unsure of state — showing progress"
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 01.8.4 of 8 · ready to verify"
   },
-  "updated_at": "2026-10-09T16:49:55.031Z"
+  "updated_at": "2026-10-09T22:16:38.991Z"
 }

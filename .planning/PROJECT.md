@@ -15,28 +15,51 @@ A member can describe what they want in plain Spanish and find a game that fits 
 already knowing board-game vocabulary. Everything before that (a working, deployed catalog) exists
 to make that possible; everything after it (rules Q&A, rental tracking) is a differentiator on top.
 
-## Current Milestone: v1.1 Sharable Version
+## Current Milestone: v1.2 Web Tab — Sketch 070 Parity
 
-**Goal:** Make the live catalog safe and appealing to actually pass around — discoverable on
-Google, good-looking when a game link is dropped into WhatsApp/Facebook/Twitter, hardened against
-the basics now that the repo is public, and clean of any leaked secrets.
+**Goal:** Bring the admin Web tab (`/admin/secciones`) to full parity with sketch 070 — the design
+the developer approved after driving the artefact. Of every admin screen, this is the one whose
+shipped implementation sits furthest from its settled design.
 
 **Target features:**
-- **Production catalog data (highest priority — blocks everything else looking real):** the live
-  production database at pukllay.club is currently empty of games, despite the seed pipeline
-  having loaded ~400+ games in dev. The seed pipeline was deliberately scoped dev-machine-only
-  (BGG/R2 credentials only ever in gitignored `config/dev.secret.exs`, never wired through Kamal)
-  — needs a safe path to run it against production, or the SEO/sharing work below has nothing real
-  to demonstrate
-- SEO: per-page meta descriptions, real `alt` text on catalog card/preview images, a real
-  `robots.txt` + `sitemap.xml`, and JSON-LD structured data (schema.org `Game` on detail pages,
-  `LocalBusiness`/Jujuy context site-wide)
-- Social sharing: Open Graph + Twitter Card tags on game detail pages (title/description/game
-  cover-art image) and a site-wide brand fallback (isologo/wordmark), sharing the same canonical
-  URL the existing native-share control already builds
-- Security hardening: secure session cookie flag, HSTS/CSP/CSRF/XSS audit and fixes
-- One-time secrets sweep across full git history and all tracked config files (no new tooling —
-  repo already keeps real secrets gitignored per D-19)
+- **The destacada rail becomes the add surface:** a "+" in every gap (N+1 slots, 44px hit box), the
+  `¿Qué juego va acá?` full-height sheet behind each one (`Últimas novedades` idle list, search, a
+  game already in the row *moves* rather than duplicates), the empty-rail dashed tile, and the
+  20-game cap dimming the slots. The inline `Agregar un juego` field is **deleted** — 070's
+  decision 12 forbids a second control beside the main one (D-19j).
+- **`Crear «{q}»` gets designed, not stubbed:** the no-match branch is the one piece sketch 070
+  never drew. It gets its own sketch round first (Estantes' equivalent is settled in sketch 069
+  decision 66), then ships.
+- **Moving a game:** the cover sheet grows to `Ver ficha` / `Mover` / `Quitar de la fila`, and
+  `Mover` opens `¿Dónde va?` — the rail drawn *without* the moving game, so the gaps are the
+  positions it can actually land in.
+- **"Destacada" becomes a role, not a row** (070 decision 7): `Destacar` / `Cambiar la destacada`
+  move the role between hand-picked rows. This is the milestone's only net-new product behaviour
+  and its only data-model work — `sections.featured` is currently set *only* by a migration
+  backfill — and it carries the "only `:manual` rows" and ">20 games cannot be destacada"
+  invariants, with the cap following the role.
+- **Row and page chrome:** the row name becomes a 44px button opening the row-options sheet; ⇅ and
+  ＋ move into the page header; the inline `Ajustes` panel and the bottom create form collapse into
+  one `Editar fila` / `Nueva fila` form sheet (subtitle textarea, 40/160 limits); `Otras filas` rows
+  get the tile + corner count badge (D-19m); `Ordenar filas` gains drag and a locked `Destacada`
+  row reading `Siempre primera`.
+- **Context line and copy:** `{n} de 20 juegos`, the `Vacía` / `hasta 20` tails, the `● Oculta ·`
+  prefix, and every snackbar — all Spanish **verbatim** from the findings note, Argentine voseo.
+- **Backend for positions:** `Sections` gains insert-at-index and move-to-index, preserving the
+  dense-position invariant (D-25) and the transactional 20-game cap.
+- `section_live/edit.ex` becomes the same page shape with a `‹ Web` back link.
+
+**Why this milestone exists:** phase 01.8.2 "Admin UI/UX Redesign" sealed 22/22 in v1.1, but for
+this page it delivered only a slice — its own moduledoc says *"this plan changes presentation and
+the removal/undo shape only."* The remaining 070 scope was never recorded as deferred: it is absent
+from `01.8.2/deferred-items.md` and from the 12 artifacts acknowledged at v1.1's
+`override_closeout`. The design contract is sketch 070 plus
+`.claude/skills/sketch-findings-pukllay_club/references/admin-web-destacados.md`; where the two
+disagree, the artefact wins (070's README is known-stale on four points).
+
+**Scope boundary:** this milestone is the **Web tab only**. The other admin pages likely carry the
+same class of sealed-phase-vs-sketch gap, but that is unmeasured — measuring it is the explicit
+reassessment at the end of this milestone, not part of it.
 
 ## Requirements
 
@@ -71,15 +94,28 @@ the basics now that the repo is public, and clean of any leaked secrets.
 - [x] No secrets, keys, or credentials are discoverable anywhere in the public repo or its git
       history — full-history Gitleaks sweep, one reviewed false positive, no real leaks (Phase
       01.7, 2026-09-11) — v1.1
+- [x] Game detail and catalog pages carry real SEO metadata — per-page descriptions, image `alt`
+      text, `robots.txt`, `sitemap.xml`, and schema.org JSON-LD — so the catalog is discoverable on
+      Google and reads as a Jujuy business (Phase 01.8, 7/7 plans, 2026-09-12) — v1.1
+- [x] Shared game links render an on-brand preview on WhatsApp/Facebook/Twitter — Open Graph +
+      Twitter Card tags per game plus a site-wide isologo fallback, on the same canonical URL the
+      native-share control already built (Phase 01.8, 2026-09-12) — v1.1
+- [x] Staff can run the club's catalog from a real admin: the Ludoteca game editor, physical
+      shelves (estantes) with per-copy placement, and hand-curated home rows (destacados), all
+      behind staff auth (Phase 01.8.1, 15/15 plans, 2026-09-16) — v1.1
+- [x] The admin reads as one designed system rather than scaffolding — a shared sheet / dialog /
+      snackbar / button vocabulary, the app-wide D-19 rules (status is dot + text, chevron only
+      when a row opens a page, reorder is a mode, destructive = centred dialog), and the bottom-tab
+      shell (Phase 01.8.2, 22/22 plans, 2026-10-09). **Partial for the Web tab** — see Current
+      Milestone above — v1.1
+- [x] Each admin screen was refined individually against its own sketch, one page at a time
+      (Phase 01.8.3, 14/14 plans, 2026-09-28) — v1.1
 
 ### Active
 
-- [ ] Game detail and catalog pages carry real SEO metadata (descriptions, alt text, sitemap,
-      robots.txt, JSON-LD structured data) so the catalog is discoverable on Google, targeted at
-      Jujuy (v1.1)
-- [ ] Game detail pages carry Open Graph + Twitter Card tags (title/description/cover image) and
-      the site carries a branded fallback, so shared links render an appealing, on-brand preview
-      on WhatsApp/Facebook/Twitter (v1.1)
+- [ ] Staff can curate the public home's destacada row entirely from the rail: tap the "+" in any
+      gap to place a game at that exact spot, move a game to another spot, and move the destacada
+      role itself between hand-picked rows — the admin Web tab at full sketch-070 parity (v1.2)
 - [ ] Members can search the catalog with natural-language Spanish queries via local embeddings +
       pgvector hybrid ranking + LLM query parsing, and save favorites behind magic-link auth
       (Phase 2 — hero feature)
@@ -205,4 +241,5 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-11 after Phase 01.7*
+*Last updated: 2026-10-09 after v1.1 close — opened milestone v1.2, moved the shipped
+v1.1 SEO/sharing and admin phases (01.8, 01.8.1, 01.8.2, 01.8.3) into Validated.*

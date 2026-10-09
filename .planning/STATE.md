@@ -1,23 +1,23 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.1
-milestone_name: Sharable Version
-status: Awaiting next milestone
-stopped_at: Milestone v1.1 shipped and archived; awaiting /gsd-new-milestone
-last_updated: "2026-10-09T16:49:55.004Z"
+milestone: v1.2
+milestone_name: Web Tab — Sketch 070 Parity
+current_phase: 01.8.4
+current_phase_name: The Rail Becomes the Add Surface
+status: verifying
+stopped_at: Completed 01.8.4-04-PLAN.md
+last_updated: "2026-10-09T22:16:40.041Z"
 last_activity: 2026-10-09
-last_activity_desc: Milestone v1.1 completed and archived
-state_head: 2993ac40b5ced8a21a1d43115faa533763286092
+last_activity_desc: Phase 01.8.4 execution started
+state_head: 12b8fba865e0b9519a54926ccd43a1771cab270f
 progress:
-  total_phases: 10
+  total_phases: 8
   completed_phases: 7
-  total_plans: 63
+  total_plans: 4
   completed_plans: 63
-current_phase: 01.8.3
-current_phase_name: Admin Screen-by-Screen Refinement
 ---
 
-Total Phases: 10
+Total Phases: 15
 
 # Project State
 
@@ -27,16 +27,29 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.3 — Admin Screen-by-Screen Refinement (INSERTED)
-(production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
-ahead of Phase 2, which keeps its number and scope.
+**Current focus:** Phase 01.8.4 — The Rail Becomes the Add Surface
+v1.2 (Web Tab — Sketch 070 Parity). Phases 01.8.4–01.8.8 are decimal insertions ahead of Phase 2,
+which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/01.8.2/01.8.3 set.
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-09 — Milestone v1.1 completed and archived
+Phase: 01.8.4 (The Rail Becomes the Add Surface) — EXECUTING
+Plan: 4 of 4
+Status: Phase complete — ready for verification
+Last activity: 2026-10-09 — Phase 01.8.4 execution started
+
+**Design contract for this whole milestone:** sketch 070
+(`.planning/sketches/070-web-destacados/index.html`) plus
+`.claude/skills/sketch-findings-pukllay_club/references/admin-web-destacados.md`. The developer
+re-reviewed and approved the artefact on 2026-10-09. Where the note and the artefact disagree, the
+artefact wins — 070's README is known-stale on four points. All Spanish copy is verbatim from the
+findings note; Argentine voseo.
+
+> ⚠ **Decimal phases: the resume guard is blind here.** `safe_resume_gate` aborts on
+> `$((10#01.8.4))` and its commit-scope regex never matches `feat(01.8.4-N):`, so a half-executed
+> plan is not detected and a bare `/gsd-execute-phase` restarts it at Task 1. See `.claude/CLAUDE.md`
+> → "GSD Decimal-Phase Resume Bug" for the manual recovery path, and confirm `git status` reads
+> "up to date with origin/main" before starting a phase.
 
 ## Performance Metrics
 
@@ -164,6 +177,10 @@ Last activity: 2026-10-09 — Milestone v1.1 completed and archived
 | Phase 01.8.3 P12 | 50min | 3 tasks | 4 files |
 | Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
 | Phase 01.8.3 P14 | ~55min | 2 tasks | 2 files |
+| Phase 01.8.4 P01 | 13 min | 3 tasks | 8 files |
+| Phase 01.8.4 P02 | 6 min | 2 tasks | 2 files |
+| Phase 01.8.4 P03 | 16min | 3 tasks | 3 files |
+| Phase 01.8.4 P04 | 11 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -349,6 +366,12 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-12: rest-air chosen — first section's --pt: 14px override deleted; header box now reserves the full 44px band, closing G-01.8.3-3's overhang with no pin-moment jitter.
 - [Phase 01.8.3]: 01.8.3-13: Reference-counted (not boolean) document scroll lock at the shared AdminSheet component closes G-01.8.3-4a; fixed-body-plus-saved-offset CSS lock chosen over the repo's two bare overflow:hidden precedents for iOS Safari coverage + position preservation. — Proven necessary by a real sheet->dialog handoff (LiveView mounts the second overlay's hook and acquires before the first's destroyed()/release runs); a boolean toggle would unlock mid-handoff.
 - [Phase 01.8.3]: 01.8.3-14: onClose's focus-restore condition rewritten from an equality against document.body to containment against the overlay's own root, closing G-01.8.3-4c without disturbing plan 01.8.2-12's sheet->dialog handoff protection or plan 13's scroll lock
+- [Phase 01.8.4]: 01.8.4-01: insert_game_at/3 and move_game_to/3 take a 0-based slot index over dense 1..n storage, lock the section row FOR UPDATE, and reject (never clamp) an out-of-range slot — A clamped slot would silently place a game somewhere other than the tapped gap; the locked row also removes the stale-struct and cap races
+- [Phase 01.8.4]: 01.8.4-01: clear_snackbars/1 (assigns plus :info/:error flashes) gates every snack-setting write in SectionLive.Index — snackbar/1 has no data-timeout consumer, so a stale flash would otherwise render beside a later assign-driven snack
+- [Phase 01.8.4]: recent_games_for_row/2 tiebreaks on desc: id (not automatic_order_by(:recent)'s asc: id); drafts and thumbnail-less games included — timestamps() is second-precision; the higher id is the later insert, so desc: id is the only deterministic newest-first tiebreak
+- [Phase 01.8.4]: 01.8.4-03: section_live_test.exs is async: false - FOR UPDATE on the shared seeded featured row vs FK KEY SHARE deadlocks concurrent tests
+- [Phase 01.8.4]: 01.8.4-03: a game already in the row is no longer excluded from sheet search; it is shown with its sub-line and moved (ADD-05)
+- [Phase 01.8.4]: 01.8.4-04: .pk-admin-web-slot is display:flex with min-width:0; a grid slot let the 24px glyph widen the 20px column and made the hit pitch 48px — Found only by rendering in headless Chrome; the CSS source gate now also pins min-width: 0
 
 ### Pending Todos
 
@@ -529,8 +552,8 @@ resurfaces at the next audit.
 
 ## Session Continuity
 
-Last session: 2026-09-28T05:26:52.830Z
-Stopped at: Phase 01.8.2 complete, ready to plan Phase 01.8.3
+Last session: 2026-10-09T22:16:39.996Z
+Stopped at: Completed 01.8.4-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

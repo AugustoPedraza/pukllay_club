@@ -242,6 +242,326 @@ defmodule PukllayClub.Catalog.SectionsTest do
     end
   end
 
+  describe "insert_game_at/3 (01.8.4, CTX-01) — places at the chosen slot" do
+    setup do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      a = game_fixture(%{name: "A"})
+      b = game_fixture(%{name: "B"})
+      {:ok, _} = Sections.add_game(section, a.id)
+      {:ok, _} = Sections.add_game(section, b.id)
+      %{section: section, a: a, b: b, new: game_fixture(%{name: "Nuevo"})}
+    end
+
+    test "slot 0 places before the first member, positions dense 1..3", ctx do
+      assert {:ok, %{index: 0}} = Sections.insert_game_at(ctx.section, ctx.new.id, 0)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.new.id, ctx.a.id, ctx.b.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "a middle slot places between two members, positions dense 1..3", ctx do
+      assert {:ok, %{index: 1}} = Sections.insert_game_at(ctx.section, ctx.new.id, 1)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.a.id, ctx.new.id, ctx.b.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "slot n places after the last member, positions dense 1..3", ctx do
+      assert {:ok, %{index: 2}} = Sections.insert_game_at(ctx.section, ctx.new.id, 2)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.a.id, ctx.b.id, ctx.new.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "returns the locked section row", ctx do
+      assert {:ok, %{section: section}} = Sections.insert_game_at(ctx.section, ctx.new.id, 0)
+      assert section.id == ctx.section.id
+    end
+  end
+
+  describe "insert_game_at/3 (01.8.4, CTX-01) — the edge matrix" do
+    defp snapshot(section), do: section |> Sections.section_members() |> Enum.map(&{&1.game_id, &1.position})
+
+    defp positions(section), do: section |> Sections.section_members() |> Enum.map(& &1.position)
+
+    defp manual_section_with(count) do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      games = for i <- 1..count//1, do: game_fixture(%{name: "G#{i}"})
+      for game <- games, do: {:ok, _} = Sections.add_game(section, game.id)
+      {section, games}
+    end
+
+    test "slot -1 and slot n + 1 are :index_out_of_range and write nothing" do
+      {section, _games} = manual_section_with(2)
+      before = snapshot(section)
+
+      assert {:error, :index_out_of_range} = Sections.insert_game_at(section, game_fixture().id, -1)
+      assert {:error, :index_out_of_range} = Sections.insert_game_at(section, game_fixture().id, 3)
+      assert snapshot(section) == before
+    end
+
+    test "a slot that is not an integer is :index_out_of_range and writes nothing" do
+      {section, _games} = manual_section_with(2)
+      before = snapshot(section)
+
+      for bad <- ["1", 1.0, nil, :one, [1]] do
+        assert {:error, :index_out_of_range} = Sections.insert_game_at(section, game_fixture().id, bad)
+      end
+
+      assert snapshot(section) == before
+    end
+
+    test "the bounds check runs before the already-member check" do
+      {section, [first | _]} = manual_section_with(2)
+
+      assert {:error, :index_out_of_range} = Sections.insert_game_at(section, first.id, 99)
+    end
+
+    test "an empty row accepts slot 0 only" do
+      {section, []} = manual_section_with(0)
+
+      assert {:error, :index_out_of_range} = Sections.insert_game_at(section, game_fixture().id, 1)
+      assert {:ok, %{index: 0}} = Sections.insert_game_at(section, game_fixture().id, 0)
+      assert positions(section) == [1]
+    end
+
+    test "a game id above Postgres' bigint maximum is :game_not_found, not a raise" do
+      {section, _games} = manual_section_with(1)
+      before = snapshot(section)
+
+      assert {:error, :game_not_found} = Sections.insert_game_at(section, 99_999_999_999_999_999_999, 0)
+      assert snapshot(section) == before
+    end
+
+    test "an unknown but in-range game id is :game_not_found, not an Ecto.ConstraintError" do
+      {section, _games} = manual_section_with(1)
+      before = snapshot(section)
+
+      assert {:error, :game_not_found} = Sections.insert_game_at(section, 9_000_000_000_000, 0)
+      assert snapshot(section) == before
+    end
+
+    test "a retired game is :game_not_found" do
+      {section, _games} = manual_section_with(1)
+      retired = game_fixture(%{status: :retired})
+
+      assert {:error, :game_not_found} = Sections.insert_game_at(section, retired.id, 0)
+    end
+
+    test "inserting the same game twice is :already_member and positions stay dense" do
+      {section, _games} = manual_section_with(2)
+      game = game_fixture()
+
+      assert {:ok, _} = Sections.insert_game_at(section, game.id, 1)
+      assert {:error, :already_member} = Sections.insert_game_at(section, game.id, 0)
+      assert positions(section) == Enum.to_list(1..3)
+    end
+
+    test "the featured row at exactly 20 members is :featured_full for a 21st" do
+      featured = Repo.get_by!(Section, featured: true)
+      for _ <- 1..20, do: {:ok, _} = Sections.add_game(featured, game_fixture().id)
+      before = snapshot(featured)
+
+      assert {:error, :featured_full} = Sections.insert_game_at(featured, game_fixture().id, 0)
+      assert snapshot(featured) == before
+    end
+
+    test "the cap is read from the locked row, not the passed (stale) struct" do
+      featured = Repo.get_by!(Section, featured: true)
+      for _ <- 1..20, do: {:ok, _} = Sections.add_game(featured, game_fixture().id)
+
+      stale = %{featured | featured: false}
+
+      assert {:error, :featured_full} = Sections.insert_game_at(stale, game_fixture().id, 0)
+    end
+
+    test "a non-featured manual row at 20 members accepts a 21st" do
+      {section, _games} = manual_section_with(20)
+
+      assert {:ok, _} = Sections.insert_game_at(section, game_fixture().id, 20)
+      assert positions(section) == Enum.to_list(1..21)
+    end
+
+    test "weight_band and recent rows are :automatic_section and write nothing" do
+      for attrs <- [%{kind: :weight_band, rule_value: "nivel_experto", sort: :name}, %{kind: :recent, sort: :recent}] do
+        section = section_fixture(attrs)
+        assert {:error, :automatic_section} = Sections.insert_game_at(section, game_fixture().id, 0)
+        assert snapshot(section) == []
+      end
+    end
+
+    test "the kind is read from the locked row, not the passed (stale) struct" do
+      automatic = section_fixture(%{kind: :recent, sort: :recent})
+      stale = %{automatic | kind: :manual}
+
+      assert {:error, :automatic_section} = Sections.insert_game_at(stale, game_fixture().id, 0)
+      assert snapshot(automatic) == []
+    end
+
+    test "renumbering heals non-dense stored positions" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      add_game_to_section(section, game_fixture(), 500)
+      add_game_to_section(section, game_fixture(), 700)
+
+      assert {:ok, _} = Sections.insert_game_at(section, game_fixture().id, 1)
+      assert positions(section) == Enum.to_list(1..3)
+    end
+
+    test "two members sharing one position value keep one deterministic id order" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      g1 = game_fixture()
+      g2 = game_fixture()
+      add_game_to_section(section, g1, 7)
+      add_game_to_section(section, g2, 7)
+
+      assert section |> Sections.section_members() |> Enum.map(& &1.game_id) == [g1.id, g2.id]
+
+      new = game_fixture()
+      assert {:ok, _} = Sections.insert_game_at(section, new.id, 1)
+      assert section |> Sections.section_members() |> Enum.map(& &1.game_id) == [g1.id, new.id, g2.id]
+      assert positions(section) == [1, 2, 3]
+    end
+
+    test "mixed-writer invariant: any interleaving of add_game, insert_game_at and remove_game leaves positions 1..n" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      [a, b, c, d, e] = for _ <- 1..5, do: game_fixture()
+
+      {:ok, _} = Sections.add_game(section, a.id)
+      {:ok, _} = Sections.insert_game_at(section, b.id, 0)
+      {:ok, _} = Sections.add_game(section, c.id)
+      {:ok, _} = Sections.insert_game_at(section, d.id, 1)
+      {:ok, _} = Sections.remove_game(section, b.id)
+      {:ok, _} = Sections.insert_game_at(section, e.id, 3)
+      {:ok, _} = Sections.remove_game(section, a.id)
+
+      members = Sections.section_members(section)
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..length(members))
+      assert Enum.map(members, & &1.game_id) == [d.id, c.id, e.id]
+    end
+  end
+
+  describe "rest_index/2 (01.8.4, CTX-02) — the one documented off-by-one" do
+    test "a mover sitting before the chosen gap shifts the gap down by one" do
+      assert Sections.rest_index(0, 2) == 1
+      assert Sections.rest_index(1, 3) == 2
+    end
+
+    test "a mover sitting at or after the chosen gap leaves the gap unchanged" do
+      assert Sections.rest_index(3, 0) == 0
+      assert Sections.rest_index(2, 2) == 2
+    end
+  end
+
+  describe "move_game_to/3 (01.8.4, CTX-02) — rest-list coordinates" do
+    setup do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      [a, b, c, d] = for name <- ~w(A B C D), do: game_fixture(%{name: name})
+      for game <- [a, b, c, d], do: {:ok, _} = Sections.add_game(section, game.id)
+      %{section: section, a: a, b: b, c: c, d: d}
+    end
+
+    defp order(section), do: section |> Sections.section_members() |> Enum.map(& &1.game_id)
+
+    test "A to rest-index 2 gives [B, C, A, D], positions dense, returning the original full index", ctx do
+      assert {:ok, %{from: 0, index: 2}} = Sections.move_game_to(ctx.section, ctx.a.id, 2)
+      assert order(ctx.section) == [ctx.b.id, ctx.c.id, ctx.a.id, ctx.d.id]
+      assert positions(ctx.section) == Enum.to_list(1..4)
+    end
+
+    test "D to rest-index 0 gives [D, A, B, C], positions dense", ctx do
+      assert {:ok, %{from: 3, index: 0}} = Sections.move_game_to(ctx.section, ctx.d.id, 0)
+      assert order(ctx.section) == [ctx.d.id, ctx.a.id, ctx.b.id, ctx.c.id]
+      assert positions(ctx.section) == Enum.to_list(1..4)
+    end
+
+    test "B to rest-index 1 is B's own spot and changes nothing", ctx do
+      assert {:ok, %{from: 1, index: 1}} = Sections.move_game_to(ctx.section, ctx.b.id, 1)
+      assert order(ctx.section) == [ctx.a.id, ctx.b.id, ctx.c.id, ctx.d.id]
+    end
+
+    test "rest-index -1 and rest-index 4 (the rest list holds three) are :index_out_of_range and write nothing",
+         ctx do
+      before = snapshot(ctx.section)
+
+      assert {:error, :index_out_of_range} = Sections.move_game_to(ctx.section, ctx.a.id, -1)
+      assert {:error, :index_out_of_range} = Sections.move_game_to(ctx.section, ctx.a.id, 4)
+      assert {:error, :index_out_of_range} = Sections.move_game_to(ctx.section, ctx.a.id, "1")
+      assert snapshot(ctx.section) == before
+    end
+
+    test "rest-index 3 (the end of the rest list) is accepted", ctx do
+      assert {:ok, %{index: 3}} = Sections.move_game_to(ctx.section, ctx.a.id, 3)
+      assert order(ctx.section) == [ctx.b.id, ctx.c.id, ctx.d.id, ctx.a.id]
+    end
+
+    test "a game that is not a member is :not_member and writes nothing", ctx do
+      before = snapshot(ctx.section)
+
+      assert {:error, :not_member} = Sections.move_game_to(ctx.section, game_fixture().id, 0)
+      assert snapshot(ctx.section) == before
+    end
+
+    test "weight_band and recent rows are :automatic_section" do
+      for attrs <- [%{kind: :weight_band, rule_value: "nivel_experto", sort: :name}, %{kind: :recent, sort: :recent}] do
+        section = section_fixture(attrs)
+        assert {:error, :automatic_section} = Sections.move_game_to(section, game_fixture().id, 0)
+      end
+    end
+
+    test "the kind is read from the locked row, not the passed (stale) struct" do
+      automatic = section_fixture(%{kind: :recent, sort: :recent})
+
+      assert {:error, :automatic_section} =
+               Sections.move_game_to(%{automatic | kind: :manual}, game_fixture().id, 0)
+    end
+
+    test "the featured row at exactly 20 members still moves: the count does not grow" do
+      featured = Repo.get_by!(Section, featured: true)
+      games = for _ <- 1..20, do: game_fixture()
+      for game <- games, do: {:ok, _} = Sections.add_game(featured, game.id)
+      last = List.last(games)
+
+      assert {:ok, %{from: 19, index: 0}} = Sections.move_game_to(featured, last.id, 0)
+      assert hd(order(featured)) == last.id
+      assert positions(featured) == Enum.to_list(1..20)
+    end
+
+    test "non-dense stored positions are healed by one move" do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      [x, y, z] = for _ <- 1..3, do: game_fixture()
+      add_game_to_section(section, x, 500)
+      add_game_to_section(section, y, 700)
+      add_game_to_section(section, z, 900)
+
+      assert {:ok, _} = Sections.move_game_to(section, z.id, 0)
+      assert order(section) == [z.id, x.id, y.id]
+      assert positions(section) == Enum.to_list(1..3)
+    end
+
+    test "undo round trip: moving back to the returned `from` restores the original order exactly", ctx do
+      original = order(ctx.section)
+
+      assert {:ok, %{from: from}} = Sections.move_game_to(ctx.section, ctx.a.id, 2)
+      assert order(ctx.section) != original
+      assert {:ok, _} = Sections.move_game_to(ctx.section, ctx.a.id, from)
+      assert order(ctx.section) == original
+    end
+
+    test "move_game/3, the shipped adjacent swap, still exists", ctx do
+      assert {:ok, _} = Sections.move_game(ctx.section, ctx.b.id, :up)
+      assert order(ctx.section) == [ctx.b.id, ctx.a.id, ctx.c.id, ctx.d.id]
+    end
+  end
+
+  describe "featured_cap/0" do
+    test "is the one place the featured cap lives" do
+      assert Sections.featured_cap() == 20
+    end
+  end
+
   describe "remove_game/2 (D-25)" do
     test "removes and re-packs positions densely" do
       section = section_fixture(%{kind: :manual, sort: :manual})

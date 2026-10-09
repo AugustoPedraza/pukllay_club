@@ -233,6 +233,181 @@
   color: var(--color-primary);
 }
 
+/* Plan 01.8.4-01, RAIL-01: the Web rail becomes the add surface. It is its
+   own family and deliberately reuses none of the public catalog's rail
+   classes: the public rail declares a 1rem gap, fades its edges and sizes
+   its cards for the catalog, and each of those contradicts a rail whose
+   spacing lives in the slot between every pair of covers. The rail
+   declares NO gap. The slot carries the spacing, so the covers sit
+   exactly where the sketch drew them. */
+.pk-admin-web-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 16px 16px 8px;
+}
+
+.pk-admin-web-box {
+  /* Positioned and raised so a neighbouring slot's hit layer (below) runs
+     under this cover instead of over it. */
+  position: relative;
+  z-index: 1;
+  flex: 0 0 96px;
+  width: 96px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  scroll-snap-align: center;
+}
+
+.pk-admin-web-box__caption {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 4px;
+  min-height: 31px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--color-neutral);
+}
+
+/* 20px of slot plus 12px of margin either side is a 44px hit box. The
+   hit layer below runs UNDER the inert covers without covering them. */
+.pk-admin-web-slot {
+  position: relative;
+  flex: 0 0 20px;
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* The 24px glyph below is wider than the 20px column. Without min-width:
+     0 a flex item's automatic minimum grows the slot to the glyph's width,
+     which silently turns the 44px pitch into 48px. The glyph overflows the
+     column evenly instead, as sketch 070 drew it. */
+  min-width: 0;
+  margin: 0 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+}
+
+.pk-admin-web-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0 -12px;
+}
+
+/* The end slots reclaim the rail's own 16px padding, so their hit boxes
+   still measure 44px wide. */
+.pk-admin-web-slot:first-child {
+  margin-left: 0;
+}
+
+.pk-admin-web-slot:last-child {
+  margin-right: 0;
+}
+
+.pk-admin-web-slot:first-child::before {
+  left: -16px;
+}
+
+.pk-admin-web-slot:last-child::before {
+  right: -16px;
+}
+
+.pk-admin-web-slot__plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-top: 38px;
+  border-radius: 50%;
+  border: 1px dashed var(--stroke);
+  background: var(--color-base-100);
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Plan 01.8.4-04, RAIL-03: an empty row's rail is a different shape - one
+   96 by 100 dashed tile with its instruction line beside it. The slot IS
+   the tile here, so the 20px-plus-12px geometry above does not apply. This
+   modifier is the ONLY rule in the family allowed to declare a gap (the
+   base rail stays gap-free, RAIL-01). It is declared after the base rail
+   rule because both selectors are one class: the later padding-bottom only
+   wins by coming later. */
+.pk-admin-web-rail--empty {
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot {
+  flex: 0 0 96px;
+  height: 100px;
+  margin: 0;
+  align-items: center;
+  border: 1px dashed var(--stroke);
+  border-radius: 6px;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot::before {
+  inset: 0;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot__plus {
+  margin: 0;
+  border: 0;
+}
+
+.pk-admin-web-rail__hint {
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--color-neutral);
+}
+
+/* Plan 01.8.4-04, RAIL-06: the placed or moved cover drops into its spot
+   (sketch 070) - from 40px above at 92% size, a small overshoot, then
+   settled, over 520ms. This is deliberately NOT the longer landing in
+   estantes.css: the two screens drew different motion and are not unified.
+   Gated behind prefers-reduced-motion no-preference (this repo's
+   established idiom, a media-query gate on the trigger rather than a
+   per-selector reduce override), so a user who asked for no motion sees
+   the cover simply appear. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes pk-admin-web-land {
+    0% {
+      transform: translateY(-40px) scale(0.92);
+      opacity: 0;
+    }
+
+    60% {
+      transform: translateY(4px) scale(1.02);
+      opacity: 1;
+    }
+
+    100% {
+      transform: none;
+    }
+  }
+
+  .pk-admin-web-box--landed .pk-admin-web-cover__art {
+    animation: pk-admin-web-land 520ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  }
+}
+
+/* RAIL-04: at the featured cap every "+" dims, but the slot stays a live
+   button - a tap explains the cap (D-24 forbids dead controls). Opacity
+   only: nothing here may make the control inert. */
+.pk-admin-web-slot--full .pk-admin-web-slot__plus {
+  opacity: 0.45;
+}
+
 .pk-admin-web-search {
   margin-top: 16px;
 }
