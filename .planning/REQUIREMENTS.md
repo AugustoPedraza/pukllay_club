@@ -27,9 +27,9 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
       grammar: `Agregar un juego al principio` / `… entre {X} y {Y}` / `… al final`
 - [ ] **RAIL-03**: An empty row's rail is a single 96×100 dashed tile beside the line
       `Tocá + para elegir el primer juego.`
-- [ ] **RAIL-04**: At the 20-game cap every slot dims and tapping one snacks
+- [x] **RAIL-04**: At the 20-game cap every slot dims and tapping one snacks
       `Ya hay 20 juegos. Quitá uno para agregar otro.` (no action, no Deshacer)
-- [ ] **RAIL-05**: The inline `Agregar un juego` field and `#web-search-results` are **removed** —
+- [x] **RAIL-05**: The inline `Agregar un juego` field and `#web-search-results` are **removed** —
       070 decision 12 / D-19j forbids a second control beside the main one
 - [ ] **RAIL-06**: A placed cover lands with a 520ms animation (`cubic-bezier(.2,.8,.3,1)`), with a
       `prefers-reduced-motion: reduce` opt-out. **Not** estantes' 620ms
@@ -41,15 +41,15 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 - [x] **ADD-01**: Tapping a slot opens the full-height `¿Qué juego va acá?` sheet, whose header
       context names the chosen spot: `{fila} · al principio | entre {X} y {Y} | al final`
 - [x] **ADD-02**: The sheet's search field `Buscá un juego` is pinned and focused on open
-- [ ] **ADD-03**: Idle (empty query) lists `Últimas novedades` — the 6 most recently added games
+- [x] **ADD-03**: Idle (empty query) lists `Últimas novedades` — the 6 most recently added games
       not already in the row
-- [ ] **ADD-04**: Typing searches every game, starts-with before contains, 6 results max, excluding
+- [x] **ADD-04**: Typing searches every game, starts-with before contains, 6 results max, excluding
       retired games
-- [ ] **ADD-05**: A game already in the row shows the sub `Ya está en la fila · pasa a este lugar`
+- [x] **ADD-05**: A game already in the row shows the sub `Ya está en la fila · pasa a este lugar`
       and is **moved, not duplicated**; picking the game already in that exact spot snacks
       `Ya está en ese lugar` (no action)
 - [x] **ADD-06**: Placing closes the sheet and snacks `Juego agregado` + **Deshacer**
-- [ ] **ADD-07**: No match shows `Ningún juego se llama así.` plus `Crear «{q}»` /
+- [x] **ADD-07**: No match shows `Ningún juego se llama así.` plus `Crear «{q}»` /
       `Agregarlo al catálogo`
 - [ ] **ADD-08**: `Crear «{q}»` is **designed in its own sketch round and then built** — it is the
       one piece sketch 070 never drew (the artefact stubs it to a snackbar). Estantes' equivalent is
@@ -123,7 +123,7 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 - [ ] **CTX-03**: `Sections` gains an atomic featured-role move — today `sections.featured` is set
       only by a migration backfill and no function moves it. Setting the role on one row clears it
       on the other inside one transaction
-- [ ] **CTX-04**: Every new LiveView event bounds-checks its slot index against the **live** member
+- [x] **CTX-04**: Every new LiveView event bounds-checks its slot index against the **live** member
       count rather than a stale client view, parses untrusted game-id and index params as integers,
       and keeps the `:manual`-vs-`:automatic` guard
 
@@ -160,17 +160,17 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 | RAIL-01 | Phase 01.8.4 | Pending |
 | RAIL-02 | Phase 01.8.4 | Complete |
 | RAIL-03 | Phase 01.8.4 | Pending |
-| RAIL-04 | Phase 01.8.4 | Pending |
-| RAIL-05 | Phase 01.8.4 | Pending |
+| RAIL-04 | Phase 01.8.4 | Complete |
+| RAIL-05 | Phase 01.8.4 | Complete |
 | RAIL-06 | Phase 01.8.4 | Pending |
 | RAIL-07 | Phase 01.8.4 | Complete |
 | ADD-01 | Phase 01.8.4 | Complete |
 | ADD-02 | Phase 01.8.4 | Complete |
-| ADD-03 | Phase 01.8.4 | Pending |
-| ADD-04 | Phase 01.8.4 | Pending |
-| ADD-05 | Phase 01.8.4 | Pending |
+| ADD-03 | Phase 01.8.4 | Complete |
+| ADD-04 | Phase 01.8.4 | Complete |
+| ADD-05 | Phase 01.8.4 | Complete |
 | ADD-06 | Phase 01.8.4 | Complete |
-| ADD-07 | Phase 01.8.4 | Pending |
+| ADD-07 | Phase 01.8.4 | Complete |
 | ADD-08 | Phase 01.8.8 | Pending |
 | MOVE-01 | Phase 01.8.5 | Pending |
 | MOVE-02 | Phase 01.8.5 | Pending |
@@ -194,7 +194,7 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 | CTX-01 | Phase 01.8.4 | Complete |
 | CTX-02 | Phase 01.8.4 | Complete |
 | CTX-03 | Phase 01.8.7 | Pending |
-| CTX-04 | Phase 01.8.4 | Pending |
+| CTX-04 | Phase 01.8.4 | Complete |
 
 **Per-phase totals:** 01.8.4 → 17 (RAIL-01..07, ADD-01..07, CTX-01, CTX-02, CTX-04) ·
 01.8.5 → 5 (MOVE-01..05) · 01.8.6 → 8 (CHROME-01..08) ·
