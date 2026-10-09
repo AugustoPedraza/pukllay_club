@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 9
 waived_count: 1
-fixed_count: 28
-total_count: 37
-last_updated: 2026-10-09T21:35:14.728Z
+fixed_count: 29
+total_count: 39
+last_updated: 2026-10-09T22:00:02.311Z
 ---
 
 # Broken Windows Ledger
@@ -51,7 +51,9 @@ last_updated: 2026-10-09T21:35:14.728Z
 | 34 | 01.8.3 | deviation | .planning/phases/01.8.2-admin-ui-ux-redesign/01.8.2-UAT.md |  | Task 2's acceptance criteria expects grep -c "Crear «" to return 0 file-wide; it returns 3 because tests 22 (Estantes) and 73 (Web) legitimately document their own still-shipping Crear «texto» search-to-create flow, unrelated to Juegos and out of D-01's admin-only-Juegos scope. Test 3's own occurrence was removed as required. | open |  | 2026-09-25T00:11:01.471Z |  |
 | 35 | 01.8.3 | stub | assets/css/admin/components.css |  | REGRESSION (not merely a stub left for later): plan 01.8.3-10's direct-child-only sheet-row compensation broke list_row elements nested inside an unpadded wrapper div on four live containers — #donde-va-estante-list, #donde-va-results (donde-va-sheet), #que-va-aca-unplaced, #que-va-aca-results (que-va-aca-sheet), plus editor-shelf-sheet's own placement_sheet/1 instance — rendering ink at 32px instead of 16px; these rows were correctly inset BEFORE plan 10 (the body carried zero horizontal padding, so each row self-inset via its own padding alone). checkSheetKeel's own guard could not catch its own regression: Test 2 compared only the MINIMUM leftmost candidate (structurally blind to over-inset, which can never be the minimum) and Test 3 excluded any element matching the full-bleed CSS class regardless of real DOM depth (hiding compensated vs uncompensated rows alike). Fixed in review-fix round 1: compensation selector generalized to a descendant combinator (reaches any depth, safe since no intermediate wrapper carries its own padding); new Test 6 in admin_shell.mjs asserts EVERY full-bleed descendant's own measured geometry against the panel/header, regardless of bodyShape or nesting depth — negative-tested RED against the unfixed CSS (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-red.txt) before the fix landed, GREEN after (evidence/01.8.3-REVIEW-FIX-wr01-nested-keel-green.txt). | fixed |  | 2026-09-27T22:23:24.257Z | 2026-09-28T10:35:44.366Z |
 | 36 | 01.8.3 | deviation | assets/js/hooks/admin_list.js |  | Intermittent flake (not a plan-12 defect): the pinned-offset scroll-up differential control (test4/test5 in admin_shell.mjs) leaves bandTop stuck at 0 instead of settling to 60 after scroll-up in roughly 2 of 4 local runs. This is a timing race in admin_list.js's growth-deferral mechanism introduced by plan 01.8.3-11 (transitionend-based reservation growth), confirmed pre-existing relative to plan 12 via a git-stash A/B against unmodified source. Not fixed here per explicit human decision — left open for a future plan. (Recorded as kind=deviation; the ledger's fixed kind vocabulary has no 'flake' entry.) | open |  | 2026-09-28T03:04:55.303Z |  |
-| 37 | 01.8.4 | stub | lib/pukllay_club_web/live/admin/section_live/index.ex |  | candidate_games/2 is a tracer seam (list_admin_games, non-members only) and the add sheet's recent: [] is unused; plan 01.8.4-03 replaces both with the ranked search and Últimas novedades | open |  | 2026-10-09T21:35:14.728Z |  |
+| 37 | 01.8.4 | stub | lib/pukllay_club_web/live/admin/section_live/index.ex |  | candidate_games/2 is a tracer seam (list_admin_games, non-members only) and the add sheet's recent: [] is unused; plan 01.8.4-03 replaces both with the ranked search and Últimas novedades | fixed |  | 2026-10-09T21:35:14.728Z | 2026-10-09T21:59:58.144Z |
+| 38 | 01.8.4 | stub | lib/pukllay_club_web/live/admin/section_live/index.ex |  | Crear «{q}» row (create-game-stub) only flashes 'Crear un juego: se diseña en otra ronda'; phase 01.8.8 (ADD-08) designs the real create flow | open |  | 2026-10-09T22:00:02.084Z |  |
+| 39 | 01.8.4 | unrun-verify | lib/pukllay_club_web/live/admin/section_live/index.ex |  | 01.8.4-03 Task 3 human-check not run: dimmed-but-live slots at the cap, cap snack not covered by the tab bar, and single-snackbar on a real phone (data-timeout has no JS dismiss consumer) | open |  | 2026-10-09T22:00:02.311Z |  |
 
 ````json
 [
@@ -502,9 +504,35 @@ last_updated: 2026-10-09T21:35:14.728Z
     "file": "lib/pukllay_club_web/live/admin/section_live/index.ex",
     "line": null,
     "description": "candidate_games/2 is a tracer seam (list_admin_games, non-members only) and the add sheet's recent: [] is unused; plan 01.8.4-03 replaces both with the ranked search and Últimas novedades",
-    "status": "open",
+    "status": "fixed",
     "reason": "",
     "recorded_at": "2026-10-09T21:35:14.728Z",
+    "resolved_at": "2026-10-09T21:59:58.144Z",
+    "milestone": "v1.2"
+  },
+  {
+    "id": 38,
+    "kind": "stub",
+    "phase": "01.8.4",
+    "file": "lib/pukllay_club_web/live/admin/section_live/index.ex",
+    "line": null,
+    "description": "Crear «{q}» row (create-game-stub) only flashes 'Crear un juego: se diseña en otra ronda'; phase 01.8.8 (ADD-08) designs the real create flow",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-09T22:00:02.084Z",
+    "resolved_at": null,
+    "milestone": "v1.2"
+  },
+  {
+    "id": 39,
+    "kind": "unrun-verify",
+    "phase": "01.8.4",
+    "file": "lib/pukllay_club_web/live/admin/section_live/index.ex",
+    "line": null,
+    "description": "01.8.4-03 Task 3 human-check not run: dimmed-but-live slots at the cap, cap snack not covered by the tab bar, and single-snackbar on a real phone (data-timeout has no JS dismiss consumer)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-09T22:00:02.311Z",
     "resolved_at": null,
     "milestone": "v1.2"
   }
