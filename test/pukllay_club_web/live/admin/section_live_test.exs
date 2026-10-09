@@ -447,6 +447,73 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
+  describe "SectionLive.Index — an empty row's rail is one dashed tile (01.8.4, RAIL-03)" do
+    setup :register_and_log_in_staff
+
+    defp slot_button_count(html), do: length(Regex.scan(~r/<button[^>]*\bclass="[^"]*\bpk-admin-web-slot\b/, html))
+
+    test "an empty row renders the empty modifier, one slot, and the instruction line", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert html =~ "Tocá + para elegir el primer juego."
+      assert has_element?(lv, "#web-destacada-rail.pk-admin-web-rail--empty")
+      assert has_element?(lv, "#web-destacada-rail .pk-admin-web-rail__hint", "Tocá + para elegir el primer juego.")
+      assert slot_button_count(html) == 1
+      assert has_element?(lv, "#web-destacada-rail > button.pk-admin-web-slot")
+    end
+
+    test "the empty rail keeps role=group and its label, and the shipped note still renders", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert has_element?(
+               lv,
+               ~s(#web-destacada-rail.pk-admin-web-rail--empty[role="group"][aria-labelledby="web-destacada-name"])
+             )
+
+      assert html =~ "Sin juegos, no se ve en el inicio."
+    end
+
+    test "the instruction line is the rail's last child and the slot stays its first", %{conn: conn} do
+      {:ok, _lv, html} = live(conn, ~p"/admin/secciones")
+
+      [_, rail] = Regex.run(~r/id="web-destacada-rail"[^>]*>(.*?)<\/div>/s, html)
+      {slot_at, _} = :binary.match(rail, "web-slot-0")
+      {hint_at, _} = :binary.match(rail, "pk-admin-web-rail__hint")
+
+      assert slot_at < hint_at
+      assert String.starts_with?(String.trim_leading(rail), "<button")
+    end
+
+    test "a populated rail carries no empty modifier and no hint, and renders two slots", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture(%{name: "Everdell"}), 1)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      refute has_element?(lv, "#web-destacada-rail.pk-admin-web-rail--empty")
+      refute html =~ "Tocá + para elegir el primer juego."
+      refute html =~ "pk-admin-web-rail__hint"
+      assert slot_button_count(html) == 2
+    end
+
+    test "placing the first game swaps the rail from the empty shape to the populated one", %{conn: conn} do
+      picked = game_fixture(%{name: "Carcassonne"})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+      assert has_element?(lv, "#web-destacada-rail.pk-admin-web-rail--empty")
+      assert slot_button_count(html) == 1
+
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "carcas"})
+      html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
+
+      refute has_element?(lv, "#web-destacada-rail.pk-admin-web-rail--empty")
+      refute html =~ "Tocá + para elegir el primer juego."
+      assert slot_button_count(html) == 2
+      assert has_element?(lv, "#web-cover-#{picked.id}")
+    end
+  end
+
   describe "SectionLive.Index — add-sheet handlers vs. forged and stale payloads (01.8.4, CTX-04)" do
     setup :register_and_log_in_staff
 

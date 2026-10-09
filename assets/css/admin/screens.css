@@ -327,6 +327,43 @@
   line-height: 1;
 }
 
+/* Plan 01.8.4-04, RAIL-03: an empty row's rail is a different shape - one
+   96 by 100 dashed tile with its instruction line beside it. The slot IS
+   the tile here, so the 20px-plus-12px geometry above does not apply. This
+   modifier is the ONLY rule in the family allowed to declare a gap (the
+   base rail stays gap-free, RAIL-01). It is declared after the base rail
+   rule because both selectors are one class: the later padding-bottom only
+   wins by coming later. */
+.pk-admin-web-rail--empty {
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot {
+  flex: 0 0 96px;
+  height: 100px;
+  margin: 0;
+  place-items: center;
+  border: 1px dashed var(--stroke);
+  border-radius: 6px;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot::before {
+  inset: 0;
+}
+
+.pk-admin-web-rail--empty .pk-admin-web-slot__plus {
+  margin: 0;
+  border: 0;
+}
+
+.pk-admin-web-rail__hint {
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--color-neutral);
+}
+
 /* RAIL-04: at the featured cap every "+" dims, but the slot stays a live
    button - a tap explains the cap (D-24 forbids dead controls). Opacity
    only: nothing here may make the control inert. */

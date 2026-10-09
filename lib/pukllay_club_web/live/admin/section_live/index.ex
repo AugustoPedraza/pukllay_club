@@ -606,6 +606,9 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
               names={member_names(@featured_members)}
               full={@slots_full}
             />
+            <span :if={@featured_members == []} class="pk-admin-web-rail__hint">
+              Tocá + para elegir el primer juego.
+            </span>
           </div>
 
           <p :if={@featured_members == []} class="pk-admin-empty-note">
