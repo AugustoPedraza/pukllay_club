@@ -1,12 +1,20 @@
 defmodule PukllayClub.Catalog.AdminGameSearchTest do
   use PukllayClub.DataCase, async: true
 
+  import Ecto.Query
   import PukllayClub.CatalogFixtures
   import PukllayClub.SectionsFixtures
 
   alias PukllayClub.Catalog
+  alias PukllayClub.Catalog.Game
+  alias PukllayClub.Repo
 
   defp names(games), do: Enum.map(games, & &1.name)
+
+  defp set_inserted_at(game, %NaiveDateTime{} = at) do
+    Repo.update_all(from(g in Game, where: g.id == ^game.id), set: [inserted_at: at])
+    game
+  end
 
   describe "search_admin_games_ranked/2 (01.8.4, ADD-04)" do
     setup do
@@ -137,6 +145,84 @@ defmodule PukllayClub.Catalog.AdminGameSearchTest do
 
       assert "gemelo" |> Catalog.search_admin_games_ranked() |> Enum.map(& &1.id) ==
                [first.id, second.id]
+    end
+  end
+
+  describe "recent_games_for_row/2 (01.8.4, ADD-03)" do
+    test "returns at most 6 of 8 eligible games" do
+      for n <- 1..8, do: game_fixture(%{name: "Reciente #{n}"})
+
+      assert length(Catalog.recent_games_for_row([])) == 6
+    end
+
+    test "opts[:limit] overrides the default of 6" do
+      for n <- 1..8, do: game_fixture(%{name: "Reciente #{n}"})
+
+      assert length(Catalog.recent_games_for_row([], limit: 2)) == 2
+      assert length(Catalog.recent_games_for_row([], limit: 8)) == 8
+    end
+
+    test "orders newest-first by explicitly set inserted_at, not by insertion order" do
+      # Inserted oldest-name-first, but timestamps deliberately inverted.
+      a = %{name: "Alfa"} |> game_fixture() |> set_inserted_at(~N[2026-03-01 10:00:00])
+      b = %{name: "Beta"} |> game_fixture() |> set_inserted_at(~N[2026-01-01 10:00:00])
+      c = %{name: "Gamma"} |> game_fixture() |> set_inserted_at(~N[2026-02-01 10:00:00])
+
+      assert [] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [a.id, c.id, b.id]
+    end
+
+    test "games sharing one inserted_at second are ordered by id descending" do
+      same = ~N[2026-04-01 12:00:00]
+      first = %{name: "Mellizo 1"} |> game_fixture() |> set_inserted_at(same)
+      second = %{name: "Mellizo 2"} |> game_fixture() |> set_inserted_at(same)
+      third = %{name: "Mellizo 3"} |> game_fixture() |> set_inserted_at(same)
+
+      assert [] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) ==
+               [third.id, second.id, first.id]
+    end
+
+    test "every id in exclude_ids is absent from the result" do
+      keep = game_fixture(%{name: "Queda"})
+      drop = game_fixture(%{name: "Sale"})
+
+      assert [drop.id] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [keep.id]
+    end
+
+    test "a :retired game is absent, a :draft game is present" do
+      game_fixture(%{name: "Retirado", status: :retired})
+      draft = game_fixture(%{name: "Borrador", status: :draft})
+
+      assert [] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [draft.id]
+    end
+
+    test "a game with no thumbnail is present — no thumbnail requirement" do
+      bare = game_fixture(%{name: "Sin Portada", thumbnail_url: nil})
+
+      assert [] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [bare.id]
+    end
+
+    test "returns [] when there are no games at all" do
+      assert Catalog.recent_games_for_row([]) == []
+    end
+
+    test "returns [] when every eligible game is already a member" do
+      a = game_fixture(%{name: "Uno"})
+      b = game_fixture(%{name: "Dos"})
+
+      assert Catalog.recent_games_for_row([a.id, b.id]) == []
+    end
+
+    test "returns exactly one row when exactly one game is eligible" do
+      a = game_fixture(%{name: "Uno"})
+      b = game_fixture(%{name: "Dos"})
+
+      assert [a.id] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [b.id]
+    end
+
+    test "an exclude id that matches no game is harmless" do
+      only = game_fixture(%{name: "Solo"})
+
+      assert [-1, 999_999_999] |> Catalog.recent_games_for_row() |> Enum.map(& &1.id) == [only.id]
     end
   end
 end
