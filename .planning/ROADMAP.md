@@ -104,9 +104,17 @@ touch-target minimum and the rail scrolls horizontally.
 **Plans:** 4 plans in 3 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 01.8.4-01-PLAN.md — Tracer: a game lands at the chosen slot end to end, plus the positional `Sections` API (`insert_game_at/3`, `move_game_to/3`, `rest_index/2`, `featured_cap/0`) and the shared `Admin.Params` guard
 - [ ] 01.8.4-02-PLAN.md — `Catalog` ranked search (accent-folded, starts-with-first) and `Últimas novedades` recents
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.8.4-03-PLAN.md — The sheet becomes the only add control: real search, the member move, the no-match stub, the 20-game cap, and the inline field's deletion
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01.8.4-04-PLAN.md — The rail reads like 070: empty-row tile, the 520ms landing, the CSS-source geometry gate and the 44px hit-box probe
 
 **UI hint**: yes

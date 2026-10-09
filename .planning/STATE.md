@@ -2,19 +2,19 @@
 gsd_state_version: "1.0"
 milestone: v1.2
 milestone_name: Web Tab — Sketch 070 Parity
-status: Ready to plan
-stopped_at: Milestone v1.2 opened — PROJECT/REQUIREMENTS/ROADMAP written; phase 01.8.4 not yet planned
-last_updated: "2026-10-09T18:55:00.000Z"
-last_activity: 2026-10-09
-last_activity_desc: Opened milestone v1.2 (Web Tab — Sketch 070 Parity); roadmapped phases 01.8.4–01.8.8
-state_head: 2993ac40b5ced8a21a1d43115faa533763286092
-progress:
-  total_phases: 15
-  completed_phases: 7
-  total_plans: 63
-  completed_plans: 63
 current_phase: 01.8.4
 current_phase_name: The Rail Becomes the Add Surface
+status: executing
+stopped_at: Milestone v1.2 opened — PROJECT/REQUIREMENTS/ROADMAP written; phase 01.8.4 not yet planned
+last_updated: "2026-10-09T20:55:39.523Z"
+last_activity: 2026-10-09
+last_activity_desc: Opened milestone v1.2 (Web Tab — Sketch 070 Parity); roadmapped phases 01.8.4–01.8.8
+state_head: 538a212e3595514986b6bb0294cfa2fa73ec1769
+progress:
+  total_phases: 8
+  completed_phases: 7
+  total_plans: 4
+  completed_plans: 63
 ---
 
 Total Phases: 15
@@ -33,9 +33,9 @@ which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/
 
 ## Current Position
 
-Phase: 01.8.4 — The Rail Becomes the Add Surface (milestone v1.2, not yet planned)
+Phase: 01.8.4 (The Rail Becomes the Add Surface) — READY TO EXECUTE
 Plan: —
-Status: Ready to plan
+Status: Ready to execute
 Last activity: 2026-10-09 — Opened milestone v1.2 and roadmapped phases 01.8.4–01.8.8
 
 **Design contract for this whole milestone:** sketch 070
