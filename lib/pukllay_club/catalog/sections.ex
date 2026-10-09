@@ -258,6 +258,84 @@ defmodule PukllayClub.Catalog.Sections do
 
   def insert_game_at(%Section{}, _game_id, _slot), do: {:error, :automatic_section}
 
+  @doc """
+  Converts a slot index over the FULL ordered member list (the add sheet
+  draws its slots with the mover visible) into a rest index for
+  `move_game_to/3`, which indexes the list WITHOUT the mover. `from` is the
+  mover's 0-based index in the full list.
+
+  When the mover sits before the chosen gap (`from < slot`), lifting it out
+  shifts the gap down by one; otherwise the gap is unchanged. This is the
+  single place that off-by-one lives.
+
+  `slot in [from, from + 1]` is the same-spot condition (the game would
+  land where it already is); detecting it is the LiveView's job (ADD-05),
+  not this function's. Phase 01.8.5's `¿Dónde va?` rail draws its slots over
+  the rest list directly, so it passes the rest index with no conversion.
+  """
+  def rest_index(from, slot) when from < slot, do: slot - 1
+  def rest_index(_from, slot), do: slot
+
+  @doc """
+  Moves an existing member of `section` to a **rest index** — an index into
+  the ordered member list with the moving game removed (see `rest_index/2`).
+  Like `insert_game_at/3`, the slot is 0-based, positions are rewritten
+  dense `1..n` from the new order, and the whole move runs in one
+  transaction that re-reads the section row `FOR UPDATE`, taking `kind` from
+  THAT row.
+
+  The featured cap is deliberately NOT checked: a move cannot grow the
+  member count, so a cap error here would be a bug.
+
+  Returns `{:ok, %{section: locked_section, from: original_full_index,
+  index: rest_index}}`, or `{:error, :automatic_section | :not_member |
+  :index_out_of_range}`. `from` is the mover's 0-based index in the full
+  list BEFORE the move, which makes undo a plain inverse call: the rest
+  index of the original spot equals that original full-list index, so
+  `move_game_to(section, game_id, from)` restores the order.
+
+  A caller's undo may legitimately come back `{:error, :index_out_of_range}`
+  or `{:error, :not_member}` if the row changed in between; the caller is
+  expected to swallow that and clear its snackbar rather than crash.
+  """
+  def move_game_to(%Section{kind: :manual} = section, game_id, rest_index) do
+    Repo.transaction(fn ->
+      locked = lock_section!(section.id)
+
+      if locked.kind != :manual, do: Repo.rollback(:automatic_section)
+
+      rows = ordered_member_rows(locked.id)
+
+      case validate_move(Enum.map(rows, & &1.game_id), game_id, rest_index) do
+        {:ok, from, rest} ->
+          positions = rest |> List.insert_at(rest_index, game_id) |> Enum.with_index(1) |> Map.new()
+
+          renumber_changed_rows(rows, positions)
+
+          %{section: locked, from: from, index: rest_index}
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  def move_game_to(%Section{}, _game_id, _rest_index), do: {:error, :automatic_section}
+
+  defp validate_move(ids, game_id, rest_index) do
+    case Enum.find_index(ids, &(&1 == game_id)) do
+      nil ->
+        {:error, :not_member}
+
+      from ->
+        rest = List.delete_at(ids, from)
+
+        if is_integer(rest_index) and rest_index >= 0 and rest_index <= length(rest),
+          do: {:ok, from, rest},
+          else: {:error, :index_out_of_range}
+    end
+  end
+
   # The order matters: the bounds check runs before the already-member
   # check, so a forged slot on an existing member reports the slot problem
   # rather than masking it.
