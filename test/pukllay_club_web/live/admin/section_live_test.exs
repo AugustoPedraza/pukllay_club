@@ -241,7 +241,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
   describe "SectionLive.Index — member add/remove on the destacada (D-19k)" do
     setup :register_and_log_in_staff
 
-    test "typing a name lists matching non-member, non-retired games; tapping adds it", %{conn: conn} do
+    test "typing a name lists matching non-retired games, members included and marked; tapping adds it", %{conn: conn} do
       featured = featured_section()
       already_in = game_fixture(%{name: "Carcassonne en la fila"})
       add_game_to_section(featured, already_in)
@@ -250,18 +250,22 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
 
-      lv |> form("#web-search-form", %{q: "carc"}) |> render_change()
+      lv |> element("#web-slot-1") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "carc"})
 
-      assert has_element?(lv, "#web-search-result-#{matching.id}")
-      refute has_element?(lv, "#web-search-result-#{already_in.id}")
-      refute has_element?(lv, "#web-search-results", "Carcassonne Retirado")
+      assert has_element?(lv, "#web-add-result-#{matching.id}")
+      # Deliberate behaviour change (ADD-05): a game already in the row is no
+      # longer excluded - it is shown with its sub-line and moved when picked.
+      assert has_element?(lv, "#web-add-result-#{already_in.id}", "Ya está en la fila · pasa a este lugar")
+      refute has_element?(lv, "#web-add-sheet-results", "Carcassonne Retirado")
 
       html =
         lv
-        |> element("#web-search-result-#{matching.id}")
+        |> element("#web-add-result-#{matching.id}")
         |> render_click()
 
       assert html =~ "Carcassonne"
+      assert member_ids(featured) == [already_in.id, matching.id]
     end
 
     test "opening a cover's sheet and tapping Quitar de la fila removes it at once, no dialog, no Peligro",
@@ -311,25 +315,64 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert html =~ "Everdell"
     end
 
-    test "at 20 members the featured screen shows the cap message", %{conn: conn} do
+    test "at 20 members every slot is dimmed, a tap explains the cap and writes nothing", %{conn: conn} do
       featured = featured_section()
+      for _ <- 1..20, do: {:ok, _section} = Sections.add_game(featured, game_fixture().id)
+      before = members_with_positions(featured)
 
-      for _ <- 1..20 do
-        {:ok, _section} = Sections.add_game(featured, game_fixture().id)
-      end
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
 
-      extra = game_fixture(%{name: "Juego 21"})
+      assert length(slot_ids(html)) == 21
+      for index <- 0..20, do: assert(has_element?(lv, "#web-slot-#{index}.pk-admin-web-slot--full"))
+      # Dimmed, never dead: D-24 forbids a disabled control.
+      refute html =~ "disabled"
 
-      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      html = lv |> element("#web-slot-0") |> render_click()
 
-      lv |> form("#web-search-form", %{q: "Juego 21"}) |> render_change()
+      assert html =~ "Ya hay 20 juegos. Quitá uno para agregar otro."
+      assert html =~ ~s(data-timeout="4000")
+      refute html =~ "Deshacer"
+      refute has_element?(lv, "#web-add-sheet")
+      assert members_with_positions(featured) == before
+    end
 
-      html =
-        lv
-        |> element("#web-search-result-#{extra.id}")
-        |> render_click()
+    test "at 19 members no slot is dimmed and a tap opens the sheet", %{conn: conn} do
+      featured = featured_section()
+      for _ <- 1..19, do: {:ok, _section} = Sections.add_game(featured, game_fixture().id)
 
-      assert html =~ "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert length(slot_ids(html)) == 20
+      refute html =~ "pk-admin-web-slot--full"
+
+      lv |> element("#web-slot-0") |> render_click()
+      assert has_element?(lv, "#web-add-sheet")
+    end
+
+    test "an empty row never dims its single slot", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert slot_ids(html) == ["web-slot-0"]
+      refute has_element?(lv, "#web-slot-0.pk-admin-web-slot--full")
+    end
+
+    test "a non-featured manual row accepts a 21st game: the cap follows `featured`, not the count" do
+      # The Web page only draws the featured row's rail, so the dim condition
+      # (`featured` AND count >= cap) is exercised here at the context level,
+      # where the same `featured` flag decides the cap.
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      for _ <- 1..Sections.featured_cap(), do: {:ok, _section} = Sections.add_game(section, game_fixture().id)
+
+      assert {:ok, _placement} = Sections.insert_game_at(section, game_fixture().id, 0)
+      assert length(Sections.section_members(section)) == Sections.featured_cap() + 1
+    end
+
+    test "the cap threshold has one home: index.ex carries no literal for it" do
+      source = File.read!("lib/pukllay_club_web/live/admin/section_live/index.ex")
+
+      assert source =~ "Sections.featured_cap()"
+      refute source =~ ~r/>=\s*20\b/
+      refute source =~ "@featured_cap"
     end
   end
 
@@ -818,6 +861,106 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
       refute has_element?(lv, "#web-place-snackbar")
       assert member_ids(featured) == [a.id]
+    end
+  end
+
+  describe "SectionLive.Index — the inline add control is gone (01.8.4, RAIL-05)" do
+    setup :register_and_log_in_staff
+
+    test "with the sheet closed, none of the removed ids render", %{conn: conn} do
+      add_game_to_section(featured_section(), game_fixture(%{name: "Everdell"}), 1)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      refute has_element?(lv, "#web-search-form")
+      refute has_element?(lv, "#web-search-input")
+      refute has_element?(lv, "#web-search-results")
+    end
+
+    test "with the sheet open, none of the removed ids render", %{conn: conn} do
+      add_game_to_section(featured_section(), game_fixture(%{name: "Everdell"}), 1)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+
+      assert has_element?(lv, "#web-add-sheet")
+      refute has_element?(lv, "#web-search-form")
+      refute has_element?(lv, "#web-search-input")
+      refute has_element?(lv, "#web-search-results")
+    end
+
+    test "with a query typed, none of the removed ids render", %{conn: conn} do
+      add_game_to_section(featured_section(), game_fixture(%{name: "Everdell"}), 1)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => "ever"})
+
+      assert has_element?(lv, "#web-add-sheet-results")
+      refute has_element?(lv, "#web-search-form")
+      refute has_element?(lv, "#web-search-input")
+      refute has_element?(lv, "#web-search-results")
+    end
+
+    test "index.ex carries no occurrence of the removed ids' shared prefix, moduledoc included" do
+      source = File.read!("lib/pukllay_club_web/live/admin/section_live/index.ex")
+
+      refute source =~ "web-search"
+    end
+
+    test "edit.ex keeps its own inline add field: RAIL-05 is Index-only" do
+      source = File.read!("lib/pukllay_club_web/live/admin/section_live/edit.ex")
+
+      assert source =~ "section-member-search"
+    end
+  end
+
+  describe "SectionLive.Index — at most one snackbar, in both directions (01.8.4, RAIL-04)" do
+    setup :register_and_log_in_staff
+
+    defp snackbar_count(lv), do: length(Regex.scan(~r/\sdata-pk-snackbar[\s=>]/, render(lv)))
+
+    test "flash after assign: the cap flash replaces the remove snackbar", %{conn: conn} do
+      featured = featured_section()
+      games = for _ <- 1..20, do: game_fixture()
+      for game <- games, do: {:ok, _} = Sections.add_game(featured, game.id)
+      first = hd(games)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      lv |> element("#web-cover-#{first.id}") |> render_click()
+      lv |> element("button[phx-click='remove-game'][phx-value-game-id='#{first.id}']") |> render_click()
+      assert has_element?(lv, "[data-pk-snackbar]", "quitado de la fila")
+      assert snackbar_count(lv) == 1
+
+      # Back to the cap out of band; the page's own count is now stale.
+      {:ok, _} = Sections.add_game(featured, game_fixture().id)
+
+      lv |> element("#web-slot-0") |> render_click()
+
+      assert snackbar_count(lv) == 1
+      assert has_element?(lv, "[data-pk-snackbar]", "Ya hay 20 juegos. Quitá uno para agregar otro.")
+      refute has_element?(lv, "#web-remove-snackbar")
+    end
+
+    test "assign after flash: a successful place replaces the same-spot flash", %{conn: conn} do
+      featured = featured_section()
+      [a, _b, _c] = seed_named(featured, ["Aaa Snack", "Bbb Snack", "Ccc Snack"])
+      newcomer = game_fixture(%{name: "Ddd Snack"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      # The same-spot flash is on screen and the sheet has closed.
+      open_and_search(lv, 1, "aaa")
+      lv |> element("#web-add-result-#{a.id}") |> render_click()
+      assert has_element?(lv, "[data-pk-snackbar]", "Ya está en ese lugar")
+      assert snackbar_count(lv) == 1
+
+      # `open-add-sheet` sets no snack, so the stale flash is still up when the place commits.
+      open_and_search(lv, 0, "ddd")
+      assert has_element?(lv, "[data-pk-snackbar]", "Ya está en ese lugar")
+      lv |> element("#web-add-result-#{newcomer.id}") |> render_click()
+
+      assert snackbar_count(lv) == 1
+      assert has_element?(lv, "[data-pk-snackbar]", "Juego agregado")
+      refute has_element?(lv, "[data-pk-snackbar]", "Ya está en ese lugar")
     end
   end
 

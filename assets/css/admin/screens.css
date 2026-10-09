@@ -327,6 +327,13 @@
   line-height: 1;
 }
 
+/* RAIL-04: at the featured cap every "+" dims, but the slot stays a live
+   button - a tap explains the cap (D-24 forbids dead controls). Opacity
+   only: nothing here may make the control inert. */
+.pk-admin-web-slot--full .pk-admin-web-slot__plus {
+  opacity: 0.45;
+}
+
 .pk-admin-web-search {
   margin-top: 16px;
 }

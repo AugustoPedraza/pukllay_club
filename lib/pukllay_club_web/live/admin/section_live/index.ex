@@ -21,6 +21,15 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   `normalize_ajustes_params/1` below is the one place that inversion
   happens.
 
+  The destacada's rail is the page's ONE add control (D-19j, RAIL-01,
+  RAIL-05): every gap between covers, and both ends, is a real "+" button
+  that opens the «¿Qué juego va acá?» sheet at that exact spot. Picking a
+  game already in the row moves it there instead of duplicating it
+  (ADD-05), and at the featured cap every "+" dims but stays a live control
+  that explains the cap when tapped (RAIL-04). The older inline add field
+  and its results block are gone from this page; `Admin.SectionLive.Edit`
+  keeps its own until the page it belongs to is rebuilt.
+
   No delete action exists anywhere on this screen (E6 empty: cannot occur
   at launch since plan 10's migration seeds 3 sections plus an empty
   featured one; sections are hide-only, per D-17/E6). `Sections`' own
@@ -44,9 +53,6 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> assign(:page_title, "Web")
      |> assign(:name_input, "")
      |> assign(:name_error, nil)
-     |> assign(:q, "")
-     |> assign(:search_results, [])
-     |> assign(:add_error, nil)
      |> assign(:selected_member, nil)
      |> assign(:removed, nil)
      |> assign(:add_sheet, nil)
@@ -109,34 +115,6 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     end
   end
 
-  @impl true
-  def handle_event("search", %{"q" => q}, socket) do
-    results = if q == "", do: [], else: search_candidates(socket, q)
-    {:noreply, socket |> assign(:q, q) |> assign(:search_results, results)}
-  end
-
-  @impl true
-  def handle_event("add-game", %{"game-id" => id}, socket) do
-    case Integer.parse(id) do
-      {int_id, ""} ->
-        case Sections.add_game(socket.assigns.featured, int_id) do
-          {:ok, _section} ->
-            {:noreply,
-             socket
-             |> assign(:add_error, nil)
-             |> assign(:q, "")
-             |> assign(:search_results, [])
-             |> load_sections()}
-
-          {:error, reason} ->
-            {:noreply, assign(socket, :add_error, reason)}
-        end
-
-      _not_an_integer ->
-        {:noreply, socket}
-    end
-  end
-
   # ------------------------------------------------------------------
   # The rail's "+" slots and the «¿Qué juego va acá?» sheet (01.8.4, ADD-01,
   # ADD-02, ADD-06). Every param is parsed through `Params.parse_int/2`
@@ -146,20 +124,19 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   # ------------------------------------------------------------------
 
   @impl true
-  def handle_event("open-add-sheet", %{"index" => raw}, %{assigns: %{featured: %{}}} = socket) do
+  def handle_event("open-add-sheet", %{"index" => raw}, %{assigns: %{featured: %{} = featured}} = socket) do
     ids = live_member_ids(socket)
 
     case Params.parse_int(raw, 0..length(ids)) do
       {:ok, index} ->
-        sheet = %{
-          index: index,
-          snapshot_ids: ids,
-          query: "",
-          results: [],
-          recent: Catalog.recent_games_for_row(ids)
-        }
-
-        {:noreply, assign(socket, :add_sheet, sheet)}
+        if featured_full?(featured, length(ids)) do
+          # RAIL-04: bail before the sheet opens, as the artefact does. The UI
+          # bail is a courtesy; `insert_game_at/3` re-checks the cap under its
+          # row lock. The count is a fresh read, never `@featured_members`.
+          {:noreply, socket |> clear_snackbars() |> put_flash(:info, "Ya hay 20 juegos. Quitá uno para agregar otro.")}
+        else
+          {:noreply, assign(socket, :add_sheet, new_add_sheet(index, ids))}
+        end
 
       :error ->
         {:noreply, socket}
@@ -415,6 +392,21 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     end
   end
 
+  defp new_add_sheet(index, ids) do
+    %{
+      index: index,
+      snapshot_ids: ids,
+      query: "",
+      results: [],
+      recent: Catalog.recent_games_for_row(ids)
+    }
+  end
+
+  # The cap follows `featured`, never the member count alone: any other
+  # manual section is uncapped. The threshold lives only in `Sections`.
+  defp featured_full?(%{featured: true}, count), do: count >= Sections.featured_cap()
+  defp featured_full?(_section, _count), do: false
+
   defp live_member_ids(socket) do
     socket.assigns.featured |> Sections.section_members() |> Enum.map(& &1.game_id)
   end
@@ -520,13 +512,14 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
 
   attr :index, :integer, required: true
   attr :names, :list, required: true
+  attr :full, :boolean, default: false
 
   defp web_slot(assigns) do
     ~H"""
     <button
       type="button"
       id={"web-slot-#{@index}"}
-      class="pk-admin-web-slot"
+      class={["pk-admin-web-slot", @full && "pk-admin-web-slot--full"]}
       data-pk-pressable="true"
       phx-click="open-add-sheet"
       phx-value-index={@index}
@@ -535,14 +528,6 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
       <span class="pk-admin-web-slot__plus" aria-hidden="true">+</span>
     </button>
     """
-  end
-
-  defp search_candidates(socket, q) do
-    member_game_ids = Enum.map(socket.assigns.featured_members, & &1.game_id)
-
-    [q: q, limit: 20]
-    |> Catalog.list_admin_games()
-    |> Enum.reject(&(&1.status == :retired or &1.id in member_game_ids))
   end
 
   defp kind_tag_label(:manual), do: "personalizada"
@@ -560,6 +545,9 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
 
   @impl true
   def render(assigns) do
+    # Computed once per render, not once per slot.
+    assigns = assign(assigns, :slots_full, featured_full?(assigns.featured, length(assigns.featured_members)))
+
     ~H"""
     <Layouts.app
       flash={@flash}
@@ -589,7 +577,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
             aria-labelledby="web-destacada-name"
           >
             <%= for {member, index} <- Enum.with_index(@featured_members) do %>
-              <.web_slot index={index} names={member_names(@featured_members)} />
+              <.web_slot index={index} names={member_names(@featured_members)} full={@slots_full} />
               <button
                 type="button"
                 id={"web-cover-#{member.game_id}"}
@@ -613,39 +601,16 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
                 <span class="pk-admin-web-box__caption" aria-hidden="true">{member.game.name}</span>
               </button>
             <% end %>
-            <.web_slot index={length(@featured_members)} names={member_names(@featured_members)} />
+            <.web_slot
+              index={length(@featured_members)}
+              names={member_names(@featured_members)}
+              full={@slots_full}
+            />
           </div>
 
           <p :if={@featured_members == []} class="pk-admin-empty-note">
             Sin juegos, no se ve en el inicio.
           </p>
-
-          <form id="web-search-form" phx-change="search" class="pk-admin-web-search">
-            <AdminComponents.field
-              type="text"
-              id="web-search-input"
-              name="q"
-              value={@q}
-              label="Agregar un juego"
-              placeholder="Buscá un juego"
-              phx-debounce="300"
-            />
-          </form>
-
-          <p :if={add_error_message(@add_error)} class="pk-admin-web-add-error">
-            {add_error_message(@add_error)}
-          </p>
-
-          <div :if={@q != ""} id="web-search-results" class="pk-admin-web-search-results">
-            <p :if={@search_results == []} class="pk-admin-empty-note">Sin resultados.</p>
-            <AdminComponents.list_row
-              :for={game <- @search_results}
-              id={"web-search-result-#{game.id}"}
-              name={game.name}
-              phx-click="add-game"
-              phx-value-game-id={game.id}
-            />
-          </div>
 
           <AdminComponents.section_panel class="pk-admin-web-ajustes">
             <:label>Ajustes</:label>
@@ -865,9 +830,4 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     </Layouts.app>
     """
   end
-
-  defp add_error_message(:featured_full), do: "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
-
-  defp add_error_message(:already_member), do: "Ese juego ya está en la sección."
-  defp add_error_message(_other), do: nil
 end
