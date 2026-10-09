@@ -2,23 +2,22 @@
 gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: Sharable Version
-current_phase: 01.8.2
-current_phase_name: Admin UI/UX Redesign
-status: planning
-stopped_at: Phase 01.8.3 complete, ready to plan Phase 01.8.2
-last_updated: "2026-09-28T23:23:00.028Z"
-last_activity: 2026-09-28
-last_activity_desc: Phase 01.8.3 complete, transitioned to Phase 01.8.2
-state_head: 16e329cecfb24667b35874442ff7228e96ab01d9
+status: Awaiting next milestone
+stopped_at: Milestone v1.1 shipped and archived; awaiting /gsd-new-milestone
+last_updated: "2026-10-09T16:49:55.004Z"
+last_activity: 2026-10-09
+last_activity_desc: Milestone v1.1 completed and archived
+state_head: 2993ac40b5ced8a21a1d43115faa533763286092
 progress:
-  total_phases: 8
-  completed_phases: 4
+  total_phases: 10
+  completed_phases: 7
   total_plans: 63
   completed_plans: 63
-  percent: 57
+current_phase: 01.8.3
+current_phase_name: Admin Screen-by-Screen Refinement
 ---
 
-Total Phases: 9
+Total Phases: 10
 
 # Project State
 
@@ -34,33 +33,16 @@ ahead of Phase 2, which keeps its number and scope.
 
 ## Current Position
 
-Phase: 01.8.2 — Admin UI/UX Redesign
-Plan: Not started
-Status: Ready to plan
-
-Note (2026-09-27, this plan's executor): this field drifted stale across
-plans 06-10 (it read "Plan: 4 of 14" immediately before this correction,
-despite 01.8.3-01 through -10-SUMMARY.md already existing on disk) — the
-documented "GSD Decimal-Phase Resume Bug" in this repo's CLAUDE.md
-(`gsd_run query state.advance-plan` increments from whatever stale value
-is here rather than recomputing from the phase directory's real PLAN/
-SUMMARY counts on a decimal phase number). Corrected by hand per that
-note's own recovery path ("inspect commits, write SUMMARY.md, then update
-STATE/ROADMAP manually") — 11 summaries exist on disk
-(01.8.3-01 through 01.8.3-11), 14 plans total, so 12 is next.
-Last activity: 2026-09-28 - Completed quick task 260928-og0: guard the unguarded Code.require_file in sections_backfill_test.exs
-
-Blocked behind 01.8.3: Phase 01.8.2 is EXECUTED but not COMPLETE — its VERIFICATION.md is
-`gaps_found` (2 accepted gaps: D-06's pre-deploy pg_dump, permanently unmet; D-37 gate 3's
-persisted failure_reason, never implemented) and its UAT.md is `partial` with 19 checkpoints
-outstanding. Re-walk 01.8.2's UAT **from test 1**, not test 8, once 01.8.3 lands — tests 1-7
-covered screens 01.8.3 will change.
+Phase: Milestone v1.1 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-10-09 — Milestone v1.1 completed and archived
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 117
+- Total plans completed: 139
 - Average duration: - min
 - Total execution time: 0 hours
 
@@ -79,6 +61,7 @@ covered screens 01.8.3 will change.
 | 01.8 | 7 | - | - |
 | 01.8.1 | 15 | - | - |
 | 01.8.3 | 14 | - | - |
+| 01.8.2 | 22 | - | - |
 
 **Recent Trend:**
 
@@ -483,6 +466,39 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 Items acknowledged and carried forward from previous milestone close:
 
+### Acknowledged at the v1.1 close (2026-10-09)
+
+`closeout_type: override_closeout`. All 12 acknowledged through the `audit-open acknowledge`
+writer with zero failures; suppression is self-invalidating — any item whose own state changes
+resurfaces at the next audit.
+
+| Category | Item | Status | Deferred At | Milestone |
+|----------|------|--------|-------------|-----------|
+| debug_sessions | DEBUG-admin-sheet-modal-contract | diagnosed | 2026-10-09 | v1.1 |
+| debug_sessions | DEBUG-juegos-horizontal-keel-three-axes | diagnosed | 2026-10-09 | v1.1 |
+| debug_sessions | DEBUG-juegos-pinned-band-viewport-offset | diagnosed | 2026-10-09 | v1.1 |
+| quick_tasks | 260912-rwt-fix-windows-4-mobile-nav-drawer-painted-under-the-about-floa | unknown | 2026-10-09 | v1.1 |
+| quick_tasks | 260912-rwv-fix-windows-18-tappable-pills-under-44px-read-the-diagnosed | unknown | 2026-10-09 | v1.1 |
+| todos | email-provider-and-dns.md | open | 2026-10-09 | v1.1 |
+| todos | sync-local-main-sketch-wrap-up.md | open | 2026-10-09 | v1.1 |
+| uat_gaps | 01.8.3 / 01.8.3-UAT.md (iOS Safari scroll lock, blocked on device) | partial | 2026-10-09 | v1.1 |
+| deferred_items | 01.8.2 plan 05 — unpublish-still-empty-games migration follow-up | open | 2026-10-09 | v1.1 |
+| deferred_items | 01.8.2 plan 12 — visual-harness findings against the real /admin | open | 2026-10-09 | v1.1 |
+| deferred_items | 01.8.2 plan 19 — pre-existing flaky catalog test, not caused by that plan | open | 2026-10-09 | v1.1 |
+| deferred_items | 01.8.2 PR CI — fresh-database migration trap (SINCE FIXED, see quick 260928-og0) | open | 2026-10-09 | v1.1 |
+
+**Also overridden at this close, and not in the table above** (phase-level, not artifact-level):
+
+- Phases **01.7**, **01.8**, **01.8.1** read `[x]` in ROADMAP.md but report
+  `phase_complete=false` / `verification=stale`. Staleness here is a fingerprint mismatch
+  against later commits, not a finding — each was verified when closed — but it is why v1.1
+  closed as `override_closeout` rather than `verified_closeout`.
+- Phase **01.8.2** carries two developer-attributed waivers of its own (D-37's unpersisted
+  enrichment failure reason, and open item 1's unfilled device pass). See
+  `01.8.2-VERIFICATION.md` Acknowledged Gaps.
+
+### Carried forward from earlier closes
+
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | debug_sessions | G-01-2-badge-title-overlap | diagnosed | 2026-09-10 |
@@ -513,9 +529,9 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-09-28T05:26:52.830Z
-Stopped at: Phase 01.8.3 complete, ready to plan Phase 01.8.2
+Stopped at: Phase 01.8.2 complete, ready to plan Phase 01.8.3
 Resume file: None
 
 ## Operator Next Steps
 
-- Discuss/plan Phase 01.8 with /gsd-discuss-phase 01.8 or /gsd-plan-phase 01.8
+- Start the next milestone with /gsd-new-milestone

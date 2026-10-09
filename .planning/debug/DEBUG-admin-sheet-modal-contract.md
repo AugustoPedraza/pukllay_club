@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Diagnose UAT gap G-01.8.3-4a on /admin/juegos: background scrolls behind an open `aria-modal=true` admin sheet. Scope WIDER than the symptom — report the whole modal contract (scroll lock, focus trap, initial focus, Escape, focus restore, aria/inert). goal: find_root_cause_only. HARD CONSTRAINT: must not disturb the overlay geometry that makes UAT test 5 (tab bar unreachable) pass."
 created: 2026-09-27T00:00:00Z
 updated: 2026-09-27T00:00:00Z
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-10-09
+  status: diagnosed
 ---
 
 ## Current Focus

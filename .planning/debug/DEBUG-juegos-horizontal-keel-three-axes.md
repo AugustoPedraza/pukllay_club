@@ -3,6 +3,10 @@ status: diagnosed
 trigger: "Diagnose UAT gaps G-01.8.3-2c (pinned band width), G-01.8.3-2e (search row + `+` inset), G-01.8.3-4b (sheet body vs its own header keel) on /admin/juegos. goal: find_root_cause_only"
 created: 2026-09-27T00:00:00Z
 updated: 2026-09-27T00:00:00Z
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-10-09
+  status: diagnosed
 ---
 
 ## Current Focus

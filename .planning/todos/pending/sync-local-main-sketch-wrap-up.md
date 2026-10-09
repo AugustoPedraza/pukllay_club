@@ -2,6 +2,9 @@
 title: Sync local main to origin/main (106 commits, incl. the sketch wrap-up + share-card.md)
 date: 2026-09-22
 priority: medium
+audit_acknowledged:
+  milestone: v1.1
+  at: 2026-10-09
 ---
 
 # Sync local `main` → `origin/main`
