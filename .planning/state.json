@@ -36,7 +36,7 @@
     {
       "number": "01.8.4",
       "name": "The Rail Becomes the Add Surface",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "01.8.5",
@@ -79,5 +79,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 01.8.4 of 8 · executing"
   },
-  "updated_at": "2026-10-09T21:36:13.443Z"
+  "updated_at": "2026-10-09T21:43:12.592Z"
 }
