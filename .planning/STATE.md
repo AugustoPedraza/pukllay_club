@@ -5,11 +5,11 @@ milestone_name: Web Tab — Sketch 070 Parity
 current_phase: 01.8.4
 current_phase_name: The Rail Becomes the Add Surface
 status: executing
-stopped_at: Completed 01.8.4-01-PLAN.md
-last_updated: "2026-10-09T21:36:14.900Z"
+stopped_at: Completed 01.8.4-02-PLAN.md
+last_updated: "2026-10-09T21:43:13.745Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 01.8.4 execution started
-state_head: 795ad48ff9fe8bd52b5f0ea5afa44e6b031c1ed5
+state_head: 98cb3b3de284757fad28a6e548a1d3e7e99690f8
 progress:
   total_phases: 8
   completed_phases: 7
@@ -34,7 +34,7 @@ which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/
 ## Current Position
 
 Phase: 01.8.4 (The Rail Becomes the Add Surface) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-10-09 — Phase 01.8.4 execution started
 
@@ -178,6 +178,7 @@ findings note; Argentine voseo.
 | Phase 01.8.3 P13 | ~105min | 3 tasks | 4 files |
 | Phase 01.8.3 P14 | ~55min | 2 tasks | 2 files |
 | Phase 01.8.4 P01 | 13 min | 3 tasks | 8 files |
+| Phase 01.8.4 P02 | 6 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -365,6 +366,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.3]: 01.8.3-14: onClose's focus-restore condition rewritten from an equality against document.body to containment against the overlay's own root, closing G-01.8.3-4c without disturbing plan 01.8.2-12's sheet->dialog handoff protection or plan 13's scroll lock
 - [Phase 01.8.4]: 01.8.4-01: insert_game_at/3 and move_game_to/3 take a 0-based slot index over dense 1..n storage, lock the section row FOR UPDATE, and reject (never clamp) an out-of-range slot — A clamped slot would silently place a game somewhere other than the tapped gap; the locked row also removes the stale-struct and cap races
 - [Phase 01.8.4]: 01.8.4-01: clear_snackbars/1 (assigns plus :info/:error flashes) gates every snack-setting write in SectionLive.Index — snackbar/1 has no data-timeout consumer, so a stale flash would otherwise render beside a later assign-driven snack
+- [Phase 01.8.4]: recent_games_for_row/2 tiebreaks on desc: id (not automatic_order_by(:recent)'s asc: id); drafts and thumbnail-less games included — timestamps() is second-precision; the higher id is the later insert, so desc: id is the only deterministic newest-first tiebreak
 
 ### Pending Todos
 
@@ -545,8 +547,8 @@ resurfaces at the next audit.
 
 ## Session Continuity
 
-Last session: 2026-10-09T21:36:14.853Z
-Stopped at: Completed 01.8.4-01-PLAN.md
+Last session: 2026-10-09T21:43:13.702Z
+Stopped at: Completed 01.8.4-02-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

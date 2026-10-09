@@ -101,13 +101,13 @@ touch-target minimum and the rail scrolls horizontally.
   4. The inline `Agregar un juego` field and `#web-search-results` are absent from the rendered page (asserted, not just visually gone), so the slots are the only add control; an empty row's rail is the single 96×100 dashed tile beside `Tocá + para elegir el primer juego.`
   5. At 20 members every slot renders dimmed and tapping one snacks `Ya hay 20 juegos. Quitá uno para agregar otro.` with no action; each slot carries its `where()` label (`Agregar un juego al principio` / `… entre {X} y {Y}` / `… al final`) in a 44px hit box (20px column + 12px each side, no `gap` on the rail), the rail's `role="group"` is `aria-labelledby` the row name, and every slot index and game id arrives parsed as an integer and bounds-checked against the **live** member count with the `:manual`-vs-`:automatic` guard intact
 
-**Plans:** 1/4 plans executed in 3 waves
+**Plans:** 2/4 plans executed in 3 waves
 
 Plans:
 **Wave 1**
 
 - [x] 01.8.4-01-PLAN.md — Tracer: a game lands at the chosen slot end to end, plus the positional `Sections` API (`insert_game_at/3`, `move_game_to/3`, `rest_index/2`, `featured_cap/0`) and the shared `Admin.Params` guard
-- [ ] 01.8.4-02-PLAN.md — `Catalog` ranked search (accent-folded, starts-with-first) and `Últimas novedades` recents
+- [x] 01.8.4-02-PLAN.md — `Catalog` ranked search (accent-folded, starts-with-first) and `Últimas novedades` recents
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -285,7 +285,7 @@ Phases execute in numeric order: 0 → 1 → 01.7 → 01.8 → 01.8.1 → 01.8.2
 | 01.8.1. Staff Admin — Ludoteca, Shelves & Curated Destacados | 15/15 | Complete — shipped v1.1 | 2026-09-16 |
 | 01.8.2. Admin UI/UX Redesign | 22/22 | Complete — shipped v1.1 | 2026-10-09 |
 | 01.8.3. Admin Screen-by-Screen Refinement | 14/14 | Complete — shipped v1.1 | 2026-09-28 |
-| 01.8.4. The Rail Becomes the Add Surface | 1/4 | In Progress|  |
+| 01.8.4. The Rail Becomes the Add Surface | 2/4 | In Progress|  |
 | 01.8.5. Moving a Game | 0/TBD | Not started | - |
 | 01.8.6. Page & Row Chrome | 0/TBD | Not started | - |
 | 01.8.7. Destacada Becomes a Role | 0/TBD | Not started | - |
