@@ -110,7 +110,7 @@ defmodule PukllayClub.Catalog.AdminGameSearchTest do
     test "a game already in a section is still returned — members are shown so they can be moved (ADD-05)" do
       member = game_fixture(%{name: "Miembro Fila"})
       game_fixture(%{name: "Miembro Libre"})
-      section = section_fixture(%{featured: true})
+      section = section_fixture()
       add_game_to_section(section, member)
 
       assert "miembro" |> Catalog.search_admin_games_ranked() |> names() ==

@@ -505,6 +505,60 @@ defmodule PukllayClub.Catalog do
     |> Repo.aggregate(:count)
   end
 
+  @admin_ranked_default_limit 6
+  @admin_ranked_max_query_length 120
+
+  @doc """
+  Ranked name search for the destacada add sheet (01.8.4, ADD-04).
+
+  Returns at most `#{@admin_ranked_default_limit}` games (`opts[:limit]`
+  overrides), matching `q` as a case- and accent-insensitive substring of
+  the game name — `cat` finds `Catán` and `CATÁN` finds `Catan`. Games whose
+  name STARTS with the term come before games that merely contain it; each
+  group is ordered `[asc: name, asc: id]`, and the whole ranking is one SQL
+  `ORDER BY` (never an Elixir-side sort, which would only rank the rows that
+  survived the limit). A game that both starts with and contains the term
+  appears exactly once.
+
+  `:retired` games are excluded; `:draft` games are included, and so are
+  games already in a section — membership is deliberately not filtered
+  here, because ADD-05 shows a member in the results so it can be moved.
+
+  `%`, `_` and `\\` in `q` match literally (`escape_ilike/1`, the one copy
+  in this module). `q` is cut to #{@admin_ranked_max_query_length}
+  characters first, matching `Shelves`' search cap, and an empty or
+  whitespace-only `q` returns `[]` without querying.
+
+  `unaccent(...)` is a function call on a column, so it is not index-assisted.
+  That is fine at ~400 rows and is why no index is added.
+  """
+  @spec search_admin_games_ranked(String.t(), keyword()) :: [Game.t()]
+  def search_admin_games_ranked(q, opts \\ []) when is_binary(q) do
+    limit = Keyword.get(opts, :limit, @admin_ranked_default_limit)
+
+    case q |> String.slice(0, @admin_ranked_max_query_length) |> String.trim() do
+      "" -> []
+      term -> ranked_admin_games(escape_ilike(term), limit)
+    end
+  end
+
+  defp ranked_admin_games(escaped, limit) do
+    starts = escaped <> "%"
+    contains = "%" <> escaped <> "%"
+
+    Repo.all(
+      from g in Game,
+        where: g.status != :retired,
+        where: fragment("unaccent(?) ILIKE unaccent(?)", g.name, ^contains),
+        order_by: [
+          asc: fragment("CASE WHEN unaccent(?) ILIKE unaccent(?) THEN 0 ELSE 1 END", g.name, ^starts),
+          asc: g.name,
+          asc: g.id
+        ],
+        limit: ^limit
+    )
+  end
+
   defp admin_filtered_query(query, opts) do
     query
     |> maybe_filter_admin_status(Map.get(opts, :status))
