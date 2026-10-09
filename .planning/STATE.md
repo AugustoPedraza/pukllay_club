@@ -1,23 +1,23 @@
 ---
 gsd_state_version: "1.0"
-milestone: v1.1
-milestone_name: Sharable Version
-status: Awaiting next milestone
-stopped_at: Milestone v1.1 shipped and archived; awaiting /gsd-new-milestone
-last_updated: "2026-10-09T16:49:55.004Z"
+milestone: v1.2
+milestone_name: Web Tab — Sketch 070 Parity
+status: Ready to plan
+stopped_at: Milestone v1.2 opened — PROJECT/REQUIREMENTS/ROADMAP written; phase 01.8.4 not yet planned
+last_updated: "2026-10-09T18:55:00.000Z"
 last_activity: 2026-10-09
-last_activity_desc: Milestone v1.1 completed and archived
+last_activity_desc: Opened milestone v1.2 (Web Tab — Sketch 070 Parity); roadmapped phases 01.8.4–01.8.8
 state_head: 2993ac40b5ced8a21a1d43115faa533763286092
 progress:
-  total_phases: 10
+  total_phases: 15
   completed_phases: 7
   total_plans: 63
   completed_plans: 63
-current_phase: 01.8.3
-current_phase_name: Admin Screen-by-Screen Refinement
+current_phase: 01.8.4
+current_phase_name: The Rail Becomes the Add Surface
 ---
 
-Total Phases: 10
+Total Phases: 15
 
 # Project State
 
@@ -27,16 +27,29 @@ See: .planning/PROJECT.md (updated 2026-09-11 after v1.0 milestone)
 
 **Core value:** A member can describe what they want in plain Spanish and find a game that fits —
 even without already knowing board-game vocabulary.
-**Current focus:** Phase 01.8.3 — Admin Screen-by-Screen Refinement (INSERTED)
-(production catalog data + security hardening) completed 2026-09-11. Both are decimal insertions
-ahead of Phase 2, which keeps its number and scope.
+**Current focus:** Phase 01.8.4 — The Rail Becomes the Add Surface, the first phase of milestone
+v1.2 (Web Tab — Sketch 070 Parity). Phases 01.8.4–01.8.8 are decimal insertions ahead of Phase 2,
+which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/01.8.2/01.8.3 set.
 
 ## Current Position
 
-Phase: Milestone v1.1 complete
+Phase: 01.8.4 — The Rail Becomes the Add Surface (milestone v1.2, not yet planned)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-10-09 — Milestone v1.1 completed and archived
+Status: Ready to plan
+Last activity: 2026-10-09 — Opened milestone v1.2 and roadmapped phases 01.8.4–01.8.8
+
+**Design contract for this whole milestone:** sketch 070
+(`.planning/sketches/070-web-destacados/index.html`) plus
+`.claude/skills/sketch-findings-pukllay_club/references/admin-web-destacados.md`. The developer
+re-reviewed and approved the artefact on 2026-10-09. Where the note and the artefact disagree, the
+artefact wins — 070's README is known-stale on four points. All Spanish copy is verbatim from the
+findings note; Argentine voseo.
+
+> ⚠ **Decimal phases: the resume guard is blind here.** `safe_resume_gate` aborts on
+> `$((10#01.8.4))` and its commit-scope regex never matches `feat(01.8.4-N):`, so a half-executed
+> plan is not detected and a bare `/gsd-execute-phase` restarts it at Task 1. See `.claude/CLAUDE.md`
+> → "GSD Decimal-Phase Resume Bug" for the manual recovery path, and confirm `git status` reads
+> "up to date with origin/main" before starting a phase.
 
 ## Performance Metrics
 
