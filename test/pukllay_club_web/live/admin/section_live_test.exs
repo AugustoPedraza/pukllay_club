@@ -392,6 +392,149 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
+  describe "SectionLive.Index — add-sheet handlers vs. forged and stale payloads (01.8.4, CTX-04)" do
+    setup :register_and_log_in_staff
+
+    defp seed_two(featured) do
+      first = game_fixture(%{name: "Everdell"})
+      second = game_fixture(%{name: "Wingspan"})
+      add_game_to_section(featured, first, 1)
+      add_game_to_section(featured, second, 2)
+      {first, second}
+    end
+
+    defp member_ids(featured), do: featured |> Sections.section_members() |> Enum.map(& &1.game_id)
+
+    for {label, raw} <- [{"non-numeric", "abc"}, {"negative", "-1"}, {"past the last gap", "999"}] do
+      test "open-add-sheet with a #{label} index leaves the page unchanged and alive", %{conn: conn} do
+        featured = featured_section()
+        seed_two(featured)
+        {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+        render_click(lv, "open-add-sheet", %{"index" => unquote(raw)})
+
+        refute has_element?(lv, "#web-add-sheet")
+        assert render(lv) =~ "Everdell"
+      end
+    end
+
+    test "add-sheet-pick with an id above the bigint maximum leaves the LiveView alive and the row unchanged",
+         %{conn: conn} do
+      featured = featured_section()
+      seed_two(featured)
+      before = member_ids(featured)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+
+      render_click(lv, "add-sheet-pick", %{"game-id" => "99999999999999999999"})
+
+      assert render(lv) =~ "Everdell"
+      assert member_ids(featured) == before
+    end
+
+    test "add-sheet-pick with an unknown in-range id closes the sheet and writes nothing", %{conn: conn} do
+      featured = featured_section()
+      seed_two(featured)
+      before = member_ids(featured)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-1") |> render_click()
+
+      render_click(lv, "add-sheet-pick", %{"game-id" => "9000000000000"})
+
+      refute has_element?(lv, "#web-add-sheet")
+      assert member_ids(featured) == before
+    end
+
+    test "a row that changed under the open sheet closes it, says so, and writes nothing", %{conn: conn} do
+      featured = featured_section()
+      {first, second} = seed_two(featured)
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+
+      out_of_band = game_fixture(%{name: "Fuera de banda"})
+      {:ok, _} = Sections.add_game(featured, out_of_band.id)
+      picked = game_fixture(%{name: "Carcassonne"})
+
+      html = render_click(lv, "add-sheet-pick", %{"game-id" => Integer.to_string(picked.id)})
+
+      refute has_element?(lv, "#web-add-sheet")
+      assert html =~ "La fila cambió mientras elegías un juego. Probá de nuevo."
+      assert member_ids(featured) == [first.id, second.id, out_of_band.id]
+    end
+
+    test "members sharing one position render one deterministic order and the labels follow it", %{conn: conn} do
+      featured = featured_section()
+      a = game_fixture(%{name: "Zeta"})
+      b = game_fixture(%{name: "Alfa"})
+      add_game_to_section(featured, a, 7)
+      add_game_to_section(featured, b, 7)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      ordered = Enum.sort([a, b], &(&1.id <= &2.id))
+      [lo, hi] = ordered
+
+      assert :binary.match(html, ~s(id="web-cover-#{lo.id}")) < :binary.match(html, ~s(id="web-cover-#{hi.id}"))
+      assert has_element?(lv, "#web-slot-1[aria-label='Agregar un juego entre #{lo.name} y #{hi.name}']")
+    end
+
+    test "a name with accents and guillemets reaches the slot label and the sheet subtitle verbatim", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture(%{name: "«Ñandú» Cañón"}), 1)
+      add_game_to_section(featured, game_fixture(%{name: "Árbol & Co"}), 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      assert has_element?(lv, "#web-slot-1[aria-label='Agregar un juego entre «Ñandú» Cañón y Árbol & Co']")
+
+      html = lv |> element("#web-slot-1") |> render_click()
+      assert html =~ "#{featured.name} · entre «Ñandú» Cañón y Árbol &amp; Co"
+    end
+
+    test "exactly one element carries the id the rail group is labelled by, and no cover repeats the row name",
+         %{conn: conn} do
+      featured = featured_section()
+      {first, _second} = seed_two(featured)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert length(Regex.scan(~r/id="web-destacada-name"/, html)) == 1
+      refute has_element?(lv, "#web-cover-#{first.id}", featured.name)
+    end
+
+    test "only one snackbar renders, whichever order the snacks are set in", %{conn: conn} do
+      featured = featured_section()
+      {first, _second} = seed_two(featured)
+      picked = game_fixture(%{name: "Carcassonne"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      snackbars = fn -> length(Regex.scan(~r/data-pk-snackbar/, render(lv))) end
+
+      # flash first, then a snackbar assign
+      lv |> form("#web-ajustes-form", section: %{name: featured.name}) |> render_submit()
+      assert render(lv) =~ "Fila guardada."
+      assert snackbars.() == 1
+
+      lv |> element("#web-slot-0") |> render_click()
+      render_click(lv, "add-sheet-pick", %{"game-id" => Integer.to_string(picked.id)})
+      assert render(lv) =~ "Juego agregado"
+      refute render(lv) =~ "Fila guardada."
+      assert snackbars.() == 1
+
+      # a snackbar assign first, then a flash
+      lv |> form("#web-ajustes-form", section: %{name: featured.name}) |> render_submit()
+      assert render(lv) =~ "Fila guardada."
+      refute render(lv) =~ "Juego agregado"
+      assert snackbars.() == 1
+
+      # and a remove snack after a flash
+      lv |> element("#web-cover-#{first.id}") |> render_click()
+      lv |> element("button[phx-click='remove-game'][phx-value-game-id='#{first.id}']") |> render_click()
+      refute render(lv) =~ "Fila guardada."
+      assert snackbars.() == 1
+    end
+  end
+
   describe "SectionLive.Index — create (D-17, \"Crear sección\")" do
     setup :register_and_log_in_staff
 
