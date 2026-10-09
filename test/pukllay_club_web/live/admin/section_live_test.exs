@@ -1,5 +1,12 @@
 defmodule PukllayClubWeb.Admin.SectionLiveTest do
-  use PukllayClubWeb.ConnCase, async: true
+  # Not async: the positional writers re-read the seeded featured section row
+  # `FOR UPDATE`, and seeding a member first takes a `KEY SHARE` lock on that
+  # same committed row through the foreign key. Two concurrent tests that both
+  # seed and then lock would each wait on the other's `KEY SHARE`, which
+  # Postgres reports as a deadlock. Running this module after the async ones
+  # keeps it out of that cycle (`sections_test.exs` stays async: with this
+  # module serialised it has no peer left to deadlock against).
+  use PukllayClubWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   import PukllayClub.CatalogFixtures
@@ -654,6 +661,163 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert member_ids(featured) == before
       # Not a navigation: the same LiveView is still rendering the same page.
       assert has_element?(lv, "#web-destacada")
+    end
+  end
+
+  describe "SectionLive.Index — a game already in the row is moved, not duplicated (01.8.4, ADD-05)" do
+    setup :register_and_log_in_staff
+
+    defp seed_named(featured, names) do
+      names
+      |> Enum.with_index(1)
+      |> Enum.map(fn {name, position} ->
+        game = game_fixture(%{name: name})
+        add_game_to_section(featured, game, position)
+        game
+      end)
+    end
+
+    defp members_with_positions(featured) do
+      featured |> Sections.section_members() |> Enum.map(&{&1.game_id, &1.position})
+    end
+
+    defp open_and_search(lv, slot, query) do
+      lv |> element("#web-slot-#{slot}") |> render_click()
+      render_change(lv, "add-sheet-search", %{"q" => query})
+    end
+
+    test "a member in the results carries the verbatim sub-line; a non-member carries none", %{conn: conn} do
+      featured = featured_section()
+      [_a, _b, c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+      outsider = game_fixture(%{name: "Ddd Mover"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      html = open_and_search(lv, 0, "mover")
+
+      assert has_element?(lv, "#web-add-result-#{c.id}", "Ya está en la fila · pasa a este lugar")
+      assert html =~ "Ya está en la fila · pasa a este lugar"
+      refute has_element?(lv, "#web-add-result-#{outsider.id}", "Ya está en la fila")
+    end
+
+    test "a forward move lands at the chosen gap: count unchanged, once, Juego movido + Deshacer, undo restores", %{
+      conn: conn
+    } do
+      featured = featured_section()
+      [a, b, c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 0, "ccc")
+      html = lv |> element("#web-add-result-#{c.id}") |> render_click()
+
+      members = Sections.section_members(featured)
+      assert Enum.map(members, & &1.game_id) == [c.id, a.id, b.id]
+      assert length(members) == 3
+      assert Enum.map(members, & &1.position) == [1, 2, 3]
+      assert length(Regex.scan(~r/id="web-cover-#{c.id}"/, html)) == 1
+      refute has_element?(lv, "#web-add-sheet")
+      assert has_element?(lv, "#web-place-snackbar", "Juego movido")
+      assert html =~ ~s(data-timeout="10000")
+      refute html =~ "Juego agregado"
+
+      lv |> element("button[phx-click='undo-place']") |> render_click()
+
+      assert member_ids(featured) == [a.id, b.id, c.id]
+      assert featured |> Sections.section_members() |> Enum.map(& &1.position) == [1, 2, 3]
+      refute has_element?(lv, "#web-place-snackbar")
+    end
+
+    test "a backward move lands one gap further than the full-list slot suggests: [A,B,C,D] slot 3 picking A", %{
+      conn: conn
+    } do
+      featured = featured_section()
+      [a, b, c, d] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover", "Ddd Mover"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 3, "aaa")
+      lv |> element("#web-add-result-#{a.id}") |> render_click()
+
+      assert member_ids(featured) == [b.id, c.id, a.id, d.id]
+
+      lv |> element("button[phx-click='undo-place']") |> render_click()
+      assert member_ids(featured) == [a.id, b.id, c.id, d.id]
+    end
+
+    test "a move to the end of the row and its undo", %{conn: conn} do
+      featured = featured_section()
+      [a, b, c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 3, "aaa")
+      lv |> element("#web-add-result-#{a.id}") |> render_click()
+      assert member_ids(featured) == [b.id, c.id, a.id]
+
+      lv |> element("button[phx-click='undo-place']") |> render_click()
+      assert member_ids(featured) == [a.id, b.id, c.id]
+    end
+
+    for {label, slot} <- [{"the gap before it (slot = its index)", 1}, {"the gap after it (slot = index + 1)", 2}] do
+      test "picking the game that already occupies #{label} says so and writes nothing", %{conn: conn} do
+        featured = featured_section()
+        [_a, b, _c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+        before = members_with_positions(featured)
+        updated_before = featured |> Sections.section_members() |> Enum.map(& &1.updated_at)
+
+        {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+        open_and_search(lv, unquote(slot), "bbb")
+        html = lv |> element("#web-add-result-#{b.id}") |> render_click()
+
+        assert html =~ "Ya está en ese lugar"
+        refute has_element?(lv, "#web-add-sheet")
+        refute has_element?(lv, "#web-place-snackbar")
+        refute has_element?(lv, "button[phx-click='undo-place']")
+        assert members_with_positions(featured) == before
+        assert featured |> Sections.section_members() |> Enum.map(& &1.updated_at) == updated_before
+      end
+    end
+
+    test "the slot 0 half of the two-gap condition: picking the first game at slot 0 is a no-op", %{conn: conn} do
+      featured = featured_section()
+      [a, _b, _c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+      before = members_with_positions(featured)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 0, "aaa")
+      html = lv |> element("#web-add-result-#{a.id}") |> render_click()
+
+      assert html =~ "Ya está en ese lugar"
+      refute has_element?(lv, "#web-add-sheet")
+      assert members_with_positions(featured) == before
+    end
+
+    test "the same-spot snack carries no action", %{conn: conn} do
+      featured = featured_section()
+      [_a, b, _c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 1, "bbb")
+      lv |> element("#web-add-result-#{b.id}") |> render_click()
+
+      assert has_element?(lv, "#admin-snackbar-info", "Ya está en ese lugar")
+      refute has_element?(lv, "#admin-snackbar-info button[phx-click]")
+    end
+
+    test "a stale undo of a move is swallowed: the page stays alive and the snackbar clears", %{conn: conn} do
+      featured = featured_section()
+      [a, b, c] = seed_named(featured, ["Aaa Mover", "Bbb Mover", "Ccc Mover"])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_and_search(lv, 0, "ccc")
+      lv |> element("#web-add-result-#{c.id}") |> render_click()
+      assert member_ids(featured) == [c.id, a.id, b.id]
+
+      # Out of band, the mover leaves the row and the original index no longer exists.
+      {:ok, _} = Sections.remove_game(featured, c.id)
+      {:ok, _} = Sections.remove_game(featured, b.id)
+
+      lv |> element("button[phx-click='undo-place']") |> render_click()
+
+      refute has_element?(lv, "#web-place-snackbar")
+      assert member_ids(featured) == [a.id]
     end
   end
 

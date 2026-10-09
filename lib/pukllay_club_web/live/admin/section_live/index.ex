@@ -226,6 +226,20 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> load_sections()}
   end
 
+  # The inverse of a move is a move back to the `from` the original call
+  # returned, never a recomputed index. The row may have changed since, so a
+  # stale undo is swallowed (the context documents this as the caller's job)
+  # rather than crashing the LiveView.
+  def handle_event("undo-place", _params, %{assigns: %{placed: %{kind: :moved, game_id: id, from: from}}} = socket) do
+    _ = Sections.move_game_to(socket.assigns.featured, id, from)
+
+    {:noreply,
+     socket
+     |> assign(:placed, nil)
+     |> assign(:landed_game_id, nil)
+     |> load_sections()}
+  end
+
   def handle_event("undo-place", _params, socket), do: {:noreply, socket}
 
   @impl true
@@ -405,7 +419,16 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     socket.assigns.featured |> Sections.section_members() |> Enum.map(& &1.game_id)
   end
 
+  # A game already in the row is MOVED to the chosen gap, never duplicated
+  # (ADD-05); any other game is inserted there.
   defp place_game(socket, sheet, game_id) do
+    case Enum.find_index(sheet.snapshot_ids, &(&1 == game_id)) do
+      nil -> insert_member(socket, sheet, game_id)
+      from -> move_member(socket, sheet, game_id, from)
+    end
+  end
+
+  defp insert_member(socket, sheet, game_id) do
     case Sections.insert_game_at(socket.assigns.featured, game_id, sheet.index) do
       {:ok, _placement} ->
         socket
@@ -419,6 +442,37 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
         assign(socket, :add_sheet, nil)
     end
   end
+
+  # The artefact's own `from === pos || from === pos - 1` condition: the two
+  # gaps that bracket a game are the spot it already occupies. That is a
+  # no-op with ZERO writes - a write that happens to land in the same order
+  # would still bump `updated_at` on every renumbered row and still offer a
+  # Deshacer for an action that did not happen.
+  defp move_member(socket, %{index: slot}, _game_id, from) when slot in [from, from + 1] do
+    socket
+    |> assign(:add_sheet, nil)
+    |> clear_snackbars()
+    |> put_flash(:info, "Ya está en ese lugar")
+  end
+
+  defp move_member(socket, sheet, game_id, from) do
+    # `rest_index/2` is the only place the slot-to-rest-list off-by-one lives.
+    case Sections.move_game_to(socket.assigns.featured, game_id, Sections.rest_index(from, sheet.index)) do
+      {:ok, %{from: original_index}} ->
+        socket
+        |> assign(:add_sheet, nil)
+        |> load_sections()
+        |> clear_snackbars()
+        |> assign(:landed_game_id, game_id)
+        |> assign(:placed, %{kind: :moved, game_id: game_id, from: original_index})
+
+      {:error, _reason} ->
+        assign(socket, :add_sheet, nil)
+    end
+  end
+
+  defp placed_message(%{kind: :moved}), do: "Juego movido"
+  defp placed_message(%{kind: :added}), do: "Juego agregado"
 
   # This page emits snacks through two independent mechanisms — three
   # assigns and `put_flash/3` — and an action-less flash snack has no
@@ -762,6 +816,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
             id={"web-add-result-#{game.id}"}
             cover={game.thumbnail_url}
             name={game.name}
+            meta={if game.id in @add_sheet.snapshot_ids, do: "Ya está en la fila · pasa a este lugar"}
             phx-click="add-sheet-pick"
             phx-value-game-id={game.id}
           />
@@ -787,7 +842,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
       <AdminComponents.snackbar
         :if={@placed}
         id="web-place-snackbar"
-        message="Juego agregado"
+        message={placed_message(@placed)}
         action={%{label: "Deshacer", event: "undo-place"}}
         on_close={JS.push("dismiss-place-snackbar")}
       />
