@@ -280,8 +280,14 @@
   position: relative;
   flex: 0 0 20px;
   align-self: stretch;
-  display: grid;
-  place-items: start center;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* The 24px glyph below is wider than the 20px column. Without min-width:
+     0 a flex item's automatic minimum grows the slot to the glyph's width,
+     which silently turns the 44px pitch into 48px. The glyph overflows the
+     column evenly instead, as sketch 070 drew it. */
+  min-width: 0;
   margin: 0 12px;
   padding: 0;
   border: 0;
@@ -317,6 +323,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   width: 24px;
   height: 24px;
   margin-top: 38px;
@@ -344,7 +351,7 @@
   flex: 0 0 96px;
   height: 100px;
   margin: 0;
-  place-items: center;
+  align-items: center;
   border: 1px dashed var(--stroke);
   border-radius: 6px;
 }
