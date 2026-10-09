@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 9
+open_count: 11
 waived_count: 1
 fixed_count: 29
-total_count: 39
-last_updated: 2026-10-09T22:00:02.311Z
+total_count: 41
+last_updated: 2026-10-09T22:15:41.573Z
 ---
 
 # Broken Windows Ledger
@@ -54,6 +54,8 @@ last_updated: 2026-10-09T22:00:02.311Z
 | 37 | 01.8.4 | stub | lib/pukllay_club_web/live/admin/section_live/index.ex |  | candidate_games/2 is a tracer seam (list_admin_games, non-members only) and the add sheet's recent: [] is unused; plan 01.8.4-03 replaces both with the ranked search and Últimas novedades | fixed |  | 2026-10-09T21:35:14.728Z | 2026-10-09T21:59:58.144Z |
 | 38 | 01.8.4 | stub | lib/pukllay_club_web/live/admin/section_live/index.ex |  | Crear «{q}» row (create-game-stub) only flashes 'Crear un juego: se diseña en otra ronda'; phase 01.8.8 (ADD-08) designs the real create flow | open |  | 2026-10-09T22:00:02.084Z |  |
 | 39 | 01.8.4 | unrun-verify | lib/pukllay_club_web/live/admin/section_live/index.ex |  | 01.8.4-03 Task 3 human-check not run: dimmed-but-live slots at the cap, cap snack not covered by the tab bar, and single-snackbar on a real phone (data-timeout has no JS dismiss consumer) | open |  | 2026-10-09T22:00:02.311Z |  |
+| 40 | 01.8.4 | unrun-verify | test/visual/admin_components.mjs |  | 01.8.4-04 Task 3 human-check not run: the checkSlotHitBox probe against a booted dev server (writes to the dev DB, needs a staff session), the landing motion's feel on a real phone, its absence under OS Reduce motion, and the empty-row tile at 360px | open |  | 2026-10-09T22:15:41.363Z |  |
+| 41 | 01.8.4 | deviation | assets/css/admin/screens.css |  | 01.8.4-04 fixed plan 01's slot: grid + no min-width:0 let the 24px plus widen the 20px column, making the pitch 48px not 44px; found only by rendering in headless Chrome | open |  | 2026-10-09T22:15:41.573Z |  |
 
 ````json
 [
@@ -533,6 +535,32 @@ last_updated: 2026-10-09T22:00:02.311Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-09T22:00:02.311Z",
+    "resolved_at": null,
+    "milestone": "v1.2"
+  },
+  {
+    "id": 40,
+    "kind": "unrun-verify",
+    "phase": "01.8.4",
+    "file": "test/visual/admin_components.mjs",
+    "line": null,
+    "description": "01.8.4-04 Task 3 human-check not run: the checkSlotHitBox probe against a booted dev server (writes to the dev DB, needs a staff session), the landing motion's feel on a real phone, its absence under OS Reduce motion, and the empty-row tile at 360px",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-09T22:15:41.363Z",
+    "resolved_at": null,
+    "milestone": "v1.2"
+  },
+  {
+    "id": 41,
+    "kind": "deviation",
+    "phase": "01.8.4",
+    "file": "assets/css/admin/screens.css",
+    "line": null,
+    "description": "01.8.4-04 fixed plan 01's slot: grid + no min-width:0 let the 24px plus widen the 20px column, making the pitch 48px not 44px; found only by rendering in headless Chrome",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-09T22:15:41.573Z",
     "resolved_at": null,
     "milestone": "v1.2"
   }

@@ -4,12 +4,12 @@ milestone: v1.2
 milestone_name: Web Tab — Sketch 070 Parity
 current_phase: 01.8.4
 current_phase_name: The Rail Becomes the Add Surface
-status: executing
-stopped_at: Completed 01.8.4-03-PLAN.md
-last_updated: "2026-10-09T22:00:51.268Z"
+status: verifying
+stopped_at: Completed 01.8.4-04-PLAN.md
+last_updated: "2026-10-09T22:16:40.041Z"
 last_activity: 2026-10-09
 last_activity_desc: Phase 01.8.4 execution started
-state_head: 7f5b4a269210e344612c12baee1d5e3422e17223
+state_head: 12b8fba865e0b9519a54926ccd43a1771cab270f
 progress:
   total_phases: 8
   completed_phases: 7
@@ -35,7 +35,7 @@ which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/
 
 Phase: 01.8.4 (The Rail Becomes the Add Surface) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-09 — Phase 01.8.4 execution started
 
 **Design contract for this whole milestone:** sketch 070
@@ -180,6 +180,7 @@ findings note; Argentine voseo.
 | Phase 01.8.4 P01 | 13 min | 3 tasks | 8 files |
 | Phase 01.8.4 P02 | 6 min | 2 tasks | 2 files |
 | Phase 01.8.4 P03 | 16min | 3 tasks | 3 files |
+| Phase 01.8.4 P04 | 11 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -370,6 +371,7 @@ Recent decisions affecting current work:
 - [Phase 01.8.4]: recent_games_for_row/2 tiebreaks on desc: id (not automatic_order_by(:recent)'s asc: id); drafts and thumbnail-less games included — timestamps() is second-precision; the higher id is the later insert, so desc: id is the only deterministic newest-first tiebreak
 - [Phase 01.8.4]: 01.8.4-03: section_live_test.exs is async: false - FOR UPDATE on the shared seeded featured row vs FK KEY SHARE deadlocks concurrent tests
 - [Phase 01.8.4]: 01.8.4-03: a game already in the row is no longer excluded from sheet search; it is shown with its sub-line and moved (ADD-05)
+- [Phase 01.8.4]: 01.8.4-04: .pk-admin-web-slot is display:flex with min-width:0; a grid slot let the 24px glyph widen the 20px column and made the hit pitch 48px — Found only by rendering in headless Chrome; the CSS source gate now also pins min-width: 0
 
 ### Pending Todos
 
@@ -550,8 +552,8 @@ resurfaces at the next audit.
 
 ## Session Continuity
 
-Last session: 2026-10-09T22:00:51.222Z
-Stopped at: Completed 01.8.4-03-PLAN.md
+Last session: 2026-10-09T22:16:39.996Z
+Stopped at: Completed 01.8.4-04-PLAN.md
 Resume file: None
 
 ## Operator Next Steps

@@ -20,18 +20,18 @@ verbatim" section — Argentine voseo. No paraphrasing, no re-translation, no re
 
 ### Rail
 
-- [ ] **RAIL-01**: The destacada rail carries a "+" slot in every gap — before the first cover,
+- [x] **RAIL-01**: The destacada rail carries a "+" slot in every gap — before the first cover,
       between every two, after the last (N+1) — always visible, with a 44px hit box (20px column
       plus 12px each side) and no `gap` on the rail itself
 - [x] **RAIL-02**: Each slot has a Spanish accessible label following the artefact's `where()`
       grammar: `Agregar un juego al principio` / `… entre {X} y {Y}` / `… al final`
-- [ ] **RAIL-03**: An empty row's rail is a single 96×100 dashed tile beside the line
+- [x] **RAIL-03**: An empty row's rail is a single 96×100 dashed tile beside the line
       `Tocá + para elegir el primer juego.`
 - [x] **RAIL-04**: At the 20-game cap every slot dims and tapping one snacks
       `Ya hay 20 juegos. Quitá uno para agregar otro.` (no action, no Deshacer)
 - [x] **RAIL-05**: The inline `Agregar un juego` field and `#web-search-results` are **removed** —
       070 decision 12 / D-19j forbids a second control beside the main one
-- [ ] **RAIL-06**: A placed cover lands with a 520ms animation (`cubic-bezier(.2,.8,.3,1)`), with a
+- [x] **RAIL-06**: A placed cover lands with a 520ms animation (`cubic-bezier(.2,.8,.3,1)`), with a
       `prefers-reduced-motion: reduce` opt-out. **Not** estantes' 620ms
 - [x] **RAIL-07**: The rail's `role="group"` stays labelled by the row name (`aria-labelledby`), so
       the row's identity is announced once rather than on every cover
@@ -157,12 +157,12 @@ Which phases cover which requirements. Populated during roadmap creation (2026-1
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RAIL-01 | Phase 01.8.4 | Pending |
+| RAIL-01 | Phase 01.8.4 | Complete |
 | RAIL-02 | Phase 01.8.4 | Complete |
-| RAIL-03 | Phase 01.8.4 | Pending |
+| RAIL-03 | Phase 01.8.4 | Complete |
 | RAIL-04 | Phase 01.8.4 | Complete |
 | RAIL-05 | Phase 01.8.4 | Complete |
-| RAIL-06 | Phase 01.8.4 | Pending |
+| RAIL-06 | Phase 01.8.4 | Complete |
 | RAIL-07 | Phase 01.8.4 | Complete |
 | ADD-01 | Phase 01.8.4 | Complete |
 | ADD-02 | Phase 01.8.4 | Complete |
