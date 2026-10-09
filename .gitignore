@@ -58,3 +58,10 @@ npm-debug.log
 /.gsd/
 /.planning/milestone.lock
 
+# Guard against esbuild/tailwind binaries landing at the repo root. The Mix
+# tasks resolve their binary under /_build/ (already ignored above) since no
+# `path:` override is set in config/config.exs — a copy at the root is always
+# a stray. Worth an explicit rule because the Tailwind binary is ~118MB and
+# this repo is public; `mix assets.setup` re-downloads either on demand.
+/esbuild-*
+/tailwind-*
