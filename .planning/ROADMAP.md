@@ -33,7 +33,7 @@ numbers and their scope; nothing from them is pulled forward.
 - [x] **Phase 01.7: Production Catalog Data & Security Hardening** - Load the real ~400+ game catalog into production via a safe repeatable path, then close the cookie/HSTS/CSP/CSRF gaps and sweep git history for secrets (completed 2026-09-11)
 - [x] **Phase 01.8: SEO, Structured Data & Social Sharing** - Per-game meta/OG/Twitter tags, `Game` + `LocalBusiness` JSON-LD under a nonced CSP, live `sitemap.xml`, real `robots.txt`, and real image `alt` text (completed 2026-09-12)
 - [x] **Phase 01.8.1: Staff Admin — Ludoteca, Shelves & Curated Destacados** - Invite-only staff magic-link auth, ludoteca CRUD, per-game shelf locations with walk-the-shelf assignment, curated first carousel, CSV-band vs BGG-weight audit (inserted 2026-09-13, prioritized ahead of Phase 2/3) (completed 2026-09-16)
-- [ ] **Phase 01.8.2: Admin UI/UX Redesign** - Implement sketches 059–065 across the staff admin: in-shelf position backend, admin shell, Estantes as one page, one save bar, one action system, sheets (inserted 2026-09-16)
+- [x] **Phase 01.8.2: Admin UI/UX Redesign** - Implement sketches 059–065 across the staff admin: in-shelf position backend, admin shell, Estantes as one page, one save bar, one action system, sheets (inserted 2026-09-16) (completed 2026-10-09)
 - [x] **Phase 01.8.3: Admin Screen-by-Screen Refinement** - Close the UI gaps raised by 01.8.2's UAT one admin screen at a time: main-menu screens drop their back row and page title, the Juegos search cluster becomes a `+` that opens a bottom sheet, one shared page width across bar and body, opaque pinned section captions, and the list/section/facet refinements (inserted 2026-09-24) (completed 2026-09-28)
 
 ### Phase 01.7: Production Catalog Data & Security Hardening (INSERTED)
@@ -192,7 +192,7 @@ escribe», and every admin screen shares one shell, one save bar, one action sys
 **Depends on:** Phase 01.8.1
 **Context:** `.planning/notes/admin-redesign-scope.md`, `.planning/notes/estante-ui-restart.md`, `.planning/notes/juegos-ui-redesign.md`
 **UI hint**: yes
-**Plans:** 21/22 plans executed
+**Plans:** 22/22 plans complete
 
 Plans:
 
@@ -252,7 +252,7 @@ Plans:
 
 **Wave 12**
 
-- [ ] 01.8.2-22-PLAN.md — rollout: the pre-deploy baseline (D-06), the same-deploy gate (D-07), the post-deploy smoke, D-20's Phase 4 scope note, D-21's UAT set
+- [x] 01.8.2-22-PLAN.md — rollout: the pre-deploy baseline (D-06), the same-deploy gate (D-07), the post-deploy smoke, D-20's Phase 4 scope note, D-21's UAT set
 
 ### Phase 01.8.3: Admin Screen-by-Screen Refinement (INSERTED)
 
