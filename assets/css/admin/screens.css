@@ -233,6 +233,100 @@
   color: var(--color-primary);
 }
 
+/* Plan 01.8.4-01, RAIL-01: the Web rail becomes the add surface. It is its
+   own family and deliberately reuses none of the public catalog's rail
+   classes: the public rail declares a 1rem gap, fades its edges and sizes
+   its cards for the catalog, and each of those contradicts a rail whose
+   spacing lives in the slot between every pair of covers. The rail
+   declares NO gap. The slot carries the spacing, so the covers sit
+   exactly where the sketch drew them. */
+.pk-admin-web-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 16px 16px 8px;
+}
+
+.pk-admin-web-box {
+  /* Positioned and raised so a neighbouring slot's hit layer (below) runs
+     under this cover instead of over it. */
+  position: relative;
+  z-index: 1;
+  flex: 0 0 96px;
+  width: 96px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  scroll-snap-align: center;
+}
+
+.pk-admin-web-box__caption {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 4px;
+  min-height: 31px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--color-neutral);
+}
+
+/* 20px of slot plus 12px of margin either side is a 44px hit box. The
+   hit layer below runs UNDER the inert covers without covering them. */
+.pk-admin-web-slot {
+  position: relative;
+  flex: 0 0 20px;
+  align-self: stretch;
+  display: grid;
+  place-items: start center;
+  margin: 0 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-neutral);
+}
+
+.pk-admin-web-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0 -12px;
+}
+
+/* The end slots reclaim the rail's own 16px padding, so their hit boxes
+   still measure 44px wide. */
+.pk-admin-web-slot:first-child {
+  margin-left: 0;
+}
+
+.pk-admin-web-slot:last-child {
+  margin-right: 0;
+}
+
+.pk-admin-web-slot:first-child::before {
+  left: -16px;
+}
+
+.pk-admin-web-slot:last-child::before {
+  right: -16px;
+}
+
+.pk-admin-web-slot__plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 38px;
+  border-radius: 50%;
+  border: 1px dashed var(--stroke);
+  background: var(--color-base-100);
+  font-size: 16px;
+  line-height: 1;
+}
+
 .pk-admin-web-search {
   margin-top: 16px;
 }

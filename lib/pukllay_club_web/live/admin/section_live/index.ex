@@ -34,6 +34,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   alias Phoenix.LiveView.JS
   alias PukllayClub.Catalog
   alias PukllayClub.Catalog.Sections
+  alias PukllayClubWeb.Admin.Params
   alias PukllayClubWeb.AdminComponents
 
   @impl true
@@ -48,6 +49,9 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> assign(:add_error, nil)
      |> assign(:selected_member, nil)
      |> assign(:removed, nil)
+     |> assign(:add_sheet, nil)
+     |> assign(:placed, nil)
+     |> assign(:landed_game_id, nil)
      |> assign(:reorder_mode, false)
      |> assign(:revealed_section_id, nil)
      |> assign(:reorder_snapshot, nil)
@@ -98,7 +102,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   def handle_event("save", %{"section" => params}, socket) do
     case Sections.update_section(socket.assigns.featured, normalize_ajustes_params(params)) do
       {:ok, _section} ->
-        {:noreply, socket |> load_sections() |> put_flash(:info, "Fila guardada.")}
+        {:noreply, socket |> load_sections() |> clear_snackbars() |> put_flash(:info, "Fila guardada.")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -133,6 +137,83 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     end
   end
 
+  # ------------------------------------------------------------------
+  # The rail's "+" slots and the «¿Qué juego va acá?» sheet (01.8.4, ADD-01,
+  # ADD-02, ADD-06). Every param is parsed through `Params.parse_int/2`
+  # with an explicit range; the slot is bounds-checked against a FRESH
+  # `Sections.section_members/1` read, never the render-time
+  # `@featured_members`; and no event accepts a section id from the client.
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("open-add-sheet", %{"index" => raw}, %{assigns: %{featured: %{}}} = socket) do
+    ids = live_member_ids(socket)
+
+    case Params.parse_int(raw, 0..length(ids)) do
+      {:ok, index} ->
+        sheet = %{index: index, snapshot_ids: ids, query: "", results: [], recent: []}
+        {:noreply, assign(socket, :add_sheet, sheet)}
+
+      :error ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("open-add-sheet", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("close-add-sheet", _params, socket) do
+    {:noreply, assign(socket, :add_sheet, nil)}
+  end
+
+  @impl true
+  def handle_event("add-sheet-search", %{"q" => q}, %{assigns: %{add_sheet: %{} = sheet}} = socket) when is_binary(q) do
+    query = String.slice(q, 0, 120)
+    results = candidate_games(sheet.snapshot_ids, query)
+    {:noreply, assign(socket, :add_sheet, %{sheet | query: query, results: results})}
+  end
+
+  def handle_event("add-sheet-search", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("add-sheet-pick", %{"game-id" => raw}, %{assigns: %{add_sheet: %{} = sheet, featured: %{}}} = socket) do
+    if live_member_ids(socket) == sheet.snapshot_ids do
+      case Params.parse_int(raw, Params.bigint_range()) do
+        {:ok, game_id} -> {:noreply, place_game(socket, sheet, game_id)}
+        :error -> {:noreply, socket}
+      end
+    else
+      # The row changed under the open sheet: the tapped gap no longer
+      # means what it meant. Say so and write nothing, rather than
+      # clamping to the nearest valid slot.
+      {:noreply,
+       socket
+       |> assign(:add_sheet, nil)
+       |> clear_snackbars()
+       |> put_flash(:info, "La fila cambió mientras elegías un juego. Probá de nuevo.")}
+    end
+  end
+
+  def handle_event("add-sheet-pick", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("undo-place", _params, %{assigns: %{placed: %{kind: :added, game_id: id}}} = socket) do
+    {:ok, _section} = Sections.remove_game(socket.assigns.featured, id)
+
+    {:noreply,
+     socket
+     |> assign(:placed, nil)
+     |> assign(:landed_game_id, nil)
+     |> load_sections()}
+  end
+
+  def handle_event("undo-place", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("dismiss-place-snackbar", _params, socket) do
+    {:noreply, assign(socket, :placed, nil)}
+  end
+
   @impl true
   def handle_event("open-member-sheet", %{"game-id" => id}, socket) do
     case Integer.parse(id) do
@@ -163,6 +244,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
         {:noreply,
          socket
          |> assign(:selected_member, nil)
+         |> clear_snackbars()
          |> assign(:removed, member && %{game_id: int_id, name: member.game.name})
          |> load_sections()}
 
@@ -203,6 +285,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      socket
      |> assign(:reorder_mode, false)
      |> assign(:revealed_section_id, nil)
+     |> clear_snackbars()
      |> assign(:undo_snapshot, socket.assigns.reorder_snapshot)
      |> assign(:reorder_snapshot, nil)}
   end
@@ -299,6 +382,85 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     end
   end
 
+  defp live_member_ids(socket) do
+    socket.assigns.featured |> Sections.section_members() |> Enum.map(& &1.game_id)
+  end
+
+  defp place_game(socket, sheet, game_id) do
+    case Sections.insert_game_at(socket.assigns.featured, game_id, sheet.index) do
+      {:ok, _placement} ->
+        socket
+        |> assign(:add_sheet, nil)
+        |> load_sections()
+        |> clear_snackbars()
+        |> assign(:landed_game_id, game_id)
+        |> assign(:placed, %{kind: :added, game_id: game_id})
+
+      {:error, _reason} ->
+        assign(socket, :add_sheet, nil)
+    end
+  end
+
+  # This page emits snacks through two independent mechanisms — three
+  # assigns and `put_flash/3` — and an action-less flash snack has no
+  # dismiss consumer at all (the accepted `data-timeout` limitation), so a
+  # flash set earlier would otherwise render beside a later assign-driven
+  # snack. This is the single gate in front of EVERY snack-setting write in
+  # this module, reached in both orders: before each snackbar assign and
+  # before each `put_flash/3`.
+  defp clear_snackbars(socket) do
+    socket
+    |> assign(:removed, nil)
+    |> assign(:undo_snapshot, nil)
+    |> assign(:placed, nil)
+    |> clear_flash(:info)
+    |> clear_flash(:error)
+  end
+
+  # The sheet's candidate rows (ADD-03/ADD-04 replace this body with the
+  # ranked search and the recents). Non-members only for now: a game already
+  # in the row is not offered, and a retired game never is.
+  defp candidate_games(member_ids, query) do
+    if String.trim(query) == "" do
+      []
+    else
+      [q: query, limit: 6]
+      |> Catalog.list_admin_games()
+      |> Enum.reject(&(&1.status == :retired or &1.id in member_ids))
+    end
+  end
+
+  defp member_names(members), do: Enum.map(members, & &1.game.name)
+
+  # 0-based slot index into the rail's gaps: 0 is before the first cover,
+  # `length(names)` is after the last. The `0` clause is evaluated first, so
+  # an empty rail's single slot (where 0 is both the first and the last
+  # gap) reads "al principio".
+  defp slot_where(_names, 0), do: "al principio"
+  defp slot_where(names, index) when index == length(names), do: "al final"
+  defp slot_where(names, index), do: "entre #{Enum.at(names, index - 1)} y #{Enum.at(names, index)}"
+
+  defp add_sheet_subtitle(section_name, names, index), do: "#{section_name} · #{slot_where(names, index)}"
+
+  attr :index, :integer, required: true
+  attr :names, :list, required: true
+
+  defp web_slot(assigns) do
+    ~H"""
+    <button
+      type="button"
+      id={"web-slot-#{@index}"}
+      class="pk-admin-web-slot"
+      data-pk-pressable="true"
+      phx-click="open-add-sheet"
+      phx-value-index={@index}
+      aria-label={"Agregar un juego " <> slot_where(@names, @index)}
+    >
+      <span class="pk-admin-web-slot__plus" aria-hidden="true">+</span>
+    </button>
+    """
+  end
+
   defp search_candidates(socket, q) do
     member_game_ids = Enum.map(socket.assigns.featured_members, & &1.game_id)
 
@@ -333,20 +495,31 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
       <div class="mx-auto w-full max-w-3xl space-y-6">
         <h1 class="pk-admin-page-title">Web</h1>
 
-        <div :if={@featured} id="web-destacada" class="pk-admin-web-destacada">
-          <p class="pk-admin-web-destacada__name">{@featured.name}</p>
+        <div
+          :if={@featured}
+          id="web-destacada"
+          class="pk-admin-web-destacada"
+          phx-hook="AdminRail"
+        >
+          <p id="web-destacada-name" class="pk-admin-web-destacada__name">{@featured.name}</p>
           <p class="pk-admin-web-destacada__context">
             {length(@featured_members)} juego{if length(@featured_members) == 1, do: "", else: "s"}
           </p>
 
-          <div :if={@featured_members != []} class="pk-rail-wrap">
-            <div class="pk-rail" id="web-destacada-rail">
+          <div
+            id="web-destacada-rail"
+            class={["pk-admin-web-rail", @featured_members == [] && "pk-admin-web-rail--empty"]}
+            role="group"
+            aria-labelledby="web-destacada-name"
+          >
+            <%= for {member, index} <- Enum.with_index(@featured_members) do %>
+              <.web_slot index={index} names={member_names(@featured_members)} />
               <button
-                :for={member <- @featured_members}
                 type="button"
                 id={"web-cover-#{member.game_id}"}
-                class="pk-poster-card"
+                class="pk-admin-web-box"
                 data-pk-pressable="true"
+                data-pk-rail-selected={to_string(member.game_id == @landed_game_id)}
                 phx-click="open-member-sheet"
                 phx-value-game-id={member.game_id}
               >
@@ -361,8 +534,10 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
                     <.icon name="hero-puzzle-piece" class="size-8" />
                   </div>
                 </div>
+                <span class="pk-admin-web-box__caption" aria-hidden="true">{member.game.name}</span>
               </button>
-            </div>
+            <% end %>
+            <.web_slot index={length(@featured_members)} names={member_names(@featured_members)} />
           </div>
 
           <p :if={@featured_members == []} class="pk-admin-empty-note">
@@ -514,6 +689,55 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
           Quitar de la fila
         </AdminComponents.action>
       </AdminComponents.sheet>
+
+      <AdminComponents.sheet
+        :if={@add_sheet}
+        id="web-add-sheet"
+        title="¿Qué juego va acá?"
+        subtitle={
+          add_sheet_subtitle(@featured.name, member_names(@featured_members), @add_sheet.index)
+        }
+        open
+        on_close={JS.push("close-add-sheet")}
+        class="pk-estantes-sheet--full"
+      >
+        <:commit>
+          <div class="pk-donde-va-search">
+            <input
+              type="text"
+              id="web-add-sheet-input"
+              name="q"
+              value={@add_sheet.query}
+              placeholder="Buscá un juego"
+              aria-label="Buscá un juego"
+              autocomplete="off"
+              phx-change="add-sheet-search"
+              phx-debounce="200"
+              onfocus="this.select()"
+              data-pk-sheet-autofocus
+            />
+          </div>
+        </:commit>
+
+        <div :if={@add_sheet.query != ""} id="web-add-sheet-results">
+          <AdminComponents.list_row
+            :for={game <- @add_sheet.results}
+            id={"web-add-result-#{game.id}"}
+            cover={game.thumbnail_url}
+            name={game.name}
+            phx-click="add-sheet-pick"
+            phx-value-game-id={game.id}
+          />
+        </div>
+      </AdminComponents.sheet>
+
+      <AdminComponents.snackbar
+        :if={@placed}
+        id="web-place-snackbar"
+        message="Juego agregado"
+        action={%{label: "Deshacer", event: "undo-place"}}
+        on_close={JS.push("dismiss-place-snackbar")}
+      />
 
       <AdminComponents.snackbar
         :if={@removed}

@@ -16,6 +16,7 @@ defmodule PukllayClub.Catalog.Sections do
   import Ecto.Changeset
   import Ecto.Query
 
+  alias PukllayClub.Catalog.Game
   alias PukllayClub.Catalog.Section
   alias PukllayClub.Catalog.SectionGame
   alias PukllayClub.Repo
@@ -25,6 +26,19 @@ defmodule PukllayClub.Catalog.Sections do
   # as the insert (T-01.8.1-56) so two concurrent adds can never push the
   # featured section past the cap.
   @featured_cap 20
+
+  # Postgres' bigint maximum. A deliberate, documented mirror of
+  # `Catalog`'s own private copy — the two live in different layers and
+  # must change together. An id above it reaches Postgrex and raises
+  # `DBConnection.EncodeError` (verified), so the positional writers
+  # range-check a game id before any query binds it.
+  @max_bigint 9_223_372_036_854_775_807
+
+  @doc """
+  The featured section's member cap (D-26) — the one place the number
+  lives, so a caller never carries a second `20` literal.
+  """
+  def featured_cap, do: @featured_cap
 
   @doc """
   Every section (hidden included), featured first then by `position`
@@ -191,6 +205,98 @@ defmodule PukllayClub.Catalog.Sections do
   end
 
   def add_game(%Section{}, _game_id), do: {:error, :automatic_section}
+
+  @doc """
+  Places `game_id` in `section` at the chosen gap `slot` — the positional
+  counterpart to `add_game/2`'s append (01.8.4, CTX-01).
+
+  **The slot index is 0-based**: `0` means before the first cover, `n`
+  means after the last, where `n` is the current member count. Stored
+  `section_games.position` values stay dense `1..n` — the slot index is a
+  rail concept, not a column value. `add_game/2` keeps its own `max + 1`
+  path untouched; this is the general positional writer beside it.
+
+  Everything runs in one transaction that first re-reads the section row
+  `FOR UPDATE`, taking `kind` and `featured` from THAT row (the passed
+  struct can be stale), so the cap's count-then-insert cannot race. The
+  member order is loaded inside the lock and positions are then
+  **rewritten `1..n` from the new order** rather than shifted — which also
+  heals any non-dense positions already stored.
+
+  Returns `{:ok, %{section: locked_section, index: slot}}` or one of
+  `{:error, :automatic_section | :already_member | :featured_full |
+  :index_out_of_range | :game_not_found}`. A slot outside `0..n` is
+  rejected, never clamped into range: clamping would silently place the
+  game somewhere other than the gap the caller named. A retired or
+  unknown game id (including one above the bigint maximum) is
+  `:game_not_found` rather than a raise.
+  """
+  def insert_game_at(%Section{kind: :manual} = section, game_id, slot) do
+    Repo.transaction(fn ->
+      locked = lock_section!(section.id)
+
+      if locked.kind != :manual, do: Repo.rollback(:automatic_section)
+
+      rows = ordered_member_rows(locked.id)
+      ids = Enum.map(rows, & &1.game_id)
+
+      case validate_insert(locked, ids, game_id, slot) do
+        :ok ->
+          new_ids = List.insert_at(ids, slot, game_id)
+          positions = new_ids |> Enum.with_index(1) |> Map.new()
+
+          renumber_changed_rows(rows, positions)
+          Repo.insert!(%SectionGame{section_id: locked.id, game_id: game_id, position: Map.fetch!(positions, game_id)})
+
+          %{section: locked, index: slot}
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  def insert_game_at(%Section{}, _game_id, _slot), do: {:error, :automatic_section}
+
+  # The order matters: the bounds check runs before the already-member
+  # check, so a forged slot on an existing member reports the slot problem
+  # rather than masking it.
+  defp validate_insert(locked, ids, game_id, slot) do
+    cond do
+      not (is_integer(slot) and slot >= 0 and slot <= length(ids)) -> {:error, :index_out_of_range}
+      game_id in ids -> {:error, :already_member}
+      not live_game?(game_id) -> {:error, :game_not_found}
+      locked.featured and length(ids) >= @featured_cap -> {:error, :featured_full}
+      true -> :ok
+    end
+  end
+
+  # Re-reads the section row under a row lock (`FOR UPDATE`) — the lock is
+  # held until the surrounding transaction ends, so a second caller's
+  # count-then-insert blocks until the first commits.
+  defp lock_section!(section_id) do
+    Repo.one!(from s in Section, where: s.id == ^section_id, lock: "FOR UPDATE")
+  end
+
+  defp ordered_member_rows(section_id) do
+    Repo.all(from sg in SectionGame, where: sg.section_id == ^section_id, order_by: [asc: sg.position, asc: sg.id])
+  end
+
+  # Rewrites only the rows whose stored position differs from the dense
+  # position the new order assigns them.
+  defp renumber_changed_rows(rows, positions) do
+    Enum.each(rows, fn row ->
+      new_position = Map.fetch!(positions, row.game_id)
+      if new_position != row.position, do: {:ok, _row} = update_member_position(row, new_position)
+    end)
+  end
+
+  defp live_game?(game_id) when is_integer(game_id) and game_id >= 1 and game_id <= @max_bigint do
+    retired = :retired
+    Repo.exists?(from g in Game, where: g.id == ^game_id and g.status != ^retired)
+  end
+
+  defp live_game?(_game_id), do: false
 
   defp already_member?(section_id, game_id) do
     Repo.exists?(from sg in SectionGame, where: sg.section_id == ^section_id and sg.game_id == ^game_id)

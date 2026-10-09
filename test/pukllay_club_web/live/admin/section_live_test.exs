@@ -12,6 +12,11 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
   defp featured_section, do: Repo.get_by!(Section, featured: true)
 
+  # The rendered slot buttons' ids in left-to-right DOM order.
+  defp slot_ids(html) do
+    ~r/<button[^>]*\bid="(web-slot-\d+)"/ |> Regex.scan(html) |> Enum.map(&List.last/1)
+  end
+
   describe "SectionLive.Index — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
       assert {:error, {:redirect, %{to: "/admin/ingresar"}}} = live(conn, ~p"/admin/secciones")
@@ -313,6 +318,77 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
         |> render_click()
 
       assert html =~ "La sección destacada ya tiene 20 juegos. Quitá uno para agregar otro."
+    end
+  end
+
+  describe "SectionLive.Index — the + slot rail and the add sheet (01.8.4, tracer)" do
+    setup :register_and_log_in_staff
+
+    test "a tap on slot 0 opens the sheet, a pick lands the game first, Deshacer restores the row",
+         %{conn: conn} do
+      featured = featured_section()
+      first = game_fixture(%{name: "Everdell"})
+      second = game_fixture(%{name: "Wingspan"})
+      add_game_to_section(featured, first, 1)
+      add_game_to_section(featured, second, 2)
+      picked = game_fixture(%{name: "Carcassonne"})
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      # n covers render n + 1 slots, and the rail is one labelled group.
+      assert slot_ids(html) == ["web-slot-0", "web-slot-1", "web-slot-2"]
+      assert has_element?(lv, ~s(#web-destacada-rail[role="group"][aria-labelledby="web-destacada-name"]))
+      assert has_element?(lv, "#web-destacada-name", featured.name)
+
+      sheet_html = lv |> element("#web-slot-0") |> render_click()
+
+      assert sheet_html =~ "¿Qué juego va acá?"
+      assert sheet_html =~ "#{featured.name} · al principio"
+
+      assert has_element?(
+               lv,
+               "#web-add-sheet #web-add-sheet-input[placeholder='Buscá un juego'][data-pk-sheet-autofocus]"
+             )
+
+      render_change(lv, "add-sheet-search", %{"q" => "carcas"})
+      assert has_element?(lv, "#web-add-sheet-results #web-add-result-#{picked.id}")
+
+      html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
+
+      refute has_element?(lv, "#web-add-sheet")
+      members = Sections.section_members(featured)
+      assert Enum.map(members, & &1.game_id) == [picked.id, first.id, second.id]
+      assert Enum.map(members, & &1.position) == [1, 2, 3]
+      assert html =~ "Juego agregado"
+      assert html =~ ~s(data-timeout="10000")
+
+      lv |> element("button[phx-click='undo-place']") |> render_click()
+
+      assert featured |> Sections.section_members() |> Enum.map(& &1.game_id) == [first.id, second.id]
+      refute has_element?(lv, "#web-place-snackbar")
+    end
+
+    test "slot labels name the two covers a slot sits between", %{conn: conn} do
+      featured = featured_section()
+      add_game_to_section(featured, game_fixture(%{name: "Everdell"}), 1)
+      add_game_to_section(featured, game_fixture(%{name: "Wingspan"}), 2)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      assert has_element?(lv, "#web-slot-0[aria-label='Agregar un juego al principio']")
+      assert has_element?(lv, "#web-slot-1[aria-label='Agregar un juego entre Everdell y Wingspan']")
+      assert has_element?(lv, "#web-slot-2[aria-label='Agregar un juego al final']")
+    end
+
+    test "an empty row renders its single slot, labelled al principio", %{conn: conn} do
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert slot_ids(html) == ["web-slot-0"]
+      assert has_element?(lv, "#web-slot-0[aria-label='Agregar un juego al principio']")
+      assert has_element?(lv, ~s(#web-destacada-rail[role="group"][aria-labelledby="web-destacada-name"]))
+
+      sheet_html = lv |> element("#web-slot-0") |> render_click()
+      assert sheet_html =~ "· al principio"
     end
   end
 

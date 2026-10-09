@@ -231,9 +231,14 @@ export default {
         this.overlayLockHeld = true
       }
       this.lastFocused = document.activeElement
+      // Plan 01.8.4-01 (ADD-02): a sheet whose first job is a search field
+      // opts in with `data-pk-sheet-autofocus` on that field, and it is
+      // looked up BEFORE the close button. The attribute is opt-in, so every
+      // shipped sheet keeps focusing its close button exactly as before.
       const initial = this.isDialog
         ? this.panel?.querySelector("[data-pk-dialog-cancel]")
-        : this.panel?.querySelector("[data-pk-sheet-close]")
+        : this.panel?.querySelector("[data-pk-sheet-autofocus]") ||
+          this.panel?.querySelector("[data-pk-sheet-close]")
       initial?.focus()
     }
     // FIX (plan 01.8.3-14, G-01.8.3-4c): the guard that used to live here

@@ -242,6 +242,52 @@ defmodule PukllayClub.Catalog.SectionsTest do
     end
   end
 
+  describe "insert_game_at/3 (01.8.4, CTX-01) — places at the chosen slot" do
+    setup do
+      section = section_fixture(%{kind: :manual, sort: :manual})
+      a = game_fixture(%{name: "A"})
+      b = game_fixture(%{name: "B"})
+      {:ok, _} = Sections.add_game(section, a.id)
+      {:ok, _} = Sections.add_game(section, b.id)
+      %{section: section, a: a, b: b, new: game_fixture(%{name: "Nuevo"})}
+    end
+
+    test "slot 0 places before the first member, positions dense 1..3", ctx do
+      assert {:ok, %{index: 0}} = Sections.insert_game_at(ctx.section, ctx.new.id, 0)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.new.id, ctx.a.id, ctx.b.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "a middle slot places between two members, positions dense 1..3", ctx do
+      assert {:ok, %{index: 1}} = Sections.insert_game_at(ctx.section, ctx.new.id, 1)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.a.id, ctx.new.id, ctx.b.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "slot n places after the last member, positions dense 1..3", ctx do
+      assert {:ok, %{index: 2}} = Sections.insert_game_at(ctx.section, ctx.new.id, 2)
+
+      members = Sections.section_members(ctx.section)
+      assert Enum.map(members, & &1.game_id) == [ctx.a.id, ctx.b.id, ctx.new.id]
+      assert Enum.map(members, & &1.position) == Enum.to_list(1..3)
+    end
+
+    test "returns the locked section row", ctx do
+      assert {:ok, %{section: section}} = Sections.insert_game_at(ctx.section, ctx.new.id, 0)
+      assert section.id == ctx.section.id
+    end
+  end
+
+  describe "featured_cap/0" do
+    test "is the one place the featured cap lives" do
+      assert Sections.featured_cap() == 20
+    end
+  end
+
   describe "remove_game/2 (D-25)" do
     test "removes and re-packs positions densely" do
       section = section_fixture(%{kind: :manual, sort: :manual})
