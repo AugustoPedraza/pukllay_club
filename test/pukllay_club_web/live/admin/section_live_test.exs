@@ -29,6 +29,13 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     ~r/id="(web-add-sheet-recent-\d+)"/ |> Regex.scan(html) |> Enum.map(&List.last/1)
   end
 
+  # Quick 261010-gig: neither form is on the page at rest. Both are reached
+  # by tapping their trigger — the destacada's own NAME for its settings, the
+  # "+" beside the page title for a new row.
+  defp open_edit_sheet(lv), do: lv |> element("#web-destacada-name-button") |> render_click()
+
+  defp open_create_sheet(lv), do: lv |> element("button[phx-click='open-create-sheet']") |> render_click()
+
   describe "SectionLive.Index — anonymous access" do
     test "an anonymous request redirects to /admin/ingresar", %{conn: conn} do
       assert {:error, {:redirect, %{to: "/admin/ingresar"}}} = live(conn, ~p"/admin/secciones")
@@ -212,6 +219,9 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert home_html_before =~ featured.name
 
       {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+      refute html =~ "Mostrar en el inicio"
+
+      html = open_edit_sheet(lv)
       assert html =~ "Mostrar en el inicio"
       refute html =~ "Ocultar en la home"
 
@@ -226,11 +236,13 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       add_game_to_section(featured, game_fixture())
 
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_edit_sheet(lv)
       lv |> form("#web-ajustes-form", section: %{shown: "false"}) |> render_submit()
 
       {:ok, _home_lv, hidden_html} = live(build_conn(), ~p"/")
       refute hidden_html =~ featured.name
 
+      open_edit_sheet(lv)
       lv |> form("#web-ajustes-form", section: %{shown: "true"}) |> render_submit()
 
       {:ok, _home_lv, home_html} = live(build_conn(), ~p"/")
@@ -599,7 +611,10 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       html = lv |> element("#web-add-result-#{picked.id}") |> render_click()
       assert landed_cover_ids(html) == ["web-cover-#{picked.id}"]
 
-      html = lv |> form("#web-ajustes-form", %{"section" => %{"name" => "Destacados nuevos"}}) |> render_submit()
+      open_edit_sheet(lv)
+
+      html =
+        lv |> form("#web-ajustes-form", %{"section" => %{"name" => "Destacados nuevos"}}) |> render_submit()
 
       refute html =~ "pk-admin-web-box--landed"
     end
@@ -738,6 +753,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       snackbars = fn -> length(Regex.scan(~r/data-pk-snackbar/, render(lv))) end
 
       # flash first, then a snackbar assign
+      open_edit_sheet(lv)
       lv |> form("#web-ajustes-form", section: %{name: featured.name}) |> render_submit()
       assert render(lv) =~ "Fila guardada."
       assert snackbars.() == 1
@@ -749,6 +765,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert snackbars.() == 1
 
       # a snackbar assign first, then a flash
+      open_edit_sheet(lv)
       lv |> form("#web-ajustes-form", section: %{name: featured.name}) |> render_submit()
       assert render(lv) =~ "Fila guardada."
       refute render(lv) =~ "Juego agregado"
@@ -1155,11 +1172,102 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
     end
   end
 
+  describe "SectionLive.Index — neither form is open at rest (quick 261010-gig, sketch 070)" do
+    setup :register_and_log_in_staff
+
+    test "the page carries no form on mount", %{conn: conn} do
+      featured = featured_section()
+      seed_two(featured)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      refute has_element?(lv, "#web-ajustes-form")
+      refute has_element?(lv, "#create-section-form")
+      refute html =~ "Mostrar en el inicio"
+      refute html =~ "Nombre de la sección"
+    end
+
+    test "the destacada's name is the dialog trigger that opens its settings", %{conn: conn} do
+      featured = featured_section()
+      seed_two(featured)
+
+      {:ok, lv, html} = live(conn, ~p"/admin/secciones")
+
+      assert has_element?(
+               lv,
+               ~s(#web-destacada-name-button[aria-haspopup="dialog"][phx-click="open-edit-sheet"])
+             )
+
+      # The rail's label target is still the name text itself, exactly once.
+      assert length(Regex.scan(~r/id="web-destacada-name"/, html)) == 1
+      assert has_element?(lv, "#web-destacada-name", featured.name)
+
+      html = open_edit_sheet(lv)
+
+      assert html =~ "Editar fila"
+      assert has_element?(lv, "#web-edit-sheet #web-ajustes-form")
+      assert has_element?(lv, "#web-ajustes-shown")
+      assert length(Regex.scan(~r/id="web-destacada-name"/, html)) == 1
+    end
+
+    test "saving from the sheet closes it; an invalid name keeps it open", %{conn: conn} do
+      featured = featured_section()
+      seed_two(featured)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_edit_sheet(lv)
+
+      html = lv |> form("#web-ajustes-form", section: %{name: ""}) |> render_submit()
+
+      assert has_element?(lv, "#web-ajustes-form")
+      assert html =~ "can&#39;t be blank"
+
+      html = lv |> form("#web-ajustes-form", section: %{name: "Destacados del club 2"}) |> render_submit()
+
+      assert html =~ "Fila guardada."
+      refute has_element?(lv, "#web-ajustes-form")
+      assert has_element?(lv, "#web-destacada-name", "Destacados del club 2")
+      assert featured.id == featured_section().id
+    end
+
+    test "the page title's + opens the create sheet and closing it puts the form away", %{
+      conn: conn
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+
+      assert has_element?(lv, ~s(button[phx-click="open-create-sheet"][aria-label="Nueva fila"]))
+
+      html = open_create_sheet(lv)
+
+      assert html =~ "Nueva fila"
+      assert has_element?(lv, "#web-create-sheet #create-section-form")
+
+      html = render_click(lv, "close-create-sheet", %{})
+
+      refute html =~ "Nombre de la sección"
+      refute has_element?(lv, "#create-section-form")
+    end
+
+    test "a name error survives a re-render but not a reopen", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_create_sheet(lv)
+
+      html = lv |> form("#create-section-form", name: "") |> render_submit()
+      assert html =~ "can&#39;t be blank"
+
+      render_click(lv, "close-create-sheet", %{})
+      html = open_create_sheet(lv)
+
+      refute html =~ "can&#39;t be blank"
+    end
+  end
+
   describe "SectionLive.Index — create (D-17, \"Crear sección\")" do
     setup :register_and_log_in_staff
 
     test "creating a section navigates to its own edit screen", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_create_sheet(lv)
 
       {:ok, edit_lv, edit_html} =
         lv
@@ -1173,6 +1281,7 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
 
     test "a blank name shows a validation error and stays on the list", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      open_create_sheet(lv)
 
       html = lv |> form("#create-section-form", name: "") |> render_submit()
 

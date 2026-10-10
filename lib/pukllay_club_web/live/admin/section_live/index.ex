@@ -11,6 +11,14 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
   directly on this page instead, since D-19l already gives it a resting
   place at the top.
 
+  Neither form on this page renders at rest (quick 261010-gig, sketch
+  070's `.phead`/`.fname`/`nameSheet()`): the destacada's own settings
+  open as the `Editar fila` sheet when its NAME is tapped, and the
+  `Nueva fila` sheet opens from the "+" to the right of the page title.
+  The two panels those replace (`Ajustes` under the rail, `Nueva fila` at
+  the foot of the page) are gone — the forms, their events and the
+  `shown`→`hidden` inversion below moved unchanged.
+
   `Quitar de la fila` (D-19k) is the explicit counter-case to D-19f: it
   happens at once with a 10s Deshacer snackbar, no dialog, and the row is
   never Peligro red — removing a game from a curated row loses no state
@@ -56,6 +64,8 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
      |> assign(:selected_member, nil)
      |> assign(:removed, nil)
      |> assign(:add_sheet, nil)
+     |> assign(:edit_sheet, false)
+     |> assign(:create_sheet, false)
      |> assign(:placed, nil)
      |> assign(:landed_game_id, nil)
      |> assign(:reorder_mode, false)
@@ -74,6 +84,44 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
     |> assign(:other_sections, Enum.reject(sections, & &1.featured))
     |> assign(:featured_members, if(featured, do: Sections.section_members(featured), else: []))
     |> assign(:form, if(featured, do: to_form(Sections.change_section(featured))))
+  end
+
+  # ------------------------------------------------------------------
+  # The two name-tap sheets (sketch 070's `.fname` → `nameSheet()` and
+  # `.phead`'s "+"). Neither form renders at rest: opening the edit sheet
+  # re-reads the destacada so a half-typed, never-saved edit cannot come
+  # back on the next open, and opening the create sheet clears the field
+  # and its error for the same reason.
+  # ------------------------------------------------------------------
+
+  @impl true
+  def handle_event("open-edit-sheet", _params, %{assigns: %{featured: %{} = featured}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:form, to_form(Sections.change_section(featured)))
+     |> assign(:edit_sheet, true)}
+  end
+
+  @impl true
+  def handle_event("open-edit-sheet", _params, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_event("close-edit-sheet", _params, socket) do
+    {:noreply, assign(socket, :edit_sheet, false)}
+  end
+
+  @impl true
+  def handle_event("open-create-sheet", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:name_input, "")
+     |> assign(:name_error, nil)
+     |> assign(:create_sheet, true)}
+  end
+
+  @impl true
+  def handle_event("close-create-sheet", _params, socket) do
+    {:noreply, assign(socket, :create_sheet, false)}
   end
 
   @impl true
@@ -113,6 +161,7 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
          |> load_sections()
          |> clear_snackbars()
          |> assign(:landed_game_id, nil)
+         |> assign(:edit_sheet, false)
          |> put_flash(:info, "Fila guardada.")}
 
       {:error, changeset} ->
@@ -564,7 +613,20 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
       active_tab={:web}
     >
       <div class="mx-auto w-full max-w-3xl space-y-6">
-        <h1 class="pk-admin-page-title">Web</h1>
+        <%!-- Sketch 070's `.phead`: the page title plus a trailing icon row.
+        The "+" is the page's create control — the «Nueva fila» panel that used
+        to sit open at the bottom of the page is now the sheet it opens. --%>
+        <div class="pk-admin-web-head">
+          <h1 class="pk-admin-page-title">Web</h1>
+          <AdminComponents.action
+            anatomy="a3"
+            role="terciaria"
+            aria-label="Nueva fila"
+            phx-click="open-create-sheet"
+          >
+            <.icon name="hero-plus" class="size-5" />
+          </AdminComponents.action>
+        </div>
 
         <div
           :if={@featured}
@@ -572,7 +634,21 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
           class="pk-admin-web-destacada"
           phx-hook="AdminRail"
         >
-          <p id="web-destacada-name" class="pk-admin-web-destacada__name">{@featured.name}</p>
+          <%!-- Sketch 070's `.fname`: the row's name IS the control that opens
+          its settings (`aria-haspopup="dialog"`), so the Ajustes form no longer
+          sits open under the rail. The id stays on the element that holds the
+          name text — it is what the rail group below is `aria-labelledby`. --%>
+          <button
+            type="button"
+            id="web-destacada-name-button"
+            class="pk-admin-web-destacada__name-button"
+            data-pk-pressable="true"
+            aria-haspopup="dialog"
+            aria-label={"Editar «#{@featured.name}»"}
+            phx-click="open-edit-sheet"
+          >
+            <p id="web-destacada-name" class="pk-admin-web-destacada__name">{@featured.name}</p>
+          </button>
           <p class="pk-admin-web-destacada__context">
             {length(@featured_members)} juego{if length(@featured_members) == 1, do: "", else: "s"}
           </p>
@@ -624,30 +700,6 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
           <p :if={@featured_members == []} class="pk-admin-empty-note">
             Sin juegos, no se ve en el inicio.
           </p>
-
-          <AdminComponents.section_panel class="pk-admin-web-ajustes">
-            <:label>Ajustes</:label>
-            <.form
-              for={@form}
-              id="web-ajustes-form"
-              phx-change="validate"
-              phx-submit="save"
-              class="pk-admin-stacked-form"
-            >
-              <AdminComponents.field field={@form[:name]} label="Nombre" />
-              <AdminComponents.field field={@form[:subtitle]} label="Subtítulo" />
-              <AdminComponents.field
-                type="checkbox"
-                id="web-ajustes-shown"
-                name="section[shown]"
-                checked={!@form[:hidden].value}
-                label="Mostrar en el inicio"
-              />
-              <AdminComponents.action anatomy="a1" role="principal" type="submit">
-                Guardar
-              </AdminComponents.action>
-            </.form>
-          </AdminComponents.section_panel>
         </div>
 
         <section :if={@other_sections != []} id="web-otras-filas" class="pk-admin-web-otras">
@@ -707,24 +759,70 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
             </AdminComponents.reorder_row>
           </div>
         </section>
-
-        <AdminComponents.section_panel class="pk-admin-web-create">
-          <:label>Nueva fila</:label>
-          <form id="create-section-form" phx-submit="create" class="pk-admin-web-create-form">
-            <AdminComponents.field
-              type="text"
-              id="create-section-name"
-              name="name"
-              value={@name_input}
-              label="Nombre de la sección"
-              errors={if @name_error, do: [@name_error], else: []}
-            />
-            <AdminComponents.action anatomy="a1" role="principal" type="submit">
-              Crear sección
-            </AdminComponents.action>
-          </form>
-        </AdminComponents.section_panel>
       </div>
+
+      <%!-- Sketch 070's `nameSheet()`, edit side: the destacada's own settings,
+      opened by tapping its name. The form, its events and the `shown`→`hidden`
+      inversion are unchanged from the panel this replaces. --%>
+      <AdminComponents.sheet
+        :if={@featured && @edit_sheet}
+        id="web-edit-sheet"
+        title="Editar fila"
+        subtitle={@featured.name}
+        open
+        on_close={JS.push("close-edit-sheet")}
+      >
+        <.form
+          for={@form}
+          id="web-ajustes-form"
+          phx-change="validate"
+          phx-submit="save"
+          class="pk-admin-stacked-form pk-admin-web-sheet-form"
+        >
+          <AdminComponents.field field={@form[:name]} label="Nombre" data-pk-sheet-autofocus />
+          <AdminComponents.field field={@form[:subtitle]} label="Subtítulo" />
+          <AdminComponents.field
+            type="checkbox"
+            id="web-ajustes-shown"
+            name="section[shown]"
+            checked={!@form[:hidden].value}
+            label="Mostrar en el inicio"
+          />
+          <AdminComponents.action anatomy="a1" role="principal" type="submit">
+            Guardar
+          </AdminComponents.action>
+        </.form>
+      </AdminComponents.sheet>
+
+      <%!-- Sketch 070's `nameSheet()`, new side. Name only, as the panel it
+      replaces was: `create` navigates to the new row's own page, where its
+      subtitle is edited. --%>
+      <AdminComponents.sheet
+        :if={@create_sheet}
+        id="web-create-sheet"
+        title="Nueva fila"
+        open
+        on_close={JS.push("close-create-sheet")}
+      >
+        <form
+          id="create-section-form"
+          phx-submit="create"
+          class="pk-admin-stacked-form pk-admin-web-sheet-form"
+        >
+          <AdminComponents.field
+            type="text"
+            id="create-section-name"
+            name="name"
+            value={@name_input}
+            label="Nombre de la sección"
+            errors={if @name_error, do: [@name_error], else: []}
+            data-pk-sheet-autofocus
+          />
+          <AdminComponents.action anatomy="a1" role="principal" type="submit">
+            Crear sección
+          </AdminComponents.action>
+        </form>
+      </AdminComponents.sheet>
 
       <AdminComponents.sheet
         :if={@selected_member}

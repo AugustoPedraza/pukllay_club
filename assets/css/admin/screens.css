@@ -197,6 +197,31 @@
    mirroring `estantes.css`'s `.pk-estantes-cover__*` shape verbatim.
    ============================================================ */
 
+/* Quick 261010-gig / sketch 070 `.phead`: the page title and its trailing
+   icon row. Same anatomy `.pk-admin-web-otras-header` below already uses on
+   this screen — a flex row with the label at one end and a 44px A3 icon at
+   the other — rather than a second, absolutely-positioned header shape. */
+.pk-admin-web-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Sketch 070 `.fname`: the name is the control that opens the row's
+   settings, so it needs the button reset (a `<button>` otherwise inherits
+   the UA's centred, 13px, bordered box) while the 17/600 rank below stays
+   on the `<p>` the rail is `aria-labelledby`. */
+.pk-admin-web-destacada__name-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
 .pk-admin-web-destacada__name {
   margin: 0;
   font-size: 17px;
@@ -425,10 +450,6 @@
   margin-top: 4px;
 }
 
-.pk-admin-web-ajustes {
-  margin-top: 16px;
-}
-
 .pk-admin-web-otras {
   display: flex;
   flex-direction: column;
@@ -459,15 +480,15 @@
   min-width: 0;
 }
 
-.pk-admin-web-create {
-  margin-top: 8px;
-}
-
-.pk-admin-web-create-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
+/* Quick 261010-gig: both of this screen's forms now live inside a sheet
+   (`web-edit-sheet`, `web-create-sheet`). `.pk-admin-stacked-form` above
+   gives them their 12px field rhythm; the commit control goes full-width
+   the way `.pk-editor-sheet-save` (editor.css) already does for the one
+   in-sheet form pattern that ships, instead of shrink-wrapping to its own
+   text at `align-items: flex-start`. */
+.pk-admin-web-sheet-form .pk-admin-action {
+  width: 100%;
+  margin-top: 4px;
 }
 
 /* ============================================================
