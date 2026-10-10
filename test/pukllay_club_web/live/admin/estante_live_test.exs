@@ -617,6 +617,27 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert on_b == [selected.id, a0.id]
     end
 
+    # Browser-reachability, not handler-reachability: starts at the DOM, so it fails if the
+    # search input has no enclosing <form> to serialize `q` into.
+    test "a keystroke in the real ¿Qué juego va acá? search field renders a matching game row",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      selected = copy_fixture(%{game_id: game_fixture(%{name: "Elegido"}).id})
+      {:ok, _} = Shelves.place_copy(selected.id, shelf_b.id, 0)
+      a0 = copy_fixture(%{game_id: game_fixture(%{name: "A0"}).id})
+      {:ok, _} = Shelves.place_copy(a0.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "elegido"})
+      lv |> element("#suggestion-#{selected.id}") |> render_click()
+      render_click(lv, "open-que-va-aca", %{"index" => "1"})
+
+      lv |> form("#que-va-aca-search-form", %{q: "a0"}) |> render_change()
+
+      assert has_element?(lv, "#que-va-aca-result-#{a0.id}")
+    end
+
     test "picking a Sin ubicar game places it beside the selected cover in one transaction",
          %{conn: conn} do
       shelf = shelf_fixture(%{name: "Estante Norte"})
