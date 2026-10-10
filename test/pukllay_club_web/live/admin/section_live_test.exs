@@ -816,6 +816,24 @@ defmodule PukllayClubWeb.Admin.SectionLiveTest do
       assert starts_at < contains_at
     end
 
+    # Browser-reachability, not handler-reachability. The sibling tests hand-build the param
+    # map with `render_change(lv, "add-sheet-search", %{"q" => ...})`, which pushes a raw event
+    # and bypasses the browser, so they cannot see a client-side defect. LiveView's client
+    # `pushInput` throws ("form events require the input to be inside a form") when a
+    # `phx-change` input has no enclosing <form>, and sends nothing at all. This test starts at
+    # the DOM: `form/2` raises unless a real <form> exists, and `render_change/1` raises unless
+    # that form carries a change binding and serializes `q` as a named param.
+    test "a keystroke in the real search field reaches the handler and renders a match (browser-reachability, not handler-reachability)", %{conn: conn} do
+      game = game_fixture(%{name: "Catán"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
+      lv |> element("#web-slot-0") |> render_click()
+      lv |> form("#web-add-sheet-form", %{q: "cat"}) |> render_change()
+
+      assert has_element?(lv, "#web-add-sheet-results #web-add-result-#{game.id}")
+      refute has_element?(lv, "#web-add-sheet-recent")
+    end
+
     test "a whitespace-only query is the idle state, not a no-match", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/secciones")
       lv |> element("#web-slot-0") |> render_click()
