@@ -756,7 +756,12 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
         class="pk-estantes-sheet--full"
       >
         <:commit>
-          <div class="pk-donde-va-search">
+          <form
+            id="web-add-sheet-form"
+            class="pk-donde-va-search"
+            phx-change="add-sheet-search"
+            phx-submit="add-sheet-search"
+          >
             <input
               type="text"
               id="web-add-sheet-input"
@@ -765,12 +770,11 @@ defmodule PukllayClubWeb.Admin.SectionLive.Index do
               placeholder="Buscá un juego"
               aria-label="Buscá un juego"
               autocomplete="off"
-              phx-change="add-sheet-search"
               phx-debounce="200"
               onfocus="this.select()"
               data-pk-sheet-autofocus
             />
-          </div>
+          </form>
         </:commit>
 
         <div :if={blank_query?(@add_sheet.query)} id="web-add-sheet-recent">
