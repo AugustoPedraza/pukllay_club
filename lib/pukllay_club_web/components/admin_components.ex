@@ -552,7 +552,12 @@ defmodule PukllayClubWeb.AdminComponents do
       on_close={JS.push("donde-va-close")}
       class="pk-estantes-sheet--full"
     >
-      <div class="pk-donde-va-search">
+      <form
+        id="donde-va-search-form"
+        class="pk-donde-va-search"
+        phx-change="donde-va-search"
+        phx-submit="donde-va-search"
+      >
         <input
           type="text"
           id="donde-va-search-input"
@@ -561,7 +566,6 @@ defmodule PukllayClubWeb.AdminComponents do
           placeholder="Buscá un estante o un juego"
           aria-label="Buscá un estante o un juego"
           autocomplete="off"
-          phx-change="donde-va-search"
           phx-debounce="200"
           onfocus="this.select()"
         />
@@ -574,7 +578,7 @@ defmodule PukllayClubWeb.AdminComponents do
         >
           <CoreComponents.icon name="hero-x-mark" class="size-5" />
         </button>
-      </div>
+      </form>
 
       <div :if={is_nil(@state.estante) and @state.query == ""} id="donde-va-estante-list">
         <.list_section_label>O elegí un estante</.list_section_label>

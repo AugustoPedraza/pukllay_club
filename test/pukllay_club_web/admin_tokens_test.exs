@@ -143,4 +143,38 @@ defmodule PukllayClubWeb.AdminTokensTest do
              "assets/css/admin/tokens.css (it inherits, so one :root declaration covers every " <>
              "pressable surface added later), found #{occurrences}."
   end
+
+  test "text selection is suppressed exactly once, on the bare [data-pk-pressable] hook (D-19o)" do
+    src = strip_comments(tokens_source())
+
+    unprefixed = ~r/(?<![-\w])user-select\s*:/
+    prefixed = ~r/-webkit-user-select\s*:/
+
+    assert length(Regex.scan(unprefixed, src)) == 1,
+           "Expected exactly one unprefixed `user-select` declaration in " <>
+             "assets/css/admin/tokens.css (it inherits, so one declaration on the " <>
+             "[data-pk-pressable] hook covers every pressable surface). Do not repeat it on a " <>
+             "component selector, and do not put it on :root."
+
+    assert length(Regex.scan(prefixed, src)) == 1,
+           "Expected exactly one `-webkit-user-select` declaration in " <>
+             "assets/css/admin/tokens.css (iOS Safari still needs the prefixed form), declared " <>
+             "once beside the unprefixed one."
+
+    bare_rules = Regex.scan(~r/\[data-pk-pressable\]\s*\{([^}]*)\}/, src)
+
+    assert length(bare_rules) == 1,
+           "Expected exactly one bare `[data-pk-pressable] { ... }` rule in " <>
+             "assets/css/admin/tokens.css. The selection suppression belongs on the bare " <>
+             "attribute hook — not on :root (it inherits, so every admin string would become " <>
+             "unselectable) and not on `:active` (a selection begins on pointer-down, before " <>
+             "the press state applies)."
+
+    [[_, body]] = bare_rules
+
+    assert body =~ unprefixed and body =~ prefixed,
+           "Expected both `-webkit-user-select` and `user-select` inside the bare " <>
+             "`[data-pk-pressable] { ... }` rule in assets/css/admin/tokens.css, found body: " <>
+             "#{inspect(String.trim(body))}"
+  end
 end
