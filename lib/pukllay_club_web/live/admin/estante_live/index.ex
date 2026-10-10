@@ -795,7 +795,12 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
         on_close={JS.push("que-va-aca-close")}
         class="pk-estantes-sheet--full"
       >
-        <div class="pk-donde-va-search">
+        <form
+          id="que-va-aca-search-form"
+          class="pk-donde-va-search"
+          phx-change="que-va-aca-search"
+          phx-submit="que-va-aca-search"
+        >
           <input
             type="text"
             id="que-va-aca-search-input"
@@ -804,11 +809,10 @@ defmodule PukllayClubWeb.Admin.EstanteLive.Index do
             placeholder="Buscá el juego que va acá"
             aria-label="Buscá el juego que va acá"
             autocomplete="off"
-            phx-change="que-va-aca-search"
             phx-debounce="200"
             onfocus="this.select()"
           />
-        </div>
+        </form>
 
         <div :if={@que_va_aca.query == ""} id="que-va-aca-unplaced">
           <AdminComponents.list_section_label>
