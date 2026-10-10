@@ -58,6 +58,31 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* D-19o: a pressable is a control, not copy, so it must not start a text
+   selection. Observed on a real phone: a tap with a slight drag on a rail
+   "+" slot painted a full-rail-height selection band, because the slot is
+   `align-self: stretch` (screens.css) and its one-glyph text node is
+   selectable like any other text.
+
+   Declared on the bare attribute hook, deliberately:
+   - NOT on `:root`. The property INHERITS, so a root declaration would make
+     every string in the admin unselectable, including the game names staff
+     legitimately copy — a worse bug than this one.
+   - NOT on `:active`. A selection begins on pointer-down and grows with the
+     drag; a rule scoped to the press state arrives after it has started and
+     stops applying when the press ends while the painted selection survives.
+     The `:active` rules below are press FEEDBACK; this is not one.
+
+   It inherits down to the glyph's child text node, so this one declaration
+   reaches all three "+" slot families — `.pk-admin-web-slot`,
+   `.pk-donde-va-slot` and `.pk-estantes-slot` — each of which carries the
+   attribute on its button. Declare it exactly once, here; never repeat it on
+   a component selector (the same D-19o rule as the tap highlight above). */
+[data-pk-pressable] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* D-19o: a `:hover` implies an `:active`. Touch has no hover, so a
    hover-only control is invisible to press on the primary platform this
    app targets. One token, not a ramp: press = --color-surface-2, painted
