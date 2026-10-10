@@ -64,7 +64,16 @@ defmodule PukllayClub.Catalog.AdminGameSearchTest do
       ref = make_ref()
       parent = self()
 
-      handler = fn _event, _measure, _meta, _config -> send(parent, {ref, :query}) end
+      # `:telemetry.attach/4` installs a VM-GLOBAL handler and this file is
+      # `async: true`, so without the `self() == parent` guard the handler also
+      # reports queries issued by other concurrently-running async tests — which
+      # made the `refute_received` below fail intermittently in CI. A telemetry
+      # handler runs synchronously in the process that emitted the event, so
+      # comparing with `parent` scopes the assertion to this test's own queries.
+      handler = fn _event, _measure, _meta, _config ->
+        if self() == parent, do: send(parent, {ref, :query})
+      end
+
       :telemetry.attach(inspect(ref), [:pukllay_club, :repo, :query], handler, nil)
 
       try do
