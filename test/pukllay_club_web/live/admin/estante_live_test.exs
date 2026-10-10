@@ -484,6 +484,27 @@ defmodule PukllayClubWeb.Admin.EstanteLiveTest do
       assert on_b == [a0.id]
     end
 
+    # Browser-reachability, not handler-reachability (see the sibling in section_live_test.exs).
+    # The two tests above push the raw event by name with a hand-built param map; this one starts
+    # at the DOM, so it fails if the search input has no enclosing <form> to serialize `q` into.
+    # The markup under test lives in the shared `placement_sheet/1` component.
+    test "a keystroke in the real ¿Dónde va? search field renders a matching estante row",
+         %{conn: conn} do
+      shelf_a = shelf_fixture(%{name: "Origen"})
+      shelf_b = shelf_fixture(%{name: "Destino"})
+      copy = copy_fixture(%{game_id: game_fixture(%{name: "Movible"}).id})
+      {:ok, _} = Shelves.place_copy(copy.id, shelf_a.id, 0)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/estantes")
+      render_change(lv, "search", %{"q" => "movible"})
+      lv |> element("#suggestion-#{copy.id}") |> render_click()
+      render_click(lv, "open-mover", %{})
+
+      lv |> form("#donde-va-search-form", %{q: "destino"}) |> render_change()
+
+      assert has_element?(lv, "#donde-va-result-shelf-#{shelf_b.id}")
+    end
+
     test "Deshacer after a move restores the copy's previous estante and position",
          %{conn: conn} do
       shelf_a = shelf_fixture(%{name: "Origen"})

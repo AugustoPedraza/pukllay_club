@@ -802,6 +802,23 @@ defmodule PukllayClubWeb.Admin.GameLiveTest do
       assert lv |> element("#donde-va-shelf-#{Shelves.list_shelves() |> hd() |> Map.get(:id)}") |> has_element?()
     end
 
+    # Browser-reachability, not handler-reachability: starts at the DOM, so it fails if the
+    # search input has no enclosing <form> to serialize `q` into. The markup under test lives in
+    # the shared `placement_sheet/1` component in admin_components.ex, not in form.ex; this test
+    # proves the one component fix reaches this LiveView's own search handler too.
+    test "a keystroke in the real ¿Dónde va? search field renders a matching estante row", %{conn: conn} do
+      game = game_fixture()
+      copy_fixture(%{game_id: game.id})
+      shelf = shelf_fixture(%{name: "Estante Uno"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/juegos/#{game.id}/editar")
+      render_click(lv, "edit-field", %{"field" => "shelf_id"})
+
+      lv |> form("#donde-va-search-form", %{q: "uno"}) |> render_change()
+
+      assert has_element?(lv, "#donde-va-result-shelf-#{shelf.id}")
+    end
+
     test "a multi-copy game with no copy context asks which copy before opening the sheet", %{conn: conn} do
       game = game_fixture()
       c1 = copy_fixture(%{game_id: game.id, number: 1})
