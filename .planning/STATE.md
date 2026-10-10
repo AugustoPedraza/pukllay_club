@@ -36,7 +36,7 @@ which keeps its number and scope — continuing the convention 01.7/01.8/01.8.1/
 Phase: 01.8.4 (The Rail Becomes the Add Surface) — EXECUTING
 Plan: 4 of 4
 Status: Phase complete — ready for verification
-Last activity: 2026-10-09 — Phase 01.8.4 execution started
+Last activity: 2026-10-10 — Completed quick task 261010-gig: Secciones' two forms moved behind a tap (name sheet + "+" sheet)
 
 **Design contract for this whole milestone:** sketch 070
 (`.planning/sketches/070-web-destacados/index.html`) plus
@@ -437,6 +437,7 @@ in `01-VERIFICATION.md`. Full original audit: https://claude.ai/code/artifact/f0
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261010-gig | /admin/secciones opens with neither form open: the destacada's `Ajustes` panel is now the `Editar fila` bottom sheet opened by tapping the row's NAME (`aria-haspopup="dialog"`), and `Nueva fila` is now a sheet behind a `+` beside the page title — sketch 070's own `.fname`/`.phead` shape, which the shipped page had diverged from. Forms, events and the `shown`->`hidden` inversion moved unchanged; `Ordenar filas` left in place. mix quality 2033 tests 0 failures; resting-state guard negative-tested | 2026-10-10 | 49727d02 | complete | [261010-gig-secciones-mover-el-form-de-ajustes-de-la](./quick/261010-gig-secciones-mover-el-form-de-ajustes-de-la/) |
 | 261009-b1n | Deleted 124MB of stray root build-tool binaries (`esbuild-linux-x64`, `tailwind-linux-x64-4.3.0`) — byte-identical to the `_build/` copies the Mix tasks actually resolve, never tracked, never committed; added `/esbuild-*` + `/tailwind-*` gitignore guard since the Tailwind binary is ~118MB and this repo is public. `mix assets.build` verified clean | 2026-10-09 | 6ccab67c | complete | [261009-b1n-clean-up-stray-esbuild-tailwind-binaries](./quick/261009-b1n-clean-up-stray-esbuild-tailwind-binaries/) |
 | 260928-og0 | Guarded the `CreateSections` require in `sections_backfill_test.exs`'s setup so a fresh-database run emits zero compiler warnings (RED 1 -> GREEN 0, full suite 1878 tests 0 failures); corrected the now-disproven exemption note in `clear_estantes_migration_test.exs`. Latent fix — did NOT cause or fix the PR #72 CI failure (that was three `mint 1.10.1` CVEs, resolved separately in 1311b0e8) | 2026-09-28 | 68b7b1ff | complete | [260928-og0-guard-the-unguarded-code-require-file-in](./quick/260928-og0-guard-the-unguarded-code-require-file-in/) |
 | 260912-hrx | Docs-only pushes to main skip build-and-push/deploy via an always-run paths-filter gate job; `quality` (both deploy.yml's D-04 guard and ci.yml's actual required check) stays unconditional | 2026-09-12 | 16226be | complete | [260912-hrx-add-path-based-filtering-to-github-workf](./quick/260912-hrx-add-path-based-filtering-to-github-workf/) |
